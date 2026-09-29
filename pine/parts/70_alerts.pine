@@ -1,0 +1,49 @@
+// =============================================================================
+//  LAYER 7 - ALERTS
+//  - alertcondition() cho UI chon trong TradingView
+//  - alert()       cho webhook (JSON, xem docs/alert-schema.md)
+//  Chi doc - khong bao gio duoc tinh tin hieu.
+// =============================================================================
+
+// CANH BAO: str.format_time(time, format, timezone) - `time` (series int) di TRUOC.
+// Dau tien la UNIX timestamp, thu hai moi la chuoi format. Dao nguoc -> CE10123
+// "argument of literal string type was used but a series int is expected".
+f_ts() =>
+    str.format_time(time, "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC")
+
+f_sym() =>
+    str.replace_all(syminfo.ticker, "\\", "/")
+
+// JSON cua mot ke hoach gom san: side / price / sl / tps / atr / conf
+f_jsonPlan(int dir, float entry, float sl, float t1, float t2, float t3, float a, int conf) =>
+    string tps = "[" + f_fmtPx(t1) + (not na(t2) ? "," + f_fmtPx(t2) + (not na(t3) ? "," + f_fmtPx(t3) : "") : "") + "]"
+    string core = '"side":"' + (dir == 1 ? "BUY" : "SELL") + '","price":' + f_fmtPx(entry) + ',"sl":' + f_fmtPx(sl) + ',"tps":' + tps
+    core + (tm_payloadMode == "Slim" ? "" : ',"atr":' + f_fmtPx(a) + ',"conf":' + str.tostring(conf / 100.0, "#.##"))
+
+tm_head   = '{"v":1,"ts":"' + f_ts() + '","symbol":"' + f_sym() + '","tf":"' + timeframe.period + '","mode":"' + (tm_confirmOnly ? "closed" : "live") + '"'
+tm_send   = tm_payloadMode != "Off"
+tm_wEntry = tm_alertMode == "All" or tm_alertMode == "Entry only"
+tm_wLevel = tm_alertMode == "All" or tm_alertMode == "TP/SL only"
+
+// -----------------------------------------------------------------------------
+//  ALERT CONDITION
+// -----------------------------------------------------------------------------
+alertcondition(tm_evEntry and tm_plan.dir == 1, "TM BUY", "TM BUY · {{ticker}} · {{interval}}")
+alertcondition(tm_evEntry and tm_plan.dir == -1, "TM SELL", "TM SELL · {{ticker}} · {{interval}}")
+alertcondition(tm_evTp > 0, "TM TAKE PROFIT", "TM TP · {{ticker}} · {{interval}}")
+alertcondition(tm_evSl, "TM STOP LOSS", "TM SL · {{ticker}} · {{interval}}")
+
+// -----------------------------------------------------------------------------
+//  WEBHOOK PAYLOAD
+// -----------------------------------------------------------------------------
+if tm_okBar and tm_send and tm_wEntry and tm_evEntry
+    alert(tm_head + ',"action":"ENTRY",' + f_jsonPlan(tm_plan.dir, tm_plan.entry, tm_plan.sl, tm_plan.tp1, tm_plan.tp2, tm_plan.tp3, tm_atr, int(math.round(tm_conf * 100))), alert.freq_once_per_bar)
+
+if tm_okBar and tm_send and tm_wLevel and tm_posDir != 0 and tm_evTp > 0
+    alert(tm_head + ',"action":"TAKE_PROFIT","level":' + str.tostring(tm_evTp > 3 ? 3 : tm_evTp) + ',' + f_jsonPlan(tm_posDir, tm_posEntry, tm_posSl, tm_posTp1, tm_posTp2, tm_posTp3, tm_atr, tm_posConf), alert.freq_once_per_bar)
+
+if tm_okBar and tm_send and tm_wLevel and tm_posDir != 0 and tm_evSl
+    alert(tm_head + ',"action":"STOP_LOSS","level":1,' + f_jsonPlan(tm_posDir, tm_posEntry, tm_posSl, tm_posTp1, tm_posTp2, tm_posTp3, tm_atr, tm_posConf), alert.freq_once_per_bar)
+
+if tm_okBar and tm_send and tm_wLevel and tm_evClose and not tm_evSl and tm_evTp == 0 and tm_posDir != 0
+    alert(tm_head + ',"action":"TIME_CLOSE",' + f_jsonPlan(tm_posDir, tm_posEntry, tm_posSl, tm_posTp1, tm_posTp2, tm_posTp3, tm_atr, tm_posConf), alert.freq_once_per_bar)

@@ -1,0 +1,143 @@
+// @part skip:strategy
+// =============================================================================
+//  LAYER 6 - VISUALIZATION
+//  Marker entry, vung TP/SL cua viethe dang mo, lich su plan da dong, dashboard.
+//  CHI DOC - khong bao gio duoc tinh tin hieu.
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+//  Duong nen trend (Supertrend) - bat/tat bang module M1
+// -----------------------------------------------------------------------------
+tm_stCol = tm_stDir == -1 ? color.new(#089981, 20) : color.new(#f23645, 20)
+plot(tm_m1_on ? tm_stLine : na, "Supertrend", color = tm_stCol, linewidth = 2, style = plot.style_linebr)
+
+// -----------------------------------------------------------------------------
+//  Marker vao lenh
+// -----------------------------------------------------------------------------
+tm_unconfirmed = not tm_confirmOnly
+tm_buyCol  = tm_unconfirmed ? color.new(tm_cBull, 55) : tm_cBull
+tm_sellCol = tm_unconfirmed ? color.new(tm_cBear, 55) : tm_cBear
+
+// CANH BAO: plotshape/plot co tham so OFFSET o vi tri 6.
+// Neu truyen theo thu tu, `size = size.tiny` se gan nham vao `offset` -> CE10271.
+// Phai luon truyen bang TEN tham so.
+plotshape(tm_evEntry and tm_plan.dir == 1, title = "BUY",  style = shape.triangleup,   location = location.belowbar, color = tm_buyCol,  size = size.tiny, text = "BUY")
+plotshape(tm_evEntry and tm_plan.dir == -1, title = "SELL", style = shape.triangledown, location = location.abovebar, color = tm_sellCol, size = size.tiny, text = "SELL")
+
+// -----------------------------------------------------------------------------
+//  Vung TP / SL cua viethe dang mo (cap nhat moi bar nen nen "chay" theo gia)
+// -----------------------------------------------------------------------------
+var box bxSl = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(color.gray, 70), bgcolor = color.new(color.gray, 88), xloc = xloc.bar_index)
+var box bxTp1 = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(tm_cBull, 50), bgcolor = color.new(tm_cBull, 90), xloc = xloc.bar_index)
+var box bxTp2 = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(tm_cBull, 60), bgcolor = color.new(tm_cBull, 93), xloc = xloc.bar_index)
+var box bxTp3 = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(tm_cBull, 70), bgcolor = color.new(tm_cBull, 95), xloc = xloc.bar_index)
+var line lnEntry = line.new(bar_index, 0.0, bar_index, 0.0, color = color.new(color.silver, 40), style = line.style_dashed, xloc = xloc.bar_index)
+
+var label lbEntry = label.new(bar_index, 0.0, "", style = label.style_label_left, color = color.new(color.gray, 30), textcolor = color.white, size = size.tiny)
+var label lbSl    = label.new(bar_index, 0.0, "", style = label.style_label_left, color = color.new(color.gray, 30), textcolor = color.white, size = size.tiny)
+var label lbTp    = label.new(bar_index, 0.0, "", style = label.style_label_left, color = color.new(color.gray, 30), textcolor = color.white, size = size.tiny)
+
+tm_right = tm_posBar + tm_zoneLen
+tm_base  = tm_posDir == 1 ? tm_cBull : tm_cBear
+
+if tm_showZone and tm_posDir != 0 and not na(tm_posBar)
+    box.set_lefttop(bxSl, tm_posBar, tm_posDir == 1 ? tm_posEntry : tm_posSl)
+    box.set_rightbottom(bxSl, tm_right, tm_posDir == 1 ? tm_posSl : tm_posEntry)
+    box.set_border_color(bxSl, color.new(color.gray, 55))
+    box.set_bgcolor(bxSl, color.new(color.gray, 90))
+
+    box.set_lefttop(bxTp1, tm_posBar, tm_posDir == 1 ? tm_posEntry : tm_posTp1)
+    box.set_rightbottom(bxTp1, tm_right, tm_posTp1)
+    box.set_border_color(bxTp1, color.new(tm_base, 45))
+    box.set_bgcolor(bxTp1, color.new(tm_base, 90))
+
+    box.set_lefttop(bxTp2, tm_posBar, tm_posDir == 1 ? tm_posEntry : tm_posTp2)
+    box.set_rightbottom(bxTp2, tm_right, tm_posTp2)
+    box.set_border_color(bxTp2, color.new(tm_base, 60))
+    box.set_bgcolor(bxTp2, color.new(tm_base, 93))
+
+    box.set_lefttop(bxTp3, tm_posBar, tm_posDir == 1 ? tm_posEntry : tm_posTp3)
+    box.set_rightbottom(bxTp3, tm_right, tm_posTp3)
+    box.set_border_color(bxTp3, color.new(tm_base, 70))
+    box.set_bgcolor(bxTp3, color.new(tm_base, 95))
+
+    line.set_xy1(lnEntry, tm_posBar, tm_posEntry)
+    line.set_xy2(lnEntry, tm_right, tm_posEntry)
+
+    label.set_xy(lbEntry, tm_posBar, tm_posEntry)
+    label.set_text(lbEntry, "E " + f_fmtPx(tm_posEntry))
+    label.set_color(lbEntry, color.new(tm_base, 10))
+
+    label.set_xy(lbSl, tm_right, tm_posSl)
+    label.set_text(lbSl, "SL " + f_fmtPx(tm_posSl))
+    label.set_color(lbSl, color.new(color.gray, 20))
+
+    label.set_xy(lbTp, tm_right, tm_tpMode == "Ladder" and not na(tm_posTp3) ? tm_posTp3 : tm_posTp1)
+    label.set_text(lbTp, "TP " + f_fmtPx(tm_tpMode == "Ladder" and not na(tm_posTp3) ? tm_posTp3 : tm_posTp1))
+    label.set_color(lbTp, color.new(tm_base, 10))
+else
+    box.set_lefttop(bxSl,  bar_index, na)
+    box.set_rightbottom(bxSl, bar_index, na)
+    box.set_lefttop(bxTp1, bar_index, na)
+    box.set_rightbottom(bxTp1, bar_index, na)
+    box.set_lefttop(bxTp2, bar_index, na)
+    box.set_rightbottom(bxTp2, bar_index, na)
+    box.set_lefttop(bxTp3, bar_index, na)
+    box.set_rightbottom(bxTp3, bar_index, na)
+    line.set_xy1(lnEntry, bar_index, na)
+    line.set_xy2(lnEntry, bar_index, na)
+    label.set_xy(lbEntry, bar_index, na)
+    label.set_text(lbEntry, "")
+    label.set_xy(lbSl, bar_index, na)
+    label.set_text(lbSl, "")
+    label.set_xy(lbTp, bar_index, na)
+    label.set_text(lbTp, "")
+
+// -----------------------------------------------------------------------------
+//  Lich su plan da dong (gioi han so object)
+// -----------------------------------------------------------------------------
+var array<box> tm_hist = array.new<box>()
+
+if tm_evClose and tm_showHist and tm_keepPlans > 0 and tm_xDir != 0 and not na(tm_xBar)
+    box hSl = box.new(tm_xBar, tm_xDir == 1 ? tm_xEntry : tm_xSl, bar_index, tm_xDir == 1 ? tm_xSl : tm_xEntry, border_color = color.new(tm_evSl ? color.gray : tm_xDir == 1 ? tm_cBull : tm_cBear, 45), bgcolor = color.new(color.gray, 92), xloc = xloc.bar_index)
+    array.push(tm_hist, hSl)
+    while array.size(tm_hist) > tm_keepPlans * 3
+        box.delete(array.shift(tm_hist))
+
+// CANH BAO: table.new() KHONG co tham so `size`. Kich thuoc bang duoc quyet dinh
+// boi `text_size` cua tung o table.cell(). Neu truyen size -> CE10120.
+var table tm_tbl = na
+if tm_showDash and na(tm_tbl)
+    tm_tbl := table.new(position.top_right, 2, 12, border_width = 1, border_color = color.new(color.gray, 80))
+
+tm_font = tm_dashSize == "Tiny" ? size.tiny : tm_dashSize == "Small" ? size.small : size.normal
+
+if not na(tm_tbl) and barstate.islast
+    tm_kColor = color.new(color.gray, 10)
+    tm_vColor = color.silver
+    table.clear(tm_tbl, 0, 0, 1, 11)
+
+    table.cell(tm_tbl, 0,  0, "Che do",         text_color = tm_kColor, text_size = tm_font, text_halign = text.align_left,  bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 1,  0, tm_confirmOnly ? "Nen dong" : "Realtime", text_color = color.silver, text_size = tm_font, text_halign = text.align_right, bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 0,  1, "Diem so",       text_color = tm_kColor, text_size = tm_font, text_halign = text.align_left,  bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 1,  1, str.tostring(tm_score, "#.00"), text_color = tm_score > 0 ? tm_cBull : tm_score < 0 ? tm_cBear : color.gray, text_size = tm_font, text_halign = text.align_right, bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 0,  2, "Module TG/TG",  text_color = tm_kColor, text_size = tm_font, text_halign = text.align_left,  bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 1,  2, str.tostring(tm_bullMods) + " / " + str.tostring(tm_bearMods), text_color = tm_vColor, text_size = tm_font, text_halign = text.align_right, bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 0,  3, "Bias TF cao",   text_color = tm_kColor, text_size = tm_font, text_halign = text.align_left,  bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 1,  3, tm_htfDir == 1 ? "Tang" : tm_htfDir == -1 ? "Giam" : "-", text_color = tm_htfDir == 1 ? tm_cBull : tm_htfDir == -1 ? tm_cBear : color.gray, text_size = tm_font, text_halign = text.align_right, bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 0,  4, "ATR",           text_color = tm_kColor, text_size = tm_font, text_halign = text.align_left,  bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 1,  4, f_fmtPx(tm_atr), text_color = tm_vColor, text_size = tm_font, text_halign = text.align_right, bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 0,  5, "Viethe",       text_color = tm_kColor, text_size = tm_font, text_halign = text.align_left,  bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 1,  5, tm_posDir == 1 ? "BUY" : tm_posDir == -1 ? "SELL" : "-", text_color = tm_posDir == 1 ? tm_cBull : tm_posDir == -1 ? tm_cBear : color.gray, text_size = tm_font, text_halign = text.align_right, bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 0,  6, "Entry",         text_color = tm_kColor, text_size = tm_font, text_halign = text.align_left,  bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 1,  6, tm_posDir != 0 ? f_fmtPx(tm_posEntry) : "-", text_color = tm_vColor, text_size = tm_font, text_halign = text.align_right, bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 0,  7, "SL",            text_color = tm_kColor, text_size = tm_font, text_halign = text.align_left,  bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 1,  7, tm_posDir != 0 ? f_fmtPx(tm_posSl) : "-", text_color = color.gray, text_size = tm_font, text_halign = text.align_right, bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 0,  8, "TP1",           text_color = tm_kColor, text_size = tm_font, text_halign = text.align_left,  bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 1,  8, tm_posDir != 0 ? f_fmtPx(tm_posTp1) : "-", text_color = tm_posDir != 0 ? tm_cBull : color.gray, text_size = tm_font, text_halign = text.align_right, bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 0,  9, "TP2",           text_color = tm_kColor, text_size = tm_font, text_halign = text.align_left,  bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 1,  9, tm_posDir != 0 and not na(tm_posTp2) ? f_fmtPx(tm_posTp2) : "-", text_color = tm_posDir != 0 ? tm_cBull : color.gray, text_size = tm_font, text_halign = text.align_right, bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 0, 10, "Lenh hom nay",  text_color = tm_kColor, text_size = tm_font, text_halign = text.align_left,  bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 1, 10, str.tostring(tm_dayCount) + " / " + str.tostring(tm_flt_maxDay), text_color = tm_vColor, text_size = tm_font, text_halign = text.align_right, bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 0, 11, "Thang / That",  text_color = tm_kColor, text_size = tm_font, text_halign = text.align_left,  bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 1, 11, str.tostring(tm_statWins) + " / " + str.tostring(tm_statLosses), text_color = tm_statTrades > 0 and tm_statWins * 100 / tm_statTrades >= 50 ? tm_cBull : color.gray, text_size = tm_font, text_halign = text.align_right, bgcolor = color.new(color.black, 100))

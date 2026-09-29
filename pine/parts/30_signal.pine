@@ -1,0 +1,104 @@
+// =============================================================================
+//  LAYER 3 - SIGNAL ENGINE
+//  Giao thuc chuan hoa moi module:
+//      - tra ve diem so trong [-1, +1]  ( +1 = mua tot, -1 = ban tot, 0 = trung lap )
+//      - bien su kien (pulse) duoc giu lai `hold` nen de tinh diem tong hop
+//  THEM MODULE MOI: khoi if + 1 dong trong hep tong so o cuoi, khong can sua file khac.
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+//  M1 - TREND FLIP (Supertrend)
+// -----------------------------------------------------------------------------
+[ tm_stLine, tm_stDir ] = ta.supertrend(tm_m1_stAtr * tm_atrST, tm_m1_stAtrLen)
+tm_m1_score = tm_stDir == -1 ? 1.0 : tm_stDir == 1 ? -1.0 : 0.0
+
+// -----------------------------------------------------------------------------
+//  M2 - RSI DIVERGENCE (so sanh 2 pivot gan nhat)
+// -----------------------------------------------------------------------------
+tm_rsi = ta.rsi(close, tm_m2_rsiLen)
+
+divBullEv = false
+divBearEv = false
+if not na(tm_pivLow) and not na(tm_pivLow[tm_m2_swLen]) and not na(low[tm_m2_swLen * 2])
+    divBullEv := low[tm_m2_swLen] < low[tm_m2_swLen * 2] and nz(tm_rsi[tm_m2_swLen], 50) > nz(tm_rsi[tm_m2_swLen * 2], 50)
+if not na(tm_pivHigh) and not na(tm_pivHigh[tm_m2_swLen]) and not na(high[tm_m2_swLen * 2])
+    divBearEv := high[tm_m2_swLen] > high[tm_m2_swLen * 2] and nz(tm_rsi[tm_m2_swLen], 50) < nz(tm_rsi[tm_m2_swLen * 2], 50)
+
+divBullHold = f_pulse(divBullEv, tm_m2_hold)
+divBearHold = f_pulse(divBearEv, tm_m2_hold)
+tm_m2_score = divBullHold and not divBearHold ? 1.0 : divBearHold and not divBullHold ? -1.0 : 0.0
+
+// -----------------------------------------------------------------------------
+//  M3 - BOLLINGER REVERSION (cham band roi dong lai)
+// -----------------------------------------------------------------------------
+[ bbMid, bbUp, bbLo ] = ta.bb(close, tm_m3_len, tm_m3_mult)
+bbTouchLo = ta.lowest(low,  tm_m3_look) <= ta.lowest(bbLo, tm_m3_look)
+bbTouchHi = ta.highest(high, tm_m3_look) >= ta.highest(bbUp, tm_m3_look)
+bbBullEv  = bbTouchLo and close > bbLo and close > open
+bbBearEv  = bbTouchHi and close < bbUp and close < open
+tm_m3_score = (bbBullEv ? 1.0 : 0.0) - (bbBearEv ? 1.0 : 0.0)
+
+// -----------------------------------------------------------------------------
+//  M4 - PRICE ACTION (engulfing + pin bar)
+// -----------------------------------------------------------------------------
+paBody   = math.abs(close - open)
+paRange  = math.max(high - low, syminfo.mintick)
+prevBody = math.abs(close[1] - open[1])
+
+paBullEng = close > open and close[1] < open[1] and close >= open[1] and open <= close[1] and paBody >= prevBody
+paBearEng = close < open and close[1] > open[1] and close <= open[1] and open >= close[1] and paBody >= prevBody
+paBullPin = (close > open) and (2.0 * (math.min(open, close) - low) > tm_m4_pinR * paRange)
+paBearPin = (close < open) and (2.0 * (high - math.max(open, close)) > tm_m4_pinR * paRange)
+
+paBullEv = (tm_m4_engulf and paBullEng) or (tm_m4_pin and paBullPin)
+paBearEv = (tm_m4_engulf and paBearEng) or (tm_m4_pin and paBearPin)
+paBullHold = f_pulse(paBullEv, tm_m4_hold)
+paBearHold = f_pulse(paBearEv, tm_m4_hold)
+tm_m4_score = (paBullHold ? 1.0 : 0.0) - (paBearHold ? 1.0 : 0.0)
+
+// -----------------------------------------------------------------------------
+//  M5 - EMA CROSS (co giu tin hieu)
+// -----------------------------------------------------------------------------
+emaBullHold = f_pulse(ta.crossover(tm_emaF, tm_emaS), tm_m5_hold)
+emaBearHold = f_pulse(ta.crossunder(tm_emaF, tm_emaS), tm_m5_hold)
+tm_m5_score = (emaBullHold ? 1.0 : 0.0) - (emaBearHold ? 1.0 : 0.0)
+
+// -----------------------------------------------------------------------------
+//  TONG HOP CO TRONG SO
+// -----------------------------------------------------------------------------
+tm_wTotal = (tm_m1_on ? tm_m1_w : 0.0) + (tm_m2_on ? tm_m2_w : 0.0) + (tm_m3_on ? tm_m3_w : 0.0) + (tm_m4_on ? tm_m4_w : 0.0) + (tm_m5_on ? tm_m5_w : 0.0)
+tm_wSum   = (tm_m1_on ? tm_m1_w * tm_m1_score : 0.0) + (tm_m2_on ? tm_m2_w * tm_m2_score : 0.0) + (tm_m3_on ? tm_m3_w * tm_m3_score : 0.0) + (tm_m4_on ? tm_m4_w * tm_m4_score : 0.0) + (tm_m5_on ? tm_m5_w * tm_m5_score : 0.0)
+
+tm_score = tm_wTotal > 0 ? f_clamp(tm_wSum / tm_wTotal, -1.0, 1.0) : 0.0
+tm_conf  = math.abs(tm_score)
+
+tm_candDir = tm_score >= tm_confMin ? 1 : tm_score <= -tm_confMin ? -1 : 0
+
+// -----------------------------------------------------------------------------
+//  BO LOC
+// -----------------------------------------------------------------------------
+// Xu huong TF cao - lookahead_on + [1] la cach doc MTF khong repait.
+tm_htfEma = request.security(syminfo.tickerid, tm_flt_htf, ta.ema(close, tm_flt_htfLen)[1], lookahead = barmerge.lookahead_on)
+tm_htfDir = not na(tm_htfEma) ? (close > tm_htfEma ? 1 : -1) : 0
+
+var int tm_dayCount = 0
+if f_isNewDay()
+    tm_dayCount := 0
+
+var int tm_barsSince = 999999
+tm_barsSince += 1
+
+tm_okHtf  = not tm_flt_htfOn or tm_flt_htfDir == "Tat" or (tm_candDir == 0) or (tm_flt_htfDir == "Chi chan thoi trong" and tm_htfDir != tm_candDir) or (tm_flt_htfDir == "Cung huong" and tm_htfDir == tm_candDir)
+tm_okSess = not tm_flt_sessOn or f_sessionOk(tm_flt_sess, tm_flt_tz)
+tm_okVol  = not tm_flt_volOn or (tm_atr / close * 100.0) >= tm_flt_volMin
+tm_okCool = tm_barsSince >= tm_flt_cool
+tm_okDay  = tm_dayCount < tm_flt_maxDay
+
+tm_okFilter = tm_okHtf and tm_okSess and tm_okVol and tm_okCool and tm_okDay
+
+// -----------------------------------------------------------------------------
+//  DIEN TRONG LUONG TUNG MODULE (cho dashboard + payload)
+// -----------------------------------------------------------------------------
+tm_bullMods = (tm_m1_on and tm_m1_score > 0 ? 1 : 0) + (tm_m2_on and tm_m2_score > 0 ? 1 : 0) + (tm_m3_on and tm_m3_score > 0 ? 1 : 0) + (tm_m4_on and tm_m4_score > 0 ? 1 : 0) + (tm_m5_on and tm_m5_score > 0 ? 1 : 0)
+tm_bearMods = (tm_m1_on and tm_m1_score < 0 ? 1 : 0) + (tm_m2_on and tm_m2_score < 0 ? 1 : 0) + (tm_m3_on and tm_m3_score < 0 ? 1 : 0) + (tm_m4_on and tm_m4_score < 0 ? 1 : 0) + (tm_m5_on and tm_m5_score < 0 ? 1 : 0)
+tm_modCount = (tm_m1_on ? 1 : 0) + (tm_m2_on ? 1 : 0) + (tm_m3_on ? 1 : 0) + (tm_m4_on ? 1 : 0) + (tm_m5_on ? 1 : 0)

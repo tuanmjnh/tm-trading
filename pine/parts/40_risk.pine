@@ -1,0 +1,58 @@
+// =============================================================================
+//  LAYER 4 - RISK ENGINE
+//  Chiu trach: entry / SL / TP1-3 / RR. Khong biet gi ve vie the, khong ve.
+//  UDT nay la "hop dong" giua tang risk va tang state - muon them muc TP chi sua day.
+// =============================================================================
+
+type TmPlan
+    bool  valid
+    int   dir
+    float entry
+    float sl
+    float tp1
+    float tp2
+    float tp3
+    float risk
+    float rr1
+
+// -----------------------------------------------------------------------------
+//  SL : cau truc (swing) va ATR, tron vao nhau roi kep trong [minATR, maxATR]
+// -----------------------------------------------------------------------------
+f_buildPlan(int dir) =>
+    float a     = tm_atr
+    float entry = close
+    bool  atrOk = not na(a) and a > 0
+
+    float pad        = a * tm_slPadAtr
+    float swing      = dir == 1 ? nz(tm_swingLow, low) : nz(tm_swingHigh, high)
+    float structDist = dir == 1 ? (entry - swing) + pad : (swing - entry) + pad
+    float atrDist    = a * tm_slAtrMul
+
+    float base = tm_slMode == "ATR" ? atrDist : tm_slMode == "Structure" ? structDist : (atrDist + structDist) * 0.5
+    float lo   = a * tm_slMinAtr
+    float hi   = math.max(a * tm_slMaxAtr, lo)
+    float dist = f_clamp(nz(base, atrDist), lo, hi)
+
+    float sl   = entry - dir * dist
+    float risk = dist
+
+    float rr1 = tm_rr1
+    float rr2 = math.max(tm_rr2, rr1)
+    float rr3 = math.max(tm_rr3, rr2)
+
+    bool dirOk  = dir != 0
+    bool slOk   = dist > 0 and (dir == 1 ? sl < entry : sl > entry)
+    bool rrOk   = tm_rrMin <= 0 or rr1 >= tm_rrMin
+    bool valid  = atrOk and dirOk and slOk and rrOk
+
+    float tp1 = entry + dir * rr1 * risk
+    float tp2 = tm_tpMode == "Ladder" ? entry + dir * rr2 * risk : na
+    float tp3 = tm_tpMode == "Ladder" ? entry + dir * rr3 * risk : na
+
+    TmPlan.new(valid, dir, entry, sl, tp1, tp2, tp3, risk, rr1)
+
+// -----------------------------------------------------------------------------
+//  KeT QUA
+// -----------------------------------------------------------------------------
+tm_plan   = f_buildPlan(tm_candDir)
+tm_signal = tm_plan.valid and tm_okFilter and tm_candDir != 0

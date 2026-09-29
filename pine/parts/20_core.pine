@@ -1,0 +1,51 @@
+// =============================================================================
+//  LAYER 2 - CORE : tien ich thuan, ATR, pivot/swing, phien giao dich
+//  Khong duoc phep phu thuoc vao module tin hieu cu the nao.
+// =============================================================================
+
+f_clamp(float v, float lo, float hi) =>
+    math.max(lo, math.min(hi, v))
+
+f_tfMinutes() =>
+    timeframe.in_seconds() / 60.0
+
+f_sessionOk(string sess, string tz) =>
+    not na(time(timeframe.period, sess, tz))
+
+f_isNewDay() =>
+    ta.change(time("D")) != 0
+
+// Giu 1 su kien trong `n` nen (chuyen thanh xung lien tuc de tinh diem tong hop).
+f_pulse(bool ev, int n) =>
+    var int cnt = 0
+    cnt := ev ? n : math.max(0, cnt - 1)
+    cnt > 0
+
+f_fmtPx(float p) =>
+    str.tostring(p, format.mintick)
+
+// -----------------------------------------------------------------------------
+//  Bien do
+//  tm_atr    - dung cho SL/TP (series float, khong gioi han)
+//  tm_atrST  - dung cho supertrend (can MOT so chu ky int rieng, xem 10_config)
+// -----------------------------------------------------------------------------
+tm_atr   = ta.atr(14)
+tm_atrST = ta.atr(tm_m1_stAtrLen)
+
+// -----------------------------------------------------------------------------
+//  Pivot / swing dung chung cho divergence va SL theo cau truc
+// -----------------------------------------------------------------------------
+tm_pivHigh = ta.pivothigh(high, tm_m2_swLen, tm_m2_swLen)
+tm_pivLow  = ta.pivotlow(low,  tm_m2_swLen, tm_m2_swLen)
+
+// -----------------------------------------------------------------------------
+//  Swing tham bien cho SL (ta.lowest/ta.highest theo lookback)
+// -----------------------------------------------------------------------------
+tm_swingLow  = ta.lowest(low,  tm_slSwing)
+tm_swingHigh = ta.highest(high, tm_slSwing)
+
+// -----------------------------------------------------------------------------
+//  EMA nhanh/cham cho module 5 + bias nen
+// -----------------------------------------------------------------------------
+tm_emaF = ta.ema(close, tm_m5_fast)
+tm_emaS = ta.ema(close, tm_m5_slow)
