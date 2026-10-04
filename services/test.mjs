@@ -346,7 +346,7 @@ check('cluster: rong -> []', clusterLiqs([]).length === 0 && clusterLiqs(null).l
 
 check('hourBucket: chia nguyen 3_600_000', hourBucket(3_600_000) === 1 && hourBucket(3_599_999) === 0)
 
-check('heartbeat: 6 services mac dinh (Phase 10)', ['news', 'scanner', 'funding', 'regime', 'liquidation', 'confluence'].every((k) => typeof DEFAULT_INTERVALS[k] === 'number' && DEFAULT_INTERVALS[k] > 0), JSON.stringify(DEFAULT_INTERVALS))
+  check('heartbeat: 7 services mac dinh (Phase 11)', ['news', 'scanner', 'funding', 'regime', 'liquidation', 'confluence', 'brief'].every((k) => typeof DEFAULT_INTERVALS[k] === 'number' && DEFAULT_INTERVALS[k] > 0), JSON.stringify(DEFAULT_INTERVALS))
 check('regime cfg: nguong 75/25 + sweep top12', REGIME_CFG.asiAlt === 75 && REGIME_CFG.asiBtc === 25 && REGIME_CFG.sweepTopN === 12)
 check('liq cfg: 7 bang sum(w)=1', LIQ_CFG.bands.length === 7 && Math.abs(LIQ_CFG.bands.reduce((s, b) => s + b.w, 0) - 1) < 1e-9)
 

@@ -22,8 +22,9 @@ const { title, description } = useAdminPageChrome({
   descKey: 'admin.permissionsDesc'
 })
 const { exporting: exportingPermissions, exportModule: exportPermissions } = useModuleExport()
+const { hubFetch, appId } = useHub()
 
-const targetApp = ref('')
+const targetApp = ref(appId || '')
 const search = ref('')
 const items = ref<PermissionRow[]>([])
 const loading = ref(false)
@@ -88,7 +89,7 @@ async function fetchPermissions() {
   if (!targetApp.value) return
   loading.value = true
   try {
-    const res = await adminFetch<{ success: boolean, data: PermissionRow[] }>(
+    const res = await hubFetch<{ success: boolean, data: PermissionRow[] }>(
       `/api/v1/apps/${encodeURIComponent(targetApp.value)}/permissions`
     )
     items.value = (res.data || []).map(p => ({ ...p, code: p.code || p.name }))
@@ -144,7 +145,7 @@ useHead({ title })
       <UDashboardToolbar>
         <template #left>
           <div class="flex items-center gap-2 w-full min-w-0 sm:w-auto">
-            <AdminAppSwitcher v-model="targetApp" />
+            <!-- Satellite appId: {{ targetApp }} -->
           </div>
         </template>
         <template #right>

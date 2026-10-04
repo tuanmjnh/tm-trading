@@ -32,7 +32,7 @@ interface LogsResponse {
 
 const { t } = useI18n()
 const appsStore = useAppsStore()
-const { hubFetch } = useHub()
+const { hubFetch, appId } = useHub()
 const notify = useNotify()
 const { viewMode } = useAdminGridView('logs-view-mode')
 const { title, description } = useAdminPageChrome({
@@ -44,7 +44,7 @@ const { exporting: exportingLogs, exportModule: exportLogs } = useModuleExport()
 
 const ALL = 'all'
 
-const selectedAppId = ref<string>('')
+const selectedAppId = ref<string>(appId || '')
 const actionFilter = ref<string>(ALL)
 const selectedLog = ref<AuditLogItem | null>(null)
 const isDetailOpen = ref(false)
@@ -197,14 +197,7 @@ useHead({ title })
       <UDashboardToolbar>
         <template #left>
           <div class="flex items-center gap-2 w-full min-w-0 sm:w-auto">
-            <USelectMenu
-              v-model="selectedAppId"
-              :items="appOptions"
-              value-key="value"
-              :placeholder="t('logs.selectApp')"
-              size="sm"
-              class="flex-1 min-w-0 sm:flex-none sm:w-48"
-            />
+            <!-- App fixed to satellite appId -->
             <AdminFilterPopover>
               <USelectMenu
                 v-if="logs.length > 0"

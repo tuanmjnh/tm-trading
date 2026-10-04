@@ -29,6 +29,20 @@ function check(name, cond, detail = '') {
   }
 }
 const close = (a, b, eps = 1e-9) => Math.abs(a - b) <= eps
+// An unexpected throw must NEVER hide the summary line (same guard as the other
+// hand-rolled suites).
+process.on('uncaughtException', (e) => {
+  fail++
+  console.log(`  FAIL (unexpected throw) — ${e && e.message}`)
+  console.log(`\nFAIL — ${pass} pass, ${fail} fail\n`)
+  process.exit(1)
+})
+process.on('unhandledRejection', (e) => {
+  fail++
+  console.log(`  FAIL (unhandled rejection) — ${(e && e.message) || e}`)
+  console.log(`\nFAIL — ${pass} pass, ${fail} fail\n`)
+  process.exit(1)
+})
 
 // --- fixtures ---------------------------------------------------------------
 const cfg = { ...RISK_DEFAULTS } // defaults: equity 10000, 1%/trade, cap 5%, lev 5x, maxOpen 5, expo 500%, minRR 1.5
@@ -94,6 +108,51 @@ check('BUY with TP <= entry -> BAD_TPS', evaluate({ ...LONG, tps: [63000] }, sna
 check('SELL with TP >= entry -> BAD_TPS', evaluate({ symbol: 'X', side: 'SELL', entry: 100, sl: 105, tps: [110] }, snap()).code === 'BAD_TPS')
 check('riskPerTradePct=0 -> SIZE_ZERO', evaluate(LONG, snap({ config: { ...cfg, riskPerTradePct: 0 } })).code === 'SIZE_ZERO')
 check('equity=0 -> SIZE_ZERO', evaluate(LONG, snap({ equity: 0 })).code === 'SIZE_ZERO')
+
+// =============================================================================
+section('4b. TP ladder with defective levels — REJECT, never coerce or drop')
+
+// DECISION (fail-closed, 2026-10-04). An element that is not a finite number is
+// REJECTED with its index. Coercion FABRICATES a level (Number(null) === Number('')
+// === Number([]) === 0, Number(true) === 1) and silently dropping the gap shortens
+// a ladder the alert contract indexes (`tps[level-1]`) while destroying the only
+// evidence of the defect. A stored `tps[0] = 0` then made findFirstExit's
+// `high >= tp1` test trivially true — a long "closed at TP" at price 0.
+const TPS_SELL = (tps) => evaluate({ symbol: 'X', side: 'SELL', entry: 100, sl: 105, tps }, snap())
+const TPS_BUY = (tps) => evaluate({ symbol: 'X', side: 'BUY', entry: 100, sl: 95, tps }, snap())
+const namesIndex = (r, i) => new RegExp(`tps\\[${i}\\]`).test(r.message || '')
+
+check('SELL tps=[null] -> BAD_TPS naming index 0', TPS_SELL([null]).code === 'BAD_TPS' && namesIndex(TPS_SELL([null]), 0), JSON.stringify(TPS_SELL([null])))
+check('SELL tps=[""] -> BAD_TPS naming index 0', TPS_SELL(['']).code === 'BAD_TPS' && namesIndex(TPS_SELL(['']), 0))
+check('SELL tps=["  "] (blank, not empty) -> BAD_TPS (Number(" ") === 0 trap)', TPS_SELL(['  ']).code === 'BAD_TPS')
+check('SELL tps=[void 0] -> BAD_TPS naming index 0', TPS_SELL([undefined]).code === 'BAD_TPS' && namesIndex(TPS_SELL([undefined]), 0))
+check('SELL tps=[NaN] -> BAD_TPS', TPS_SELL([NaN]).code === 'BAD_TPS')
+check('SELL tps=["abc"] -> BAD_TPS (garbage is not silently dropped either)', TPS_SELL(['abc']).code === 'BAD_TPS')
+check('BUY tps=[null] -> BAD_TPS', TPS_BUY([null]).code === 'BAD_TPS')
+check('BUY tps=[true] -> BAD_TPS (Number(true) === 1 would invent a level)', TPS_BUY([true]).code === 'BAD_TPS')
+check('BUY tps=[[]] -> BAD_TPS (Number([]) === 0 would invent a level)', TPS_BUY([[]]).code === 'BAD_TPS')
+
+// The index must point at the DEFECTIVE element (not always 0), and a defect
+// anywhere in the ladder must reject the whole order.
+check('BUY tps=[null,110] -> BAD_TPS naming index 0 (the doc that used to be stored)', namesIndex(TPS_BUY([null, 110]), 0), JSON.stringify(TPS_BUY([null, 110])))
+check('SELL tps=[90,null] -> BAD_TPS naming index 1', TPS_SELL([90, null]).code === 'BAD_TPS' && namesIndex(TPS_SELL([90, null]), 1), JSON.stringify(TPS_SELL([90, null])))
+check('SELL tps=[null,80] -> BAD_TPS naming index 0 (gap NOT dropped)', TPS_SELL([null, 80]).code === 'BAD_TPS' && namesIndex(TPS_SELL([null, 80]), 0), JSON.stringify(TPS_SELL([null, 80])))
+check('SELL tps=[90,"",80] -> BAD_TPS naming index 1', namesIndex(TPS_SELL([90, '', 80]), 1))
+check('SELL tps=[null,""] -> BAD_TPS naming the FIRST defect (index 0)', namesIndex(TPS_SELL([null, '']), 0))
+// A level must be a POSITIVE price: on a SHORT the side check (t >= entry) does not
+// catch 0 or a negative level, so `tps:[0]` used to be approved with rr computed
+// against price 0 (probe: {ok:true, rr:20}).
+check('SELL tps=[0] -> BAD_TPS naming index 0 (a zero level is not a price)', TPS_SELL([0]).code === 'BAD_TPS' && namesIndex(TPS_SELL([0]), 0), JSON.stringify(TPS_SELL([0])))
+check('SELL tps=[-5] -> BAD_TPS naming index 0 (negative level)', TPS_SELL([-5]).code === 'BAD_TPS' && namesIndex(TPS_SELL([-5]), 0), JSON.stringify(TPS_SELL([-5])))
+check('SELL tps=[90,0] -> BAD_TPS naming index 1 (zero is not a usable last TP)', TPS_SELL([90, 0]).code === 'BAD_TPS' && namesIndex(TPS_SELL([90, 0]), 1), JSON.stringify(TPS_SELL([90, 0])))
+check('BUY tps=[0] -> BAD_TPS', TPS_BUY([0]).code === 'BAD_TPS')
+
+// Valid ladders must keep working (no over-blocking).
+check('clean SELL tps=[90] -> allowed, rr 2', TPS_SELL([90]).ok === true && close(TPS_SELL([90]).rr, 2))
+check('clean BUY tps=[110] -> allowed, rr 2', TPS_BUY([110]).ok === true && close(TPS_BUY([110]).rr, 2))
+check('numeric strings still accepted (["90"]) -> rr 2', TPS_SELL(['90']).ok === true && close(TPS_SELL(['90']).rr, 2))
+check('multi-level clean ladder [110,120] -> allowed, rr from the LAST level (4)', TPS_BUY([110, 120]).ok === true && close(TPS_BUY([110, 120]).rr, 4))
+check('tps not an array -> BAD_TPS (still becomes [])', TPS_BUY(undefined).code === 'BAD_TPS' && TPS_SELL(null).code === 'BAD_TPS' && TPS_BUY('nope').code === 'BAD_TPS')
 
 // =============================================================================
 section('5. Stacked exposure / max open / leverage / min RR')

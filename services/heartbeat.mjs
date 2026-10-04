@@ -26,6 +26,7 @@ export const DEFAULT_INTERVALS = Object.freeze({
   regime: Number(process.env.REGIME_INTERVAL || 3600),
   liquidation: Number(process.env.LIQ_INTERVAL || 900),
   confluence: Number(process.env.CONFLUENCE_INTERVAL || 86400), // Phase 10 — 1 ngay/lan
+  brief: Number(process.env.AI_BRIEF_INTERVAL || 3600), // Phase 11 — hourly window check
 })
 
 /** Nhắc lại Telegram sau khi overdue: 6h (đổi qua HEARTBEAT_REMIND_H). */

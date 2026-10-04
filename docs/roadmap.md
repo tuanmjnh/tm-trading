@@ -450,41 +450,129 @@ funding/OI/liquidation zone (est ±% + L/S ratio); bảng filter alt-lướt ch�
 
 ### Phase 11 — AI Copilot (phân tích → phương án → lệnh)
 
-- [ ] `ai/gateway.mjs` — abstraction OpenAI / Anthropic / Ollama; key + model qua `.env`;
+- [x] `ai/gateway.mjs` — abstraction OpenAI / Anthropic / Ollama; key + model qua `.env`;
       rate-limit + log prompt/response (`logs/ai.ndjson`)
-- [ ] `ai/agent.mjs` — tool-calling: `queryDB` (runs/trades/signals/intel) · `getKlines` ·
+* ✅ (2026-10-04): `ai/gateway.mjs` (13.7 KB) — 3 provider (`openai`/`ollama` cùng dạng
+  chat/completions, `anthropic` dùng `/v1/messages` + `x-api-key` + `anthropic-version`),
+  rate-limit cửa sổ trượt `AI_RPM` (mặc định 30/60s), audit `logs/ai.ndjson`,
+  8 mã lỗi (`ai.no-key|rate-limited|timeout|network|http-error|api-error|bad-shape`).
+  Env: `AI_PROVIDER|AI_API_KEY|AI_BASE_URL|AI_MODEL|AI_MAX_TOKENS|AI_TIMEOUT_MS|AI_RPM|AI_TEMPERATURE|AI_LANG|AI_LOG|AI_LOG_FILE`.
+- [x] `ai/agent.mjs` — tool-calling: `queryDB` (runs/trades/signals/intel) · `getKlines` ·
       `scanMovers` · `methodSignals` · `regimeSnapshot` · `backtestQuick`
-- [ ] **Use-case ra output**:
+* ✅ (2026-10-04): `ai/agent.mjs` (14.3 KB) — `TOOLS`/`TOOL_NAMES` đủ **6 tool**, `toolSpecs()`,
+  `executeTool(name, params, deps)` (tiêm dep được), `defaultSystem()`, `runAgent()`.
+- [x] **Use-case ra output**:
       1. **Phân tích báo cáo backtest** → đề xuất chỉnh preset (gợi ý cho Phase 5)
       2. **Daily brief** (mỗi sáng): regime + scanner + funding + vị thế + rủi ro → Telegram
       3. **Trade plan**: Entry/SL/TP + lý do + confluence score → **qua risk gate**
       4. **Journal review**: nhận xét lệnh thua/lãi (Phase 13)
-- [ ] 🔒 **Guardrails (bắt buộc)**: AI **không** tự đặt lệnh thật — output là *đề xuất*; lệnh chỉ
+* ✅ (2026-10-04): (1) tool `backtestQuick`; (2) `ai/daily-brief.mjs` (5.6 KB) + **đã lên lịch**
+  trong `services/run.mjs` (`{ name: 'brief', run: runBrief }`, window-gated `AI_BRIEF_HOURS`,
+  `AI_BRIEF_INTERVAL`) và `heartbeat.mjs` theo dõi (7 service); (3) `agent.mjs` ghi rõ
+  *"Trade ideas are PROPOSALS only (entry/SL/TP + reason + confluence)"*; (4) **chờ Phase 13** —
+  chưa có lệnh thật để review.
+- [x] 🔒 **Guardrails (bắt buộc)**: AI **không** tự đặt lệnh thật — output là *đề xuất*; lệnh chỉ
       chạy khi qua `exec/risk.mjs` + (tuỳ cấu hình) xác nhận của người; audit log toàn bộ quyết định
+* ✅ (2026-10-04): guardrail viết thành văn trong code — `agent.mjs`: *"PROPOSALS only; anything
+  executable must still pass exec/risk.mjs"*; `daily-brief.mjs`: *"no order path exists here"*;
+  brief đọc trạng thái rủi ro qua `loadRiskConfig`/`loadSnapshot` từ `exec/risk.mjs`;
+  **audit toàn bộ** prompt/response ở `logs/ai.ndjson` (`appendAiLog`, fail-soft).
+* ❗ **Bug thật bắt được khi rà roadmap (2026-10-04):** `package.json` có `"test:ai": "node ai/test.mjs"`
+  và **`npm test` gọi nó ở bước cuối**, nhưng **`ai/test.mjs` không tồn tại** → `npm test` hỏng.
+  Đã viết `ai/test.mjs` (xem §9). *Bài học: 3 file `ai/*.mjs` có script riêng nhưng thiếu test —
+  đúng loại lỗi mà "chạy `npm test`" bắt được, còn đọc code thì không.*
 
 **Acceptance:** daily brief chạy tự động; trade plan trên dashboard có lý do + điểm confluence;
 mọi lệnh AI đều qua risk gate và có audit trail.
 
 ### Phase 12 — Execution MT5 cho XAU/XAG (và crypto qua exchange)
 
-- [ ] `exec/mt5/` — bridge MetaTrader 5:
+- [x] `exec/mt5/` — bridge MetaTrader 5: **phía NODE xong + đã kiểm chứng; `server.py` CHƯA chạy được**
       * **A (khuyến nghị)**: micro-service Python (`MetaTrader5` lib official, chỉ chạy Windows
         cạnh MT5) ↔ server qua HTTP/NDJSON — Node giữ phần còn lại
       * **B**: MetaAPI cloud (SDK Node, trả phí) — không cần máy chạy Python
-- [ ] Tính năng: kết nối tài khoản (**demo trước, real sau**), đọc positions/balance/equity
+- [~] Tính năng: kết nối tài khoản (**demo trước, real sau**), đọc positions/balance/equity
       realtime, đặt lệnh market/pending (entry + SL + TP theo plan), sửa/đóng lệnh
 - [ ] Nguồn tín hiệu XAU: TV alert → risk → MT5; sau Phase 10: engine signals XAU
       (cần data XAU — song song tìm nguồn: exchange XAU pair hoặc data API)
 - [ ] Position sync: lệnh MT5 ↔ collection `positions` → dashboard
+
+* ✅ (2026-10-04) checkpoint §7 của `docs/mt5-ipc.md`: `exec/mt5/client.mjs` (586 dòng, transport
+  Node — **đã kiểm chứng**), `exec/mt5/server.py` (822 dòng — **CHƯA KIỂM CHỨNG**), `exec/mt5/test.mjs`
+  (538 dòng, **92 assertion**). `server/webhook.mjs` +44 dòng (`mt5HealthComponent()` vào `/health`
+  tổng, D9) + 2 check trong `tools/smoke.mjs`. `test:mt5` đã nối vào `npm test`.
+* ✅ **Idempotency (bất biến sinh tử) — đã kiểm chứng bằng MUTATION, không chỉ đọc test:**
+  mutation làm `idempotencyKeyFor` không tất định → suite đổ **8 FAIL**, trong đó:
+  `both calls return the SAME ticket — 40311842 vs 40311843`, `mock minted exactly ONE ticket
+  — created=2`, **`duplicate answer placed nothing new — positions=2`** (tức **2 lệnh thật thay vì
+  1**), và `Idempotency-Key` lệch khỏi `clientOrderId` thật của `engine/keys.mjs`.
+  Đã khôi phục và xác minh hash `ec0775639478a2a0b02fd5b5d3674303`. ⇒ Suite này **bảo vệ đúng
+  chỗ mất tiền**, không phải test hình thức.
+* ❗ **Chưa kiểm chứng / còn thiếu:** (a) `server.py` chưa từng chạy — máy này **không có**
+  `MetaTrader5` (`ModuleNotFoundError`, Python 3.11.9 có sẵn), không có terminal MT5, sandbox chặn
+  spawn tiến trình; chỉ `py_compile` (cú pháp) đạt. (b) **Nguồn dữ liệu XAU chưa có.** (c) Chưa
+  round-trip MT5 thật → chưa biết quirk `filling-mode`/`retcode`. ⇒ **Acceptance của phase CHƯA đạt**,
+  cần máy bạn có MT5.
+* 📌 **Mâu thuẫn trong hợp đồng đã phát hiện, cần chốt lại `docs/mt5-ipc.md`:** §3 (`GET` không
+  retry trong 1 request) **mâu thuẫn** §4 (GET idempotent retry tối đa 2 lần) → tạm giải:
+  `/health`+`/account` gọi 1 lần, `/positions`+`/history` có retry. §4.4 nói tra theo "ticket"
+  nhưng lúc `unknown` **chưa có ticket** (§4.1 chỉ ghi `clientOrderId`). §2.1/§4.2 **không định nghĩa**
+  cách so payload (byte-exact hay canonical) — hậu quả nặng vì lệch → 409 → **khoá lệnh vĩnh viễn**.
+  §6 yêu cầu `account_type` trong `/health` nhưng ví dụ §2.2 không có, và MT5 chỉ cho `trade_mode` số.
+  §2.1 đặt `Idempotency-Key` ở **body** trong khi yêu cầu là **header**. Không rõ `/health` có cần
+  token không.
 
 **Acceptance:** pipeline demo: signal XAU → risk gate → lệnh demo MT5 → đồng bộ dashboard;
 chỉ mở real khi paper/demo đạt mục tiêu phase.
 
 ### Phase 13 (backlog) — Journal + Feedback loop
 
-- [ ] Trade journal tập trung (mọi nguồn: paper, MT5, manual) → tag method/regime
-- [ ] AI review định kỳ: lỗi lặp (vào trễ, SL quá rộng, trade ngược regime...) → đề xuất rule
-- [ ] Dataset lệnh → đo preset live vs preset backtest (**drift theo thời gian**, khác D8)
+- [x] Trade journal tập trung (mọi nguồn: paper, MT5, manual) → tag method/regime
+- [~] AI review định kỳ: lỗi lặp (vào trễ, SL quá rộng, trade ngược regime...) → đề xuất rule
+- [x] Dataset lệnh → đo preset live vs preset backtest (**drift theo thời gian**, khác D8)
+
+> **Status (2026-10-04, English per the new language policy).**
+> **Item 1 — BUILT.** `engine/journal.mjs` (+ `engine/models/journal.mjs`, collection
+> `journal`) unifies executed trades from every source (`paper`/`mt5`/`exchange`/`manual`)
+> into one journal tagged with `source · symbol · tf · dir · entry/SL/TP · result · R ·
+> fees · engineVersion · paramsHash · method · regime · entry/exit timestamps`. It is a
+> derived read model over `positions` (the only place a real fill exists), so it respects
+> D3/D4: `key` is *derived from* the upstream identity (`account`+`source`+`externalId|_id`)
+> with a UNIQUE index, and re-syncing is a no-op — no second order-id scheme. Tags that
+> cannot be derived are recorded as `unknown` and listed in `unknown[]`; `fees` stays
+> `null` because paper PnL is fee-free by design (0 would claim costs were measured).
+> `tf` is not stored on `positions` at all → resolved through the opening alert, else
+> unknown. `regime` is a point-in-time `intel` lookup (no look-ahead). Query helpers
+> (`filterJournal` / `journalStats` / `groupJournal`) are pure, so the dashboard can use
+> them without a DB; `syncJournal`/`loadJournal` write NDJSON always and Mongo when
+> present. Home chosen: `engine/` (data layer over engine models, like `engine/store.mjs`);
+> `services/` is defined as periodic jobs.
+> **Item 3 — BUILT.** `engine/preset-drift.mjs` measures preset drift **over time**:
+> executed rows are bucketed by `engineVersion#paramsHash` (D1 — a live dataset spanning
+> several generations is REFUSED, no pooled number is printed) and by UTC-aligned time
+> window, then compared against the FROZEN backtest preset from `reports/trades.ndjson`
+> (win rate + expectancy in R + deltas + trend). Sample size is printed per bucket and a
+> bucket below `--min-trades` (default 20 R samples) is marked **insufficient evidence**
+> with no delta — D12. This is explicitly NOT D8: `exec/drift.mjs` compares TV ENTRY
+> alert counts against engine setups and halts; preset drift measures the preset and
+> takes no action.
+> **Blocker found (must be fixed before the number means anything):** nothing on the
+> live path writes a version stamp — `exec/paper.mjs` → `exec/risk.mjs recordOpen()` stores
+> `paramsHash: null`, `source: 'paper'` hardcoded, and `positions` has no `tf`/`exitReason`
+> field — so live rows honestly come out as `unknown#unknown` and the report says
+> "cannot compare". `--live-preset/--live-engine-version` exist to fill MISSING stamps
+> (declaration, never an overwrite) until the live path stamps its own trades.
+> **Item 2 — SCAFFOLD ONLY.** `ai/review.mjs`: deterministic `reviewDigest()`, prompt
+> builder with the recurring-error taxonomy (`entry-too-late`, `sl-too-wide`,
+> `against-regime`, `rr-too-low`, ...), tolerant `parseReviewProposals()`, and `runReview()`
+> as the single entry point **through `ai/gateway.mjs`** (never a provider directly).
+> Deliberately NOT built: scheduling (nothing in `services/run.mjs` calls it), persistence
+> of proposals, Telegram delivery, and any feedback into engine parameters — item 2 needs
+> real accumulated trades first, and `runReview()` refuses to spend a model call while the
+> journal is below the D12 threshold (`--force` reviews anyway and says so in the prompt).
+> **Tests:** `test:journal` 122 · `test:preset-drift` 88 · `test:ai-review` 71, all wired
+> into `npm test`; pure (no Mongo/network/API key) and they assert no DB connection was
+> opened.
 
 ---
 

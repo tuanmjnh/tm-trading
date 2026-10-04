@@ -105,8 +105,8 @@ importers:
         specifier: 4.3.3
         version: 4.3.3
       tm-hub-client:
-        specifier: 1.0.3
-        version: 1.0.3
+        specifier: 1.0.4
+        version: 1.0.4
       uuid:
         specifier: ^14.0.2
         version: 14.0.2
@@ -6595,8 +6595,8 @@ packages:
     resolution: {integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==}
     engines: {node: '>=12.0.0'}
 
-  tm-hub-client@1.0.3:
-    resolution: {integrity: sha512-JTCHtHISn7pR4JJFYZXhnPC7sZToszjt8rQFqgXVnE3oCRVW1LPLgCu5rfca9C1JAHjtvqWt37P7lF4T+2ZdAg==}
+  tm-hub-client@1.0.4:
+    resolution: {integrity: sha512-7AKDWrQcJYxISnEzfz8A+cmWJex070e3Ntkgiyy5v0klzHUSimdNBPQW8fFr2/evV3HbfSkmCFcUtJv4meqLrg==}
 
   to-regex-range@5.0.1:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}
@@ -14707,7 +14707,7 @@ snapshots:
       fdir: 6.5.0(picomatch@4.0.7)
       picomatch: 4.0.7
 
-  tm-hub-client@1.0.3: {}
+  tm-hub-client@1.0.4: {}
 
   to-regex-range@5.0.1:
     dependencies:

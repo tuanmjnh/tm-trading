@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { getErrorMessage } from '~/shared/utils/errors'
+import type { HeaderAction } from '~/components/base/HeaderActions.vue'
+import { buildExportChildren, useModuleExport } from '~/composables/useModuleExport'
 
 definePageMeta({
   middleware: () => {
@@ -423,6 +425,34 @@ const getActionOptions = (item: ConfigItem) => [
   ]
 ]
 
+const { exporting, exportModule } = useModuleExport()
+
+const headerActions = computed<HeaderAction[]>(() => [
+  {
+    key: 'import',
+    icon: 'i-lucide-file-up',
+    label: t('import.open'),
+    overflow: true,
+    onSelect: () => navigateTo({ path: '/resources/import', query: { target: 'configs' } })
+  },
+  {
+    key: 'export',
+    icon: 'i-lucide-file-down',
+    label: t('admin.export.action'),
+    overflow: true,
+    disabled: exporting.value,
+    children: buildExportChildren(t, fmt => exportModule('configs', fmt))
+  },
+  {
+    key: 'add',
+    icon: 'i-lucide-plus',
+    label: t('configs.new'),
+    color: 'primary',
+    primary: true,
+    onSelect: openCreate
+  }
+])
+
 onMounted(() => load(true))
 </script>
 
@@ -430,7 +460,7 @@ onMounted(() => load(true))
   <BasePage id="admin-configs" :title="$t('configs.title')">
     <template #right>
       <div class="flex items-center gap-2">
-        <UButton icon="i-lucide-plus" :label="t('configs.new')" color="primary" variant="soft" @click="openCreate" />
+        <BaseHeaderActions :actions="headerActions" />
         <UButton icon="i-lucide-refresh-cw" variant="soft" color="neutral" size="sm" :loading="loading"
           @click="refresh" />
       </div>

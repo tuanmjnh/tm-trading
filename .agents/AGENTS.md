@@ -1,114 +1,158 @@
-# AGENTS.md
+# AGENTS.md — tm-trading
 
 Guidance for AI coding agents working in this repository.
 
-## Project overview
+> **This file describes `tm-trading` only.** For tm-hub read `../tm-hub/AGENTS.md`, and for tm-tools read `../tm-tools/AGENTS.md`.
 
-Electron + Nuxt 4 desktop application using Nuxt UI v4 (Tailwind CSS v4). It is a dashboard app with:
+## What this project is
 
-- JWT authentication (access + refresh token rotation)
-- Role-based access control (RBAC) with module-level permissions
-- **Dynamic menu system**: the sidebar navigation is generated at runtime from a `system_routes` table (DB-stored route tree, fetched from tm-hub API via `GET /api/v1/apps/:appId/routes`) **filtered by the user's `isVisible` flag** (root AND children). Role `allowedRoutes` does **not** affect the tm-tools client menu (it only controls UI display + hub `/auth/routes`). Route labels are i18n keys like `nav.*` — resolved via `t()`.
-- MongoDB (default) or Supabase (Postgres) database backends
-- i18n (EN/VI), Web Push notifications, Tiptap rich text editor, Cloudinary uploads, Unovis charts
+An **automated trade desk** and quantitative signal execution platform with an integrated Nuxt 4 administration dashboard:
+
+- **`engine/`** — Node ESM signal engine + backtester (the backbone)
+- **`exec/`** — risk gate, drift detection, paper execution
+- **`services/`** — periodic jobs: intel, regime, scanner, funding, liquidation, confluence
+- **`ai/`** — AI copilot: provider gateway, tool-calling agent, daily brief
+- **`app/`** — Nuxt 4 dashboard (Nuxt UI v4 + Tailwind v4) running on Port 4001 (`APP_PORT=4001`)
+- **`pine/`** — TradingView indicators, a **supporting tool** (signal source + manual cross-check), not the product
+- **`server/`** — the TradingView webhook receiver (zero-dependency Node HTTP)
+
+**Engine core is dependency-free.** `tools/build.mjs`, `engine/ta.mjs`, `engine/methods/*`,
+`engine/version.mjs` and their tests run with plain Node — no `npm install` needed. Nuxt and
+Mongoose are only required for the dashboard and the store layer.
 
 ## Commands
 
+**Package manager is `npm`** (not pnpm). See `.npmrc` and "Environment gotchas" below.
+
 ```bash
-pnpm install        # install dependencies (pnpm is the package manager)
-pnpm dev            # Nuxt dev server on http://localhost:3000
-pnpm dev:electron   # Nuxt dev + Electron together
-pnpm typecheck      # nuxt typecheck (vue-tsc) — always run after type changes
-pnpm lint           # eslint (run on files you modify)
-pnpm build          # nuxt build
-pnpm build:electron # nuxt build + electron-builder (Windows)
-pnpm generate:vapid # generate Web Push VAPID keys
+npm run build          # assemble pine/parts* -> pine/dist (4 targets) + lint
+npm test               # smoke + engine + journal + preset-drift + risk + paper
+                       # + drift + mt5 + db + services + ai + ai-review (12 suites)
+npm run verify         # build + test  <- the gate; must stay green
+npm run typecheck      # tools/typecheck.mjs
 
-# Seeding routes & roles for tm-tools is managed centrally via tm-hub:
-# cd ../tm-hub && pnpm seed:tools        # update routes & roles
-# cd ../tm-hub && pnpm seed:tools:reset  # reset and recreate routes & roles
+npm run dev            # Nuxt dashboard  -> http://localhost:4001/
+npm run services       # run periodic services (watch mode)
+npm run services:once  # run all services once
+npm run services:status# service + heartbeat status
+
+npm run engine:run     # backtest CLI (--symbols --tfs --market --preset)
+npm run engine:league  # method league table -> docs/method-league.md
+npm run notify         # TradingView webhook receiver
+
+npm run ai:gateway     # smoke the AI provider gateway
+npm run ai:agent       # run the AI agent
+npm run ai:brief       # force a daily brief
+
+npm run backup         # backup
+
+# Central Seeding via tm-hub:
+# cd ../tm-hub && pnpm seed --app=trading        # sync routes, roles, & configs
+# cd ../tm-hub && pnpm seed:reset --app=trading  # reset and recreate trading data
 ```
 
-## Project structure
+Individual suites: `test:pines`, `test:engine`, `test:journal`, `test:preset-drift`,
+`test:risk`, `test:paper`, `test:drift`, `test:db`, `test:services`, `test:ai`,
+`test:ai-review`, `test:app`.
+
+## Layout
 
 ```
-app/                 Nuxt app (pages, layouts, components, composables, middleware)
-app/pages/           Route pages (index, chat, media, login, register, settings, system, administration/*, utilities/*, profiles/*, tools/*)
-app/composables/     useAuth, useNavMenu, etc.
-app/layouts/         default.vue (sidebar + UNavigationMenu)
-app/middleware/      auth.global.ts (client route guard)
-electron/            Electron main + preload (main.cjs, preload.cjs)
-i18n/                Locale files (en.json, vi.json)
-server/api/          Nitro API routes
-server/config/       index.ts — environment-driven config (see below)
-server/modules/      auth/, rbac/, database/
-supabase/            SQL migrations for Supabase provider
-types/               Shared types (auth.ts, rbac.ts) — imported from both app/ and server/
+engine/           ta, version, keys, db, data, backtest, report, store, run, league,
+                  journal (central executed-trade journal),
+                  preset-drift (live preset vs frozen backtest preset)
+engine/methods/   method plugins: vsa (method 0), priceAction, trend, orderflow (+ index, all)
+exec/             risk, drift, paper, env
+services/         binance, news, funding, scanner, regime, liquidation, confluence,
+                  telegram, heartbeat, store, run
+ai/               gateway, agent, daily-brief, review
+app/              Nuxt dashboard:
+  ├── components/ BasePage, LazyGridList, LazyBaseConfirmModal, JsonEditor, form inputs
+  ├── composables/ useAuth, useHub (tm-hub-client wrapper), useNavMenu, useWebPush
+  ├── layouts/    default.vue (dashboard layout with sidebar)
+  ├── pages/
+  │   ├── index.vue, runs.vue, signals.vue
+  │   ├── administration/ (users, roles, permissions, routes, configs, logs, apps)
+  │   ├── resources/      (media, inbox, notifications, connections, import, queues)
+  │   ├── utilities/      (text, icons, encode, random, editor)
+  │   └── system/         (profile, docs, settings)
+server/           webhook.mjs (TradingView receiver)
+pine/             parts/ parts-vsa/ shared/ dist/   (build inputs; dist is generated)
+tools/            build, smoke, errors, copy, pine-ref, typecheck, backup
+docs/             roadmap, architecture, data-model, time-rules, alert-schema, mt5-ipc,
+                  method-league, vsa-wyckoff-method, vsa-optimization, app-inheritance
+tests/            run-tests.mjs (app-level suite)
 ```
 
-## Architecture notes
+## Architecture rules that must not be broken
 
-### Database abstraction
+### 1. Pine ↔ engine parity is risk #1
+`docs/vsa-wyckoff-method.md` is the **spec**; golden fixtures in `engine/test.mjs` guarantee the
+engine matches Pine. Any change to `pine/parts-vsa/` (or `engine/methods/vsa.mjs`) requires
+re-running the fixtures. `tools/build.mjs` lints Pine against `tools/pine-ref.json`, which is
+**generated** (`npm run ref`) — never hardcode Pine knowledge from memory.
 
-- `server/modules/database/index.ts` defines `DatabaseAdapter` interface. `getDatabase()` returns either `MongoDBAdapter` (`mongodb.ts`) or `SupabaseAdapter` (`supabase.ts`) based on `AUTH_PROVIDER`.
-- `getAppDatabase()` is a separate MongoDB-only adapter (`database/app.ts`) for app data.
-- **When adding new data operations: add the method to the `DatabaseAdapter` interface AND implement it in BOTH `mongodb.ts` and `supabase.ts`.** The Supabase adapter maps snake_case columns (`parent_id`, `is_visible`, `allowed_routes`, `allowed_routes`).
+### 2. Every stored result carries a version stamp (D1)
+`engine/version.mjs` — `engineVersion`, `paramsHash`, `params`, `dataHash`, `universeSnapshot`,
+`gitRev`. Bump `ENGINE_VERSION` whenever behaviour changes. **Never mix runs from different
+`paramsHash`/`engineVersion`** in a report or preset table.
 
-### Dynamic menu system (important)
+### 3. No order without the risk gate (D7)
+`exec/risk.mjs` is the single choke point for every order (manual, scanner, AI, MT5). AI output is
+**proposals only** — see the guardrail comments in `ai/agent.mjs` and `ai/daily-brief.mjs`.
 
-- Route tree is stored flat in `system_routes`: `id, path, name, label, icon, sort, isVisible, parentId, isDeleted`.
-- Routes are fetched at runtime from tm-hub API (`GET /api/v1/apps/:appId/routes`) → `useHub().routes.list()` → flat tree → `buildTree` (sorted by `sort`).
-- `app/composables/useNavMenu.ts` builds `NavigationMenuItem[]` for the sidebar; **`buildNavItems` hard-filters out routes named `settings`** (hidden from sidebar, still reachable by URL) **and filters `isVisible !== false` at root AND children**.
-- Role `allowedRoutes` does **not** affect the tm-tools client menu — it only controls UI display + hub `/auth/routes`. The Roles page (`app/pages/administration/roles.vue`) uses `SharedHeTreeMenu` (ported `@he-tree/vue` component) for tree selection; selecting a node auto-selects its parents and children.
-- Client guard: `app/middleware/auth.global.ts` fetches all app routes via `nav.fetchRoutes()` and redirects to the first allowed path when access is denied. Root (`/`) bypass is: `user.role === 'root' || user.permissions?.includes('*')`.
+### 4. Idempotency has two layers (D3/D4)
+`engine/keys.mjs`: `alertKey` (alert dedupe; unique index on `alerts.alertKey`) and
+`clientOrderId` (order-layer idempotency). Never rely on in-memory dedupe for anything that can
+place an order.
 
-### Auth & RBAC
+### 5. Time is UTC everywhere (D2)
+See `docs/time-rules.md`. Business days are `YYYY-MM-DD` strings, never local time.
 
-- `server/modules/auth/` — login/register/refresh logic, JWT via `jose`, bcrypt password hashing. Login flow goes through hub API (`POST /api/v1/auth/login` with `X-App-Id` header). Credentials: `root@example.com`/`root123` (TOTP root disabled).
-- `server/modules/rbac/service.ts` — `getUserAccess()` builds permissions + allowedRoutes for a user; both auth providers use it.
-- `server/middleware/rbac.ts` — server-side API guard using a `permissionMap` (currently `{}` — all `/api/*` except `publicRoutes` are open). Auth middleware wraps all `/api/*` routes.
-- Demo users (from seed): `root@example.com/root123`, `admin@example.com/admin123`, `test@example.com/test123`.
+### 6. Measurement honesty (D12)
+Phase 5 (preset optimizer) was **deliberately skipped**: the random-entry baseline showed VSA is
+not distinguishable from random entries, so tuning parameters would only produce confident
+overfitting. Read `docs/vsa-optimization.md` before proposing any parameter optimisation.
 
-### Config
+## Platform Integration — Satellite of TM Hub
 
-- `server/config/index.ts` reads env vars with hardcoded fallbacks (Supabase/Cloudinary/Firebase dev credentials are committed as defaults). Create `.env` from `.env.example` to override. `AUTH_PROVIDER` = `mongodb` or `supabase`. Ports: `HUB_PORT` (tm-hub, default 4000), `TOOLS_PORT` (tm-tools, default 3000). Create `.env` files in each app root to set custom ports.
+`tm-hub` (Port 4000) is the central IAM, route catalog, configuration store, and notification hub:
 
-### i18n
+- **Satellite Connection**:
+  - Connects to TM Hub via `useHub()` (wrapping `tm-hub-client`) with `X-App-Id: tm-trading_8pmp33`.
+  - Login/auth requests go directly to Hub (`POST /api/v1/auth/login`).
+  - Configure via `.env`: `NUXT_PUBLIC_HUB_URL=http://localhost:4000`, `NUXT_PUBLIC_HUB_APP_ID=tm-trading_8pmp33`.
+- **Dynamic Menu Catalog**:
+  - Navigation menu is fetched from TM Hub via `GET /api/v1/apps/:appId/routes` (`system_routes` table) filtered by `isVisible !== false`.
+  - Route labels map to i18n keys (`nav.*`).
+- **Satellite Administration & Resources Modules**:
+  - `/administration/*` (Users, Roles, Permissions, Routes, Configs, Logs, Apps) and `/resources/*` (Media, Inbox, Notifications, Connections, Import, Queues) interface with TM Hub API while displaying locally in the dashboard.
+- **Push Notifications & Firebase FCM**:
+  - Device subscriptions use `useWebPush.ts` and `public/push-sw.js`.
+  - Supports both **Firebase Cloud Messaging (FCM)** and standard **VAPID Web Push** dispatched via TM Hub.
 
-- Locale keys live in `i18n/locales/{en,vi}.json`. Any new user-facing string must be added to BOTH files. Menu/route labels use `nav.*` keys; admin/role UI uses `admin.*` keys.
+## UI & Coding Conventions
 
-## Conventions
+- **BasePage Mandatory**:
+  - Every page MUST wrap its layout in `<BasePage :title="..." :description="...">`.
+  - Auxiliary header buttons belong in `template #right`.
+- **Button Variants**:
+  - Primary actions use `color="primary" variant="soft"`.
+- **GridList & Batch Deletion**:
+  - Prefer `LazyGridList` over `BaseTable`. Always provide a `#mobile-content` slot for responsive cards.
+  - Delete operations support batch removal using `LazyBaseConfirmModal`.
+- **i18n Mandatory**:
+  - All user-facing strings MUST be defined in both `i18n/locales/en.json` and `i18n/locales/vi.json`.
+  - Never hardcode raw English or Vietnamese in template markup.
+- **Language Policy**:
+  - All NEW code, comments, log/error strings, CLI output and docs MUST be in English.
+  - User-facing Vietnamese belongs strictly in `i18n/locales/vi.json` via `t()`.
 
-- TypeScript everywhere (`@typescript-eslint/no-explicit-any` is an error — avoid `any` in new code; note some pre-existing `any` casts remain in seed code and are exempted by repo style).
-- No code comments unless asked.
-- Nuxt auto-imports: `app/components/**` become `<XxxYyy>` components (e.g. `app/components/shared/HeTreeMenu.vue` → `<SharedHeTreeMenu>`).
-- `pnpm` is the package manager — never introduce `npm`/`yarn`/`pnpm`-incompatible tooling.
-- Use Nuxt UI v4 components (`UButton`, `UModal`, `UForm`, etc.) with `:ui` prop / variants API — do not use Tailwind `@apply` overrides or old `:ui="{ width }"` patterns (removed in v4).
-- Always run `pnpm typecheck` after touching types; run `pnpm lint` on modified files.
-- **GridList & Batch Deletion Conventions**:
-  - **GridList Usage**: Prefer `LazyGridList` over `BaseTable` for list views. Always provide a `#mobile-content` slot to design custom card layouts for mobile viewports.
-  - **Batch Deletion API**: DELETE API endpoints (e.g., `/api/users`, `/api/rbac/roles`) must support batch deletion by splitting a comma-separated `id` query parameter (e.g. `query.id.split(',')`).
-  - **Batch Deletion UI**: Show a batch delete button (`i-lucide-trash`, `error` color, `subtle` variant) next to the add action in the `template #right` of `BasePage` when items are selected. Use `LazyBaseConfirmModal` for verification and list names of targeted items. Protect items like the active user or system roles from deletion.
-- **Page & Header Conventions (`BasePage`)**:
-  - **Mandatory Usage**: All new pages/modules MUST wrap their content in `<BasePage>` (`app/components/base/Page.vue`).
-  - **Header Structure**:
-    - **Left**: Displays `title` and optional `description` (passed as props `:title` and `:description`, or custom slots `#leading` / `#left`).
-    - **Right**: Automatically renders Notifications Bell (`DashboardBellButton`) with unread count and Settings slideover button (`isSettingsSlideoverOpen`). Custom action buttons are placed in `template #right`.
-    - **Overflow Actions**: When there are multiple action buttons or auxiliary options, bundle secondary actions into a dropdown menu triggered by an ellipsis-vertical icon (`i-lucide-ellipsis-vertical`) via `UDropdownMenu` or `BaseHeaderActions` to avoid header overflow across viewports.
-  - **Page Padding**:
-    - **Standard Pages**: Keep default padding provided by `BasePage` (`UDashboardPanel`).
-    - **Studio / Editor Pages (e.g. TMCut Editor)**: MUST pass the `flush` prop (`<BasePage flush ...>`) to remove all padding/gap (`p-0 sm:p-0 gap-0 sm:gap-0`), giving 100% of the viewport to the timeline, canvas player, and inspectors.
-- **Button Variant Convention**:
-  - Default/standard buttons (`UButton`) MUST use `variant="soft"` for secondary, auxiliary, navigation, and regular interactive actions.
-  - Primary call-to-action buttons (like Create, Submit, Save, Export) may use `color="primary" variant="solid"`.
-  - Avoid using `variant="subtle"` or plain default buttons when a soft variant is appropriate for clean contrast.
-- **i18n Mandatory Convention**:
-  - All user-facing strings (labels, titles, descriptions, placeholders, button texts, toast messages, confirmations) MUST be defined in both `i18n/locales/en.json` and `i18n/locales/vi.json`.
-  - NEVER hardcode Vietnamese or English raw text directly in template markup or script notifications without i18n `t()` keys.
-- **Language Convention for Code, Comments & Hardcoded Text**:
-  - All source code comments (when requested), technical identifiers, constants, console/error logs, and default fallback strings MUST ALWAYS be written in English.
-  - NEVER write Vietnamese in code comments, docstrings, or hardcoded strings in code. All Vietnamese texts MUST strictly reside inside `i18n/locales/vi.json` and accessed via `t()`.
+## Testing & Verification
 
-## Testing
-
-No test suite is configured. Verification is manual via `pnpm dev` (or `pnpm dev:electron`) + `pnpm typecheck` + `pnpm lint`.
+Verification is manual:
+```bash
+npm run verify        # build Pine + run all unit/smoke suites
+npm run typecheck     # Nuxt vue-tsc typecheck
+npm run lint          # ESLint check
+```

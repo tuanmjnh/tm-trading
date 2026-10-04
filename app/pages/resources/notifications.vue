@@ -22,10 +22,8 @@ const { title, description } = useAdminPageChrome({
 })
 const { buildRowActions } = useAdminRowActions()
 const { exporting: exportingNotifications, exportModule: exportNotifications } = useModuleExport()
-const notificationsAppId = computed(() => {
-  const store = useAppsStore()
-  return store.activeAppId || store.apps[0]?.id || ''
-})
+const { appId: hubAppId } = useHub()
+const notificationsAppId = computed(() => hubAppId)
 
 const isRoot = computed(() => auth.user.value?.permissions?.includes('*')
   || auth.user.value?.permissions?.includes('notifications.send')

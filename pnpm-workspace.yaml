@@ -47,4 +47,4 @@ minimumReleaseAgeExclude:
   - '@rollup/rollup-win32-x64-gnu@4.64.0'
   - '@rollup/rollup-win32-x64-msvc@4.64.0'
   - rollup@4.64.0
-  - tm-hub-client@1.0.2 || 1.0.3
+  - tm-hub-client@1.0.2 || 1.0.3 || 1.0.4

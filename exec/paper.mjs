@@ -31,6 +31,13 @@
 //     OLDEST one first;
 //   - TAKE_PROFIT closes the full position (partial exits = Phase 11+).
 //
+//  FAIL-CLOSED ON A DEFECTIVE TP LADDER: a level that is not a positive finite
+//  number (null/''/0 — what `Number(null)` produces) is never stored on a
+//  position and never used by the exit scanner. `findFirstExit` refuses such a
+//  level, and the ENTRY path rejects the alert instead, because a stored
+//  `tps[0] = 0` would make its `high >= tp1` test trivially true — a long would
+//  be "closed at TP" at price 0 (fabricated PnL + a spurious daily-loss halt).
+//
 //  CLI:
 //    node exec/paper.mjs                 one cycle, then exit
 //    node exec/paper.mjs --watch         loop (PAPER_INTERVAL sec, default 60)
@@ -74,10 +81,15 @@ const apiSymbol = (s) => (s.endsWith('.P') ? s.slice(0, -2) : s)
 
 /**
  * First SL/TP1 touch AFTER `afterMs`, conservative intra-bar ordering.
+ * Refuses to scan when a level is not a POSITIVE price: `tp1 = 0` makes the
+ * `high >= tp1` test trivially true, so a long would be "closed at TP" at price
+ * 0 (fabricated PnL), and a non-positive stop is equally meaningless.
  * @returns {{price:number, time:number, kind:'sl'|'tp'} | null}
  */
 export function findFirstExit(bars, { dir, sl, tp1 }, afterMs) {
   if (!Number.isFinite(sl) || !Number.isFinite(tp1)) return null
+  if (sl <= 0 || tp1 <= 0) return null
+  if (dir !== 1 && dir !== -1) return null // an unknown direction must not be treated as a short
   for (const b of bars) {
     if (b.time <= afterMs) continue
     if (dir === 1) {
@@ -103,6 +115,30 @@ export function followExitPrice(alert) {
     return Number.isFinite(tp) ? tp : Number(alert.price)
   }
   return null // TIME_CLOSE -> market (resolved by caller from latest data)
+}
+
+/**
+ * The TP ladder that is safe to STORE on a position, or a defect report.
+ *
+ * The exit scanner reads `tps[0]`, so a 0 there (exactly what `Number(null)`
+ * gives) would "close" a long at price 0. Returns `{ok:true, tps}` with coerced
+ * POSITIVE levels, or `{ok:false, index, value, reason}` — the caller must then
+ * fail closed (reject the alert) instead of storing the raw array.
+ */
+export function sanitizeTps(tps) {
+  if (!Array.isArray(tps) || tps.length === 0) {
+    return { ok: false, index: null, value: tps, reason: 'tps must be a non-empty array' }
+  }
+  const out = []
+  for (let i = 0; i < tps.length; i++) {
+    const v = tps[i]
+    const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN
+    if (!Number.isFinite(n) || n <= 0) {
+      return { ok: false, index: i, value: v, reason: `tps[${i}] is not a positive finite number` }
+    }
+    out.push(n)
+  }
+  return { ok: true, tps: out }
 }
 
 // =============================================================================
@@ -143,6 +179,18 @@ export async function runCycle(config = loadRiskConfig(), opts = {}) {
         console.log(`[paper] REJECT ${a.symbol} ${a.side} — ${decision.code}`)
         continue
       }
+      // Fail closed on a defective ladder. The gate already rejects gaps, but a
+      // legacy/manually inserted alert doc can still carry one, and this is the
+      // function that STORES the array the exit scanner later reads as tps[0].
+      const safeTps = sanitizeTps(a.tps)
+      if (!safeTps.ok) {
+        const reason = `BAD_TPS: ${safeTps.reason} (${JSON.stringify(safeTps.value)}) — refusing to store an unusable TP ladder`
+        await m.Alert.updateOne({ alertKey: a.alertKey }, { $set: { status: 'rejected', rejectReason: reason } })
+        stats.rejected++
+        auditLog('paper_reject_tps', { symbol: a.symbol, index: safeTps.index, value: String(safeTps.value) })
+        console.log(`[paper] REJECT ${a.symbol} ${a.side} — ${safeTps.reason}`)
+        continue
+      }
       const dir = a.side === 'BUY' ? 1 : -1
       try {
         await recordOpen({
@@ -152,7 +200,7 @@ export async function runCycle(config = loadRiskConfig(), opts = {}) {
           qty: decision.qty,
           entryPrice: a.price,
           sl: a.sl,
-          tps: a.tps,
+          tps: safeTps.tps, // sanitised ladder — never the raw alert array
           externalId: clientOrderId(a.alertKey, 0), // D3 order-layer idempotency
           alertKey: a.alertKey,
         })
@@ -223,6 +271,14 @@ export async function runCycle(config = loadRiskConfig(), opts = {}) {
         const { bars } = await fetchKlines({ symbol: apiSymbol(symbol), tf: '1', market: cfg.market, refresh: true, limit: needBars })
         for (const pos of positions) {
           const tp1 = Array.isArray(pos.tps) && pos.tps.length ? Number(pos.tps[0]) : NaN
+          if (!(Number.isFinite(tp1) && tp1 > 0)) {
+            // Legacy/manual position whose ladder is unusable (e.g. a null level
+            // cast to 0 by Mongoose). Do NOT let the scanner "hit" it: a 0 would
+            // close the position at price 0. Skip LOUDLY so it gets noticed.
+            console.warn(`[paper] position ${pos._id} ${pos.symbol} has no usable TP1 (${JSON.stringify(pos.tps)}) — data exit scan skipped, close it manually or via a follow-up alert`)
+            auditLog('paper_bad_tps1', { symbol: pos.symbol, positionId: String(pos._id), tps: pos.tps })
+            continue
+          }
           const hit = findFirstExit(bars, { dir: pos.dir, sl: Number(pos.sl), tp1 }, +new Date(pos.entryTime))
           if (!hit) continue
           const closed = await closePosition(m, config, pos, hit.price, `data:${hit.kind}`, new Date(hit.time))

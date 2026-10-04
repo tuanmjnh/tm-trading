@@ -16,8 +16,9 @@ const { title, description } = useAdminPageChrome({
 })
 const { buildRowActions } = useAdminRowActions()
 const { exporting: exportingRoutes, exportModule: exportRoutes } = useModuleExport()
+const { hubFetch, appId } = useHub()
 
-const targetApp = ref('')
+const targetApp = ref(appId || '')
 const isCreateOpen = ref(false)
 const copySource = ref<{
   id?: string
@@ -237,7 +238,7 @@ useHead({ title })
       <UDashboardToolbar>
         <template #left>
           <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <AdminAppSwitcher v-model="targetApp" />
+            <!-- Satellite appId: {{ targetApp }} -->
             <UInput v-model="searchQuery" icon="i-lucide-search" :placeholder="t('common.search')"
               class="w-full sm:w-64" size="sm" />
           </div>

@@ -30,6 +30,7 @@ Stack: **Mongoose 9 · MongoDB 8.2 local · engine Node ESM**.
 | `alerts` | `Alert` | Alert thô từ TradingView + **nơi lưu dedupe bền vững** | `alertKey` **unique**; lifecycle `received → opened → closed` (hoặc `rejected` + `rejectReason`; `forwarded` = luồng không qua paper) |
 | `signals` | `Signal` | Sự kiện VSA đã dịch nghĩa (SV/BC/ST/NS/ND/EoM) | Tách khỏi `alerts`; webhook ghi từ `ENTRY` (Phase 6) — `toSignalDoc()` trong `server/webhook.mjs`, song song `logs/alerts.ndjson`, fail-soft |
 | `positions` | `Position` | Vị thế thật (paper/MT5/sàn/tay) | Nguồn chân lý "đang giữ gì"; paper mở/đóng qua `exec/paper.mjs` (§9.2), `externalId = clientOrderId(alertKey)` |
+| `journal` | `Journal` | **Một dòng cho mỗi lệnh ĐÃ KHỚP** (paper/MT5/exchange/manual), gắn `method` + `regime` (Phase 13 item 1) | **Derived read model**: `key` suy từ danh tính upstream (`account`+`source`+`externalId\|_id`) — không phải scheme id thứ hai (D3/D4); `unknown[]` ghi rõ tag không suy được. Chi tiết §10 |
 | `risk_state` | `RiskState` | Bộ đếm rủi ro **theo ngày UTC** + kill-switch | Unique `(account, utcDay)`; hợp đồng halt/inherit: §9.1 |
 | `equity` | `Equity` | Ảnh chụp đường vốn | Vẽ equity curve, tính drawdown thực |
 
@@ -94,6 +95,9 @@ Dashboard **phải từ chối trộn** run khác thế hệ thay vì im lặng 
 | `signals` | `(symbol, ts↓)`, `(type, ts↓)`, `(method, symbol, ts↓)` | Nhật ký tín hiệu |
 | `positions` | `(account, status)`, `(symbol, entryTime↓)` | Vị thế đang mở |
 | `positions` | **`(account, source, externalId)` UNIQUE + sparse** | Một ticket không xuất hiện 2 lần |
+| `journal` | **`key` UNIQUE** | Phase 13: re-sync một lệnh đã chiếu vào journal không tạo dòng thứ hai (dedupe bền vững kiểu D4) |
+| `journal` | `(entryTime↓)`, `(source, entryTime↓)`, `(method, regime, entryTime↓)`, `(symbol, tf, entryTime↓)` | Truy vấn journal của dashboard (lọc source/method/regime/ngày) |
+| `journal` | `(engineVersion, paramsHash, entryTime↓)` | Nhóm theo version stamp cho preset drift (Phase 13 item 3, D1) |
 | `risk_state` | **`(account, utcDay)` UNIQUE** | D7b — một bản ghi mỗi ngày |
 | `equity` | `(account, ts↓)` | Vẽ đường vốn |
 
@@ -173,8 +177,18 @@ test của chúng **vẫn chạy khi không cài / không có Mongo**.
 
 ```bash
 npm run test:db      # 58 assertion, cần MongoDB; tự SKIP (exit 0) nếu không có
-npm test             # smoke (173) + engine (360) + risk (56) + drift (25) + db (58) = 672
+npm test             # smoke + engine + journal + preset-drift + risk + drift
+                     # + mt5 + db + services + ai + ai-review
 ```
+
+> Phase 13 added three suites to `npm test`: `test:journal` (122 assertions),
+> `test:preset-drift` (88) and `test:ai-review` (71). All three are pure — no
+> Mongo, no network, no API key — and they assert that no DB connection was
+> opened. See §10.
+> The TP-ladder hardening added a fourth: `test:paper` (47), which covers
+> `findFirstExit` / `sanitizeTps` / `followExitPrice` (pure) plus narrow source
+> guards for the two `runCycle` wiring points that cannot be unit-tested without
+> Mongo. `test:risk` grew to 79.
 
 `engine/test-db.mjs` dùng DB riêng `tm-trading-test` và **xoá sạch sau khi chạy**.
 Nếu Mongo không sẵn sàng, in `SKIP` **rất rõ** và thoát 0 — để `npm run verify` vẫn xanh trên máy
@@ -234,6 +248,16 @@ khi mở. Kết quả `allowed` kèm `qty`/`sizePct` hoặc từ chối kèm lý
   `halt --close` (hoặc `closeOnHalt=true`) mới đóng.
 - **Auto-halt**: `recordClose()` khi `realizedPnlPct ≤ −dailyLossCapPct` →
   `halt('daily_loss_cap')` ngay trong lệnh đó.
+- **TP ladder — fail closed (2026-10-04, English per the language policy)**: `order.tps` not an
+  array still becomes `[]` (→ `BAD_TPS`). Inside an array, every element must be a finite number,
+  or a non-blank string that parses to one; anything else (`null`, `undefined`, `''`, `'  '`,
+  `NaN`, `true`, `[]`) is **rejected** with `BAD_TPS` naming the index (`tps[1] is not a finite
+  number (null)`). It is deliberately **not** coerced and **not** dropped: `Number(null)` /
+  `Number('')` / `Number([])` are `0` and `Number(true)` is `1`, and this gate is the only
+  component that still sees the defective array — a dropped gap also silently re-indexes the
+  ladder the alert contract uses (`tps[level-1]`, see §9.2), and a surviving `tps[0] = 0` in the
+  `positions` document made `findFirstExit()` "close" a long at price 0 (§9.2). Numeric strings
+  like `'90'` stay valid. Locked by `exec/test-risk.mjs` §4b.
 - **Audit**: mọi lần từ chối `checkOrder` + `recordOpen`/`recordClose`/`halt`/`resume`/
   `drift_report`/`drift_breach` append `logs/risk.ndjson` (fail-soft, không đụng luồng lệnh).
   `auditLog(event, data, file?)` nhận `file` tuỳ chọn — **test bắt buộc truyền file tmp riêng**
@@ -255,6 +279,14 @@ FOLLOW → STOP_LOSS  (fill tại alert.price)      ┐ data nến 1m:findFirstE
   chạy lại cycle không mở/đóng trùng.
 - Nhiều vị thế cùng symbol: follow-up đóng position **cũ nhất** trước.
 - Gate thất bại → alert `rejected` + `rejectReason` (không mở position, không tính PnL).
+- **TP ladder an toàn (2026-10-04)**: `sanitizeTps()` chạy TRƯỚC `recordOpen` — mọi mức phải là
+  số hữu hạn **> 0**, nếu không alert bị `rejected` (`BAD_TPS`, kèm `auditLog('paper_reject_tps')`)
+  thay vì âm thầm lưu mảng thô. `findFirstExit()` từ chối `sl ≤ 0`/`tp1 ≤ 0`/`dir` lạ, và vòng
+  quét dữ liệu bỏ qua (kèm cảnh báo + `auditLog('paper_bad_tps1')`) position legacy/manual có
+  `tps[0]` không dùng được. *Lý do:* `b.high >= tp1` đúng với mọi nến khi `tp1 = 0` → lệnh LONG bị
+  "đóng tại TP giá 0" (PnL giả + auto-halt oan); Mongoose **vẫn lưu** `[null,110]` cho path
+  `[Number]` nên rủi ro này tồn tại với doc legacy/manual (chưa vá schema — ngoài phạm vi).
+  Ở tầng nguồn: `test-paper.mjs` khoá việc `recordOpen` KHÔNG bao giờ nhận `tps: a.tps` thô.
 
 ### 9.3 D8 — `exec/drift.mjs`
 
@@ -272,3 +304,84 @@ tf không hỗ trợ → hàng `skipped`). Breach khi `|Δ| > DRIFT_MAX_DIFF`(3)
   Mongo down);
 - test thuần: `exec/test-drift.mjs` (25 assertion, vào `npm test`) +
   `tests/risk-status.test.ts` (readDriftStatus).
+
+---
+
+## 10. Phase 13 — `journal` + preset drift (item 1 & 3)
+
+> New section written in English (language policy: all new code, comments and doc
+> sections are English). The rest of this document is still Vietnamese and is
+> translated opportunistically.
+
+### 10.1 Why a separate collection, and where it lives
+
+`engine/journal.mjs` is a **derived read model**, not a new source of truth: rows
+come from `positions` (the only place a real fill exists) and every row keeps a
+pointer back at the upstream identity (`source` + `sourceId`). Backtest rows are
+NOT journal rows — they are the frozen baseline the journal is compared against
+(§10.3). Code lives in `engine/` because it is a data layer over the engine
+models, exactly like `engine/store.mjs`; `services/` is reserved for periodic
+jobs (roadmap §2).
+
+Shape (one row per executed trade):
+
+| Field | Meaning |
+|---|---|
+| `key` | `j1_` + sha256 of `{v, account, source, externalId\|id}` — derived from the upstream identity, **not** a second order-id scheme |
+| `source` | `paper` · `mt5` · `exchange` · `manual` (else `unknown`) |
+| `account`, `sourceId` | upstream account + `positions.externalId` (or `_id`) |
+| `symbol`, `tf`, `dir` | `tf` is NOT stored on `positions`: it is resolved through `alerts.alertKey = positions.signalKey`, else `unknown` |
+| `entryPrice`, `exitPrice`, `sl`, `tps`, `qty` | filled from the position |
+| `result` | `TP` · `SL` · `TIME` · `OPEN` · `unknown` — derived from the recorded levels (an exact level match); a gap fill (paper fills the stop at the bar OPEN) stays `unknown` instead of being guessed |
+| `rMultiple` | derived from `dir`/`entryPrice`/`sl`/`exitPrice`; `null` when the risk distance is 0 or the exit is absent |
+| `pnlAbs`, `pnlPct` | as recorded by the executor |
+| `fees` | `null` = UNKNOWN. Paper PnL is fee-free BY DESIGN, so `0` would claim costs were measured |
+| `method`, `regime`, `engineVersion`, `paramsHash` | tags; `unknown` when not derivable. `regime` is a **point-in-time** lookup (latest `intel` kind `regime` snapshot with `ts <= entryTime`) so the journal cannot leak look-ahead information |
+| `entryTime`, `exitTime`, `recordedAt` | UTC (D2) |
+| `unknown[]` | names of the tracked fields this row could NOT derive — queryable, so "we do not know" is visible in the data |
+
+Idempotency (D3/D4): re-syncing the same position is a no-op through the UNIQUE
+`key` index; the NDJSON mirror at `reports/journal.ndjson` applies the same
+key-based skip, so the file store is idempotent too. Nothing can place an order
+from a journal key.
+
+### 10.2 Query helpers
+
+Pure, DB-free and therefore usable by the dashboard: `filterJournal(entries,
+{source, method, regime, symbol, tf, result, account, engineVersion, paramsHash,
+from, to})` (date range is **half-open [from, to)** in UTC ms), `journalStats()`
+(win rate + expectancy in R over closed rows whose R is derivable, plus
+`rMissing`, `unknownTagCounts` and the D12 `insufficient` flag below
+`MIN_TRADES_FOR_EVIDENCE = 20`), `groupJournal(entries, ['source','method'])`, and
+the IO pair `syncJournal()` / `loadJournal()` (Mongo when available, NDJSON
+otherwise — `loadJournal` always reports which of the two it read).
+
+### 10.3 Preset drift — `engine/preset-drift.mjs` (Phase 13 item 3)
+
+**Not D8.** `exec/drift.mjs` (D8) compares the NUMBER of TradingView ENTRY alerts
+against the number of setups the engine sees on the same symbol/TF in a 24h
+window and **halts new orders**. `engine/preset-drift.mjs` measures the PRESET
+over time: the realized distribution of the trades executed with
+`engineVersion#paramsHash` vs what the FROZEN backtest of that same preset
+promised (`reports/trades.ndjson`). It takes no action.
+
+Rules: buckets are per generation **and** per UTC-aligned time window
+(`--window`, default 7 days); a live dataset spanning several generations is
+**refused** (no pooled number, warning printed — D1); a live stamp with no frozen
+counterpart yields "cannot compare" (no substitution, no silent pick); a bucket
+below `--min-trades` (default 20 R samples) is labelled **insufficient evidence**
+and prints no delta — only observations. `--live-preset` /
+`--live-engine-version` fill MISSING live stamps (an operator declaration, never
+an overwrite); today the live path writes `positions.paramsHash = null`
+(`exec/risk.mjs recordOpen`), so this is the normal outcome until the live path
+stamps its trades.
+
+```bash
+npm run journal -- sync      # positions -> journal (NDJSON always, Mongo optional)
+npm run journal -- stats --by source,method,regime
+npm run preset:drift -- --window 7 --min-trades 20
+npm run ai:review            # SCAFFOLD (Phase 13 item 2): digest + prompt + proposals
+```
+
+Tests: `npm run test:journal` · `npm run test:preset-drift` · `npm run test:ai-review`,
+all wired into `npm test`, no Mongo/network/API key required.

@@ -143,6 +143,21 @@ export function sizingPct(config, winStats) {
 const reject = (code, message) => ({ ok: false, code, message })
 
 /**
+ * A TP level must be a POSITIVE finite number, or a non-blank string that parses
+ * to one. Everything else (null, undefined, '', '  ', NaN, true, [], {}) is a
+ * DEFECTIVE level: returning null makes the caller reject it WITH ITS INDEX
+ * instead of letting Number() invent a price (Number(null) === Number('') ===
+ * Number([]) === 0, Number(true) === 1 — all "finite" and therefore invisible to
+ * a naive check). `> 0` matters on its own: on a SHORT the side check (`t >= entry`)
+ * does not catch a zero or negative level either, so `tps: [0]` used to be
+ * approved with rr computed against price 0.
+ */
+function tpLevel(v) {
+  const n = typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : NaN
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
+/**
  * THE gate — pure. No IO, no Date.now(), no process.env.
  *
  * @param {object} order   { symbol, side:'BUY'|'SELL' (or dir:1|-1), entry, sl, tps[], qty? }
@@ -174,11 +189,29 @@ export function evaluate(order, snap) {
   if (dir !== 1 && dir !== -1) return reject('BAD_PRICE', 'missing/invalid side or dir')
   const entry = Number(order.entry)
   const sl = Number(order.sl)
-  const tps = Array.isArray(order.tps) ? order.tps.map(Number).filter(Number.isFinite) : []
   if (!Number.isFinite(entry) || entry <= 0 || !Number.isFinite(sl) || sl <= 0) return reject('BAD_PRICE', `entry/sl must be positive numbers (entry=${order.entry}, sl=${order.sl})`)
   // SL must be on the losing side of entry — same rule the webhook validates,
   // re-checked here because the gate is the LAST line of defense.
   if ((dir === 1 && sl >= entry) || (dir === -1 && sl <= entry)) return reject('BAD_PRICE', `SL on wrong side: entry=${entry} sl=${sl} dir=${dir === 1 ? 'LONG' : 'SHORT'}`)
+
+  // --- TP ladder: REJECT a defective level, never drop or coerce it ----------
+  // Coercion can FABRICATE a level that was never sent (see tpLevel), and dropping
+  // the gap silently shortens the ladder — which the alert contract indexes: paper
+  // closes TP `level` at `tps[level-1]`. This gate is the only component that
+  // still SEES the defective array, and exec/paper.mjs stores what it is handed
+  // and later reads `pos.tps[0]`; a surviving 0 there makes findFirstExit's
+  // `high >= tp1` test trivially true, i.e. a long would be "closed at TP" at
+  // price 0 (fabricated PnL + a spurious daily-loss auto-halt). So: fail closed,
+  // name the offending index, and let the producer be fixed.
+  const rawTps = Array.isArray(order.tps) ? order.tps : []
+  const tps = []
+  for (let i = 0; i < rawTps.length; i++) {
+    const lvl = tpLevel(rawTps[i])
+    if (lvl === null) {
+      return reject('BAD_TPS', `tps[${i}] is not a positive finite number (${JSON.stringify(rawTps[i])}) — a missing/garbage/zero TP level is rejected, not coerced to 0`)
+    }
+    tps.push(lvl)
+  }
   if (tps.length === 0) return reject('BAD_TPS', 'tps must be a non-empty array')
   for (const t of tps) {
     if ((dir === 1 && t <= entry) || (dir === -1 && t >= entry)) return reject('BAD_TPS', `TP ${t} on wrong side of entry ${entry} (dir=${dir})`)

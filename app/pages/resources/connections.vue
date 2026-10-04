@@ -40,7 +40,8 @@ interface ProviderItem {
   connection: ConnectionView | null
 }
 
-const targetApp = ref('')
+const { hubFetch, appId } = useHub()
+const targetApp = ref(appId || '')
 const loading = ref(false)
 const providers = ref<ProviderItem[]>([])
 const testingKey = ref('')
@@ -85,7 +86,7 @@ async function refresh() {
   if (!targetApp.value) return
   loading.value = true
   try {
-    const res = await adminFetch<{ success: boolean, data: ProviderItem[] }>(
+    const res = await hubFetch<{ success: boolean, data: ProviderItem[] }>(
       `/api/v1/apps/${encodeURIComponent(targetApp.value)}/connections`
     )
     providers.value = res.data || []
@@ -106,7 +107,7 @@ async function connectOAuth(p: ProviderItem) {
     return
   }
   try {
-    const res = await adminFetch<{ success: boolean, data: { authUrl: string } }>(url, {
+    const res = await hubFetch<{ success: boolean, data: { authUrl: string } }>(url, {
       method: 'POST',
       body: { app_id: targetApp.value }
     })
@@ -154,7 +155,7 @@ async function saveManual() {
     for (const [k, v] of Object.entries(manualValues.value)) {
       cleanedValues[k] = cleanVal(v)
     }
-    const res = await adminFetch<{ success: boolean, data: { test: { ok: boolean, message?: string } } }>(
+    const res = await hubFetch<{ success: boolean, data: { test: { ok: boolean, message?: string } } }>(
       `/api/v1/apps/${encodeURIComponent(targetApp.value)}/connections/manual`,
       { method: 'POST', body: { provider: p.key, values: cleanedValues } }
     )
@@ -172,7 +173,7 @@ async function saveManual() {
 async function quickConnect(p: ProviderItem) {
   quickingKey.value = p.key
   try {
-    const res = await adminFetch<{ success: boolean, data: { test: { ok: boolean, message?: string } } }>(
+    const res = await hubFetch<{ success: boolean, data: { test: { ok: boolean, message?: string } } }>(
       `/api/v1/apps/${encodeURIComponent(targetApp.value)}/connections/quick`,
       { method: 'POST', body: { provider: p.key } }
     )
@@ -189,7 +190,7 @@ async function quickConnect(p: ProviderItem) {
 async function testConnection(p: ProviderItem) {
   testingKey.value = p.key
   try {
-    const res = await adminFetch<{ success: boolean, data: { ok: boolean, message?: string } }>(
+    const res = await hubFetch<{ success: boolean, data: { ok: boolean, message?: string } }>(
       `/api/v1/apps/${encodeURIComponent(targetApp.value)}/connections/test`,
       { method: 'POST', body: { provider: p.key } }
     )
@@ -243,13 +244,7 @@ useHead({ title })
     </template>
 
     <template #toolbar>
-      <UDashboardToolbar>
-        <template #left>
-          <div class="flex items-center gap-2 w-full min-w-0 sm:w-auto">
-            <AdminAppSwitcher v-model="targetApp" />
-          </div>
-        </template>
-      </UDashboardToolbar>
+      <!-- No app switcher needed in satellite mode -->
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6">

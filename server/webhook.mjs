@@ -363,6 +363,50 @@ async function notify(o) {
 }
 
 // =============================================================================
+//  Phase 12 - MT5 bridge component of the aggregate /health (D9)
+//
+//  The bridge is a separate Python process (docs/mt5-ipc.md) that may not be
+//  running, may have no token configured, or may answer slowly. So this probe:
+//    - is skipped entirely (no socket) when MT5_BRIDGE_TOKEN is unset -> the
+//      transport is fail-closed, and a probe without a token would be noise;
+//    - asks for a single attempt only: the contract's 2 s GET timeout is the
+//      verdict, /health must not retry inside one request (`retry: false`);
+//    - never throws: any failure becomes `status: 'down'`, fail-soft like
+//      engine/db.mjs mongoStatus().
+//  It reports, it does not gate: order placement still goes through the client
+//  (exec/mt5/client.mjs) and the risk gate (D7).
+// =============================================================================
+async function mt5HealthComponent() {
+  const off = (reason, extra = {}) => ({
+    component: 'mt5_bridge',
+    status: 'off',
+    configured: false,
+    reason,
+    ...extra,
+  })
+  if (!process.env.MT5_BRIDGE_TOKEN) {
+    return off('MT5_BRIDGE_TOKEN not set (bridge integration disabled)')
+  }
+  let mt5Health
+  try {
+    const mod = await import('../exec/mt5/client.mjs')
+    mt5Health = mod.mt5Health
+  } catch (e) {
+    return off(`client import failed: ${e?.message}`)
+  }
+  const res = await mt5Health()
+  return {
+    component: 'mt5_bridge',
+    status: res.status,
+    configured: true,
+    url: res.url,
+    account_type: res.body?.account_type ?? null,
+    connected: res.body?.mt5?.connected ?? null,
+    error: res.error ?? null,
+  }
+}
+
+// =============================================================================
 //  HTTP server
 // =============================================================================
 /**
@@ -397,7 +441,11 @@ export function createNotifyServer({ logFile = LOG, quiet = false, token = TM_TO
     if (req.method === 'GET' && pathname === '/health') {
       // D9 (nham truoc): phai biet duoc dedupe dang o CHE DO NAO. 'ram' = khong
       // ben vung -> khong duoc tuong nham la da an toan.
-      return json(200, { ok: true, uptime: process.uptime(), dedupe: dedupe.kind })
+      // Phase 12: the MT5 bridge is reported as another component. It never
+      // turns this endpoint into a 5xx - a dead bridge must not make the
+      // webhook look dead.
+      const mt5 = await mt5HealthComponent()
+      return json(200, { ok: true, uptime: process.uptime(), dedupe: dedupe.kind, mt5 })
     }
 
     const isAlert = req.method === 'POST' && (pathname === '/tm-alert' || pathname.startsWith('/tm-alert/'))

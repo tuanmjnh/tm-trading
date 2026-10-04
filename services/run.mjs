@@ -22,6 +22,7 @@ import { runNews } from './news.mjs'
 import { runRegime } from './regime.mjs'
 import { runLiquidation, startLiqCollector } from './liquidation.mjs'
 import { runConfluence } from './confluence.mjs'
+import { runBrief } from '../ai/daily-brief.mjs'
 
 loadEnv()
 
@@ -34,6 +35,9 @@ const SERVICES = [
   // Phase 10 — doc env TRUC TIEP (loadEnv() o tren da chay truoc dong nay,
   // khac DEFAULT_INTERVALS dong luc import -> khong thay .env).
   { name: 'confluence', run: runConfluence, intervalSec: Number(process.env.CONFLUENCE_INTERVAL || DEFAULT_INTERVALS.confluence), tag: '[confluence]' },
+  // Phase 11 — AI daily brief: window-gated (AI_BRIEF_HOURS), skips cleanly
+  // when AI_API_KEY is empty; same env-read pattern as confluence above.
+  { name: 'brief', run: runBrief, intervalSec: Number(process.env.AI_BRIEF_INTERVAL || DEFAULT_INTERVALS.brief), tag: '[ai:brief]' },
 ]
 
 const log = (tag, msg) => console.log(`${new Date().toISOString()} ${tag} ${msg}`)
