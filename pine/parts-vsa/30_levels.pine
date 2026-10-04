@@ -1,0 +1,65 @@
+// =============================================================================
+//  LAYER 3 - LEVELS : pivot ho tro/khang cu (fresh), momentum (muc chay)
+// =============================================================================
+tm_pLowV  = ta.pivotlow(low, tm_i_pivLen, tm_i_pivLen)
+tm_pHighV = ta.pivothigh(high, tm_i_pivLen, tm_i_pivLen)
+
+var float tm_lastPLow  = na
+var float tm_lastPHigh = na
+var int   tm_plowBar   = 0
+var int   tm_phighBar  = 0
+var bool  tm_hasLow    = false
+var bool  tm_hasHigh   = false
+
+if not na(tm_pLowV)
+    tm_lastPLow := tm_pLowV
+    tm_plowBar  := bar_index
+    tm_hasLow   := true
+if not na(tm_pHighV)
+    tm_lastPHigh := tm_pHighV
+    tm_phighBar  := bar_index
+    tm_hasHigh   := true
+
+tm_lowFresh  = tm_hasLow and bar_index - tm_plowBar <= tm_i_lvFresh
+tm_highFresh = tm_hasHigh and bar_index - tm_phighBar <= tm_i_lvFresh
+tm_nearSup   = tm_lowFresh and low <= tm_lastPLow + tm_i_lvTol * tm_atr
+tm_nearRes   = tm_highFresh and high >= tm_lastPHigh - tm_i_lvTol * tm_atr
+tm_runDown   = not na(close[tm_i_run]) and close < close[tm_i_run]
+tm_runUp     = not na(close[tm_i_run]) and close > close[tm_i_run]
+
+// -----------------------------------------------------------------------------
+//  SU KIEN WYCKOFF (thay cho BOS/CHoCH cua SMC o phien ban truoc)
+//  Truong phai: BOS/CHoCH la ky thuat SMC. Wyckoff xac nhan bang SPRING (pha vo
+//  vung roi PHUC HOI - Phase C) va SOS (bar manh pha vung - Phase D), roi vao o
+//  LPS (pullback sau SOS). SHORT la gong doi xung (UTAD / SOW / LPSY).
+// -----------------------------------------------------------------------------
+tm_spread    = high - low
+tm_strongVol = not na(tm_volMA) and tm_volMA > 0.0 and tm_vol >= tm_volMA * tm_i_sosVol
+
+// Spring / UTAD: PHA VO vung trong bar nhung DONG CUA tro lai trong vung.
+// Khac biet cot loi so voi "pha cau truc": PHA VO THAT BAI moi la tin hieu.
+tm_wSpring = not na(tm_atr) and tm_lowFresh and not na(tm_lastPLow) and low < tm_lastPLow and close > tm_lastPLow and close > open
+tm_wUtad   = not na(tm_atr) and tm_highFresh and not na(tm_lastPHigh) and high > tm_lastPHigh and close < tm_lastPHigh and close < open
+
+// SOS / SOW: bar than RONG + volume MANH dong cua ngoai vung.
+tm_wSos = not na(tm_atr) and tm_highFresh and not na(tm_lastPHigh) and close > tm_lastPHigh and tm_spread >= tm_i_sosSpread * tm_atr and tm_strongVol and close > open
+tm_wSow = not na(tm_atr) and tm_lowFresh and not na(tm_lastPLow) and close < tm_lastPLow and tm_spread >= tm_i_sosSpread * tm_atr and tm_strongVol and close < open
+
+var bool  tm_sosDone = false
+var int   tm_sosBar  = 0
+var float tm_sosLow  = na
+var bool  tm_sowDone = false
+var int   tm_sowBar  = 0
+var float tm_sowHigh = na
+if tm_wSos
+    tm_sosDone := true
+    tm_sosBar  := bar_index
+    tm_sosLow  := low
+if tm_wSow
+    tm_sowDone := true
+    tm_sowBar  := bar_index
+    tm_sowHigh := high
+
+// LPS / LPSY: pullback sau SOS/SOW, GIU tren day bar SOS (duoi dinh bar SOW).
+tm_wLps   = not na(tm_atr) and tm_sosDone and not na(tm_sosLow) and bar_index > tm_sosBar and low > tm_sosLow and low <= tm_sosLow + tm_i_lpsTol * tm_atr and close > open
+tm_wLpsy  = not na(tm_atr) and tm_sowDone and not na(tm_sowHigh) and bar_index > tm_sowBar and high < tm_sowHigh and high >= tm_sowHigh - tm_i_lpsTol * tm_atr and close < open

@@ -1,0 +1,137 @@
+// =============================================================================
+//  LAYER 4 - EVENTS
+//  CHINH : SV (dung lai) / BC (muc dot bien) - ca 2 bat buoc qua cot TIM.
+//  XAC NHAN : ST (test lai volume thap), NS/ND (cot am) - canh bao nhac nho.
+//  Thu tu uu tien khi cung bar: SV > BC > ST > NS > ND.
+// =============================================================================
+tm_sigSV = tm_i_evtOn and tm_okBar and tm_isPurple and tm_runDown and tm_nearSup and high > low and close > open
+tm_sigBC = tm_i_evtOn and tm_okBar and tm_isPurple and tm_runUp and tm_nearRes and high > low and (high - close) >= 0.5 * (high - low)
+
+var int   tm_svBar  = 0
+var float tm_svPx   = na
+var int   tm_bcBar  = 0
+var float tm_bcPx   = na
+var bool  tm_hasSV  = false
+var bool  tm_hasBC  = false
+
+if tm_sigSV
+    tm_svBar := bar_index
+    tm_svPx  := low
+    tm_hasSV := true
+if tm_sigBC
+    tm_bcBar := bar_index
+    tm_bcPx  := high
+    tm_hasBC := true
+
+tm_svFresh = tm_hasSV and bar_index - tm_svBar <= tm_i_lvFresh
+tm_bcFresh = tm_hasBC and bar_index - tm_bcBar <= tm_i_lvFresh
+
+// Secondary Test: retest moc SV/BC bang volume thap, gia vong trong vung ATR
+// Kich hoat VAO LENH theo chien luoc (tm_wyckoffMode dinh nghia o 10_inputs)
+//  - 'VSA dao chieu'   : SV/BC -> ST (retest volume thap) -> vao lenh
+//  - 'VSA loc + Wyckoff': SV/BC chi la BO LOC vung; SU KIEN WYCKOFF moi la
+//    THOI DIEM vao lenh. SHORT la gong doi xung cua LONG.
+tm_evLong  = tm_i_wyckoffEvent == "Spring" ? tm_wSpring : tm_i_wyckoffEvent == "SOS" ? tm_wSos : tm_wLps
+tm_evShort = tm_i_wyckoffEvent == "Spring" ? tm_wUtad : tm_i_wyckoffEvent == "SOS" ? tm_wSow : tm_wLpsy
+
+tm_sigSTl = tm_i_evtOn and tm_okBar and (tm_wyckoffMode ? (tm_evLong and tm_svFresh) : (tm_svFresh and tm_quietST and math.abs(low - tm_svPx) <= tm_i_retestT * tm_atr and close > open))
+tm_sigSTs = tm_i_evtOn and tm_okBar and (tm_wyckoffMode ? (tm_evShort and tm_bcFresh) : (tm_bcFresh and tm_quietST and math.abs(high - tm_bcPx) <= tm_i_retestT * tm_atr and close < open))
+tm_sigST  = tm_sigSTl or tm_sigSTs
+
+// Level tu dong Entry/SL/TP - cap nhat khi ST xay ra (setup gan nhat, thay setup cu):
+//   Entry = cuc tri SV/BC (level "limit tai do"); SL = cuc tri +/- buffer x ATR;
+//   TP = pivot doi dien neu RR >= 1, nguoc lai fallback rrFb x R (xem docs 5/6/8).
+//   Setup tu dong DONG khi gia cham TP/SL sau bar ST -> 60_viz xoa 3 duong,
+//   chi con nhan ket qua tai bar cham (khong de duong cu keo dai het chart).
+var float tm_lvlE       = na
+var float tm_lvlS       = na
+var float tm_lvlT       = na
+var int   tm_lvlB       = 0
+var int   tm_lvlDir     = 0
+var bool  tm_lvlDone    = false
+var string tm_lvlRes    = ""
+var int   tm_lvlDoneBar = 0
+// Entry la lenh LIMIT tai cuc tri SV/BC -> phai theo doi DA KHOP chua.
+// Thieu buoc nay thi setup chua tung vao lenh van bi ghi "TP"/"SL" (xem
+// docs/vsa-optimization.md muc 4.1).
+var bool  tm_lvlFill    = false
+var int   tm_lvlFillBar = 0
+// Rui ro THAT cua setup (|entry - SL|) - dung de hien R va tinh fee_R cua setup.
+var float tm_lvlRisk    = na
+// SL LUON dat theo CAU TRUC (ngoai cuc tri SV/BC); chi ENTRY doi theo tm_entryMarket.
+// risk = |entry - SL| la RUI RO THAT: dung cho ca TP theo R va cho fee_R cua setup.
+// Bo qua setup neu risk <= 0 (entry da nam ngoai vung SL -> vo nghia).
+if tm_sigSTl and tm_hasSV
+    float e1  = (tm_entryMarket or tm_wyckoffMode) ? close : tm_svPx
+    float sl1 = ((tm_wyckoffMode ? low : tm_svPx) - tm_i_slBuf * tm_atr)
+    float rk1 = e1 - sl1
+    if rk1 > 0
+        tm_lvlE       := e1
+        tm_lvlS       := sl1
+        tm_lvlT       := tm_tpTheoR ? e1 + tm_i_rrFb * rk1 : (not na(tm_lastPHigh) and tm_lastPHigh >= e1 + rk1 ? tm_lastPHigh : e1 + tm_i_rrFb * rk1)
+        tm_lvlB       := bar_index
+        tm_lvlDir     := 1
+        tm_lvlDone    := false
+        tm_lvlRes     := ""
+        tm_lvlDoneBar := 0
+        tm_lvlFill    := tm_entryMarket
+        tm_lvlFillBar := tm_entryMarket ? bar_index : 0
+        tm_lvlRisk    := rk1
+if tm_sigSTs and tm_hasBC
+    float e2  = (tm_entryMarket or tm_wyckoffMode) ? close : tm_bcPx
+    float sl2 = ((tm_wyckoffMode ? high : tm_bcPx) + tm_i_slBuf * tm_atr)
+    float rk2 = sl2 - e2
+    if rk2 > 0
+        tm_lvlE       := e2
+        tm_lvlS       := sl2
+        tm_lvlT       := tm_tpTheoR ? e2 - tm_i_rrFb * rk2 : (not na(tm_lastPLow) and tm_lastPLow <= e2 - rk2 ? tm_lastPLow : e2 - tm_i_rrFb * rk2)
+        tm_lvlB       := bar_index
+        tm_lvlDir     := -1
+        tm_lvlDone    := false
+        tm_lvlRes     := ""
+        tm_lvlDoneBar := 0
+        tm_lvlFill    := tm_entryMarket
+        tm_lvlFillBar := tm_entryMarket ? bar_index : 0
+        tm_lvlRisk    := rk2
+
+// Tu dong dong setup. THU TU QUAN TRONG:
+//   1. Khop entry truoc (limit tai cuc tri SV/BC)
+//   2. Chi xet TP/SL khi DA khop; uu tien SL - ke ca khi cung bar vua khop entry
+//      roi xuyen luon SL (bao thu, dung khi gia quet qua vung do).
+if not na(tm_lvlE) and not tm_lvlDone and bar_index > tm_lvlB
+    if not tm_lvlFill
+        if tm_lvlDir == 1 and low <= tm_lvlE
+            tm_lvlFill    := true
+            tm_lvlFillBar := bar_index
+        else if tm_lvlDir == -1 and high >= tm_lvlE
+            tm_lvlFill    := true
+            tm_lvlFillBar := bar_index
+    if tm_lvlFill
+        if tm_lvlDir == 1
+            if low <= tm_lvlS
+                tm_lvlDone    := true
+                tm_lvlRes     := "SL"
+                tm_lvlDoneBar := bar_index
+            else if high >= tm_lvlT
+                tm_lvlDone    := true
+                tm_lvlRes     := "TP"
+                tm_lvlDoneBar := bar_index
+        else if tm_lvlDir == -1
+            if high >= tm_lvlS
+                tm_lvlDone    := true
+                tm_lvlRes     := "SL"
+                tm_lvlDoneBar := bar_index
+            else if low <= tm_lvlT
+                tm_lvlDone    := true
+                tm_lvlRes     := "TP"
+                tm_lvlDoneBar := bar_index
+
+// No Supply / No Demand: cot am tai H/T
+tm_sigNS = tm_i_quietOn and tm_okBar and tm_quietLow and tm_nearSup and close > open
+tm_sigND = tm_i_quietOn and tm_okBar and tm_quietLow and tm_nearRes and close < open
+
+var string tm_lastEvt    = "-"
+var int    tm_lastEvtBar = 0
+if tm_sigSV or tm_sigBC or tm_sigST or tm_sigNS or tm_sigND
+    tm_lastEvt    := tm_sigSV ? "SV" : tm_sigBC ? "BC" : tm_sigST ? "ST" : tm_sigNS ? "NS" : "ND"
+    tm_lastEvtBar := bar_index

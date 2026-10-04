@@ -9,7 +9,7 @@
 // -----------------------------------------------------------------------------
 //  M1 - TREND FLIP (Supertrend)
 // -----------------------------------------------------------------------------
-[ tm_stLine, tm_stDir ] = ta.supertrend(tm_m1_stAtr * tm_atrST, tm_m1_stAtrLen)
+[ tm_stLine, tm_stDir ] = ta.supertrend(tm_m1_stAtr, tm_m1_stAtrLen)
 tm_m1_score = tm_stDir == -1 ? 1.0 : tm_stDir == 1 ? -1.0 : 0.0
 
 // -----------------------------------------------------------------------------
@@ -93,8 +93,9 @@ tm_okSess = not tm_flt_sessOn or f_sessionOk(tm_flt_sess, tm_flt_tz)
 tm_okVol  = not tm_flt_volOn or (tm_atr / close * 100.0) >= tm_flt_volMin
 tm_okCool = tm_barsSince >= tm_flt_cool
 tm_okDay  = tm_dayCount < tm_flt_maxDay
+tm_okVsa  = not tm_flt_vsaOn or tm_vol >= tm_flt_vsaMinR * tm_volMA
 
-tm_okFilter = tm_okHtf and tm_okSess and tm_okVol and tm_okCool and tm_okDay
+tm_okFilter = tm_okHtf and tm_okSess and tm_okVol and tm_okVsa and tm_okCool and tm_okDay
 
 // -----------------------------------------------------------------------------
 //  DIEN TRONG LUONG TUNG MODULE (cho dashboard + payload)

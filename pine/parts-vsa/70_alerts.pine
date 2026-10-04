@@ -1,0 +1,9 @@
+// =============================================================================
+//  LAYER 7 - ALERTS : 1 dieu kien = 1 loai canh bao, message ASCII + ten tuy bien
+// =============================================================================
+alertcondition(tm_sigSV, "VSA SV", "VSA SV · {{ticker}} · {{interval}} · dung lai")
+alertcondition(tm_sigBC, "VSA BC", "VSA BC · {{ticker}} · {{interval}} · muc dot bien")
+alertcondition(tm_sigSTl, "VSA ST LONG", "VSA ST LONG · {{ticker}} · {{interval}} · test mua")
+alertcondition(tm_sigSTs, "VSA ST SHORT", "VSA ST SHORT · {{ticker}} · {{interval}} · test ban")
+alertcondition(tm_sigNS, "VSA NS", "VSA NS · {{ticker}} · {{interval}} · noc thap")
+alertcondition(tm_sigND, "VSA ND", "VSA ND · {{ticker}} · {{interval}} · noc cao")

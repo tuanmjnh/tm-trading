@@ -1,0 +1,8 @@
+[
+  {
+    "name": "mau dinh dang: CE10271 input.timezone",
+    "expect": "CE10271",
+    "note": "Vi du dinh dang. node tools/errors.mjs <text loi> --apply se them/va gan vi tri tu dist ve pine/parts/",
+    "code": "//@version=6\nindicator(\"x\")\ntz = input.timezone(\"UTC\", \"tz\")\n"
+  }
+]

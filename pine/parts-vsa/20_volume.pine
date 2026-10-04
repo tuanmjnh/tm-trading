@@ -1,0 +1,41 @@
+// =============================================================================
+//  LAYER 2 - VOLUME : ATR, RMA (Wilder), 6 bucket, cong su kien
+//  Quy uoc mau: TIM/purple = ratio >= rP (tin hieu chinh), cac mau khac = bo canh.
+// =============================================================================
+tm_atr    = ta.atr(tm_i_atrLen)
+tm_vol    = nz(volume)
+tm_volMA  = ta.rma(tm_vol, tm_i_len)
+tm_okBar  = tm_confirmOnly ? barstate.isconfirmed : true
+tm_sessOk = not tm_i_sessOn or f_sessionOk(tm_i_sess, tm_i_tz)
+tm_evtOk  = (tm_i_volMin <= 0.0 or tm_vol >= tm_i_volMin) and tm_sessOk
+
+tm_volCol  = f_vsaColor(tm_vol, tm_volMA, tm_i_rP, tm_i_rVH, tm_i_rH, tm_i_rN, tm_i_rL)
+tm_bucket  = f_vsaName(tm_vol, tm_volMA, tm_i_rP, tm_i_rVH, tm_i_rH, tm_i_rN, tm_i_rL)
+tm_isPurRaw = not na(tm_volMA) and tm_volMA > 0.0 and tm_vol >= tm_volMA * tm_i_rP
+tm_isPurple  = tm_isPurRaw and tm_evtOk
+tm_quietST   = not na(tm_volMA) and tm_volMA > 0.0 and tm_vol < tm_volMA * tm_i_testR and not tm_isPurRaw and tm_evtOk
+tm_quietLow  = not na(tm_volMA) and tm_volMA > 0.0 and tm_vol < tm_volMA * tm_i_rN and tm_evtOk
+tm_ratio     = not na(tm_volMA) and tm_volMA > 0.0 ? tm_vol / tm_volMA : 0.0
+
+// -----------------------------------------------------------------------------
+//  fee_R - phi round-trip quy ra R. Rang buoc TOAN HOC cua do rong stop:
+//      fee_R = (phi_moi_chieu% x 2) / (slBuf x ATR%)
+//  fee_R vuot nguong => cau hinh bat kha thi (xem docs/vsa-optimization.md).
+//  tm_slBufMin = slBuf toi thieu de phi <= nguong, hien tren dashboard de biet
+//  phai noi stop rong bao nhieu o khung dang xem.
+// -----------------------------------------------------------------------------
+tm_atrPct   = not na(tm_atr) and close > 0 ? tm_atr / close : na
+tm_feeR     = not na(tm_atrPct) and tm_atrPct > 0.0 and tm_i_slBuf > 0.0 ? (tm_i_feePct / 100.0 * 2.0) / (tm_i_slBuf * tm_atrPct) : na
+tm_feeOk    = not na(tm_feeR) and tm_feeR <= tm_i_feeMaxR
+tm_slBufMin = not na(tm_atrPct) and tm_atrPct > 0.0 and tm_i_feeMaxR > 0.0 ? (tm_i_feePct / 100.0 * 2.0) / (tm_i_feeMaxR * tm_atrPct) : na
+
+tm_pur20 = math.sum(tm_isPurple ? 1.0 : 0.0, tm_i_purWin)
+
+// End of Momentum: volume am + gia chay lon -> giu lenh den khi volume no
+tm_eomMove = not na(close[1]) and not na(tm_atr) and math.abs(close - close[1]) >= 0.5 * tm_atr
+var int tm_eomRun = 0
+tm_eomRun := tm_quietLow and tm_eomMove ? tm_eomRun + 1 : 0
+
+var int tm_lastPurBar = na
+if tm_isPurple
+    tm_lastPurBar := bar_index

@@ -1,0 +1,26 @@
+// @part skip:vsa
+// =============================================================================
+//  LAYER 5 - STRATEGY BRIDGE (chi co o ban vsa-strategy)
+//  Marker "@part skip:vsa" => ban indicator TM VSA Wyckoff KHONG chua file nay.
+//  Doc THANG state tu 40_events (tm_lvlE/S/T, tm_lvlDir) - khong tinh lai tin
+//  hieu, nen backtest va indicator khong the lech nhau.
+// =============================================================================
+tm_i_btOn  = input.bool(true, "Bat dat lenh theo setup ST", group = "TM · Backtest", display = display.data_window)
+tm_i_btPct = input.float(100.0, "Khoi luong (% equity)", minval = 1.0, maxval = 100.0, step = 5.0, group = "TM · Backtest", display = display.data_window)
+
+// Vao lenh dung luc setup ST duoc tao (40_events vua gan tm_lvl* cung bar)
+tm_btLong  = tm_i_btOn and tm_sigSTl and tm_hasSV
+tm_btShort = tm_i_btOn and tm_sigSTs and tm_hasBC
+
+// qty = phan tram equity / gia -> default_qty_type khong can dung
+tm_btQty = tm_i_btPct / 100.0 * strategy.equity / close
+
+if tm_btLong
+    strategy.entry("Long", strategy.long, qty = tm_btQty, comment = "VSA ST LONG")
+if tm_btShort
+    strategy.entry("Short", strategy.short, qty = tm_btQty, comment = "VSA ST SHORT")
+
+// Thoat dung muc Entry/SL/TP cua setup gan nhat (40_events da tinh san)
+tm_btEn = tm_lvlDir == 1 ? "Long" : tm_lvlDir == -1 ? "Short" : ""
+if tm_i_btOn and tm_lvlDir != 0 and not tm_lvlDone and tm_btEn != ""
+    strategy.exit("VSA X", from_entry = tm_btEn, stop = tm_lvlS, limit = tm_lvlT)

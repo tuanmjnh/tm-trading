@@ -1,0 +1,17 @@
+// =============================================================================
+//  SHARED HELPERS - code dung chung MOI target (chen qua marker SHARED trong 00_header)
+//  - f_sessionOk : loc phien giao dich (dung cho XAU/XAG/forex, crypto de trong)
+//  - f_vsaColor  : 6 mau bucket volume VSA - TIM = volume dot bien (vol >= ma * rP)
+//  - f_vsaName   : ten bucket tuong ung, dung cho dashboard
+//  Quy uoc: ham f_* thuan (khong phu thuoc input) - dua vao day de cac
+//  indicator moi (TM Signals, TM VSA Wyckoff, ...) dung lai mot lan dinh nghia.
+// =============================================================================
+
+f_sessionOk(string sess, string tz) =>
+    not na(time(timeframe.period, sess, tz))
+
+f_vsaColor(float vol, float ma, float rP, float rVH, float rH, float rN, float rL) =>
+    vol >= ma * rP ? color.purple : vol >= ma * rVH ? color.red : vol >= ma * rH ? color.orange : vol >= ma * rN ? color.green : vol >= ma * rL ? color.blue : color.silver
+
+f_vsaName(float vol, float ma, float rP, float rVH, float rH, float rN, float rL) =>
+    vol >= ma * rP ? "TIM" : vol >= ma * rVH ? "VeryHigh" : vol >= ma * rH ? "High" : vol >= ma * rN ? "Normal" : vol >= ma * rL ? "Low" : "VeryLow"

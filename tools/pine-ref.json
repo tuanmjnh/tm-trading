@@ -1,0 +1,10481 @@
+{
+ "source": {
+  "repo": "https://github.com/folknor/pine-tools",
+  "path": "pine-data/v6",
+  "ref": "main",
+  "retrieved": "2026-09-29",
+  "files": {
+   "functions": "https://raw.githubusercontent.com/folknor/pine-tools/main/pine-data/v6/functions.json",
+   "keywords": "https://raw.githubusercontent.com/folknor/pine-tools/main/pine-data/v6/keywords.json",
+   "variables": "https://raw.githubusercontent.com/folknor/pine-tools/main/pine-data/v6/variables.json",
+   "constants": "https://raw.githubusercontent.com/folknor/pine-tools/main/pine-data/v6/constants.json"
+  },
+  "counts": {
+   "functions": 475,
+   "keywords": 30,
+   "variables": 162,
+   "constants": 237
+  },
+  "crossCheckedWith": "https://github.com/codenamedevan/pinescriptv6 (pinescriptv6_complete_reference.md)"
+ },
+ "functions": {
+  "alert": {
+   "params": [
+    "message",
+    "freq"
+   ],
+   "types": [
+    "series string",
+    "input string"
+   ],
+   "returns": "void"
+  },
+  "alertcondition": {
+   "params": [
+    "condition",
+    "title",
+    "message"
+   ],
+   "types": [
+    "series bool",
+    "const string",
+    "const string"
+   ],
+   "returns": "void"
+  },
+  "array.abs": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "array<int/float>"
+   ],
+   "returns": "array<float>",
+   "sigs": [
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "array<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "array<int>"
+     ]
+    }
+   ]
+  },
+  "array.avg": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "array<int/float>"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "array<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "array<int>"
+     ]
+    }
+   ]
+  },
+  "array.binary_search": {
+   "params": [
+    "id",
+    "val",
+    "sort_field"
+   ],
+   "types": [
+    "unknown",
+    "series int/float/string",
+    "const int/string"
+   ],
+   "returns": "series int",
+   "sigs": [
+    {
+     "params": [
+      "id",
+      "val"
+     ],
+     "types": [
+      "array<int/float>",
+      "series int/float"
+     ]
+    },
+    {
+     "params": [
+      "id",
+      "val",
+      "sort_field"
+     ],
+     "types": [
+      "any array type",
+      "series int/float/string",
+      "const int/string"
+     ]
+    }
+   ]
+  },
+  "array.binary_search_leftmost": {
+   "params": [
+    "id",
+    "val",
+    "sort_field"
+   ],
+   "types": [
+    "unknown",
+    "series int/float/string",
+    "const int/string"
+   ],
+   "returns": "series int",
+   "sigs": [
+    {
+     "params": [
+      "id",
+      "val"
+     ],
+     "types": [
+      "array<int/float>",
+      "series int/float"
+     ]
+    },
+    {
+     "params": [
+      "id",
+      "val",
+      "sort_field"
+     ],
+     "types": [
+      "any array type",
+      "series int/float/string",
+      "const int/string"
+     ]
+    }
+   ]
+  },
+  "array.binary_search_rightmost": {
+   "params": [
+    "id",
+    "val",
+    "sort_field"
+   ],
+   "types": [
+    "unknown",
+    "series int/float/string",
+    "const int/string"
+   ],
+   "returns": "series int",
+   "sigs": [
+    {
+     "params": [
+      "id",
+      "val"
+     ],
+     "types": [
+      "array<int/float>",
+      "series int/float"
+     ]
+    },
+    {
+     "params": [
+      "id",
+      "val",
+      "sort_field"
+     ],
+     "types": [
+      "any array type",
+      "series int/float/string",
+      "const int/string"
+     ]
+    }
+   ]
+  },
+  "array.clear": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any array type"
+   ],
+   "returns": "void"
+  },
+  "array.concat": {
+   "params": [
+    "id1",
+    "id2"
+   ],
+   "types": [
+    "any array type",
+    "any array type"
+   ],
+   "returns": "array<type>"
+  },
+  "array.copy": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any array type"
+   ],
+   "returns": "array<type>"
+  },
+  "array.covariance": {
+   "params": [
+    "id1",
+    "id2",
+    "biased"
+   ],
+   "types": [
+    "array<int/float>",
+    "array<int/float>",
+    "series bool"
+   ],
+   "returns": "series float"
+  },
+  "array.every": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "array<bool>"
+   ],
+   "returns": "series bool"
+  },
+  "array.fill": {
+   "params": [
+    "id",
+    "value",
+    "index_from",
+    "index_to"
+   ],
+   "types": [
+    "any array type",
+    "series <type of the array's elements>",
+    "series int",
+    "series int"
+   ],
+   "returns": "void"
+  },
+  "array.first": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any array type"
+   ],
+   "returns": "series <type>"
+  },
+  "array.from": {
+   "params": [
+    "arg0",
+    "arg1"
+   ],
+   "types": [
+    "unknown",
+    "unknown"
+   ],
+   "returns": "array<type>",
+   "sigs": [
+    {
+     "params": [
+      "arg0",
+      "arg1"
+     ],
+     "types": [
+      "<arg..._type>",
+      "<arg..._type>"
+     ]
+    },
+    {
+     "params": [
+      "arg0",
+      "arg1"
+     ],
+     "types": [
+      "series enum",
+      "series enum"
+     ]
+    },
+    {
+     "params": [
+      "arg0",
+      "arg1"
+     ],
+     "types": [
+      "series label",
+      "series label"
+     ]
+    },
+    {
+     "params": [
+      "arg0",
+      "arg1"
+     ],
+     "types": [
+      "series line",
+      "series line"
+     ]
+    },
+    {
+     "params": [
+      "arg0",
+      "arg1"
+     ],
+     "types": [
+      "series box",
+      "series box"
+     ]
+    },
+    {
+     "params": [
+      "arg0",
+      "arg1"
+     ],
+     "types": [
+      "series table",
+      "series table"
+     ]
+    },
+    {
+     "params": [
+      "arg0",
+      "arg1"
+     ],
+     "types": [
+      "series linefill",
+      "series linefill"
+     ]
+    },
+    {
+     "params": [
+      "arg0",
+      "arg1"
+     ],
+     "types": [
+      "series string",
+      "series string"
+     ]
+    },
+    {
+     "params": [
+      "arg0",
+      "arg1"
+     ],
+     "types": [
+      "series color",
+      "series color"
+     ]
+    },
+    {
+     "params": [
+      "arg0",
+      "arg1"
+     ],
+     "types": [
+      "series int",
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "arg0",
+      "arg1"
+     ],
+     "types": [
+      "series int/float",
+      "series int/float"
+     ]
+    },
+    {
+     "params": [
+      "arg0",
+      "arg1"
+     ],
+     "types": [
+      "series bool",
+      "series bool"
+     ]
+    }
+   ]
+  },
+  "array.get": {
+   "params": [
+    "id",
+    "index"
+   ],
+   "types": [
+    "any array type",
+    "series int"
+   ],
+   "returns": "series <type>"
+  },
+  "array.includes": {
+   "params": [
+    "id",
+    "value"
+   ],
+   "types": [
+    "any array type",
+    "series <type of the array's elements>"
+   ],
+   "returns": "series bool"
+  },
+  "array.indexof": {
+   "params": [
+    "id",
+    "value"
+   ],
+   "types": [
+    "any array type",
+    "series <type of the array's elements>"
+   ],
+   "returns": "series int"
+  },
+  "array.insert": {
+   "params": [
+    "id",
+    "index",
+    "value"
+   ],
+   "types": [
+    "any array type",
+    "series int",
+    "series <type of the array's elements>"
+   ],
+   "returns": "void"
+  },
+  "array.join": {
+   "params": [
+    "id",
+    "separator"
+   ],
+   "types": [
+    "array<int/float/string>",
+    "series string"
+   ],
+   "returns": "series string"
+  },
+  "array.last": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any array type"
+   ],
+   "returns": "series <type>"
+  },
+  "array.lastindexof": {
+   "params": [
+    "id",
+    "value"
+   ],
+   "types": [
+    "any array type",
+    "series <type of the array's elements>"
+   ],
+   "returns": "series int"
+  },
+  "array.max": {
+   "params": [
+    "id",
+    "nth"
+   ],
+   "types": [
+    "array<int/float>",
+    "series int"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "id",
+      "nth"
+     ],
+     "types": [
+      "array<int/float>",
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "id",
+      "nth"
+     ],
+     "types": [
+      "array<int>",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "array.median": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "array<int/float>"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "array<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "array<int>"
+     ]
+    }
+   ]
+  },
+  "array.min": {
+   "params": [
+    "id",
+    "nth"
+   ],
+   "types": [
+    "array<int/float>",
+    "series int"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "id",
+      "nth"
+     ],
+     "types": [
+      "array<int/float>",
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "id",
+      "nth"
+     ],
+     "types": [
+      "array<int>",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "array.mode": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "array<int/float>"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "array<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "array<int>"
+     ]
+    }
+   ]
+  },
+  "array.new<type>": {
+   "params": [
+    "size",
+    "initial_value"
+   ],
+   "types": [
+    "series int",
+    "<array_type>"
+   ],
+   "returns": "array<type>"
+  },
+  "array.new_bool": {
+   "params": [
+    "size",
+    "initial_value"
+   ],
+   "types": [
+    "series int",
+    "series bool"
+   ],
+   "returns": "array<bool>"
+  },
+  "array.new_box": {
+   "params": [
+    "size",
+    "initial_value"
+   ],
+   "types": [
+    "series int",
+    "series box"
+   ],
+   "returns": "array<box>"
+  },
+  "array.new_color": {
+   "params": [
+    "size",
+    "initial_value"
+   ],
+   "types": [
+    "series int",
+    "series color"
+   ],
+   "returns": "array<color>"
+  },
+  "array.new_float": {
+   "params": [
+    "size",
+    "initial_value"
+   ],
+   "types": [
+    "series int",
+    "series int/float"
+   ],
+   "returns": "array<float>"
+  },
+  "array.new_int": {
+   "params": [
+    "size",
+    "initial_value"
+   ],
+   "types": [
+    "series int",
+    "series int"
+   ],
+   "returns": "array<int>"
+  },
+  "array.new_label": {
+   "params": [
+    "size",
+    "initial_value"
+   ],
+   "types": [
+    "series int",
+    "series label"
+   ],
+   "returns": "array<label>"
+  },
+  "array.new_line": {
+   "params": [
+    "size",
+    "initial_value"
+   ],
+   "types": [
+    "series int",
+    "series line"
+   ],
+   "returns": "array<line>"
+  },
+  "array.new_linefill": {
+   "params": [
+    "size",
+    "initial_value"
+   ],
+   "types": [
+    "series int",
+    "series linefill"
+   ],
+   "returns": "array<linefill>"
+  },
+  "array.new_string": {
+   "params": [
+    "size",
+    "initial_value"
+   ],
+   "types": [
+    "series int",
+    "series string"
+   ],
+   "returns": "array<string>"
+  },
+  "array.new_table": {
+   "params": [
+    "size",
+    "initial_value"
+   ],
+   "types": [
+    "series int",
+    "series table"
+   ],
+   "returns": "array<table>"
+  },
+  "array.percentile_linear_interpolation": {
+   "params": [
+    "id",
+    "percentage"
+   ],
+   "types": [
+    "array<int/float>",
+    "series int/float"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "id",
+      "percentage"
+     ],
+     "types": [
+      "array<int/float>",
+      "series int/float"
+     ]
+    },
+    {
+     "params": [
+      "id",
+      "percentage"
+     ],
+     "types": [
+      "array<int>",
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "array.percentile_nearest_rank": {
+   "params": [
+    "id",
+    "percentage"
+   ],
+   "types": [
+    "array<int/float>",
+    "series int/float"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "id",
+      "percentage"
+     ],
+     "types": [
+      "array<int/float>",
+      "series int/float"
+     ]
+    },
+    {
+     "params": [
+      "id",
+      "percentage"
+     ],
+     "types": [
+      "array<int>",
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "array.percentrank": {
+   "params": [
+    "id",
+    "index"
+   ],
+   "types": [
+    "array<int/float>",
+    "series int"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "id",
+      "index"
+     ],
+     "types": [
+      "array<int/float>",
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "id",
+      "index"
+     ],
+     "types": [
+      "array<int>",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "array.pop": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any array type"
+   ],
+   "returns": "series <type>"
+  },
+  "array.push": {
+   "params": [
+    "id",
+    "value"
+   ],
+   "types": [
+    "any array type",
+    "series <type of the array's elements>"
+   ],
+   "returns": "void"
+  },
+  "array.range": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "array<int/float>"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "array<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "array<int>"
+     ]
+    }
+   ]
+  },
+  "array.remove": {
+   "params": [
+    "id",
+    "index"
+   ],
+   "types": [
+    "any array type",
+    "series int"
+   ],
+   "returns": "series <type>"
+  },
+  "array.reverse": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any array type"
+   ],
+   "returns": "void"
+  },
+  "array.set": {
+   "params": [
+    "id",
+    "index",
+    "value"
+   ],
+   "types": [
+    "any array type",
+    "series int",
+    "series <type of the array's elements>"
+   ],
+   "returns": "void"
+  },
+  "array.shift": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any array type"
+   ],
+   "returns": "series <type>"
+  },
+  "array.size": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any array type"
+   ],
+   "returns": "series int"
+  },
+  "array.slice": {
+   "params": [
+    "id",
+    "index_from",
+    "index_to"
+   ],
+   "types": [
+    "any array type",
+    "series int",
+    "series int"
+   ],
+   "returns": "array<type>"
+  },
+  "array.some": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "array<bool>"
+   ],
+   "returns": "series bool"
+  },
+  "array.sort": {
+   "params": [
+    "id",
+    "order",
+    "sort_field"
+   ],
+   "types": [
+    "unknown",
+    "series sort_order",
+    "const int/string"
+   ],
+   "returns": "void",
+   "sigs": [
+    {
+     "params": [
+      "id",
+      "order"
+     ],
+     "types": [
+      "array<int/float/string>",
+      "series sort_order"
+     ]
+    },
+    {
+     "params": [
+      "id",
+      "order",
+      "sort_field"
+     ],
+     "types": [
+      "any array type",
+      "series sort_order",
+      "const int/string"
+     ]
+    }
+   ]
+  },
+  "array.sort_indices": {
+   "params": [
+    "id",
+    "order",
+    "sort_field"
+   ],
+   "types": [
+    "unknown",
+    "series sort_order",
+    "const int/string"
+   ],
+   "returns": "array<int>",
+   "sigs": [
+    {
+     "params": [
+      "id",
+      "order"
+     ],
+     "types": [
+      "array<int/float/string>",
+      "series sort_order"
+     ]
+    },
+    {
+     "params": [
+      "id",
+      "order",
+      "sort_field"
+     ],
+     "types": [
+      "any array type",
+      "series sort_order",
+      "const int/string"
+     ]
+    }
+   ]
+  },
+  "array.standardize": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "array<int/float>"
+   ],
+   "returns": "array<float>",
+   "sigs": [
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "array<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "array<int>"
+     ]
+    }
+   ]
+  },
+  "array.stdev": {
+   "params": [
+    "id",
+    "biased"
+   ],
+   "types": [
+    "array<int/float>",
+    "series bool"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "id",
+      "biased"
+     ],
+     "types": [
+      "array<int/float>",
+      "series bool"
+     ]
+    },
+    {
+     "params": [
+      "id",
+      "biased"
+     ],
+     "types": [
+      "array<int>",
+      "series bool"
+     ]
+    }
+   ]
+  },
+  "array.sum": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "array<int/float>"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "array<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "array<int>"
+     ]
+    }
+   ]
+  },
+  "array.unshift": {
+   "params": [
+    "id",
+    "value"
+   ],
+   "types": [
+    "any array type",
+    "series <type of the array's elements>"
+   ],
+   "returns": "void"
+  },
+  "array.variance": {
+   "params": [
+    "id",
+    "biased"
+   ],
+   "types": [
+    "array<int/float>",
+    "series bool"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "id",
+      "biased"
+     ],
+     "types": [
+      "array<int/float>",
+      "series bool"
+     ]
+    },
+    {
+     "params": [
+      "id",
+      "biased"
+     ],
+     "types": [
+      "array<int>",
+      "series bool"
+     ]
+    }
+   ]
+  },
+  "barcolor": {
+   "params": [
+    "color",
+    "offset",
+    "editable",
+    "show_last",
+    "title",
+    "display"
+   ],
+   "types": [
+    "series color",
+    "simple int",
+    "input bool",
+    "input int",
+    "const string",
+    "input plot_simple_display"
+   ],
+   "returns": "void"
+  },
+  "bgcolor": {
+   "params": [
+    "color",
+    "offset",
+    "editable",
+    "show_last",
+    "title",
+    "display",
+    "force_overlay"
+   ],
+   "types": [
+    "series color",
+    "simple int",
+    "input bool",
+    "input int",
+    "const string",
+    "input plot_simple_display",
+    "const bool"
+   ],
+   "returns": "void"
+  },
+  "bool": {
+   "params": [
+    "x"
+   ],
+   "types": [
+    "series int/float/bool"
+   ],
+   "returns": "const bool",
+   "sigs": [
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "simple int/float/bool"
+     ]
+    },
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "input bool"
+     ]
+    },
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "simple bool"
+     ]
+    },
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "series int/float/bool"
+     ]
+    }
+   ]
+  },
+  "box": {
+   "params": [
+    "x"
+   ],
+   "types": [
+    "series box"
+   ],
+   "returns": "series box"
+  },
+  "box.copy": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series box"
+   ],
+   "returns": "series box"
+  },
+  "box.delete": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series box"
+   ],
+   "returns": "void"
+  },
+  "box.get_bottom": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series box"
+   ],
+   "returns": "series float"
+  },
+  "box.get_left": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series box"
+   ],
+   "returns": "series int"
+  },
+  "box.get_right": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series box"
+   ],
+   "returns": "series int"
+  },
+  "box.get_top": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series box"
+   ],
+   "returns": "series float"
+  },
+  "box.new": {
+   "params": [
+    "top_left",
+    "bottom_right",
+    "border_color",
+    "border_width",
+    "border_style",
+    "extend",
+    "xloc",
+    "bgcolor",
+    "text",
+    "text_size",
+    "text_color",
+    "text_halign",
+    "text_valign",
+    "text_wrap",
+    "text_font_family",
+    "force_overlay",
+    "text_formatting",
+    "left",
+    "top",
+    "right",
+    "bottom"
+   ],
+   "types": [
+    "chart.point",
+    "chart.point",
+    "series color",
+    "series int",
+    "series string",
+    "series string",
+    "series string",
+    "series color",
+    "series string",
+    "series int/string",
+    "series color",
+    "series string",
+    "series string",
+    "series string",
+    "series string",
+    "const bool",
+    "series text_format",
+    "unknown",
+    "unknown",
+    "unknown",
+    "unknown"
+   ],
+   "returns": "series box",
+   "sigs": [
+    {
+     "params": [
+      "top_left",
+      "bottom_right",
+      "border_color",
+      "border_width",
+      "border_style",
+      "extend",
+      "xloc",
+      "bgcolor",
+      "text",
+      "text_size",
+      "text_color",
+      "text_halign",
+      "text_valign",
+      "text_wrap",
+      "text_font_family",
+      "force_overlay",
+      "text_formatting"
+     ],
+     "types": [
+      "chart.point",
+      "chart.point",
+      "series color",
+      "series int",
+      "series string",
+      "series string",
+      "series string",
+      "series color",
+      "series string",
+      "series int/string",
+      "series color",
+      "series string",
+      "series string",
+      "series string",
+      "series string",
+      "const bool",
+      "series text_format"
+     ]
+    },
+    {
+     "params": [
+      "left",
+      "top",
+      "right",
+      "bottom",
+      "border_color",
+      "border_width",
+      "border_style",
+      "extend",
+      "xloc",
+      "bgcolor",
+      "text",
+      "text_size",
+      "text_color",
+      "text_halign",
+      "text_valign",
+      "text_wrap",
+      "text_font_family",
+      "force_overlay",
+      "text_formatting"
+     ],
+     "types": [
+      "series int",
+      "series int/float",
+      "series int",
+      "series int/float",
+      "series color",
+      "series int",
+      "series string",
+      "series string",
+      "series string",
+      "series color",
+      "series string",
+      "series int/string",
+      "series color",
+      "series string",
+      "series string",
+      "series string",
+      "series string",
+      "const bool",
+      "series text_format"
+     ]
+    }
+   ]
+  },
+  "box.set_bgcolor": {
+   "params": [
+    "id",
+    "color"
+   ],
+   "types": [
+    "series box",
+    "series color"
+   ],
+   "returns": "void"
+  },
+  "box.set_border_color": {
+   "params": [
+    "id",
+    "color"
+   ],
+   "types": [
+    "series box",
+    "series color"
+   ],
+   "returns": "void"
+  },
+  "box.set_border_style": {
+   "params": [
+    "id",
+    "style"
+   ],
+   "types": [
+    "series box",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "box.set_border_width": {
+   "params": [
+    "id",
+    "width"
+   ],
+   "types": [
+    "series box",
+    "series int"
+   ],
+   "returns": "void"
+  },
+  "box.set_bottom": {
+   "params": [
+    "id",
+    "bottom"
+   ],
+   "types": [
+    "series box",
+    "series int/float"
+   ],
+   "returns": "void"
+  },
+  "box.set_bottom_right_point": {
+   "params": [
+    "id",
+    "point"
+   ],
+   "types": [
+    "series box",
+    "chart.point"
+   ],
+   "returns": "void"
+  },
+  "box.set_extend": {
+   "params": [
+    "id",
+    "extend"
+   ],
+   "types": [
+    "series box",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "box.set_left": {
+   "params": [
+    "id",
+    "left"
+   ],
+   "types": [
+    "series box",
+    "series int"
+   ],
+   "returns": "void"
+  },
+  "box.set_lefttop": {
+   "params": [
+    "id",
+    "left",
+    "top"
+   ],
+   "types": [
+    "series box",
+    "series int",
+    "series int/float"
+   ],
+   "returns": "void"
+  },
+  "box.set_right": {
+   "params": [
+    "id",
+    "right"
+   ],
+   "types": [
+    "series box",
+    "series int"
+   ],
+   "returns": "void"
+  },
+  "box.set_rightbottom": {
+   "params": [
+    "id",
+    "right",
+    "bottom"
+   ],
+   "types": [
+    "series box",
+    "series int",
+    "series int/float"
+   ],
+   "returns": "void"
+  },
+  "box.set_text": {
+   "params": [
+    "id",
+    "text"
+   ],
+   "types": [
+    "series box",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "box.set_text_color": {
+   "params": [
+    "id",
+    "text_color"
+   ],
+   "types": [
+    "series box",
+    "series color"
+   ],
+   "returns": "void"
+  },
+  "box.set_text_font_family": {
+   "params": [
+    "id",
+    "text_font_family"
+   ],
+   "types": [
+    "series box",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "box.set_text_formatting": {
+   "params": [
+    "id",
+    "text_formatting"
+   ],
+   "types": [
+    "series box",
+    "series text_format"
+   ],
+   "returns": "void"
+  },
+  "box.set_text_halign": {
+   "params": [
+    "id",
+    "text_halign"
+   ],
+   "types": [
+    "series box",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "box.set_text_size": {
+   "params": [
+    "id",
+    "text_size"
+   ],
+   "types": [
+    "series box",
+    "series int/string"
+   ],
+   "returns": "void"
+  },
+  "box.set_text_valign": {
+   "params": [
+    "id",
+    "text_valign"
+   ],
+   "types": [
+    "series box",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "box.set_text_wrap": {
+   "params": [
+    "id",
+    "text_wrap"
+   ],
+   "types": [
+    "series box",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "box.set_top": {
+   "params": [
+    "id",
+    "top"
+   ],
+   "types": [
+    "series box",
+    "series int/float"
+   ],
+   "returns": "void"
+  },
+  "box.set_top_left_point": {
+   "params": [
+    "id",
+    "point"
+   ],
+   "types": [
+    "series box",
+    "chart.point"
+   ],
+   "returns": "void"
+  },
+  "box.set_xloc": {
+   "params": [
+    "id",
+    "left",
+    "right",
+    "xloc"
+   ],
+   "types": [
+    "series box",
+    "series int",
+    "series int",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "chart.point.copy": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "chart.point"
+   ],
+   "returns": "chart.point"
+  },
+  "chart.point.from_index": {
+   "params": [
+    "index",
+    "price"
+   ],
+   "types": [
+    "series int",
+    "series int/float"
+   ],
+   "returns": "chart.point"
+  },
+  "chart.point.from_time": {
+   "params": [
+    "time",
+    "price"
+   ],
+   "types": [
+    "series int",
+    "series int/float"
+   ],
+   "returns": "chart.point"
+  },
+  "chart.point.new": {
+   "params": [
+    "time",
+    "index",
+    "price"
+   ],
+   "types": [
+    "series int",
+    "series int",
+    "series int/float"
+   ],
+   "returns": "chart.point"
+  },
+  "chart.point.now": {
+   "params": [
+    "price"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "chart.point"
+  },
+  "color": {
+   "params": [
+    "x"
+   ],
+   "types": [
+    "series color"
+   ],
+   "returns": "const color",
+   "sigs": [
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "const color"
+     ]
+    },
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "input color"
+     ]
+    },
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "simple color"
+     ]
+    },
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "series color"
+     ]
+    }
+   ]
+  },
+  "color.b": {
+   "params": [
+    "color"
+   ],
+   "types": [
+    "series color"
+   ],
+   "returns": "const float",
+   "sigs": [
+    {
+     "params": [
+      "color"
+     ],
+     "types": [
+      "const color"
+     ]
+    },
+    {
+     "params": [
+      "color"
+     ],
+     "types": [
+      "input color"
+     ]
+    },
+    {
+     "params": [
+      "color"
+     ],
+     "types": [
+      "simple color"
+     ]
+    },
+    {
+     "params": [
+      "color"
+     ],
+     "types": [
+      "series color"
+     ]
+    }
+   ]
+  },
+  "color.from_gradient": {
+   "params": [
+    "value",
+    "bottom_value",
+    "top_value",
+    "bottom_color",
+    "top_color"
+   ],
+   "types": [
+    "series int/float",
+    "series int/float",
+    "series int/float",
+    "series color",
+    "series color"
+   ],
+   "returns": "series color"
+  },
+  "color.g": {
+   "params": [
+    "color"
+   ],
+   "types": [
+    "series color"
+   ],
+   "returns": "const float",
+   "sigs": [
+    {
+     "params": [
+      "color"
+     ],
+     "types": [
+      "const color"
+     ]
+    },
+    {
+     "params": [
+      "color"
+     ],
+     "types": [
+      "input color"
+     ]
+    },
+    {
+     "params": [
+      "color"
+     ],
+     "types": [
+      "simple color"
+     ]
+    },
+    {
+     "params": [
+      "color"
+     ],
+     "types": [
+      "series color"
+     ]
+    }
+   ]
+  },
+  "color.new": {
+   "params": [
+    "color",
+    "transp"
+   ],
+   "types": [
+    "series color",
+    "series int/float"
+   ],
+   "returns": "const color",
+   "sigs": [
+    {
+     "params": [
+      "color",
+      "transp"
+     ],
+     "types": [
+      "const color",
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "color",
+      "transp"
+     ],
+     "types": [
+      "input color",
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "color",
+      "transp"
+     ],
+     "types": [
+      "simple color",
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "color",
+      "transp"
+     ],
+     "types": [
+      "series color",
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "color.r": {
+   "params": [
+    "color"
+   ],
+   "types": [
+    "series color"
+   ],
+   "returns": "const float",
+   "sigs": [
+    {
+     "params": [
+      "color"
+     ],
+     "types": [
+      "const color"
+     ]
+    },
+    {
+     "params": [
+      "color"
+     ],
+     "types": [
+      "input color"
+     ]
+    },
+    {
+     "params": [
+      "color"
+     ],
+     "types": [
+      "simple color"
+     ]
+    },
+    {
+     "params": [
+      "color"
+     ],
+     "types": [
+      "series color"
+     ]
+    }
+   ]
+  },
+  "color.rgb": {
+   "params": [
+    "red",
+    "green",
+    "blue",
+    "transp"
+   ],
+   "types": [
+    "series int/float",
+    "series int/float",
+    "series int/float",
+    "series int/float"
+   ],
+   "returns": "const color",
+   "sigs": [
+    {
+     "params": [
+      "red",
+      "green",
+      "blue",
+      "transp"
+     ],
+     "types": [
+      "const int/float",
+      "const int/float",
+      "const int/float",
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "red",
+      "green",
+      "blue",
+      "transp"
+     ],
+     "types": [
+      "input int/float",
+      "input int/float",
+      "input int/float",
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "red",
+      "green",
+      "blue",
+      "transp"
+     ],
+     "types": [
+      "simple int/float",
+      "simple int/float",
+      "simple int/float",
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "red",
+      "green",
+      "blue",
+      "transp"
+     ],
+     "types": [
+      "series int/float",
+      "series int/float",
+      "series int/float",
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "color.t": {
+   "params": [
+    "color"
+   ],
+   "types": [
+    "series color"
+   ],
+   "returns": "const float",
+   "sigs": [
+    {
+     "params": [
+      "color"
+     ],
+     "types": [
+      "const color"
+     ]
+    },
+    {
+     "params": [
+      "color"
+     ],
+     "types": [
+      "input color"
+     ]
+    },
+    {
+     "params": [
+      "color"
+     ],
+     "types": [
+      "simple color"
+     ]
+    },
+    {
+     "params": [
+      "color"
+     ],
+     "types": [
+      "series color"
+     ]
+    }
+   ]
+  },
+  "dayofmonth": {
+   "params": [
+    "time",
+    "timezone"
+   ],
+   "types": [
+    "series int",
+    "series string"
+   ],
+   "returns": "series int"
+  },
+  "dayofweek": {
+   "params": [
+    "time",
+    "timezone"
+   ],
+   "types": [
+    "series int",
+    "series string"
+   ],
+   "returns": "series int"
+  },
+  "fill": {
+   "params": [
+    "hline1",
+    "hline2",
+    "color",
+    "title",
+    "editable",
+    "fillgaps",
+    "display",
+    "plot1",
+    "plot2",
+    "show_last",
+    "top_value",
+    "bottom_value",
+    "top_color",
+    "bottom_color"
+   ],
+   "types": [
+    "hline",
+    "hline",
+    "series color",
+    "const string",
+    "input bool",
+    "const bool",
+    "input plot_simple_display",
+    "unknown",
+    "unknown",
+    "unknown",
+    "unknown",
+    "unknown",
+    "unknown",
+    "unknown"
+   ],
+   "returns": "void",
+   "sigs": [
+    {
+     "params": [
+      "hline1",
+      "hline2",
+      "color",
+      "title",
+      "editable",
+      "fillgaps",
+      "display"
+     ],
+     "types": [
+      "hline",
+      "hline",
+      "series color",
+      "const string",
+      "input bool",
+      "const bool",
+      "input plot_simple_display"
+     ]
+    },
+    {
+     "params": [
+      "plot1",
+      "plot2",
+      "color",
+      "title",
+      "editable",
+      "show_last",
+      "fillgaps",
+      "display"
+     ],
+     "types": [
+      "plot",
+      "plot",
+      "series color",
+      "const string",
+      "input bool",
+      "input int",
+      "const bool",
+      "input plot_simple_display"
+     ]
+    },
+    {
+     "params": [
+      "plot1",
+      "plot2",
+      "top_value",
+      "bottom_value",
+      "top_color",
+      "bottom_color",
+      "title",
+      "display",
+      "fillgaps",
+      "editable"
+     ],
+     "types": [
+      "plot",
+      "plot",
+      "series int/float",
+      "series int/float",
+      "series color",
+      "series color",
+      "const string",
+      "input plot_simple_display",
+      "const bool",
+      "input bool"
+     ]
+    }
+   ]
+  },
+  "fixnan": {
+   "params": [
+    "source"
+   ],
+   "types": [
+    "series int/float/color"
+   ],
+   "returns": "series color",
+   "sigs": [
+    {
+     "params": [
+      "source"
+     ],
+     "types": [
+      "series color"
+     ]
+    },
+    {
+     "params": [
+      "source"
+     ],
+     "types": [
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "source"
+     ],
+     "types": [
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "float": {
+   "params": [
+    "x"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "const float",
+   "sigs": [
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "footprint.buy_volume": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "footprint"
+   ],
+   "returns": "series float"
+  },
+  "footprint.delta": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "footprint"
+   ],
+   "returns": "series float"
+  },
+  "footprint.get_row_by_price": {
+   "params": [
+    "id",
+    "price"
+   ],
+   "types": [
+    "footprint",
+    "series int/float"
+   ],
+   "returns": "volume_row"
+  },
+  "footprint.poc": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "footprint"
+   ],
+   "returns": "volume_row"
+  },
+  "footprint.rows": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "footprint"
+   ],
+   "returns": "array<volume_row>"
+  },
+  "footprint.sell_volume": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "footprint"
+   ],
+   "returns": "series float"
+  },
+  "footprint.total_volume": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "footprint"
+   ],
+   "returns": "series float"
+  },
+  "footprint.vah": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "footprint"
+   ],
+   "returns": "volume_row"
+  },
+  "footprint.val": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "footprint"
+   ],
+   "returns": "volume_row"
+  },
+  "hline": {
+   "params": [
+    "price",
+    "title",
+    "color",
+    "linestyle",
+    "linewidth",
+    "editable",
+    "display"
+   ],
+   "types": [
+    "input int/float",
+    "const string",
+    "input color",
+    "input hline_style",
+    "input int",
+    "input bool",
+    "input plot_simple_display"
+   ],
+   "returns": "hline"
+  },
+  "hour": {
+   "params": [
+    "time",
+    "timezone"
+   ],
+   "types": [
+    "series int",
+    "series string"
+   ],
+   "returns": "series int"
+  },
+  "indicator": {
+   "params": [
+    "title",
+    "shorttitle",
+    "overlay",
+    "format",
+    "precision",
+    "scale",
+    "max_bars_back",
+    "timeframe",
+    "timeframe_gaps",
+    "explicit_plot_zorder",
+    "max_lines_count",
+    "max_labels_count",
+    "max_boxes_count",
+    "calc_bars_count",
+    "max_polylines_count",
+    "dynamic_requests",
+    "behind_chart"
+   ],
+   "types": [
+    "const string",
+    "const string",
+    "const bool",
+    "const string",
+    "const int",
+    "const scale_type",
+    "const int",
+    "const string",
+    "const bool",
+    "const bool",
+    "const int",
+    "const int",
+    "const int",
+    "const int",
+    "const int",
+    "const bool",
+    "const bool"
+   ],
+   "returns": "void"
+  },
+  "input": {
+   "params": [
+    "defval",
+    "title",
+    "tooltip",
+    "inline",
+    "group",
+    "display",
+    "active"
+   ],
+   "types": [
+    "const int/float/bool/string/color or source-type built-ins",
+    "const string",
+    "const string",
+    "const string",
+    "const string",
+    "const plot_display",
+    "input bool"
+   ],
+   "returns": "input color",
+   "sigs": [
+    {
+     "params": [
+      "defval",
+      "title",
+      "tooltip",
+      "inline",
+      "group",
+      "display",
+      "active"
+     ],
+     "types": [
+      "const int/float/bool/string/color or source-type built-ins",
+      "const string",
+      "const string",
+      "const string",
+      "const string",
+      "const plot_display",
+      "input bool"
+     ]
+    },
+    {
+     "params": [
+      "defval",
+      "title",
+      "tooltip",
+      "inline",
+      "group",
+      "display",
+      "active"
+     ],
+     "types": [
+      "const int/float/bool/string/color or source-type built-ins",
+      "const string",
+      "const string",
+      "const string",
+      "const string",
+      "const plot_display",
+      "input bool"
+     ]
+    },
+    {
+     "params": [
+      "defval",
+      "title",
+      "tooltip",
+      "inline",
+      "group",
+      "display",
+      "active"
+     ],
+     "types": [
+      "const int/float/bool/string/color or source-type built-ins",
+      "const string",
+      "const string",
+      "const string",
+      "const string",
+      "const plot_display",
+      "input bool"
+     ]
+    },
+    {
+     "params": [
+      "defval",
+      "title",
+      "tooltip",
+      "inline",
+      "group",
+      "display",
+      "active"
+     ],
+     "types": [
+      "const int/float/bool/string/color or source-type built-ins",
+      "const string",
+      "const string",
+      "const string",
+      "const string",
+      "const plot_display",
+      "input bool"
+     ]
+    },
+    {
+     "params": [
+      "defval",
+      "title",
+      "tooltip",
+      "inline",
+      "group",
+      "display",
+      "active"
+     ],
+     "types": [
+      "const int/float/bool/string/color or source-type built-ins",
+      "const string",
+      "const string",
+      "const string",
+      "const string",
+      "const plot_display",
+      "input bool"
+     ]
+    },
+    {
+     "params": [
+      "defval",
+      "title",
+      "tooltip",
+      "inline",
+      "group",
+      "display",
+      "active"
+     ],
+     "types": [
+      "const int/float/bool/string/color or source-type built-ins",
+      "const string",
+      "const string",
+      "const string",
+      "const string",
+      "const plot_display",
+      "input bool"
+     ]
+    }
+   ]
+  },
+  "input.bool": {
+   "params": [
+    "defval",
+    "title",
+    "tooltip",
+    "inline",
+    "group",
+    "confirm",
+    "display",
+    "active"
+   ],
+   "types": [
+    "const bool",
+    "const string",
+    "const string",
+    "const string",
+    "const string",
+    "const bool",
+    "const plot_display",
+    "input bool"
+   ],
+   "returns": "input bool"
+  },
+  "input.color": {
+   "params": [
+    "defval",
+    "title",
+    "tooltip",
+    "inline",
+    "group",
+    "confirm",
+    "display",
+    "active"
+   ],
+   "types": [
+    "const color",
+    "const string",
+    "const string",
+    "const string",
+    "const string",
+    "const bool",
+    "const plot_display",
+    "input bool"
+   ],
+   "returns": "input color"
+  },
+  "input.enum": {
+   "params": [
+    "defval",
+    "title",
+    "options",
+    "tooltip",
+    "inline",
+    "group",
+    "confirm",
+    "display",
+    "active"
+   ],
+   "types": [
+    "const enum",
+    "const string",
+    "tuple of enum fields: [enumName.field1, enumName.field2, ...]",
+    "const string",
+    "const string",
+    "const string",
+    "const bool",
+    "const plot_display",
+    "input bool"
+   ],
+   "returns": "input enum"
+  },
+  "input.float": {
+   "params": [
+    "defval",
+    "title",
+    "options",
+    "tooltip",
+    "inline",
+    "group",
+    "confirm",
+    "display",
+    "active",
+    "minval",
+    "maxval",
+    "step"
+   ],
+   "types": [
+    "const int/float",
+    "const string",
+    "tuple of const int/float values: [val1, val2, ...]",
+    "const string",
+    "const string",
+    "const string",
+    "const bool",
+    "const plot_display",
+    "input bool",
+    "unknown",
+    "unknown",
+    "unknown"
+   ],
+   "returns": "input float",
+   "sigs": [
+    {
+     "params": [
+      "defval",
+      "title",
+      "options",
+      "tooltip",
+      "inline",
+      "group",
+      "confirm",
+      "display",
+      "active"
+     ],
+     "types": [
+      "const int/float",
+      "const string",
+      "tuple of const int/float values: [val1, val2, ...]",
+      "const string",
+      "const string",
+      "const string",
+      "const bool",
+      "const plot_display",
+      "input bool"
+     ]
+    },
+    {
+     "params": [
+      "defval",
+      "title",
+      "minval",
+      "maxval",
+      "step",
+      "tooltip",
+      "inline",
+      "group",
+      "confirm",
+      "display",
+      "active"
+     ],
+     "types": [
+      "const int/float",
+      "const string",
+      "const int/float",
+      "const int/float",
+      "const int/float",
+      "const string",
+      "const string",
+      "const string",
+      "const bool",
+      "const plot_display",
+      "input bool"
+     ]
+    }
+   ]
+  },
+  "input.int": {
+   "params": [
+    "defval",
+    "title",
+    "options",
+    "tooltip",
+    "inline",
+    "group",
+    "confirm",
+    "display",
+    "active",
+    "minval",
+    "maxval",
+    "step"
+   ],
+   "types": [
+    "const int",
+    "const string",
+    "tuple of const int values: [val1, val2, ...]",
+    "const string",
+    "const string",
+    "const string",
+    "const bool",
+    "const plot_display",
+    "input bool",
+    "unknown",
+    "unknown",
+    "unknown"
+   ],
+   "returns": "input int",
+   "sigs": [
+    {
+     "params": [
+      "defval",
+      "title",
+      "options",
+      "tooltip",
+      "inline",
+      "group",
+      "confirm",
+      "display",
+      "active"
+     ],
+     "types": [
+      "const int",
+      "const string",
+      "tuple of const int values: [val1, val2, ...]",
+      "const string",
+      "const string",
+      "const string",
+      "const bool",
+      "const plot_display",
+      "input bool"
+     ]
+    },
+    {
+     "params": [
+      "defval",
+      "title",
+      "minval",
+      "maxval",
+      "step",
+      "tooltip",
+      "inline",
+      "group",
+      "confirm",
+      "display",
+      "active"
+     ],
+     "types": [
+      "const int",
+      "const string",
+      "const int",
+      "const int",
+      "const int",
+      "const string",
+      "const string",
+      "const string",
+      "const bool",
+      "const plot_display",
+      "input bool"
+     ]
+    }
+   ]
+  },
+  "input.price": {
+   "params": [
+    "defval",
+    "title",
+    "tooltip",
+    "inline",
+    "group",
+    "confirm",
+    "display",
+    "active"
+   ],
+   "types": [
+    "const int/float",
+    "const string",
+    "const string",
+    "const string",
+    "const string",
+    "const bool",
+    "const plot_display",
+    "input bool"
+   ],
+   "returns": "input float"
+  },
+  "input.session": {
+   "params": [
+    "defval",
+    "title",
+    "options",
+    "tooltip",
+    "inline",
+    "group",
+    "confirm",
+    "display",
+    "active"
+   ],
+   "types": [
+    "const string",
+    "const string",
+    "tuple of const string values: [val1, val2, ...]",
+    "const string",
+    "const string",
+    "const string",
+    "const bool",
+    "const plot_display",
+    "input bool"
+   ],
+   "returns": "input string"
+  },
+  "input.source": {
+   "params": [
+    "defval",
+    "title",
+    "tooltip",
+    "inline",
+    "group",
+    "display",
+    "active",
+    "confirm"
+   ],
+   "types": [
+    "open/high/low/close/hl2/hlc3/ohlc4/hlcc4",
+    "const string",
+    "const string",
+    "const string",
+    "const string",
+    "const plot_display",
+    "input bool",
+    "const bool"
+   ],
+   "returns": "series float"
+  },
+  "input.string": {
+   "params": [
+    "defval",
+    "title",
+    "options",
+    "tooltip",
+    "inline",
+    "group",
+    "confirm",
+    "display",
+    "active"
+   ],
+   "types": [
+    "const string",
+    "const string",
+    "tuple of const string values: [val1, val2, ...]",
+    "const string",
+    "const string",
+    "const string",
+    "const bool",
+    "const plot_display",
+    "input bool"
+   ],
+   "returns": "input string"
+  },
+  "input.symbol": {
+   "params": [
+    "defval",
+    "title",
+    "tooltip",
+    "inline",
+    "group",
+    "confirm",
+    "display",
+    "active"
+   ],
+   "types": [
+    "const string",
+    "const string",
+    "const string",
+    "const string",
+    "const string",
+    "const bool",
+    "const plot_display",
+    "input bool"
+   ],
+   "returns": "input string"
+  },
+  "input.text_area": {
+   "params": [
+    "defval",
+    "title",
+    "tooltip",
+    "group",
+    "confirm",
+    "display",
+    "active"
+   ],
+   "types": [
+    "const string",
+    "const string",
+    "const string",
+    "const string",
+    "const bool",
+    "const plot_display",
+    "input bool"
+   ],
+   "returns": "input string"
+  },
+  "input.time": {
+   "params": [
+    "defval",
+    "title",
+    "tooltip",
+    "inline",
+    "group",
+    "confirm",
+    "display",
+    "active"
+   ],
+   "types": [
+    "const int",
+    "const string",
+    "const string",
+    "const string",
+    "const string",
+    "const bool",
+    "const plot_display",
+    "input bool"
+   ],
+   "returns": "input int"
+  },
+  "input.timeframe": {
+   "params": [
+    "defval",
+    "title",
+    "options",
+    "tooltip",
+    "inline",
+    "group",
+    "confirm",
+    "display",
+    "active"
+   ],
+   "types": [
+    "const string",
+    "const string",
+    "tuple of const string values: [val1, val2, ...]",
+    "const string",
+    "const string",
+    "const string",
+    "const bool",
+    "const plot_display",
+    "input bool"
+   ],
+   "returns": "input string"
+  },
+  "int": {
+   "params": [
+    "x"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "const int",
+   "sigs": [
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "label": {
+   "params": [
+    "x"
+   ],
+   "types": [
+    "series label"
+   ],
+   "returns": "series label"
+  },
+  "label.copy": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series label"
+   ],
+   "returns": "series label"
+  },
+  "label.delete": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series label"
+   ],
+   "returns": "void"
+  },
+  "label.get_text": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series label"
+   ],
+   "returns": "series string"
+  },
+  "label.get_x": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series label"
+   ],
+   "returns": "series int"
+  },
+  "label.get_y": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series label"
+   ],
+   "returns": "series float"
+  },
+  "label.new": {
+   "params": [
+    "point",
+    "text",
+    "xloc",
+    "yloc",
+    "color",
+    "style",
+    "textcolor",
+    "size",
+    "textalign",
+    "tooltip",
+    "text_font_family",
+    "force_overlay",
+    "text_formatting",
+    "x",
+    "y"
+   ],
+   "types": [
+    "chart.point",
+    "series string",
+    "series string",
+    "series string",
+    "series color",
+    "series string",
+    "series color",
+    "series int/string",
+    "series string",
+    "series string",
+    "series string",
+    "const bool",
+    "series text_format",
+    "unknown",
+    "unknown"
+   ],
+   "returns": "series label",
+   "sigs": [
+    {
+     "params": [
+      "point",
+      "text",
+      "xloc",
+      "yloc",
+      "color",
+      "style",
+      "textcolor",
+      "size",
+      "textalign",
+      "tooltip",
+      "text_font_family",
+      "force_overlay",
+      "text_formatting"
+     ],
+     "types": [
+      "chart.point",
+      "series string",
+      "series string",
+      "series string",
+      "series color",
+      "series string",
+      "series color",
+      "series int/string",
+      "series string",
+      "series string",
+      "series string",
+      "const bool",
+      "series text_format"
+     ]
+    },
+    {
+     "params": [
+      "x",
+      "y",
+      "text",
+      "xloc",
+      "yloc",
+      "color",
+      "style",
+      "textcolor",
+      "size",
+      "textalign",
+      "tooltip",
+      "text_font_family",
+      "force_overlay",
+      "text_formatting"
+     ],
+     "types": [
+      "series int",
+      "series int/float",
+      "series string",
+      "series string",
+      "series string",
+      "series color",
+      "series string",
+      "series color",
+      "series int/string",
+      "series string",
+      "series string",
+      "series string",
+      "const bool",
+      "series text_format"
+     ]
+    }
+   ]
+  },
+  "label.set_color": {
+   "params": [
+    "id",
+    "color"
+   ],
+   "types": [
+    "series label",
+    "series color"
+   ],
+   "returns": "void"
+  },
+  "label.set_point": {
+   "params": [
+    "id",
+    "point"
+   ],
+   "types": [
+    "series label",
+    "chart.point"
+   ],
+   "returns": "void"
+  },
+  "label.set_size": {
+   "params": [
+    "id",
+    "size"
+   ],
+   "types": [
+    "series label",
+    "series int/string"
+   ],
+   "returns": "void"
+  },
+  "label.set_style": {
+   "params": [
+    "id",
+    "style"
+   ],
+   "types": [
+    "series label",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "label.set_text": {
+   "params": [
+    "id",
+    "text"
+   ],
+   "types": [
+    "series label",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "label.set_text_font_family": {
+   "params": [
+    "id",
+    "text_font_family"
+   ],
+   "types": [
+    "series label",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "label.set_text_formatting": {
+   "params": [
+    "id",
+    "text_formatting"
+   ],
+   "types": [
+    "series label",
+    "series text_format"
+   ],
+   "returns": "void"
+  },
+  "label.set_textalign": {
+   "params": [
+    "id",
+    "textalign"
+   ],
+   "types": [
+    "series label",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "label.set_textcolor": {
+   "params": [
+    "id",
+    "textcolor"
+   ],
+   "types": [
+    "series label",
+    "series color"
+   ],
+   "returns": "void"
+  },
+  "label.set_tooltip": {
+   "params": [
+    "id",
+    "tooltip"
+   ],
+   "types": [
+    "series label",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "label.set_x": {
+   "params": [
+    "id",
+    "x"
+   ],
+   "types": [
+    "series label",
+    "series int"
+   ],
+   "returns": "void"
+  },
+  "label.set_xloc": {
+   "params": [
+    "id",
+    "x",
+    "xloc"
+   ],
+   "types": [
+    "series label",
+    "series int",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "label.set_xy": {
+   "params": [
+    "id",
+    "x",
+    "y"
+   ],
+   "types": [
+    "series label",
+    "series int",
+    "series int/float"
+   ],
+   "returns": "void"
+  },
+  "label.set_y": {
+   "params": [
+    "id",
+    "y"
+   ],
+   "types": [
+    "series label",
+    "series int/float"
+   ],
+   "returns": "void"
+  },
+  "label.set_yloc": {
+   "params": [
+    "id",
+    "yloc"
+   ],
+   "types": [
+    "series label",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "library": {
+   "params": [
+    "title",
+    "overlay",
+    "dynamic_requests"
+   ],
+   "types": [
+    "const string",
+    "const bool",
+    "const bool"
+   ],
+   "returns": "void"
+  },
+  "line": {
+   "params": [
+    "x"
+   ],
+   "types": [
+    "series line"
+   ],
+   "returns": "series line"
+  },
+  "line.copy": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series line"
+   ],
+   "returns": "series line"
+  },
+  "line.delete": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series line"
+   ],
+   "returns": "void"
+  },
+  "line.get_price": {
+   "params": [
+    "id",
+    "x"
+   ],
+   "types": [
+    "series line",
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "line.get_x1": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series line"
+   ],
+   "returns": "series int"
+  },
+  "line.get_x2": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series line"
+   ],
+   "returns": "series int"
+  },
+  "line.get_y1": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series line"
+   ],
+   "returns": "series float"
+  },
+  "line.get_y2": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series line"
+   ],
+   "returns": "series float"
+  },
+  "line.new": {
+   "params": [
+    "first_point",
+    "second_point",
+    "xloc",
+    "extend",
+    "color",
+    "style",
+    "width",
+    "force_overlay",
+    "x1",
+    "y1",
+    "x2",
+    "y2"
+   ],
+   "types": [
+    "chart.point",
+    "chart.point",
+    "series string",
+    "series string",
+    "series color",
+    "series string",
+    "series int",
+    "const bool",
+    "unknown",
+    "unknown",
+    "unknown",
+    "unknown"
+   ],
+   "returns": "series line",
+   "sigs": [
+    {
+     "params": [
+      "first_point",
+      "second_point",
+      "xloc",
+      "extend",
+      "color",
+      "style",
+      "width",
+      "force_overlay"
+     ],
+     "types": [
+      "chart.point",
+      "chart.point",
+      "series string",
+      "series string",
+      "series color",
+      "series string",
+      "series int",
+      "const bool"
+     ]
+    },
+    {
+     "params": [
+      "x1",
+      "y1",
+      "x2",
+      "y2",
+      "xloc",
+      "extend",
+      "color",
+      "style",
+      "width",
+      "force_overlay"
+     ],
+     "types": [
+      "series int",
+      "series int/float",
+      "series int",
+      "series int/float",
+      "series string",
+      "series string",
+      "series color",
+      "series string",
+      "series int",
+      "const bool"
+     ]
+    }
+   ]
+  },
+  "line.set_color": {
+   "params": [
+    "id",
+    "color"
+   ],
+   "types": [
+    "series line",
+    "series color"
+   ],
+   "returns": "void"
+  },
+  "line.set_extend": {
+   "params": [
+    "id",
+    "extend"
+   ],
+   "types": [
+    "series line",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "line.set_first_point": {
+   "params": [
+    "id",
+    "point"
+   ],
+   "types": [
+    "series line",
+    "chart.point"
+   ],
+   "returns": "void"
+  },
+  "line.set_second_point": {
+   "params": [
+    "id",
+    "point"
+   ],
+   "types": [
+    "series line",
+    "chart.point"
+   ],
+   "returns": "void"
+  },
+  "line.set_style": {
+   "params": [
+    "id",
+    "style"
+   ],
+   "types": [
+    "series line",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "line.set_width": {
+   "params": [
+    "id",
+    "width"
+   ],
+   "types": [
+    "series line",
+    "series int"
+   ],
+   "returns": "void"
+  },
+  "line.set_x1": {
+   "params": [
+    "id",
+    "x"
+   ],
+   "types": [
+    "series line",
+    "series int"
+   ],
+   "returns": "void"
+  },
+  "line.set_x2": {
+   "params": [
+    "id",
+    "x"
+   ],
+   "types": [
+    "series line",
+    "series int"
+   ],
+   "returns": "void"
+  },
+  "line.set_xloc": {
+   "params": [
+    "id",
+    "x1",
+    "x2",
+    "xloc"
+   ],
+   "types": [
+    "series line",
+    "series int",
+    "series int",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "line.set_xy1": {
+   "params": [
+    "id",
+    "x",
+    "y"
+   ],
+   "types": [
+    "series line",
+    "series int",
+    "series int/float"
+   ],
+   "returns": "void"
+  },
+  "line.set_xy2": {
+   "params": [
+    "id",
+    "x",
+    "y"
+   ],
+   "types": [
+    "series line",
+    "series int",
+    "series int/float"
+   ],
+   "returns": "void"
+  },
+  "line.set_y1": {
+   "params": [
+    "id",
+    "y"
+   ],
+   "types": [
+    "series line",
+    "series int/float"
+   ],
+   "returns": "void"
+  },
+  "line.set_y2": {
+   "params": [
+    "id",
+    "y"
+   ],
+   "types": [
+    "series line",
+    "series int/float"
+   ],
+   "returns": "void"
+  },
+  "linefill": {
+   "params": [
+    "x"
+   ],
+   "types": [
+    "series linefill"
+   ],
+   "returns": "series linefill"
+  },
+  "linefill.delete": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series linefill"
+   ],
+   "returns": "void"
+  },
+  "linefill.get_line1": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series linefill"
+   ],
+   "returns": "series line"
+  },
+  "linefill.get_line2": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series linefill"
+   ],
+   "returns": "series line"
+  },
+  "linefill.new": {
+   "params": [
+    "line1",
+    "line2",
+    "color"
+   ],
+   "types": [
+    "series line",
+    "series line",
+    "series color"
+   ],
+   "returns": "series linefill"
+  },
+  "linefill.set_color": {
+   "params": [
+    "id",
+    "color"
+   ],
+   "types": [
+    "series linefill",
+    "series color"
+   ],
+   "returns": "void"
+  },
+  "log.error": {
+   "params": [
+    "message",
+    "formatString",
+    "arg0",
+    "arg1"
+   ],
+   "types": [
+    "series string",
+    "unknown",
+    "unknown",
+    "unknown"
+   ],
+   "returns": "void",
+   "sigs": [
+    {
+     "params": [
+      "message"
+     ],
+     "types": [
+      "series string"
+     ]
+    },
+    {
+     "params": [
+      "formatString",
+      "arg0",
+      "arg1"
+     ],
+     "types": [
+      "series string",
+      "series int/float/bool/string/array<int/float/bool/string>",
+      "series int/float/bool/string/array<int/float/bool/string>"
+     ]
+    }
+   ]
+  },
+  "log.info": {
+   "params": [
+    "message",
+    "formatString",
+    "arg0",
+    "arg1"
+   ],
+   "types": [
+    "series string",
+    "unknown",
+    "unknown",
+    "unknown"
+   ],
+   "returns": "void",
+   "sigs": [
+    {
+     "params": [
+      "message"
+     ],
+     "types": [
+      "series string"
+     ]
+    },
+    {
+     "params": [
+      "formatString",
+      "arg0",
+      "arg1"
+     ],
+     "types": [
+      "series string",
+      "series int/float/bool/string/array<int/float/bool/string>",
+      "series int/float/bool/string/array<int/float/bool/string>"
+     ]
+    }
+   ]
+  },
+  "log.warning": {
+   "params": [
+    "message",
+    "formatString",
+    "arg0",
+    "arg1"
+   ],
+   "types": [
+    "series string",
+    "unknown",
+    "unknown",
+    "unknown"
+   ],
+   "returns": "void",
+   "sigs": [
+    {
+     "params": [
+      "message"
+     ],
+     "types": [
+      "series string"
+     ]
+    },
+    {
+     "params": [
+      "formatString",
+      "arg0",
+      "arg1"
+     ],
+     "types": [
+      "series string",
+      "series int/float/bool/string/array<int/float/bool/string>",
+      "series int/float/bool/string/array<int/float/bool/string>"
+     ]
+    }
+   ]
+  },
+  "map.clear": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any map type"
+   ],
+   "returns": "void"
+  },
+  "map.contains": {
+   "params": [
+    "id",
+    "key"
+   ],
+   "types": [
+    "any map type",
+    "series <type of the map's elements>"
+   ],
+   "returns": "series bool"
+  },
+  "map.copy": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any map type"
+   ],
+   "returns": "map<keyType, valueType>"
+  },
+  "map.get": {
+   "params": [
+    "id",
+    "key"
+   ],
+   "types": [
+    "any map type",
+    "series <type of the map's elements>"
+   ],
+   "returns": "<value_type>"
+  },
+  "map.keys": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any map type"
+   ],
+   "returns": "array<type>"
+  },
+  "map.new<type,type>": {
+   "params": [],
+   "types": [],
+   "returns": "map<keyType, valueType>"
+  },
+  "map.put": {
+   "params": [
+    "id",
+    "key",
+    "value"
+   ],
+   "types": [
+    "any map type",
+    "series <type of the map's elements>",
+    "series <type of the map's elements>"
+   ],
+   "returns": "<value_type>"
+  },
+  "map.put_all": {
+   "params": [
+    "id",
+    "id2"
+   ],
+   "types": [
+    "any map type",
+    "any map type"
+   ],
+   "returns": "void"
+  },
+  "map.remove": {
+   "params": [
+    "id",
+    "key"
+   ],
+   "types": [
+    "any map type",
+    "series <type of the map's elements>"
+   ],
+   "returns": "<value_type>"
+  },
+  "map.size": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any map type"
+   ],
+   "returns": "series int"
+  },
+  "map.values": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any map type"
+   ],
+   "returns": "array<type>"
+  },
+  "math.abs": {
+   "params": [
+    "number"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "const int",
+   "sigs": [
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "const int"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "input int"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "simple int"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "math.acos": {
+   "params": [
+    "angle"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "const float",
+   "sigs": [
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "math.asin": {
+   "params": [
+    "angle"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "const float",
+   "sigs": [
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "math.atan": {
+   "params": [
+    "angle"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "const float",
+   "sigs": [
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "math.avg": {
+   "params": [
+    "number0",
+    "number1"
+   ],
+   "types": [
+    "series int/float",
+    "series int/float"
+   ],
+   "returns": "simple float",
+   "sigs": [
+    {
+     "params": [
+      "number0",
+      "number1"
+     ],
+     "types": [
+      "simple int/float",
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "number0",
+      "number1"
+     ],
+     "types": [
+      "series int/float",
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "math.ceil": {
+   "params": [
+    "number"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "const int",
+   "sigs": [
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "math.cos": {
+   "params": [
+    "angle"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "const float",
+   "sigs": [
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "math.exp": {
+   "params": [
+    "number"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "const float",
+   "sigs": [
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "math.floor": {
+   "params": [
+    "number"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "const int",
+   "sigs": [
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "math.log": {
+   "params": [
+    "number"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "const float",
+   "sigs": [
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "math.log10": {
+   "params": [
+    "number"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "const float",
+   "sigs": [
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "math.max": {
+   "params": [
+    "number0",
+    "number1"
+   ],
+   "types": [
+    "series int/float",
+    "series int/float"
+   ],
+   "returns": "const int",
+   "sigs": [
+    {
+     "params": [
+      "number0",
+      "number1"
+     ],
+     "types": [
+      "const int",
+      "const int"
+     ]
+    },
+    {
+     "params": [
+      "number0",
+      "number1"
+     ],
+     "types": [
+      "const int/float",
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "number0",
+      "number1"
+     ],
+     "types": [
+      "input int",
+      "input int"
+     ]
+    },
+    {
+     "params": [
+      "number0",
+      "number1"
+     ],
+     "types": [
+      "simple int",
+      "simple int"
+     ]
+    },
+    {
+     "params": [
+      "number0",
+      "number1"
+     ],
+     "types": [
+      "input int/float",
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "number0",
+      "number1"
+     ],
+     "types": [
+      "series int",
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "number0",
+      "number1"
+     ],
+     "types": [
+      "simple int/float",
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "number0",
+      "number1"
+     ],
+     "types": [
+      "series int/float",
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "math.min": {
+   "params": [
+    "number0",
+    "number1"
+   ],
+   "types": [
+    "series int/float",
+    "series int/float"
+   ],
+   "returns": "const int",
+   "sigs": [
+    {
+     "params": [
+      "number0",
+      "number1"
+     ],
+     "types": [
+      "const int",
+      "const int"
+     ]
+    },
+    {
+     "params": [
+      "number0",
+      "number1"
+     ],
+     "types": [
+      "const int/float",
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "number0",
+      "number1"
+     ],
+     "types": [
+      "input int",
+      "input int"
+     ]
+    },
+    {
+     "params": [
+      "number0",
+      "number1"
+     ],
+     "types": [
+      "simple int",
+      "simple int"
+     ]
+    },
+    {
+     "params": [
+      "number0",
+      "number1"
+     ],
+     "types": [
+      "input int/float",
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "number0",
+      "number1"
+     ],
+     "types": [
+      "series int",
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "number0",
+      "number1"
+     ],
+     "types": [
+      "simple int/float",
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "number0",
+      "number1"
+     ],
+     "types": [
+      "series int/float",
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "math.pow": {
+   "params": [
+    "base",
+    "exponent"
+   ],
+   "types": [
+    "series int/float",
+    "series int/float"
+   ],
+   "returns": "const float",
+   "sigs": [
+    {
+     "params": [
+      "base",
+      "exponent"
+     ],
+     "types": [
+      "const int/float",
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "base",
+      "exponent"
+     ],
+     "types": [
+      "input int/float",
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "base",
+      "exponent"
+     ],
+     "types": [
+      "simple int/float",
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "base",
+      "exponent"
+     ],
+     "types": [
+      "series int/float",
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "math.random": {
+   "params": [
+    "min",
+    "max",
+    "seed"
+   ],
+   "types": [
+    "series int/float",
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "math.round": {
+   "params": [
+    "number",
+    "precision"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "const int",
+   "sigs": [
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "series int/float"
+     ]
+    },
+    {
+     "params": [
+      "number",
+      "precision"
+     ],
+     "types": [
+      "const int/float",
+      "simple int"
+     ]
+    },
+    {
+     "params": [
+      "number",
+      "precision"
+     ],
+     "types": [
+      "input int/float",
+      "simple int"
+     ]
+    },
+    {
+     "params": [
+      "number",
+      "precision"
+     ],
+     "types": [
+      "simple int/float",
+      "simple int"
+     ]
+    },
+    {
+     "params": [
+      "number",
+      "precision"
+     ],
+     "types": [
+      "series int/float",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "math.round_to_mintick": {
+   "params": [
+    "number"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "simple float",
+   "sigs": [
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "math.sign": {
+   "params": [
+    "number"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "const float",
+   "sigs": [
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "math.sin": {
+   "params": [
+    "angle"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "const float",
+   "sigs": [
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "math.sqrt": {
+   "params": [
+    "number"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "const float",
+   "sigs": [
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "number"
+     ],
+     "types": [
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "math.sum": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "math.tan": {
+   "params": [
+    "angle"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "const float",
+   "sigs": [
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "const int/float"
+     ]
+    },
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "input int/float"
+     ]
+    },
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "angle"
+     ],
+     "types": [
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "math.todegrees": {
+   "params": [
+    "radians"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "series float"
+  },
+  "math.toradians": {
+   "params": [
+    "degrees"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "series float"
+  },
+  "matrix.add_col": {
+   "params": [
+    "id",
+    "column",
+    "array_id"
+   ],
+   "types": [
+    "any matrix type",
+    "series int",
+    "any array type"
+   ],
+   "returns": "void"
+  },
+  "matrix.add_row": {
+   "params": [
+    "id",
+    "row",
+    "array_id"
+   ],
+   "types": [
+    "any matrix type",
+    "series int",
+    "any array type"
+   ],
+   "returns": "void"
+  },
+  "matrix.avg": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int>"
+     ]
+    }
+   ]
+  },
+  "matrix.col": {
+   "params": [
+    "id",
+    "column"
+   ],
+   "types": [
+    "any matrix type",
+    "series int"
+   ],
+   "returns": "array<type>"
+  },
+  "matrix.columns": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any matrix type"
+   ],
+   "returns": "series int"
+  },
+  "matrix.concat": {
+   "params": [
+    "id1",
+    "id2"
+   ],
+   "types": [
+    "any matrix type",
+    "any matrix type"
+   ],
+   "returns": "matrix<type>"
+  },
+  "matrix.copy": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any matrix type"
+   ],
+   "returns": "matrix<type>"
+  },
+  "matrix.det": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int>"
+     ]
+    }
+   ]
+  },
+  "matrix.diff": {
+   "params": [
+    "id1",
+    "id2"
+   ],
+   "types": [
+    "matrix<int/float>",
+    "unknown"
+   ],
+   "returns": "matrix<int>",
+   "sigs": [
+    {
+     "params": [
+      "id1",
+      "id2"
+     ],
+     "types": [
+      "matrix<int>",
+      "series int/float/matrix<int>"
+     ]
+    },
+    {
+     "params": [
+      "id1",
+      "id2"
+     ],
+     "types": [
+      "matrix<int/float>",
+      "series int/float/matrix<int/float>"
+     ]
+    }
+   ]
+  },
+  "matrix.eigenvalues": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "array<float>",
+   "sigs": [
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int>"
+     ]
+    }
+   ]
+  },
+  "matrix.eigenvectors": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "matrix<float>",
+   "sigs": [
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int>"
+     ]
+    }
+   ]
+  },
+  "matrix.elements_count": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any matrix type"
+   ],
+   "returns": "series int"
+  },
+  "matrix.fill": {
+   "params": [
+    "id",
+    "value",
+    "from_row",
+    "to_row",
+    "from_column",
+    "to_column"
+   ],
+   "types": [
+    "any matrix type",
+    "series <type of the matrix's elements>",
+    "series int",
+    "series int",
+    "series int",
+    "series int"
+   ],
+   "returns": "void"
+  },
+  "matrix.get": {
+   "params": [
+    "id",
+    "row",
+    "column"
+   ],
+   "types": [
+    "any matrix type",
+    "series int",
+    "series int"
+   ],
+   "returns": "<matrix_type>"
+  },
+  "matrix.inv": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "matrix<float>",
+   "sigs": [
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int>"
+     ]
+    }
+   ]
+  },
+  "matrix.is_antidiagonal": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "series bool"
+  },
+  "matrix.is_antisymmetric": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "series bool"
+  },
+  "matrix.is_binary": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "series bool"
+  },
+  "matrix.is_diagonal": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "series bool"
+  },
+  "matrix.is_identity": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "series bool"
+  },
+  "matrix.is_square": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any matrix type"
+   ],
+   "returns": "series bool"
+  },
+  "matrix.is_stochastic": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "series bool"
+  },
+  "matrix.is_symmetric": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "series bool"
+  },
+  "matrix.is_triangular": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "series bool"
+  },
+  "matrix.is_zero": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "series bool"
+  },
+  "matrix.kron": {
+   "params": [
+    "id1",
+    "id2"
+   ],
+   "types": [
+    "matrix<int/float>",
+    "matrix<int/float>"
+   ],
+   "returns": "matrix<float>",
+   "sigs": [
+    {
+     "params": [
+      "id1",
+      "id2"
+     ],
+     "types": [
+      "matrix<int/float>",
+      "matrix<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id1",
+      "id2"
+     ],
+     "types": [
+      "matrix<int>",
+      "matrix<int>"
+     ]
+    }
+   ]
+  },
+  "matrix.max": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int>"
+     ]
+    }
+   ]
+  },
+  "matrix.median": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int>"
+     ]
+    }
+   ]
+  },
+  "matrix.min": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int>"
+     ]
+    }
+   ]
+  },
+  "matrix.mode": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int>"
+     ]
+    }
+   ]
+  },
+  "matrix.mult": {
+   "params": [
+    "id1",
+    "id2"
+   ],
+   "types": [
+    "matrix<int/float>",
+    "unknown"
+   ],
+   "returns": "array<int>",
+   "sigs": [
+    {
+     "params": [
+      "id1",
+      "id2"
+     ],
+     "types": [
+      "matrix<int>",
+      "array<int>"
+     ]
+    },
+    {
+     "params": [
+      "id1",
+      "id2"
+     ],
+     "types": [
+      "matrix<int/float>",
+      "array<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id1",
+      "id2"
+     ],
+     "types": [
+      "matrix<int>",
+      "series int/float/matrix<int>"
+     ]
+    },
+    {
+     "params": [
+      "id1",
+      "id2"
+     ],
+     "types": [
+      "matrix<int/float>",
+      "series int/float/matrix<int/float>"
+     ]
+    }
+   ]
+  },
+  "matrix.new<type>": {
+   "params": [
+    "rows",
+    "columns",
+    "initial_value"
+   ],
+   "types": [
+    "series int",
+    "series int",
+    "<matrix_type>"
+   ],
+   "returns": "matrix<type>"
+  },
+  "matrix.pinv": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "matrix<float>",
+   "sigs": [
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int>"
+     ]
+    }
+   ]
+  },
+  "matrix.pow": {
+   "params": [
+    "id",
+    "power"
+   ],
+   "types": [
+    "matrix<int/float>",
+    "series int"
+   ],
+   "returns": "matrix<float>",
+   "sigs": [
+    {
+     "params": [
+      "id",
+      "power"
+     ],
+     "types": [
+      "matrix<int/float>",
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "id",
+      "power"
+     ],
+     "types": [
+      "matrix<int>",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "matrix.rank": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any matrix type"
+   ],
+   "returns": "series int"
+  },
+  "matrix.remove_col": {
+   "params": [
+    "id",
+    "column"
+   ],
+   "types": [
+    "any matrix type",
+    "series int"
+   ],
+   "returns": "array<type>"
+  },
+  "matrix.remove_row": {
+   "params": [
+    "id",
+    "row"
+   ],
+   "types": [
+    "any matrix type",
+    "series int"
+   ],
+   "returns": "array<type>"
+  },
+  "matrix.reshape": {
+   "params": [
+    "id",
+    "rows",
+    "columns"
+   ],
+   "types": [
+    "any matrix type",
+    "series int",
+    "series int"
+   ],
+   "returns": "void"
+  },
+  "matrix.reverse": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any matrix type"
+   ],
+   "returns": "void"
+  },
+  "matrix.row": {
+   "params": [
+    "id",
+    "row"
+   ],
+   "types": [
+    "any matrix type",
+    "series int"
+   ],
+   "returns": "array<type>"
+  },
+  "matrix.rows": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any matrix type"
+   ],
+   "returns": "series int"
+  },
+  "matrix.set": {
+   "params": [
+    "id",
+    "row",
+    "column",
+    "value"
+   ],
+   "types": [
+    "any matrix type",
+    "series int",
+    "series int",
+    "series <type of the matrix's elements>"
+   ],
+   "returns": "void"
+  },
+  "matrix.sort": {
+   "params": [
+    "id",
+    "column",
+    "order",
+    "sort_field"
+   ],
+   "types": [
+    "unknown",
+    "series int",
+    "series sort_order",
+    "const int/string"
+   ],
+   "returns": "void",
+   "sigs": [
+    {
+     "params": [
+      "id",
+      "column",
+      "order"
+     ],
+     "types": [
+      "matrix<int/float/string>",
+      "series int",
+      "series sort_order"
+     ]
+    },
+    {
+     "params": [
+      "id",
+      "column",
+      "order",
+      "sort_field"
+     ],
+     "types": [
+      "any matrix type",
+      "series int",
+      "series sort_order",
+      "const int/string"
+     ]
+    }
+   ]
+  },
+  "matrix.submatrix": {
+   "params": [
+    "id",
+    "from_row",
+    "to_row",
+    "from_column",
+    "to_column"
+   ],
+   "types": [
+    "any matrix type",
+    "series int",
+    "series int",
+    "series int",
+    "series int"
+   ],
+   "returns": "matrix<type>"
+  },
+  "matrix.sum": {
+   "params": [
+    "id1",
+    "id2"
+   ],
+   "types": [
+    "matrix<int/float>",
+    "unknown"
+   ],
+   "returns": "matrix<int>",
+   "sigs": [
+    {
+     "params": [
+      "id1",
+      "id2"
+     ],
+     "types": [
+      "matrix<int>",
+      "series int/float/matrix<int>"
+     ]
+    },
+    {
+     "params": [
+      "id1",
+      "id2"
+     ],
+     "types": [
+      "matrix<int/float>",
+      "series int/float/matrix<int/float>"
+     ]
+    }
+   ]
+  },
+  "matrix.swap_columns": {
+   "params": [
+    "id",
+    "column1",
+    "column2"
+   ],
+   "types": [
+    "any matrix type",
+    "series int",
+    "series int"
+   ],
+   "returns": "void"
+  },
+  "matrix.swap_rows": {
+   "params": [
+    "id",
+    "row1",
+    "row2"
+   ],
+   "types": [
+    "any matrix type",
+    "series int",
+    "series int"
+   ],
+   "returns": "void"
+  },
+  "matrix.trace": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "matrix<int/float>"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int/float>"
+     ]
+    },
+    {
+     "params": [
+      "id"
+     ],
+     "types": [
+      "matrix<int>"
+     ]
+    }
+   ]
+  },
+  "matrix.transpose": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "any matrix type"
+   ],
+   "returns": "matrix<type>"
+  },
+  "max_bars_back": {
+   "params": [
+    "var",
+    "num"
+   ],
+   "types": [
+    "series int/float/bool/color/label/line",
+    "const int"
+   ],
+   "returns": "void"
+  },
+  "minute": {
+   "params": [
+    "time",
+    "timezone"
+   ],
+   "types": [
+    "series int",
+    "series string"
+   ],
+   "returns": "series int"
+  },
+  "month": {
+   "params": [
+    "time",
+    "timezone"
+   ],
+   "types": [
+    "series int",
+    "series string"
+   ],
+   "returns": "series int"
+  },
+  "na": {
+   "params": [
+    "x"
+   ],
+   "types": [
+    "unknown"
+   ],
+   "returns": "simple bool",
+   "sigs": [
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "series int/float/color/string/label/line/box/table/linefill/polyline/array<>/matrix<>/map<>"
+     ]
+    }
+   ]
+  },
+  "nz": {
+   "params": [
+    "source",
+    "replacement"
+   ],
+   "types": [
+    "series int/float/color",
+    "series int/float/color"
+   ],
+   "returns": "simple color",
+   "sigs": [
+    {
+     "params": [
+      "source",
+      "replacement"
+     ],
+     "types": [
+      "simple color",
+      "simple color"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "replacement"
+     ],
+     "types": [
+      "simple int",
+      "simple int"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "replacement"
+     ],
+     "types": [
+      "series color",
+      "series color"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "replacement"
+     ],
+     "types": [
+      "series int",
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "replacement"
+     ],
+     "types": [
+      "simple int/float",
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "replacement"
+     ],
+     "types": [
+      "series int/float",
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "plot": {
+   "params": [
+    "series",
+    "title",
+    "color",
+    "linewidth",
+    "style",
+    "trackprice",
+    "histbase",
+    "offset",
+    "join",
+    "editable",
+    "show_last",
+    "display",
+    "format",
+    "precision",
+    "force_overlay",
+    "linestyle"
+   ],
+   "types": [
+    "series int/float",
+    "const string",
+    "series color",
+    "input int",
+    "input plot_style",
+    "input bool",
+    "input int/float",
+    "simple int",
+    "input bool",
+    "input bool",
+    "input int",
+    "input plot_display",
+    "input string",
+    "input int",
+    "const bool",
+    "input plot_line_style"
+   ],
+   "returns": "plot"
+  },
+  "plotarrow": {
+   "params": [
+    "series",
+    "title",
+    "colorup",
+    "colordown",
+    "offset",
+    "minheight",
+    "maxheight",
+    "editable",
+    "show_last",
+    "display",
+    "format",
+    "precision",
+    "force_overlay"
+   ],
+   "types": [
+    "series int/float",
+    "const string",
+    "series color",
+    "series color",
+    "simple int",
+    "input int",
+    "input int",
+    "input bool",
+    "input int",
+    "input plot_display",
+    "input string",
+    "input int",
+    "const bool"
+   ],
+   "returns": "void"
+  },
+  "plotbar": {
+   "params": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "title",
+    "color",
+    "editable",
+    "show_last",
+    "display",
+    "format",
+    "precision",
+    "force_overlay"
+   ],
+   "types": [
+    "series int/float",
+    "series int/float",
+    "series int/float",
+    "series int/float",
+    "const string",
+    "series color",
+    "input bool",
+    "input int",
+    "input plot_display",
+    "input string",
+    "input int",
+    "const bool"
+   ],
+   "returns": "void"
+  },
+  "plotcandle": {
+   "params": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "title",
+    "color",
+    "wickcolor",
+    "editable",
+    "show_last",
+    "bordercolor",
+    "display",
+    "format",
+    "precision",
+    "force_overlay"
+   ],
+   "types": [
+    "series int/float",
+    "series int/float",
+    "series int/float",
+    "series int/float",
+    "const string",
+    "series color",
+    "series color",
+    "input bool",
+    "input int",
+    "series color",
+    "input plot_display",
+    "input string",
+    "input int",
+    "const bool"
+   ],
+   "returns": "void"
+  },
+  "plotchar": {
+   "params": [
+    "series",
+    "title",
+    "char",
+    "location",
+    "color",
+    "offset",
+    "text",
+    "textcolor",
+    "editable",
+    "size",
+    "show_last",
+    "display",
+    "format",
+    "precision",
+    "force_overlay"
+   ],
+   "types": [
+    "series int/float/bool",
+    "const string",
+    "input string",
+    "input string",
+    "series color",
+    "simple int",
+    "const string",
+    "series color",
+    "input bool",
+    "const string",
+    "input int",
+    "input plot_display",
+    "input string",
+    "input int",
+    "const bool"
+   ],
+   "returns": "void"
+  },
+  "plotshape": {
+   "params": [
+    "series",
+    "title",
+    "style",
+    "location",
+    "color",
+    "offset",
+    "text",
+    "textcolor",
+    "editable",
+    "size",
+    "show_last",
+    "display",
+    "format",
+    "precision",
+    "force_overlay"
+   ],
+   "types": [
+    "series int/float/bool",
+    "const string",
+    "input string",
+    "input string",
+    "series color",
+    "simple int",
+    "const string",
+    "series color",
+    "input bool",
+    "const string",
+    "input int",
+    "input plot_display",
+    "input string",
+    "input int",
+    "const bool"
+   ],
+   "returns": "void"
+  },
+  "polyline.delete": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series polyline"
+   ],
+   "returns": "void"
+  },
+  "polyline.new": {
+   "params": [
+    "points",
+    "curved",
+    "closed",
+    "xloc",
+    "line_color",
+    "fill_color",
+    "line_style",
+    "line_width",
+    "force_overlay"
+   ],
+   "types": [
+    "array<chart.point>",
+    "series bool",
+    "series bool",
+    "series string",
+    "series color",
+    "series color",
+    "series string",
+    "series int",
+    "const bool"
+   ],
+   "returns": "series polyline"
+  },
+  "request.currency_rate": {
+   "params": [
+    "from",
+    "to",
+    "ignore_invalid_currency"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "series bool"
+   ],
+   "returns": "series float"
+  },
+  "request.dividends": {
+   "params": [
+    "ticker",
+    "field",
+    "gaps",
+    "lookahead",
+    "ignore_invalid_symbol",
+    "currency"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "simple barmerge_gaps",
+    "simple barmerge_lookahead",
+    "input bool",
+    "series string"
+   ],
+   "returns": "series float"
+  },
+  "request.earnings": {
+   "params": [
+    "ticker",
+    "field",
+    "gaps",
+    "lookahead",
+    "ignore_invalid_symbol",
+    "currency"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "simple barmerge_gaps",
+    "simple barmerge_lookahead",
+    "input bool",
+    "series string"
+   ],
+   "returns": "series float"
+  },
+  "request.economic": {
+   "params": [
+    "country_code",
+    "field",
+    "gaps",
+    "ignore_invalid_symbol"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "simple barmerge_gaps",
+    "input bool"
+   ],
+   "returns": "series float"
+  },
+  "request.financial": {
+   "params": [
+    "symbol",
+    "financial_id",
+    "period",
+    "gaps",
+    "ignore_invalid_symbol",
+    "currency"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "series string",
+    "simple barmerge_gaps",
+    "input bool",
+    "series string"
+   ],
+   "returns": "series float"
+  },
+  "request.footprint": {
+   "params": [
+    "ticks_per_row",
+    "va_percent",
+    "imbalance_percent"
+   ],
+   "types": [
+    "simple int",
+    "simple int/float",
+    "simple int/float"
+   ],
+   "returns": "footprint"
+  },
+  "request.quandl": {
+   "params": [
+    "ticker",
+    "gaps",
+    "index",
+    "ignore_invalid_symbol"
+   ],
+   "types": [
+    "series string",
+    "simple barmerge_gaps",
+    "series int",
+    "input bool"
+   ],
+   "returns": "series float"
+  },
+  "request.security": {
+   "params": [
+    "symbol",
+    "timeframe",
+    "expression",
+    "gaps",
+    "lookahead",
+    "ignore_invalid_symbol",
+    "currency",
+    "calc_bars_count"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "variable, function, object, array, matrix, or map of series int/float/bool/string/color/enum, or a tuple of these",
+    "simple barmerge_gaps",
+    "simple barmerge_lookahead",
+    "input bool",
+    "series string",
+    "simple int"
+   ],
+   "returns": "series <type>"
+  },
+  "request.security_lower_tf": {
+   "params": [
+    "symbol",
+    "timeframe",
+    "expression",
+    "ignore_invalid_symbol",
+    "currency",
+    "ignore_invalid_timeframe",
+    "calc_bars_count"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "variable, object or function of series int/float/bool/string/color/enum, or a tuple of these",
+    "series bool",
+    "series string",
+    "series bool",
+    "simple int"
+   ],
+   "returns": "array<type>"
+  },
+  "request.seed": {
+   "params": [
+    "source",
+    "symbol",
+    "expression",
+    "ignore_invalid_symbol",
+    "calc_bars_count"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "<arg_expr_type>",
+    "input bool",
+    "simple int"
+   ],
+   "returns": "series <type>"
+  },
+  "request.splits": {
+   "params": [
+    "ticker",
+    "field",
+    "gaps",
+    "lookahead",
+    "ignore_invalid_symbol"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "simple barmerge_gaps",
+    "simple barmerge_lookahead",
+    "input bool"
+   ],
+   "returns": "series float"
+  },
+  "runtime.error": {
+   "params": [
+    "message"
+   ],
+   "types": [
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "second": {
+   "params": [
+    "time",
+    "timezone"
+   ],
+   "types": [
+    "series int",
+    "series string"
+   ],
+   "returns": "series int"
+  },
+  "str.contains": {
+   "params": [
+    "source",
+    "str"
+   ],
+   "types": [
+    "series string",
+    "series string"
+   ],
+   "returns": "const bool",
+   "sigs": [
+    {
+     "params": [
+      "source",
+      "str"
+     ],
+     "types": [
+      "const string",
+      "const string"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "str"
+     ],
+     "types": [
+      "simple string",
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "str"
+     ],
+     "types": [
+      "series string",
+      "series string"
+     ]
+    }
+   ]
+  },
+  "str.endswith": {
+   "params": [
+    "source",
+    "str"
+   ],
+   "types": [
+    "series string",
+    "series string"
+   ],
+   "returns": "const bool",
+   "sigs": [
+    {
+     "params": [
+      "source",
+      "str"
+     ],
+     "types": [
+      "const string",
+      "const string"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "str"
+     ],
+     "types": [
+      "simple string",
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "str"
+     ],
+     "types": [
+      "series string",
+      "series string"
+     ]
+    }
+   ]
+  },
+  "str.format": {
+   "params": [
+    "formatString",
+    "arg0",
+    "arg1"
+   ],
+   "types": [
+    "series string",
+    "unknown",
+    "unknown"
+   ],
+   "returns": "simple string",
+   "sigs": [
+    {
+     "params": [
+      "formatString",
+      "arg0",
+      "arg1"
+     ],
+     "types": [
+      "simple string",
+      "simple int/float/bool/string",
+      "simple int/float/bool/string"
+     ]
+    },
+    {
+     "params": [
+      "formatString",
+      "arg0",
+      "arg1"
+     ],
+     "types": [
+      "series string",
+      "series int/float/bool/string/array<int/float/bool/string>",
+      "series int/float/bool/string/array<int/float/bool/string>"
+     ]
+    }
+   ]
+  },
+  "str.format_time": {
+   "params": [
+    "time",
+    "format",
+    "timezone"
+   ],
+   "types": [
+    "series int",
+    "series string",
+    "series string"
+   ],
+   "returns": "series string"
+  },
+  "str.length": {
+   "params": [
+    "string"
+   ],
+   "types": [
+    "series string"
+   ],
+   "returns": "const int",
+   "sigs": [
+    {
+     "params": [
+      "string"
+     ],
+     "types": [
+      "const string"
+     ]
+    },
+    {
+     "params": [
+      "string"
+     ],
+     "types": [
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "string"
+     ],
+     "types": [
+      "series string"
+     ]
+    }
+   ]
+  },
+  "str.lower": {
+   "params": [
+    "source"
+   ],
+   "types": [
+    "series string"
+   ],
+   "returns": "const string",
+   "sigs": [
+    {
+     "params": [
+      "source"
+     ],
+     "types": [
+      "const string"
+     ]
+    },
+    {
+     "params": [
+      "source"
+     ],
+     "types": [
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "source"
+     ],
+     "types": [
+      "series string"
+     ]
+    }
+   ]
+  },
+  "str.match": {
+   "params": [
+    "source",
+    "regex"
+   ],
+   "types": [
+    "series string",
+    "series string"
+   ],
+   "returns": "simple string",
+   "sigs": [
+    {
+     "params": [
+      "source",
+      "regex"
+     ],
+     "types": [
+      "simple string",
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "regex"
+     ],
+     "types": [
+      "series string",
+      "series string"
+     ]
+    }
+   ]
+  },
+  "str.pos": {
+   "params": [
+    "source",
+    "str"
+   ],
+   "types": [
+    "series string",
+    "series string"
+   ],
+   "returns": "const int",
+   "sigs": [
+    {
+     "params": [
+      "source",
+      "str"
+     ],
+     "types": [
+      "const string",
+      "const string"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "str"
+     ],
+     "types": [
+      "simple string",
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "str"
+     ],
+     "types": [
+      "series string",
+      "series string"
+     ]
+    }
+   ]
+  },
+  "str.repeat": {
+   "params": [
+    "source",
+    "repeat",
+    "separator"
+   ],
+   "types": [
+    "series string",
+    "series int",
+    "series string"
+   ],
+   "returns": "const string",
+   "sigs": [
+    {
+     "params": [
+      "source",
+      "repeat",
+      "separator"
+     ],
+     "types": [
+      "const string",
+      "const int",
+      "const string"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "repeat",
+      "separator"
+     ],
+     "types": [
+      "input string",
+      "input int",
+      "input string"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "repeat",
+      "separator"
+     ],
+     "types": [
+      "simple string",
+      "simple int",
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "repeat",
+      "separator"
+     ],
+     "types": [
+      "series string",
+      "series int",
+      "series string"
+     ]
+    }
+   ]
+  },
+  "str.replace": {
+   "params": [
+    "source",
+    "target",
+    "replacement",
+    "occurrence"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "series string",
+    "series int"
+   ],
+   "returns": "const string",
+   "sigs": [
+    {
+     "params": [
+      "source",
+      "target",
+      "replacement",
+      "occurrence"
+     ],
+     "types": [
+      "const string",
+      "const string",
+      "const string",
+      "const int"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "target",
+      "replacement",
+      "occurrence"
+     ],
+     "types": [
+      "simple string",
+      "simple string",
+      "simple string",
+      "simple int"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "target",
+      "replacement",
+      "occurrence"
+     ],
+     "types": [
+      "series string",
+      "series string",
+      "series string",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "str.replace_all": {
+   "params": [
+    "source",
+    "target",
+    "replacement"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "series string"
+   ],
+   "returns": "simple string",
+   "sigs": [
+    {
+     "params": [
+      "source",
+      "target",
+      "replacement"
+     ],
+     "types": [
+      "simple string",
+      "simple string",
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "target",
+      "replacement"
+     ],
+     "types": [
+      "series string",
+      "series string",
+      "series string"
+     ]
+    }
+   ]
+  },
+  "str.split": {
+   "params": [
+    "string",
+    "separator"
+   ],
+   "types": [
+    "series string",
+    "series string"
+   ],
+   "returns": "array<string>"
+  },
+  "str.startswith": {
+   "params": [
+    "source",
+    "str"
+   ],
+   "types": [
+    "series string",
+    "series string"
+   ],
+   "returns": "const bool",
+   "sigs": [
+    {
+     "params": [
+      "source",
+      "str"
+     ],
+     "types": [
+      "const string",
+      "const string"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "str"
+     ],
+     "types": [
+      "simple string",
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "str"
+     ],
+     "types": [
+      "series string",
+      "series string"
+     ]
+    }
+   ]
+  },
+  "str.substring": {
+   "params": [
+    "source",
+    "begin_pos",
+    "end_pos"
+   ],
+   "types": [
+    "series string",
+    "series int",
+    "series int"
+   ],
+   "returns": "const string",
+   "sigs": [
+    {
+     "params": [
+      "source",
+      "begin_pos",
+      "end_pos"
+     ],
+     "types": [
+      "const string",
+      "const int",
+      "const int"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "begin_pos",
+      "end_pos"
+     ],
+     "types": [
+      "simple string",
+      "simple int",
+      "simple int"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "begin_pos",
+      "end_pos"
+     ],
+     "types": [
+      "series string",
+      "series int",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "str.tonumber": {
+   "params": [
+    "string"
+   ],
+   "types": [
+    "series string"
+   ],
+   "returns": "const float",
+   "sigs": [
+    {
+     "params": [
+      "string"
+     ],
+     "types": [
+      "const string"
+     ]
+    },
+    {
+     "params": [
+      "string"
+     ],
+     "types": [
+      "input string"
+     ]
+    },
+    {
+     "params": [
+      "string"
+     ],
+     "types": [
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "string"
+     ],
+     "types": [
+      "series string"
+     ]
+    }
+   ]
+  },
+  "str.tostring": {
+   "params": [
+    "value",
+    "format"
+   ],
+   "types": [
+    "unknown",
+    "series string"
+   ],
+   "returns": "const string",
+   "sigs": [
+    {
+     "params": [
+      "value"
+     ],
+     "types": [
+      "const enum"
+     ]
+    },
+    {
+     "params": [
+      "value",
+      "format"
+     ],
+     "types": [
+      "simple int/float",
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "value",
+      "format"
+     ],
+     "types": [
+      "series int/float/array<int/float>/matrix<int/float>",
+      "series string"
+     ]
+    },
+    {
+     "params": [
+      "value"
+     ],
+     "types": [
+      "simple int/float/bool/string/enum"
+     ]
+    },
+    {
+     "params": [
+      "value"
+     ],
+     "types": [
+      "series int/float/bool/string/enum/array<int/float/bool/string>/matrix<int/float/bool/string>"
+     ]
+    }
+   ]
+  },
+  "str.trim": {
+   "params": [
+    "source"
+   ],
+   "types": [
+    "series string"
+   ],
+   "returns": "const string",
+   "sigs": [
+    {
+     "params": [
+      "source"
+     ],
+     "types": [
+      "const string"
+     ]
+    },
+    {
+     "params": [
+      "source"
+     ],
+     "types": [
+      "input string"
+     ]
+    },
+    {
+     "params": [
+      "source"
+     ],
+     "types": [
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "source"
+     ],
+     "types": [
+      "series string"
+     ]
+    }
+   ]
+  },
+  "str.upper": {
+   "params": [
+    "source"
+   ],
+   "types": [
+    "series string"
+   ],
+   "returns": "const string",
+   "sigs": [
+    {
+     "params": [
+      "source"
+     ],
+     "types": [
+      "const string"
+     ]
+    },
+    {
+     "params": [
+      "source"
+     ],
+     "types": [
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "source"
+     ],
+     "types": [
+      "series string"
+     ]
+    }
+   ]
+  },
+  "strategy": {
+   "params": [
+    "title",
+    "shorttitle",
+    "overlay",
+    "format",
+    "precision",
+    "scale",
+    "pyramiding",
+    "calc_on_order_fills",
+    "calc_on_every_tick",
+    "max_bars_back",
+    "backtest_fill_limits_assumption",
+    "default_qty_type",
+    "default_qty_value",
+    "initial_capital",
+    "currency",
+    "slippage",
+    "commission_type",
+    "commission_value",
+    "process_orders_on_close",
+    "close_entries_rule",
+    "margin_long",
+    "margin_short",
+    "explicit_plot_zorder",
+    "max_lines_count",
+    "max_labels_count",
+    "max_boxes_count",
+    "calc_bars_count",
+    "risk_free_rate",
+    "use_bar_magnifier",
+    "fill_orders_on_standard_ohlc",
+    "max_polylines_count",
+    "dynamic_requests",
+    "behind_chart",
+    "calc_on_every_history_tick"
+   ],
+   "types": [
+    "const string",
+    "const string",
+    "const bool",
+    "const string",
+    "const int",
+    "const scale_type",
+    "const int",
+    "const bool",
+    "const bool",
+    "const int",
+    "const int",
+    "const string",
+    "const int/float",
+    "const int/float",
+    "const string",
+    "const int",
+    "const string",
+    "const int/float",
+    "const bool",
+    "const string",
+    "const int/float",
+    "const int/float",
+    "const bool",
+    "const int",
+    "const int",
+    "const int",
+    "const int",
+    "const int/float",
+    "const bool",
+    "const bool",
+    "const int",
+    "const bool",
+    "const bool",
+    "const bool"
+   ],
+   "returns": "void"
+  },
+  "strategy.cancel": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "strategy.cancel_all": {
+   "params": [],
+   "types": [],
+   "returns": "void"
+  },
+  "strategy.close": {
+   "params": [
+    "id",
+    "comment",
+    "qty",
+    "qty_percent",
+    "alert_message",
+    "immediately",
+    "disable_alert"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "series int/float",
+    "series int/float",
+    "series string",
+    "series bool",
+    "series bool"
+   ],
+   "returns": "void"
+  },
+  "strategy.close_all": {
+   "params": [
+    "comment",
+    "alert_message",
+    "immediately",
+    "disable_alert"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "series bool",
+    "series bool"
+   ],
+   "returns": "void"
+  },
+  "strategy.closedtrades.commission": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "strategy.closedtrades.entry_bar_index": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series int"
+  },
+  "strategy.closedtrades.entry_comment": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series string"
+  },
+  "strategy.closedtrades.entry_id": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series string"
+  },
+  "strategy.closedtrades.entry_price": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "strategy.closedtrades.entry_time": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series int"
+  },
+  "strategy.closedtrades.exit_bar_index": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series int"
+  },
+  "strategy.closedtrades.exit_comment": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series string"
+  },
+  "strategy.closedtrades.exit_id": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series string"
+  },
+  "strategy.closedtrades.exit_price": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "strategy.closedtrades.exit_time": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series int"
+  },
+  "strategy.closedtrades.max_drawdown": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "strategy.closedtrades.max_drawdown_percent": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "strategy.closedtrades.max_runup": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "strategy.closedtrades.max_runup_percent": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "strategy.closedtrades.profit": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "strategy.closedtrades.profit_percent": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "strategy.closedtrades.size": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "strategy.convert_to_account": {
+   "params": [
+    "value"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "series float"
+  },
+  "strategy.convert_to_symbol": {
+   "params": [
+    "value"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "series float"
+  },
+  "strategy.default_entry_qty": {
+   "params": [
+    "fill_price"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "series float"
+  },
+  "strategy.entry": {
+   "params": [
+    "id",
+    "direction",
+    "qty",
+    "limit",
+    "stop",
+    "oca_name",
+    "oca_type",
+    "comment",
+    "alert_message",
+    "disable_alert"
+   ],
+   "types": [
+    "series string",
+    "series strategy_direction",
+    "series int/float",
+    "series int/float",
+    "series int/float",
+    "series string",
+    "input string",
+    "series string",
+    "series string",
+    "series bool"
+   ],
+   "returns": "void"
+  },
+  "strategy.exit": {
+   "params": [
+    "id",
+    "from_entry",
+    "qty",
+    "qty_percent",
+    "profit",
+    "limit",
+    "loss",
+    "stop",
+    "trail_price",
+    "trail_points",
+    "trail_offset",
+    "oca_name",
+    "comment",
+    "comment_profit",
+    "comment_loss",
+    "comment_trailing",
+    "alert_message",
+    "alert_profit",
+    "alert_loss",
+    "alert_trailing",
+    "disable_alert"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "series int/float",
+    "series int/float",
+    "series int/float",
+    "series int/float",
+    "series int/float",
+    "series int/float",
+    "series int/float",
+    "series int/float",
+    "series int/float",
+    "series string",
+    "series string",
+    "series string",
+    "series string",
+    "series string",
+    "series string",
+    "series string",
+    "series string",
+    "series string",
+    "series bool"
+   ],
+   "returns": "void"
+  },
+  "strategy.opentrades.commission": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "strategy.opentrades.entry_bar_index": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series int"
+  },
+  "strategy.opentrades.entry_comment": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series string"
+  },
+  "strategy.opentrades.entry_id": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series string"
+  },
+  "strategy.opentrades.entry_price": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "strategy.opentrades.entry_time": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series int"
+  },
+  "strategy.opentrades.max_drawdown": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "strategy.opentrades.max_drawdown_percent": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "strategy.opentrades.max_runup": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "strategy.opentrades.max_runup_percent": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "strategy.opentrades.profit": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "strategy.opentrades.profit_percent": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "strategy.opentrades.size": {
+   "params": [
+    "trade_num"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "strategy.order": {
+   "params": [
+    "id",
+    "direction",
+    "qty",
+    "limit",
+    "stop",
+    "oca_name",
+    "oca_type",
+    "comment",
+    "alert_message",
+    "disable_alert"
+   ],
+   "types": [
+    "series string",
+    "series strategy_direction",
+    "series int/float",
+    "series int/float",
+    "series int/float",
+    "series string",
+    "input string",
+    "series string",
+    "series string",
+    "series bool"
+   ],
+   "returns": "void"
+  },
+  "strategy.risk.allow_entry_in": {
+   "params": [
+    "value"
+   ],
+   "types": [
+    "simple string"
+   ],
+   "returns": "void"
+  },
+  "strategy.risk.max_cons_loss_days": {
+   "params": [
+    "count",
+    "alert_message"
+   ],
+   "types": [
+    "simple int",
+    "simple string"
+   ],
+   "returns": "void"
+  },
+  "strategy.risk.max_drawdown": {
+   "params": [
+    "value",
+    "type",
+    "alert_message"
+   ],
+   "types": [
+    "simple int/float",
+    "simple string",
+    "simple string"
+   ],
+   "returns": "void"
+  },
+  "strategy.risk.max_intraday_filled_orders": {
+   "params": [
+    "count",
+    "alert_message"
+   ],
+   "types": [
+    "simple int",
+    "simple string"
+   ],
+   "returns": "void"
+  },
+  "strategy.risk.max_intraday_loss": {
+   "params": [
+    "value",
+    "type",
+    "alert_message"
+   ],
+   "types": [
+    "simple int/float",
+    "simple string",
+    "simple string"
+   ],
+   "returns": "void"
+  },
+  "strategy.risk.max_position_size": {
+   "params": [
+    "contracts"
+   ],
+   "types": [
+    "simple int/float"
+   ],
+   "returns": "void"
+  },
+  "string": {
+   "params": [
+    "x"
+   ],
+   "types": [
+    "series string"
+   ],
+   "returns": "const string",
+   "sigs": [
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "const string"
+     ]
+    },
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "input string"
+     ]
+    },
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "x"
+     ],
+     "types": [
+      "series string"
+     ]
+    }
+   ]
+  },
+  "syminfo.prefix": {
+   "params": [
+    "symbol"
+   ],
+   "types": [
+    "series string"
+   ],
+   "returns": "simple string",
+   "sigs": [
+    {
+     "params": [
+      "symbol"
+     ],
+     "types": [
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "symbol"
+     ],
+     "types": [
+      "series string"
+     ]
+    }
+   ]
+  },
+  "syminfo.ticker": {
+   "params": [
+    "symbol"
+   ],
+   "types": [
+    "series string"
+   ],
+   "returns": "simple string",
+   "sigs": [
+    {
+     "params": [
+      "symbol"
+     ],
+     "types": [
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "symbol"
+     ],
+     "types": [
+      "series string"
+     ]
+    }
+   ]
+  },
+  "ta.alma": {
+   "params": [
+    "series",
+    "length",
+    "offset",
+    "sigma",
+    "floor"
+   ],
+   "types": [
+    "series int/float",
+    "series int",
+    "simple int/float",
+    "simple int/float",
+    "simple bool"
+   ],
+   "returns": "series float"
+  },
+  "ta.atr": {
+   "params": [
+    "length"
+   ],
+   "types": [
+    "simple int"
+   ],
+   "returns": "series float"
+  },
+  "ta.barssince": {
+   "params": [
+    "condition"
+   ],
+   "types": [
+    "series bool"
+   ],
+   "returns": "series int"
+  },
+  "ta.bb": {
+   "params": [
+    "series",
+    "length",
+    "mult"
+   ],
+   "types": [
+    "series int/float",
+    "series int",
+    "simple int/float"
+   ],
+   "returns": "[series float, series float, series float]"
+  },
+  "ta.bbw": {
+   "params": [
+    "series",
+    "length",
+    "mult"
+   ],
+   "types": [
+    "series int/float",
+    "series int",
+    "simple int/float"
+   ],
+   "returns": "series float"
+  },
+  "ta.cci": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "ta.change": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float/bool",
+    "series int"
+   ],
+   "returns": "series int",
+   "sigs": [
+    {
+     "params": [
+      "source",
+      "length"
+     ],
+     "types": [
+      "series int",
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "length"
+     ],
+     "types": [
+      "series int/float",
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "length"
+     ],
+     "types": [
+      "series bool",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "ta.cmo": {
+   "params": [
+    "series",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "ta.cog": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "ta.correlation": {
+   "params": [
+    "source1",
+    "source2",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "ta.cross": {
+   "params": [
+    "source1",
+    "source2"
+   ],
+   "types": [
+    "series int/float",
+    "series int/float"
+   ],
+   "returns": "series bool"
+  },
+  "ta.crossover": {
+   "params": [
+    "source1",
+    "source2"
+   ],
+   "types": [
+    "series int/float",
+    "series int/float"
+   ],
+   "returns": "series bool"
+  },
+  "ta.crossunder": {
+   "params": [
+    "source1",
+    "source2"
+   ],
+   "types": [
+    "series int/float",
+    "series int/float"
+   ],
+   "returns": "series bool"
+  },
+  "ta.cum": {
+   "params": [
+    "source"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "series float"
+  },
+  "ta.dev": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "ta.dmi": {
+   "params": [
+    "diLength",
+    "adxSmoothing"
+   ],
+   "types": [
+    "simple int",
+    "simple int"
+   ],
+   "returns": "[series float, series float, series float]"
+  },
+  "ta.ema": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "simple int"
+   ],
+   "returns": "series float"
+  },
+  "ta.falling": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series bool"
+  },
+  "ta.highest": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "length"
+     ],
+     "types": [
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "length"
+     ],
+     "types": [
+      "series int/float",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "ta.highestbars": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series int",
+   "sigs": [
+    {
+     "params": [
+      "length"
+     ],
+     "types": [
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "length"
+     ],
+     "types": [
+      "series int/float",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "ta.hma": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "simple int"
+   ],
+   "returns": "series float"
+  },
+  "ta.kc": {
+   "params": [
+    "series",
+    "length",
+    "mult",
+    "useTrueRange"
+   ],
+   "types": [
+    "series int/float",
+    "simple int",
+    "simple int/float",
+    "simple bool"
+   ],
+   "returns": "[series float, series float, series float]"
+  },
+  "ta.kcw": {
+   "params": [
+    "series",
+    "length",
+    "mult",
+    "useTrueRange"
+   ],
+   "types": [
+    "series int/float",
+    "simple int",
+    "simple int/float",
+    "simple bool"
+   ],
+   "returns": "series float"
+  },
+  "ta.linreg": {
+   "params": [
+    "source",
+    "length",
+    "offset"
+   ],
+   "types": [
+    "series int/float",
+    "series int",
+    "simple int"
+   ],
+   "returns": "series float"
+  },
+  "ta.lowest": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "length"
+     ],
+     "types": [
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "length"
+     ],
+     "types": [
+      "series int/float",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "ta.lowestbars": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series int",
+   "sigs": [
+    {
+     "params": [
+      "length"
+     ],
+     "types": [
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "length"
+     ],
+     "types": [
+      "series int/float",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "ta.macd": {
+   "params": [
+    "source",
+    "fastlen",
+    "slowlen",
+    "siglen"
+   ],
+   "types": [
+    "series int/float",
+    "simple int",
+    "simple int",
+    "simple int"
+   ],
+   "returns": "[series float, series float, series float]"
+  },
+  "ta.max": {
+   "params": [
+    "source"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "series float"
+  },
+  "ta.median": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series int",
+   "sigs": [
+    {
+     "params": [
+      "source",
+      "length"
+     ],
+     "types": [
+      "series int",
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "length"
+     ],
+     "types": [
+      "series int/float",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "ta.mfi": {
+   "params": [
+    "series",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "ta.min": {
+   "params": [
+    "source"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "series float"
+  },
+  "ta.mode": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series int",
+   "sigs": [
+    {
+     "params": [
+      "source",
+      "length"
+     ],
+     "types": [
+      "series int",
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "length"
+     ],
+     "types": [
+      "series int/float",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "ta.mom": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "ta.percentile_linear_interpolation": {
+   "params": [
+    "source",
+    "length",
+    "percentage"
+   ],
+   "types": [
+    "series int/float",
+    "series int",
+    "simple int/float"
+   ],
+   "returns": "series float"
+  },
+  "ta.percentile_nearest_rank": {
+   "params": [
+    "source",
+    "length",
+    "percentage"
+   ],
+   "types": [
+    "series int/float",
+    "series int",
+    "simple int/float"
+   ],
+   "returns": "series float"
+  },
+  "ta.percentrank": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "ta.pivot_point_levels": {
+   "params": [
+    "type",
+    "anchor",
+    "developing"
+   ],
+   "types": [
+    "series string",
+    "series bool",
+    "series bool"
+   ],
+   "returns": "array<float>"
+  },
+  "ta.pivothigh": {
+   "params": [
+    "leftbars",
+    "rightbars",
+    "source"
+   ],
+   "types": [
+    "series int/float",
+    "series int/float",
+    "unknown"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "leftbars",
+      "rightbars"
+     ],
+     "types": [
+      "series int/float",
+      "series int/float"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "leftbars",
+      "rightbars"
+     ],
+     "types": [
+      "series int/float",
+      "series int/float",
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "ta.pivotlow": {
+   "params": [
+    "leftbars",
+    "rightbars",
+    "source"
+   ],
+   "types": [
+    "series int/float",
+    "series int/float",
+    "unknown"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "leftbars",
+      "rightbars"
+     ],
+     "types": [
+      "series int/float",
+      "series int/float"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "leftbars",
+      "rightbars"
+     ],
+     "types": [
+      "series int/float",
+      "series int/float",
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "ta.range": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series int",
+   "sigs": [
+    {
+     "params": [
+      "source",
+      "length"
+     ],
+     "types": [
+      "series int",
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "length"
+     ],
+     "types": [
+      "series int/float",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "ta.rci": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "simple int"
+   ],
+   "returns": "series float"
+  },
+  "ta.rising": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series bool"
+  },
+  "ta.rma": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "simple int"
+   ],
+   "returns": "series float"
+  },
+  "ta.roc": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "ta.rsi": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "simple int"
+   ],
+   "returns": "series float"
+  },
+  "ta.sar": {
+   "params": [
+    "start",
+    "inc",
+    "max"
+   ],
+   "types": [
+    "simple int/float",
+    "simple int/float",
+    "simple int/float"
+   ],
+   "returns": "series float"
+  },
+  "ta.sma": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "ta.stdev": {
+   "params": [
+    "source",
+    "length",
+    "biased"
+   ],
+   "types": [
+    "series int/float",
+    "series int",
+    "series bool"
+   ],
+   "returns": "series float"
+  },
+  "ta.stoch": {
+   "params": [
+    "source",
+    "high",
+    "low",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int/float",
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "ta.supertrend": {
+   "params": [
+    "factor",
+    "atrPeriod"
+   ],
+   "types": [
+    "series int/float",
+    "simple int"
+   ],
+   "returns": "[series float, series float]"
+  },
+  "ta.swma": {
+   "params": [
+    "source"
+   ],
+   "types": [
+    "series int/float"
+   ],
+   "returns": "series float"
+  },
+  "ta.tr": {
+   "params": [
+    "handle_na"
+   ],
+   "types": [
+    "simple bool"
+   ],
+   "returns": "series float"
+  },
+  "ta.tsi": {
+   "params": [
+    "source",
+    "short_length",
+    "long_length"
+   ],
+   "types": [
+    "series int/float",
+    "simple int",
+    "simple int"
+   ],
+   "returns": "series float"
+  },
+  "ta.valuewhen": {
+   "params": [
+    "condition",
+    "source",
+    "occurrence"
+   ],
+   "types": [
+    "series bool",
+    "series int/float/bool/color",
+    "simple int"
+   ],
+   "returns": "series color",
+   "sigs": [
+    {
+     "params": [
+      "condition",
+      "source",
+      "occurrence"
+     ],
+     "types": [
+      "series bool",
+      "series color",
+      "simple int"
+     ]
+    },
+    {
+     "params": [
+      "condition",
+      "source",
+      "occurrence"
+     ],
+     "types": [
+      "series bool",
+      "series int",
+      "simple int"
+     ]
+    },
+    {
+     "params": [
+      "condition",
+      "source",
+      "occurrence"
+     ],
+     "types": [
+      "series bool",
+      "series int/float",
+      "simple int"
+     ]
+    },
+    {
+     "params": [
+      "condition",
+      "source",
+      "occurrence"
+     ],
+     "types": [
+      "series bool",
+      "series bool",
+      "simple int"
+     ]
+    }
+   ]
+  },
+  "ta.variance": {
+   "params": [
+    "source",
+    "length",
+    "biased"
+   ],
+   "types": [
+    "series int/float",
+    "series int",
+    "series bool"
+   ],
+   "returns": "series float"
+  },
+  "ta.vwap": {
+   "params": [
+    "source",
+    "anchor",
+    "stdev_mult"
+   ],
+   "types": [
+    "series int/float",
+    "series bool",
+    "series int/float"
+   ],
+   "returns": "series float",
+   "sigs": [
+    {
+     "params": [
+      "source",
+      "anchor"
+     ],
+     "types": [
+      "series int/float",
+      "series bool"
+     ]
+    },
+    {
+     "params": [
+      "source",
+      "anchor",
+      "stdev_mult"
+     ],
+     "types": [
+      "series int/float",
+      "series bool",
+      "series int/float"
+     ]
+    }
+   ]
+  },
+  "ta.vwma": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "ta.wma": {
+   "params": [
+    "source",
+    "length"
+   ],
+   "types": [
+    "series int/float",
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "ta.wpr": {
+   "params": [
+    "length"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "series float"
+  },
+  "table": {
+   "params": [
+    "x"
+   ],
+   "types": [
+    "series table"
+   ],
+   "returns": "series table"
+  },
+  "table.cell": {
+   "params": [
+    "table_id",
+    "column",
+    "row",
+    "text",
+    "width",
+    "height",
+    "text_color",
+    "text_halign",
+    "text_valign",
+    "text_size",
+    "bgcolor",
+    "tooltip",
+    "text_font_family",
+    "text_formatting"
+   ],
+   "types": [
+    "series table",
+    "series int",
+    "series int",
+    "series string",
+    "series int/float",
+    "series int/float",
+    "series color",
+    "series string",
+    "series string",
+    "series int/string",
+    "series color",
+    "series string",
+    "series string",
+    "series text_format"
+   ],
+   "returns": "void"
+  },
+  "table.cell_set_bgcolor": {
+   "params": [
+    "table_id",
+    "column",
+    "row",
+    "bgcolor"
+   ],
+   "types": [
+    "series table",
+    "series int",
+    "series int",
+    "series color"
+   ],
+   "returns": "void"
+  },
+  "table.cell_set_height": {
+   "params": [
+    "table_id",
+    "column",
+    "row",
+    "height"
+   ],
+   "types": [
+    "series table",
+    "series int",
+    "series int",
+    "series int/float"
+   ],
+   "returns": "void"
+  },
+  "table.cell_set_text": {
+   "params": [
+    "table_id",
+    "column",
+    "row",
+    "text"
+   ],
+   "types": [
+    "series table",
+    "series int",
+    "series int",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "table.cell_set_text_color": {
+   "params": [
+    "table_id",
+    "column",
+    "row",
+    "text_color"
+   ],
+   "types": [
+    "series table",
+    "series int",
+    "series int",
+    "series color"
+   ],
+   "returns": "void"
+  },
+  "table.cell_set_text_font_family": {
+   "params": [
+    "table_id",
+    "column",
+    "row",
+    "text_font_family"
+   ],
+   "types": [
+    "series table",
+    "series int",
+    "series int",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "table.cell_set_text_formatting": {
+   "params": [
+    "table_id",
+    "column",
+    "row",
+    "text_formatting"
+   ],
+   "types": [
+    "series table",
+    "series int",
+    "series int",
+    "series text_format"
+   ],
+   "returns": "void"
+  },
+  "table.cell_set_text_halign": {
+   "params": [
+    "table_id",
+    "column",
+    "row",
+    "text_halign"
+   ],
+   "types": [
+    "series table",
+    "series int",
+    "series int",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "table.cell_set_text_size": {
+   "params": [
+    "table_id",
+    "column",
+    "row",
+    "text_size"
+   ],
+   "types": [
+    "series table",
+    "series int",
+    "series int",
+    "series int/string"
+   ],
+   "returns": "void"
+  },
+  "table.cell_set_text_valign": {
+   "params": [
+    "table_id",
+    "column",
+    "row",
+    "text_valign"
+   ],
+   "types": [
+    "series table",
+    "series int",
+    "series int",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "table.cell_set_tooltip": {
+   "params": [
+    "table_id",
+    "column",
+    "row",
+    "tooltip"
+   ],
+   "types": [
+    "series table",
+    "series int",
+    "series int",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "table.cell_set_width": {
+   "params": [
+    "table_id",
+    "column",
+    "row",
+    "width"
+   ],
+   "types": [
+    "series table",
+    "series int",
+    "series int",
+    "series int/float"
+   ],
+   "returns": "void"
+  },
+  "table.clear": {
+   "params": [
+    "table_id",
+    "start_column",
+    "start_row",
+    "end_column",
+    "end_row"
+   ],
+   "types": [
+    "series table",
+    "series int",
+    "series int",
+    "series int",
+    "series int"
+   ],
+   "returns": "void"
+  },
+  "table.delete": {
+   "params": [
+    "table_id"
+   ],
+   "types": [
+    "series table"
+   ],
+   "returns": "void"
+  },
+  "table.merge_cells": {
+   "params": [
+    "table_id",
+    "start_column",
+    "start_row",
+    "end_column",
+    "end_row"
+   ],
+   "types": [
+    "series table",
+    "series int",
+    "series int",
+    "series int",
+    "series int"
+   ],
+   "returns": "void"
+  },
+  "table.new": {
+   "params": [
+    "position",
+    "columns",
+    "rows",
+    "bgcolor",
+    "frame_color",
+    "frame_width",
+    "border_color",
+    "border_width",
+    "force_overlay"
+   ],
+   "types": [
+    "series string",
+    "series int",
+    "series int",
+    "series color",
+    "series color",
+    "series int",
+    "series color",
+    "series int",
+    "const bool"
+   ],
+   "returns": "series table"
+  },
+  "table.set_bgcolor": {
+   "params": [
+    "table_id",
+    "bgcolor"
+   ],
+   "types": [
+    "series table",
+    "series color"
+   ],
+   "returns": "void"
+  },
+  "table.set_border_color": {
+   "params": [
+    "table_id",
+    "border_color"
+   ],
+   "types": [
+    "series table",
+    "series color"
+   ],
+   "returns": "void"
+  },
+  "table.set_border_width": {
+   "params": [
+    "table_id",
+    "border_width"
+   ],
+   "types": [
+    "series table",
+    "series int"
+   ],
+   "returns": "void"
+  },
+  "table.set_frame_color": {
+   "params": [
+    "table_id",
+    "frame_color"
+   ],
+   "types": [
+    "series table",
+    "series color"
+   ],
+   "returns": "void"
+  },
+  "table.set_frame_width": {
+   "params": [
+    "table_id",
+    "frame_width"
+   ],
+   "types": [
+    "series table",
+    "series int"
+   ],
+   "returns": "void"
+  },
+  "table.set_position": {
+   "params": [
+    "table_id",
+    "position"
+   ],
+   "types": [
+    "series table",
+    "series string"
+   ],
+   "returns": "void"
+  },
+  "ticker.heikinashi": {
+   "params": [
+    "symbol"
+   ],
+   "types": [
+    "series string"
+   ],
+   "returns": "simple string",
+   "sigs": [
+    {
+     "params": [
+      "symbol"
+     ],
+     "types": [
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "symbol"
+     ],
+     "types": [
+      "series string"
+     ]
+    }
+   ]
+  },
+  "ticker.inherit": {
+   "params": [
+    "from_tickerid",
+    "symbol"
+   ],
+   "types": [
+    "series string",
+    "series string"
+   ],
+   "returns": "simple string",
+   "sigs": [
+    {
+     "params": [
+      "from_tickerid",
+      "symbol"
+     ],
+     "types": [
+      "simple string",
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "from_tickerid",
+      "symbol"
+     ],
+     "types": [
+      "series string",
+      "series string"
+     ]
+    }
+   ]
+  },
+  "ticker.kagi": {
+   "params": [
+    "symbol",
+    "reversal",
+    "param",
+    "style"
+   ],
+   "types": [
+    "series string",
+    "simple int/float",
+    "unknown",
+    "unknown"
+   ],
+   "returns": "simple string",
+   "sigs": [
+    {
+     "params": [
+      "symbol",
+      "reversal"
+     ],
+     "types": [
+      "simple string",
+      "simple int/float"
+     ]
+    },
+    {
+     "params": [
+      "symbol",
+      "reversal"
+     ],
+     "types": [
+      "series string",
+      "series int/float"
+     ]
+    },
+    {
+     "params": [
+      "symbol",
+      "param",
+      "style"
+     ],
+     "types": [
+      "simple string",
+      "simple int/float",
+      "series string"
+     ]
+    },
+    {
+     "params": [
+      "symbol",
+      "param",
+      "style"
+     ],
+     "types": [
+      "series string",
+      "series int/float",
+      "series string"
+     ]
+    }
+   ]
+  },
+  "ticker.linebreak": {
+   "params": [
+    "symbol",
+    "number_of_lines"
+   ],
+   "types": [
+    "series string",
+    "series int"
+   ],
+   "returns": "simple string",
+   "sigs": [
+    {
+     "params": [
+      "symbol",
+      "number_of_lines"
+     ],
+     "types": [
+      "simple string",
+      "simple int"
+     ]
+    },
+    {
+     "params": [
+      "symbol",
+      "number_of_lines"
+     ],
+     "types": [
+      "series string",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "ticker.modify": {
+   "params": [
+    "tickerid",
+    "session",
+    "adjustment",
+    "backadjustment",
+    "settlement_as_close"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "series string",
+    "simple backadjustment",
+    "simple settlement"
+   ],
+   "returns": "simple string",
+   "sigs": [
+    {
+     "params": [
+      "tickerid",
+      "session",
+      "adjustment",
+      "backadjustment",
+      "settlement_as_close"
+     ],
+     "types": [
+      "simple string",
+      "simple string",
+      "simple string",
+      "simple backadjustment",
+      "simple settlement"
+     ]
+    },
+    {
+     "params": [
+      "tickerid",
+      "session",
+      "adjustment",
+      "backadjustment",
+      "settlement_as_close"
+     ],
+     "types": [
+      "series string",
+      "series string",
+      "series string",
+      "simple backadjustment",
+      "simple settlement"
+     ]
+    }
+   ]
+  },
+  "ticker.new": {
+   "params": [
+    "prefix",
+    "ticker",
+    "session",
+    "adjustment",
+    "backadjustment",
+    "settlement_as_close"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "series string",
+    "series string",
+    "simple backadjustment",
+    "simple settlement"
+   ],
+   "returns": "simple string",
+   "sigs": [
+    {
+     "params": [
+      "prefix",
+      "ticker",
+      "session",
+      "adjustment",
+      "backadjustment",
+      "settlement_as_close"
+     ],
+     "types": [
+      "simple string",
+      "simple string",
+      "simple string",
+      "simple string",
+      "simple backadjustment",
+      "simple settlement"
+     ]
+    },
+    {
+     "params": [
+      "prefix",
+      "ticker",
+      "session",
+      "adjustment",
+      "backadjustment",
+      "settlement_as_close"
+     ],
+     "types": [
+      "series string",
+      "series string",
+      "series string",
+      "series string",
+      "simple backadjustment",
+      "simple settlement"
+     ]
+    }
+   ]
+  },
+  "ticker.pointfigure": {
+   "params": [
+    "symbol",
+    "source",
+    "style",
+    "param",
+    "reversal"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "series string",
+    "series int/float",
+    "series int"
+   ],
+   "returns": "simple string",
+   "sigs": [
+    {
+     "params": [
+      "symbol",
+      "source",
+      "style",
+      "param",
+      "reversal"
+     ],
+     "types": [
+      "simple string",
+      "simple string",
+      "simple string",
+      "simple int/float",
+      "simple int"
+     ]
+    },
+    {
+     "params": [
+      "symbol",
+      "source",
+      "style",
+      "param",
+      "reversal"
+     ],
+     "types": [
+      "series string",
+      "series string",
+      "series string",
+      "series int/float",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "ticker.renko": {
+   "params": [
+    "symbol",
+    "style",
+    "param",
+    "request_wicks",
+    "source"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "series int/float",
+    "series bool",
+    "series string"
+   ],
+   "returns": "simple string",
+   "sigs": [
+    {
+     "params": [
+      "symbol",
+      "style",
+      "param",
+      "request_wicks",
+      "source"
+     ],
+     "types": [
+      "simple string",
+      "simple string",
+      "simple int/float",
+      "simple bool",
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "symbol",
+      "style",
+      "param",
+      "request_wicks",
+      "source"
+     ],
+     "types": [
+      "series string",
+      "series string",
+      "series int/float",
+      "series bool",
+      "series string"
+     ]
+    }
+   ]
+  },
+  "ticker.standard": {
+   "params": [
+    "symbol"
+   ],
+   "types": [
+    "series string"
+   ],
+   "returns": "simple string",
+   "sigs": [
+    {
+     "params": [
+      "symbol"
+     ],
+     "types": [
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "symbol"
+     ],
+     "types": [
+      "series string"
+     ]
+    }
+   ]
+  },
+  "time": {
+   "params": [
+    "timeframe",
+    "session",
+    "bars_back",
+    "timeframe_bars_back",
+    "timezone"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "series int",
+    "series int",
+    "unknown"
+   ],
+   "returns": "series int",
+   "sigs": [
+    {
+     "params": [
+      "timeframe",
+      "session",
+      "bars_back",
+      "timeframe_bars_back"
+     ],
+     "types": [
+      "series string",
+      "series string",
+      "series int",
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "timeframe",
+      "session",
+      "timezone",
+      "bars_back",
+      "timeframe_bars_back"
+     ],
+     "types": [
+      "series string",
+      "series string",
+      "series string",
+      "series int",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "time_close": {
+   "params": [
+    "timeframe",
+    "session",
+    "bars_back",
+    "timeframe_bars_back",
+    "timezone"
+   ],
+   "types": [
+    "series string",
+    "series string",
+    "series int",
+    "series int",
+    "unknown"
+   ],
+   "returns": "series int",
+   "sigs": [
+    {
+     "params": [
+      "timeframe",
+      "session",
+      "bars_back",
+      "timeframe_bars_back"
+     ],
+     "types": [
+      "series string",
+      "series string",
+      "series int",
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "timeframe",
+      "session",
+      "timezone",
+      "bars_back",
+      "timeframe_bars_back"
+     ],
+     "types": [
+      "series string",
+      "series string",
+      "series string",
+      "series int",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "timeframe.change": {
+   "params": [
+    "timeframe"
+   ],
+   "types": [
+    "series string"
+   ],
+   "returns": "series bool"
+  },
+  "timeframe.from_seconds": {
+   "params": [
+    "seconds"
+   ],
+   "types": [
+    "series int"
+   ],
+   "returns": "simple string",
+   "sigs": [
+    {
+     "params": [
+      "seconds"
+     ],
+     "types": [
+      "simple int"
+     ]
+    },
+    {
+     "params": [
+      "seconds"
+     ],
+     "types": [
+      "series int"
+     ]
+    }
+   ]
+  },
+  "timeframe.in_seconds": {
+   "params": [
+    "timeframe"
+   ],
+   "types": [
+    "series string"
+   ],
+   "returns": "simple int",
+   "sigs": [
+    {
+     "params": [
+      "timeframe"
+     ],
+     "types": [
+      "simple string"
+     ]
+    },
+    {
+     "params": [
+      "timeframe"
+     ],
+     "types": [
+      "series string"
+     ]
+    }
+   ]
+  },
+  "timestamp": {
+   "params": [
+    "dateString",
+    "year",
+    "month",
+    "day",
+    "hour",
+    "minute",
+    "second",
+    "timezone"
+   ],
+   "types": [
+    "const string",
+    "unknown",
+    "unknown",
+    "unknown",
+    "unknown",
+    "unknown",
+    "unknown",
+    "unknown"
+   ],
+   "returns": "const int",
+   "sigs": [
+    {
+     "params": [
+      "dateString"
+     ],
+     "types": [
+      "const string"
+     ]
+    },
+    {
+     "params": [
+      "dateString"
+     ],
+     "types": [
+      "series string"
+     ]
+    },
+    {
+     "params": [
+      "year",
+      "month",
+      "day",
+      "hour",
+      "minute",
+      "second"
+     ],
+     "types": [
+      "simple int",
+      "simple int",
+      "simple int",
+      "simple int",
+      "simple int",
+      "simple int"
+     ]
+    },
+    {
+     "params": [
+      "year",
+      "month",
+      "day",
+      "hour",
+      "minute",
+      "second"
+     ],
+     "types": [
+      "series int",
+      "series int",
+      "series int",
+      "series int",
+      "series int",
+      "series int"
+     ]
+    },
+    {
+     "params": [
+      "timezone",
+      "year",
+      "month",
+      "day",
+      "hour",
+      "minute",
+      "second"
+     ],
+     "types": [
+      "simple string",
+      "simple int",
+      "simple int",
+      "simple int",
+      "simple int",
+      "simple int",
+      "simple int"
+     ]
+    },
+    {
+     "params": [
+      "timezone",
+      "year",
+      "month",
+      "day",
+      "hour",
+      "minute",
+      "second"
+     ],
+     "types": [
+      "series string",
+      "series int",
+      "series int",
+      "series int",
+      "series int",
+      "series int",
+      "series int"
+     ]
+    }
+   ]
+  },
+  "volume_row.buy_volume": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "volume_row"
+   ],
+   "returns": "series float"
+  },
+  "volume_row.delta": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "volume_row"
+   ],
+   "returns": "series float"
+  },
+  "volume_row.down_price": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "volume_row"
+   ],
+   "returns": "series float"
+  },
+  "volume_row.has_buy_imbalance": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "volume_row"
+   ],
+   "returns": "series bool"
+  },
+  "volume_row.has_sell_imbalance": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "volume_row"
+   ],
+   "returns": "series bool"
+  },
+  "volume_row.sell_volume": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "volume_row"
+   ],
+   "returns": "series float"
+  },
+  "volume_row.total_volume": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "volume_row"
+   ],
+   "returns": "series float"
+  },
+  "volume_row.up_price": {
+   "params": [
+    "id"
+   ],
+   "types": [
+    "volume_row"
+   ],
+   "returns": "series float"
+  },
+  "weekofyear": {
+   "params": [
+    "time",
+    "timezone"
+   ],
+   "types": [
+    "series int",
+    "series string"
+   ],
+   "returns": "series int"
+  },
+  "year": {
+   "params": [
+    "time",
+    "timezone"
+   ],
+   "types": [
+    "series int",
+    "series string"
+   ],
+   "returns": "series int"
+  }
+ },
+ "keywords": [
+  "and",
+  "break",
+  "case",
+  "const",
+  "continue",
+  "default",
+  "do",
+  "else",
+  "enum",
+  "export",
+  "false",
+  "for",
+  "for...in",
+  "if",
+  "import",
+  "indicator",
+  "library",
+  "method",
+  "na",
+  "not",
+  "once",
+  "or",
+  "return",
+  "strategy",
+  "switch",
+  "true",
+  "type",
+  "var",
+  "varip",
+  "while"
+ ],
+ "variables": [
+  "ask",
+  "bar_index",
+  "barstate.isconfirmed",
+  "barstate.isfirst",
+  "barstate.ishistory",
+  "barstate.islast",
+  "barstate.islastconfirmedhistory",
+  "barstate.isnew",
+  "barstate.isrealtime",
+  "bid",
+  "box.all",
+  "chart.bg_color",
+  "chart.fg_color",
+  "chart.is_heikinashi",
+  "chart.is_kagi",
+  "chart.is_linebreak",
+  "chart.is_pnf",
+  "chart.is_range",
+  "chart.is_renko",
+  "chart.is_standard",
+  "chart.left_visible_bar_time",
+  "chart.right_visible_bar_time",
+  "close",
+  "dayofmonth",
+  "dayofweek",
+  "dividends.future_amount",
+  "dividends.future_ex_date",
+  "dividends.future_pay_date",
+  "earnings.future_eps",
+  "earnings.future_period_end_time",
+  "earnings.future_revenue",
+  "earnings.future_time",
+  "high",
+  "hl2",
+  "hlc3",
+  "hlcc4",
+  "hour",
+  "label.all",
+  "last_bar_index",
+  "last_bar_time",
+  "line.all",
+  "linefill.all",
+  "low",
+  "minute",
+  "month",
+  "na",
+  "ohlc4",
+  "open",
+  "polyline.all",
+  "second",
+  "session.isfirstbar",
+  "session.isfirstbar_regular",
+  "session.islastbar",
+  "session.islastbar_regular",
+  "session.ismarket",
+  "session.ispostmarket",
+  "session.ispremarket",
+  "strategy.account_currency",
+  "strategy.avg_losing_trade",
+  "strategy.avg_losing_trade_percent",
+  "strategy.avg_trade",
+  "strategy.avg_trade_percent",
+  "strategy.avg_winning_trade",
+  "strategy.avg_winning_trade_percent",
+  "strategy.closedtrades",
+  "strategy.closedtrades.first_index",
+  "strategy.equity",
+  "strategy.eventrades",
+  "strategy.grossloss",
+  "strategy.grossloss_percent",
+  "strategy.grossprofit",
+  "strategy.grossprofit_percent",
+  "strategy.initial_capital",
+  "strategy.losstrades",
+  "strategy.margin_liquidation_price",
+  "strategy.max_contracts_held_all",
+  "strategy.max_contracts_held_long",
+  "strategy.max_contracts_held_short",
+  "strategy.max_drawdown",
+  "strategy.max_drawdown_percent",
+  "strategy.max_runup",
+  "strategy.max_runup_percent",
+  "strategy.netprofit",
+  "strategy.netprofit_percent",
+  "strategy.openprofit",
+  "strategy.openprofit_percent",
+  "strategy.opentrades",
+  "strategy.opentrades.capital_held",
+  "strategy.position_avg_price",
+  "strategy.position_entry_name",
+  "strategy.position_size",
+  "strategy.wintrades",
+  "syminfo.basecurrency",
+  "syminfo.cftc_code",
+  "syminfo.country",
+  "syminfo.currency",
+  "syminfo.current_contract",
+  "syminfo.description",
+  "syminfo.employees",
+  "syminfo.expiration_date",
+  "syminfo.industry",
+  "syminfo.isin",
+  "syminfo.main_tickerid",
+  "syminfo.mincontract",
+  "syminfo.minmove",
+  "syminfo.mintick",
+  "syminfo.pointvalue",
+  "syminfo.prefix",
+  "syminfo.pricescale",
+  "syminfo.recommendations_buy",
+  "syminfo.recommendations_buy_strong",
+  "syminfo.recommendations_date",
+  "syminfo.recommendations_hold",
+  "syminfo.recommendations_sell",
+  "syminfo.recommendations_sell_strong",
+  "syminfo.recommendations_total",
+  "syminfo.root",
+  "syminfo.sector",
+  "syminfo.session",
+  "syminfo.shareholders",
+  "syminfo.shares_outstanding_float",
+  "syminfo.shares_outstanding_total",
+  "syminfo.target_price_average",
+  "syminfo.target_price_date",
+  "syminfo.target_price_estimates",
+  "syminfo.target_price_high",
+  "syminfo.target_price_low",
+  "syminfo.target_price_median",
+  "syminfo.ticker",
+  "syminfo.tickerid",
+  "syminfo.timezone",
+  "syminfo.type",
+  "syminfo.volumetype",
+  "ta.accdist",
+  "ta.iii",
+  "ta.nvi",
+  "ta.obv",
+  "ta.pvi",
+  "ta.pvt",
+  "ta.tr",
+  "ta.vwap",
+  "ta.wad",
+  "ta.wvad",
+  "table.all",
+  "time",
+  "time_close",
+  "time_tradingday",
+  "timeframe.isdaily",
+  "timeframe.isdwm",
+  "timeframe.isintraday",
+  "timeframe.isminutes",
+  "timeframe.ismonthly",
+  "timeframe.isseconds",
+  "timeframe.isticks",
+  "timeframe.isweekly",
+  "timeframe.main_period",
+  "timeframe.multiplier",
+  "timeframe.period",
+  "timenow",
+  "volume",
+  "weekofyear",
+  "year"
+ ],
+ "constants": [
+  "adjustment.dividends",
+  "adjustment.none",
+  "adjustment.splits",
+  "alert.freq_all",
+  "alert.freq_once_per_bar",
+  "alert.freq_once_per_bar_close",
+  "backadjustment.inherit",
+  "backadjustment.off",
+  "backadjustment.on",
+  "barmerge.gaps_off",
+  "barmerge.gaps_on",
+  "barmerge.lookahead_off",
+  "barmerge.lookahead_on",
+  "color.aqua",
+  "color.black",
+  "color.blue",
+  "color.fuchsia",
+  "color.gray",
+  "color.green",
+  "color.lime",
+  "color.maroon",
+  "color.navy",
+  "color.olive",
+  "color.orange",
+  "color.purple",
+  "color.red",
+  "color.silver",
+  "color.teal",
+  "color.white",
+  "color.yellow",
+  "currency.AED",
+  "currency.ARS",
+  "currency.AUD",
+  "currency.BDT",
+  "currency.BHD",
+  "currency.BRL",
+  "currency.BTC",
+  "currency.CAD",
+  "currency.CHF",
+  "currency.CLP",
+  "currency.CNY",
+  "currency.COP",
+  "currency.CZK",
+  "currency.DKK",
+  "currency.EGP",
+  "currency.ETH",
+  "currency.EUR",
+  "currency.GBP",
+  "currency.HKD",
+  "currency.HUF",
+  "currency.IDR",
+  "currency.ILS",
+  "currency.INR",
+  "currency.ISK",
+  "currency.JPY",
+  "currency.KES",
+  "currency.KRW",
+  "currency.KWD",
+  "currency.LKR",
+  "currency.MAD",
+  "currency.MXN",
+  "currency.MYR",
+  "currency.NGN",
+  "currency.NOK",
+  "currency.NONE",
+  "currency.NZD",
+  "currency.PEN",
+  "currency.PHP",
+  "currency.PKR",
+  "currency.PLN",
+  "currency.QAR",
+  "currency.RON",
+  "currency.RSD",
+  "currency.RUB",
+  "currency.SAR",
+  "currency.SEK",
+  "currency.SGD",
+  "currency.THB",
+  "currency.TND",
+  "currency.TRY",
+  "currency.TWD",
+  "currency.USD",
+  "currency.USDT",
+  "currency.VES",
+  "currency.VND",
+  "currency.ZAR",
+  "dayofweek.friday",
+  "dayofweek.monday",
+  "dayofweek.saturday",
+  "dayofweek.sunday",
+  "dayofweek.thursday",
+  "dayofweek.tuesday",
+  "dayofweek.wednesday",
+  "display.all",
+  "display.data_window",
+  "display.none",
+  "display.pane",
+  "display.pine_screener",
+  "display.price_scale",
+  "display.status_line",
+  "dividends.gross",
+  "dividends.net",
+  "earnings.actual",
+  "earnings.estimate",
+  "earnings.standardized",
+  "extend.both",
+  "extend.left",
+  "extend.none",
+  "extend.right",
+  "font.family_default",
+  "font.family_monospace",
+  "format.inherit",
+  "format.mintick",
+  "format.percent",
+  "format.price",
+  "format.volume",
+  "hline.style_dashed",
+  "hline.style_dotted",
+  "hline.style_solid",
+  "label.style_arrowdown",
+  "label.style_arrowup",
+  "label.style_circle",
+  "label.style_cross",
+  "label.style_diamond",
+  "label.style_flag",
+  "label.style_label_center",
+  "label.style_label_down",
+  "label.style_label_left",
+  "label.style_label_lower_left",
+  "label.style_label_lower_right",
+  "label.style_label_right",
+  "label.style_label_up",
+  "label.style_label_upper_left",
+  "label.style_label_upper_right",
+  "label.style_none",
+  "label.style_square",
+  "label.style_text_outline",
+  "label.style_triangledown",
+  "label.style_triangleup",
+  "label.style_xcross",
+  "line.style_arrow_both",
+  "line.style_arrow_left",
+  "line.style_arrow_right",
+  "line.style_dashed",
+  "line.style_dotted",
+  "line.style_solid",
+  "location.abovebar",
+  "location.absolute",
+  "location.belowbar",
+  "location.bottom",
+  "location.top",
+  "math.e",
+  "math.phi",
+  "math.pi",
+  "math.rphi",
+  "order.ascending",
+  "order.descending",
+  "plot.linestyle_dashed",
+  "plot.linestyle_dotted",
+  "plot.linestyle_solid",
+  "plot.style_area",
+  "plot.style_areabr",
+  "plot.style_circles",
+  "plot.style_columns",
+  "plot.style_cross",
+  "plot.style_histogram",
+  "plot.style_line",
+  "plot.style_linebr",
+  "plot.style_stepline",
+  "plot.style_stepline_diamond",
+  "plot.style_steplinebr",
+  "position.bottom_center",
+  "position.bottom_left",
+  "position.bottom_right",
+  "position.middle_center",
+  "position.middle_left",
+  "position.middle_right",
+  "position.top_center",
+  "position.top_left",
+  "position.top_right",
+  "scale.left",
+  "scale.none",
+  "scale.right",
+  "session.extended",
+  "session.regular",
+  "settlement_as_close.inherit",
+  "settlement_as_close.off",
+  "settlement_as_close.on",
+  "shape.arrowdown",
+  "shape.arrowup",
+  "shape.circle",
+  "shape.cross",
+  "shape.diamond",
+  "shape.flag",
+  "shape.labeldown",
+  "shape.labelup",
+  "shape.square",
+  "shape.triangledown",
+  "shape.triangleup",
+  "shape.xcross",
+  "size.auto",
+  "size.huge",
+  "size.large",
+  "size.normal",
+  "size.small",
+  "size.tiny",
+  "splits.denominator",
+  "splits.numerator",
+  "strategy.cash",
+  "strategy.commission.cash_per_contract",
+  "strategy.commission.cash_per_order",
+  "strategy.commission.percent",
+  "strategy.direction.all",
+  "strategy.direction.long",
+  "strategy.direction.short",
+  "strategy.fixed",
+  "strategy.long",
+  "strategy.oca.cancel",
+  "strategy.oca.none",
+  "strategy.oca.reduce",
+  "strategy.percent_of_equity",
+  "strategy.short",
+  "text.align_bottom",
+  "text.align_center",
+  "text.align_left",
+  "text.align_right",
+  "text.align_top",
+  "text.format_bold",
+  "text.format_italic",
+  "text.format_none",
+  "text.wrap_auto",
+  "text.wrap_none",
+  "xloc.bar_index",
+  "xloc.bar_time",
+  "yloc.abovebar",
+  "yloc.belowbar",
+  "yloc.price"
+ ]
+}

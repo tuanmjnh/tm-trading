@@ -9,7 +9,15 @@
 //  Duong nen trend (Supertrend) - bat/tat bang module M1
 // -----------------------------------------------------------------------------
 tm_stCol = tm_stDir == -1 ? color.new(#089981, 20) : color.new(#f23645, 20)
-plot(tm_m1_on ? tm_stLine : na, "Supertrend", color = tm_stCol, linewidth = 2, style = plot.style_linebr)
+plot(tm_m1_on ? tm_stLine : na, "Supertrend", color = tm_stCol, linewidth = 2, style = plot.style_linebr, force_overlay = true)
+
+// -----------------------------------------------------------------------------
+//  Volume VSA (ton tai rieng o pane duoi - chi ban indicator, strategy skip file nay)
+//  Mau cot theo khoi luong so voi Volume MA (Wilder): 2.2/1.8/1.2/0.8/0.4 × MA
+// -----------------------------------------------------------------------------
+tm_volCol = f_vsaColor(tm_vol, tm_volMA, 2.2, 1.8, 1.2, 0.8, 0.4)
+plot(tm_vol, "Volume", color = tm_volCol, style = plot.style_columns, format = format.volume, display = display.pane)
+plot(tm_volMA, "Volume MA", color = color.new(color.green, 0), linewidth = 1, format = format.volume, display = display.pane)
 
 // -----------------------------------------------------------------------------
 //  Marker vao lenh
@@ -21,43 +29,43 @@ tm_sellCol = tm_unconfirmed ? color.new(tm_cBear, 55) : tm_cBear
 // CANH BAO: plotshape/plot co tham so OFFSET o vi tri 6.
 // Neu truyen theo thu tu, `size = size.tiny` se gan nham vao `offset` -> CE10271.
 // Phai luon truyen bang TEN tham so.
-plotshape(tm_evEntry and tm_plan.dir == 1, title = "BUY",  style = shape.triangleup,   location = location.belowbar, color = tm_buyCol,  size = size.tiny, text = "BUY")
-plotshape(tm_evEntry and tm_plan.dir == -1, title = "SELL", style = shape.triangledown, location = location.abovebar, color = tm_sellCol, size = size.tiny, text = "SELL")
+plotshape(tm_evEntry and tm_plan.dir == 1, title = "BUY",  style = shape.triangleup,   location = location.belowbar, color = tm_buyCol,  size = size.tiny, text = "BUY",  textcolor = tm_cBull, force_overlay = true)
+plotshape(tm_evEntry and tm_plan.dir == -1, title = "SELL", style = shape.triangledown, location = location.abovebar, color = tm_sellCol, size = size.tiny, text = "SELL", textcolor = tm_cBear, force_overlay = true)
 
 // -----------------------------------------------------------------------------
 //  Vung TP / SL cua viethe dang mo (cap nhat moi bar nen nen "chay" theo gia)
 // -----------------------------------------------------------------------------
-var box bxSl = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(color.gray, 70), bgcolor = color.new(color.gray, 88), xloc = xloc.bar_index)
-var box bxTp1 = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(tm_cBull, 50), bgcolor = color.new(tm_cBull, 90), xloc = xloc.bar_index)
-var box bxTp2 = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(tm_cBull, 60), bgcolor = color.new(tm_cBull, 93), xloc = xloc.bar_index)
-var box bxTp3 = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(tm_cBull, 70), bgcolor = color.new(tm_cBull, 95), xloc = xloc.bar_index)
-var line lnEntry = line.new(bar_index, 0.0, bar_index, 0.0, color = color.new(color.silver, 40), style = line.style_dashed, xloc = xloc.bar_index)
+var box bxSl = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(color.gray, 70), bgcolor = color.new(color.gray, 88), xloc = xloc.bar_index, force_overlay = true)
+var box bxTp1 = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(tm_cBull, 50), bgcolor = color.new(tm_cBull, 90), xloc = xloc.bar_index, force_overlay = true)
+var box bxTp2 = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(tm_cBull, 60), bgcolor = color.new(tm_cBull, 93), xloc = xloc.bar_index, force_overlay = true)
+var box bxTp3 = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(tm_cBull, 70), bgcolor = color.new(tm_cBull, 95), xloc = xloc.bar_index, force_overlay = true)
+var line lnEntry = line.new(bar_index, 0.0, bar_index, 0.0, color = color.new(color.silver, 40), style = line.style_dashed, xloc = xloc.bar_index, force_overlay = true)
 
-var label lbEntry = label.new(bar_index, 0.0, "", style = label.style_label_left, color = color.new(color.gray, 30), textcolor = color.white, size = size.tiny)
-var label lbSl    = label.new(bar_index, 0.0, "", style = label.style_label_left, color = color.new(color.gray, 30), textcolor = color.white, size = size.tiny)
-var label lbTp    = label.new(bar_index, 0.0, "", style = label.style_label_left, color = color.new(color.gray, 30), textcolor = color.white, size = size.tiny)
+var label lbEntry = label.new(bar_index, 0.0, "", style = label.style_label_left, color = color.new(color.gray, 30), textcolor = color.white, size = size.tiny, force_overlay = true)
+var label lbSl    = label.new(bar_index, 0.0, "", style = label.style_label_left, color = color.new(color.gray, 30), textcolor = color.white, size = size.tiny, force_overlay = true)
+var label lbTp    = label.new(bar_index, 0.0, "", style = label.style_label_left, color = color.new(color.gray, 30), textcolor = color.white, size = size.tiny, force_overlay = true)
 
 tm_right = tm_posBar + tm_zoneLen
 tm_base  = tm_posDir == 1 ? tm_cBull : tm_cBear
 
 if tm_showZone and tm_posDir != 0 and not na(tm_posBar)
-    box.set_lefttop(bxSl, tm_posBar, tm_posDir == 1 ? tm_posEntry : tm_posSl)
-    box.set_rightbottom(bxSl, tm_right, tm_posDir == 1 ? tm_posSl : tm_posEntry)
+    box.set_lefttop(bxSl, tm_posBar, math.max(tm_posEntry, tm_posSl))
+    box.set_rightbottom(bxSl, tm_right, math.min(tm_posEntry, tm_posSl))
     box.set_border_color(bxSl, color.new(color.gray, 55))
     box.set_bgcolor(bxSl, color.new(color.gray, 90))
 
-    box.set_lefttop(bxTp1, tm_posBar, tm_posDir == 1 ? tm_posEntry : tm_posTp1)
-    box.set_rightbottom(bxTp1, tm_right, tm_posTp1)
+    box.set_lefttop(bxTp1, tm_posBar, math.max(tm_posEntry, tm_posTp1))
+    box.set_rightbottom(bxTp1, tm_right, math.min(tm_posEntry, tm_posTp1))
     box.set_border_color(bxTp1, color.new(tm_base, 45))
     box.set_bgcolor(bxTp1, color.new(tm_base, 90))
 
-    box.set_lefttop(bxTp2, tm_posBar, tm_posDir == 1 ? tm_posEntry : tm_posTp2)
-    box.set_rightbottom(bxTp2, tm_right, tm_posTp2)
+    box.set_lefttop(bxTp2, tm_posBar, math.max(tm_posEntry, tm_posTp2))
+    box.set_rightbottom(bxTp2, tm_right, math.min(tm_posEntry, tm_posTp2))
     box.set_border_color(bxTp2, color.new(tm_base, 60))
     box.set_bgcolor(bxTp2, color.new(tm_base, 93))
 
-    box.set_lefttop(bxTp3, tm_posBar, tm_posDir == 1 ? tm_posEntry : tm_posTp3)
-    box.set_rightbottom(bxTp3, tm_right, tm_posTp3)
+    box.set_lefttop(bxTp3, tm_posBar, math.max(tm_posEntry, tm_posTp3))
+    box.set_rightbottom(bxTp3, tm_right, math.min(tm_posEntry, tm_posTp3))
     box.set_border_color(bxTp3, color.new(tm_base, 70))
     box.set_bgcolor(bxTp3, color.new(tm_base, 95))
 
@@ -96,19 +104,26 @@ else
 // -----------------------------------------------------------------------------
 //  Lich su plan da dong (gioi han so object)
 // -----------------------------------------------------------------------------
-var array<box> tm_hist = array.new<box>()
+var array<box>   tm_hist   = array.new<box>()
+var array<label> tm_histLb = array.new<label>()
 
-if tm_evClose and tm_showHist and tm_keepPlans > 0 and tm_xDir != 0 and not na(tm_xBar)
-    box hSl = box.new(tm_xBar, tm_xDir == 1 ? tm_xEntry : tm_xSl, bar_index, tm_xDir == 1 ? tm_xSl : tm_xEntry, border_color = color.new(tm_evSl ? color.gray : tm_xDir == 1 ? tm_cBull : tm_cBear, 45), bgcolor = color.new(color.gray, 92), xloc = xloc.bar_index)
-    array.push(tm_hist, hSl)
-    while array.size(tm_hist) > tm_keepPlans * 3
+if tm_evClose and tm_showHist and tm_keepPlans > 0 and tm_xDir != 0 and not na(tm_xBar) and not na(tm_xExit) and not na(tm_xR)
+    float hTop = math.max(tm_xEntry, tm_xExit)
+    float hBot = math.min(tm_xEntry, tm_xExit)
+    color hCol = tm_xR > 0 ? tm_cBull : tm_xR < 0 ? tm_cBear : color.gray
+    box hB = box.new(tm_xBar, hTop, bar_index, hBot, border_color = color.new(hCol, 35), bgcolor = color.new(hCol, 88), xloc = xloc.bar_index, force_overlay = true)
+    label hL = label.new(bar_index, hTop, (tm_xR > 0 ? "+" : "") + str.tostring(tm_xR, "#.##") + "R", style = label.style_label_left, color = color.new(hCol, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+    array.push(tm_hist, hB)
+    array.push(tm_histLb, hL)
+    while array.size(tm_hist) > tm_keepPlans
         box.delete(array.shift(tm_hist))
+        label.delete(array.shift(tm_histLb))
 
 // CANH BAO: table.new() KHONG co tham so `size`. Kich thuoc bang duoc quyet dinh
 // boi `text_size` cua tung o table.cell(). Neu truyen size -> CE10120.
 var table tm_tbl = na
 if tm_showDash and na(tm_tbl)
-    tm_tbl := table.new(position.top_right, 2, 12, border_width = 1, border_color = color.new(color.gray, 80))
+    tm_tbl := table.new(position.top_right, 2, 12, border_width = 1, border_color = color.new(color.gray, 80), force_overlay = true)
 
 tm_font = tm_dashSize == "Tiny" ? size.tiny : tm_dashSize == "Small" ? size.small : size.normal
 

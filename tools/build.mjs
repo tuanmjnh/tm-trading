@@ -2,12 +2,12 @@
 // =============================================================================
 //  TM TRADING - ASSEMBLER
 //  Pine Script khong ho tro #include nen day la "preprocessor".
-//  Doc pine/parts/*.pine theo thu tu ten file -> ghep ra pine/dist/*.pine
+//  Doc pine/parts*/ + chen pine/shared/{file} (marker {{SHARED}}) -> pine/dist
 //
 //  Usage:
-//    node tools/build.mjs            # build ca 2 target
-//    node tools/build.mjs --watch    # tu dong build lai khi parts doi
-//    node tools/build.mjs indicator  # chi build 1 target
+//    node tools/build.mjs            # build ca target
+//    node tools/build.mjs --watch    # tu dong build lai khi parts/shared doi
+//    node tools/build.mjs vsa        # chi build 1 target (vsa/indicator/strategy)
 // =============================================================================
 
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, watch } from 'node:fs'
@@ -15,255 +15,225 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const PARTS = join(ROOT, 'pine', 'parts')
+const SHARED = join(ROOT, 'pine', 'shared')
 const DIST = join(ROOT, 'pine', 'dist')
 
 const TARGETS = {
   indicator: {
-    file: 'tm-signals.pine',
+    file: 'TM Signals BTC.pine',
+    dir: 'parts',
+    shared: ['common.pine'],
     // Giu tren MOT dong: khai bao script la vi tri nhay parse, khong sua.
-    decl: `indicator("TM Signals [v6]", "TM Signals", overlay = true, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)`,
+    decl: `indicator("TM Signals BTC", "TM Signals BTC", overlay = false, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)`,
   },
   strategy: {
-    file: 'tm-backtest.pine',
-    decl: `strategy("TM Backtest [v6]", "TM Backtest", overlay = true, pyramiding = 0, calc_on_order_fills = true, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 1, commission_type = strategy.commission.percent, commission_value = 0.05, slippage = 0)`,
+    file: 'TM Backtest BTC.pine',
+    dir: 'parts',
+    shared: ['common.pine'],
+    decl: `strategy("TM Backtest BTC", "TM Backtest BTC", overlay = true, pyramiding = 0, calc_on_order_fills = true, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 1, commission_type = strategy.commission.percent, commission_value = 0.05, slippage = 0)`,
+  },
+  vsa: {
+    file: 'TM VSA Wyckoff.pine',
+    dir: 'parts-vsa',
+    shared: ['common.pine'],
+    decl: `indicator("TM VSA Wyckoff", "TM VSA Wyckoff", overlay = false, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)`,
+  },
+  // Ban backtest cua VSA - CUNG nguon parts-vsa, chi khac khai bao strategy va
+  // 60_viz.pine bi cat (@part skip:vsa-strategy) vi do la phan ve rieng cua pane
+  // volume. Logic su kien (20/30/40) dung nguyen ven -> khong the lech voi ban
+  // indicator. Cau noi lenh nam o 50_strategy.pine (@part skip:vsa).
+  'vsa-strategy': {
+    file: 'TM VSA Backtest.pine',
+    dir: 'parts-vsa',
+    shared: ['common.pine'],
+    decl: `strategy("TM VSA Backtest", "TM VSA Backtest", overlay = true, pyramiding = 0, calc_on_order_fills = true, process_orders_on_close = true, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, commission_value = 0.05, slippage = 0)`,
   },
 }
 
-// --- doc part theo thu tu ten file (00_, 10_, 20_ ...) ---
-function readParts() {
-  return readdirSync(PARTS)
+// --- doc part theo thu tu ten file (00_, 10_, 20_ ...) trong dir cua target ---
+function readParts(target) {
+  const dir = join(ROOT, 'pine', TARGETS[target].dir)
+  return readdirSync(dir)
     .filter((f) => f.endsWith('.pine'))
     .sort()
-    .map((f) => ({ name: f, src: readFileSync(join(PARTS, f), 'utf8').replace(/\r\n/g, '\n') }))
+    .map((f) => ({ name: f, src: readFileSync(join(dir, f), 'utf8').replace(/\r\n/g, '\n') }))
+}
+
+// --- noi dung shared cua target (chen qua marker {{SHARED}}) ---
+function sharedCode(target) {
+  return (TARGETS[target].shared ?? [])
+    .map((f) => readFileSync(join(SHARED, f), 'utf8').replace(/\r\n/g, '\n'))
+    .join('\n')
 }
 
 // --- cat block theo marker // @part skip:<target> ---
-function filterMarkers(src, target) {
+// Tra ve [{ t, n }] - `n` la so dong TRONG FILE GOC (khong phai dong da cat),
+// de `errors.mjs` chi dung dung vi tri trong pine/parts/.
+// Ten target cho phep gach noi (vsa-strategy), neu khong `\w+` se chi bat duoc
+// phan truoc gach -> marker "skip:vsa-strategy" bi hieu nham thanh "skip:vsa".
+function filterMarkerLines(src, target) {
   const out = []
   let skipping = false
+  let n = 0
   for (const line of src.split('\n')) {
-    const m = line.match(/^\s*\/\/\s*@part\s+skip:(\w+)/)
+    n++
+    const m = line.match(/^\s*\/\/\s*@part\s+skip:([\w-]+)/)
     if (m) {
       skipping = m[1] === target
       continue
     }
-    if (!skipping) out.push(line)
-  }
-  return out.join('\n')
-}
-
-// --- kiem tra nhe: indent, ngoac, ham khong ton tai, tham so sai thu tu ---
-//
-//  TradingView khong bao gio dung offline nen 2 loi nay phai bat bang tay:
-//    - goi ham Pine khong ton tai (vd input.timezone) -> CE10271
-//    - truyen tham so theo thu tu cho ham co offset o vi tri 6 (plotshape/plot) -> CE10271
-//
-//  QUY TAC BOI BUILTINS:
-//    Day chi la DANH SACH HAM (ten di kem "(") - gom ca phep ep kieu int/float/bool/string/color.
-//    Khong dua hao so/ky hieu (color.red, shape.triangleup, position.top_right, size.tiny...)
-//    vi lint khong bao gio doi chieu chung voi dang "ten(" - dua vao chi tao cam gia la
-//    "da kiem chung".
-//    Moi ten them vao PHAI dang ky tai https://www.tradingview.com/pine-script-reference/v6/
-//    roi moi chen. Ten nao chua ky -> de ngoai de lint bao, dung im lap lai loi CE10271
-//    (van de da xay ra voi table.cell_clear).
-const BUILTINS = new Set(`
-array.clear array.copy array.from array.get array.indexof array.insert array.join array.new
-array.pop array.push array.remove array.reverse array.shift array.size array.slice array.sort array.sum
-box.new box.delete box.set_bgcolor box.set_border_color box.set_border_style box.set_border_width
-box.set_left box.set_right box.set_lefttop box.set_rightbottom box.set_top box.set_bottom box.set_extend
-box.set_text box.set_text_color box.set_text_font_family box.set_text_size box.set_text_halign box.set_text_valign
-color.new color.rgb color.from_gradient
-input.bool input.color input.float input.int input.price input.session input.string input.symbol
-input.text_area input.timeframe
-label.new label.delete label.set_x label.set_y label.set_xy label.set_text label.set_color
-label.set_bgcolor label.set_textcolor label.set_style label.set_size label.set_tooltip label.set_textalign
-line.new line.delete line.set_xy1 line.set_xy2 line.set_x1 line.set_x2 line.set_y1 line.set_y2
-line.set_color line.set_style line.set_width line.set_extend line.set_first_point line.set_second_point
-linefill.new linefill.delete linefill.set_color
-math.abs math.acos math.asin math.atan math.avg math.ceil math.cos math.exp math.floor math.log
-math.log10 math.max math.min math.pow math.random math.round math.sign math.sin math.sqrt math.sum
-math.todegrees math.toradians matrix.new matrix.get matrix.set matrix.add_row matrix.add_col
-matrix.fill matrix.copy matrix.transpose max_bars_back
-plot plotchar plotarrow plotbar plotcandle plotshape hline fill bgcolor
-request.security request.security_lower_tf request.dividends request.earnings request.splits
-str.contains str.endswith str.format str.format_time str.isequal str.length str.lower str.match
-str.pos str.repeat str.replace str.replace_all str.split str.substring str.tostring str.trim str.upper
-strategy.cancel strategy.cancel_all strategy.close strategy.close_all strategy.entry strategy.exit
-strategy.order
-ta.ad ta.atr ta.bb ta.bbw ta.cci ta.change ta.correlation ta.crossover ta.crossunder ta.cum ta.dmi
-ta.ema ta.highest ta.highestbars ta.hma ta.kc ta.kcw ta.lowest ta.lowestbars ta.macd ta.median ta.mfi
-ta.mom ta.normalize ta.obv ta.percentrank ta.pivothigh ta.pivotlow ta.rma ta.roc ta.rsi ta.sar ta.sma
-ta.stdev ta.stoch ta.supertrend ta.tr ta.trix ta.trima ta.tsi ta.variance ta.vwap ta.vwma ta.wma
-ta.wpr timeframe.change timeframe.in_seconds
-table.new table.cell table.clear table.delete table.merge_cells table.remove table.set_bgcolor
-table.set_border_color table.set_border_width table.set_position
-alert alertcondition log.info log.warning log.error
-int float bool string color
-`.trim().split(/\s+/))
-
-// Vi tri (bat dau tu 1) cua tham so `offset` - lay NGUYEN chu ky chinh thuc:
-//   plot      (series, title, color, linewidth, style, trackprice, histbase, offset, ...) -> 8
-//   plotchar  (series, title, char, location, color, offset, ...)                          -> 6
-//   plotshape (series, title, style, location, color, offset, ...)                         -> 6
-//   plotarrow (series, title, colorup, colordown, offset, ...)                             -> 5
-//   plotbar / plotcandle KHONG co tham so offset (dau vao la OHLC) -> khong dua vao day.
-// Nguon:
-//   https://www.tradingview.com/pine-script-docs/visuals/plots/
-//   https://www.tradingview.com/pine-script-docs/visuals/text-and-shapes/
-//   https://www.tradingview.com/pine-script-docs/visuals/bar-plotting/
-// Canh bao khi so tham so theo thu tu >= vi tri nay: tham so o vi tri do da roi vao
-// `offset` ma khong phai gia tri nguoi viet mong doi. Hay truyen bang TEN tham so.
-const POSITIONAL_RISK = new Map([
-  ['plot', 8],
-  ['plotchar', 6],
-  ['plotarrow', 5],
-  ['plotshape', 6],
-])
-
-// Tu khoa / toan tu cua Pine - khong phai la loi goi ham.
-const KEYWORDS = new Set(`
-na nz and or not if else for while to switch var varip export import type method enum true false
-break continue by parens series simple const input
-open high low close volume hl2 hlc3 ohlc4 hlcc4 bar_index last_bar_index time
-overlay scale shape location display text
-`.trim().split(/\s+/))
-
-// --- che comment VA noi dung chuoi, giu nguyen so dong ---
-// Khong lam vay thi regex se khop nhau nham trong text tieng Viet trong input.label
-// (vd "Chỉ tín hieu tren nen da dong (" -> nham la goi ham "dong(").
-// Cac tham so trong ham ta.* yeu cau SIMPLE INT (so chu ky / do dai).
-// Truyen bien series float se bi bao CE10123.
-// Gia tri = vi tri tham so (bat dau tu 0).
-const INT_PARAMS = {
-  'ta.atr': [0],
-  'ta.ema': [1],
-  'ta.sma': [1],
-  'ta.rsi': [1],
-  'ta.bb': [1],
-  'ta.bbw': [1],
-  'ta.stdev': [1],
-  'ta.kc': [1],
-  'ta.kcw': [1],
-  'ta.mom': [1],
-  'ta.roc': [1],
-  'ta.cci': [1],
-  'ta.mfi': [1],
-  'ta.dmi': [0, 1],
-  'ta.macd': [1, 2],
-  'ta.stoch': [4, 5, 6],
-  'ta.supertrend': [1],
-  'ta.tsi': [1, 2],
-  'ta.wma': [1],
-  'ta.vwma': [1],
-  'ta.hma': [1],
-  'ta.cog': [1],
-  'ta.tr': [],
-}
-
-// Bien duoc gan tu input.int / input.timeframe / so nguyen / phep tinh tren bien int
-function intVars(code) {
-  const out = new Set()
-  for (const line of code.split('\n')) {
-    const m = line.match(/^\s*(\w+)\s*(?::=|=(?!=))\s*(.+)$/)
-    if (!m) continue
-    const [, name, rhs] = m
-    const isInt =
-      /^input\.(int|timeframe)\(/.test(rhs.trim()) ||
-      /^\d+(\s*[-+*]\s*\d+)*\s*$/.test(rhs.trim()) ||
-      [...rhs.matchAll(/\b(\w+)\b/g)].some((x) => out.has(x[1]))
-    if (isInt) out.add(name)
+    if (!skipping) out.push({ t: line, n })
   }
   return out
 }
 
-// Ten tham so hop le cua ham Pine v6. Tru ten sai -> CE10120.
-// Chi kiem tra nhung ham co nam trong bang; ham ngoai bang thi bo qua.
-const PARAM_NAMES = {
-  'table.new': 'position, columns, rows, bgcolor, frame_color, frame_width, border_color, border_width, force_overlay',
-  'table.cell': 'table_id, column, row, text, width, height, text_color, text_halign, text_valign, text_size, tooltip, bgcolor, text_font_family, text_formatting, text_wrap, force_overlay',
-  'table.clear': 'table_id, start_column, start_row, end_column, end_row',
-  'table.delete': 'table_id',
+// --- kiem tra nhe: indent, ngoac, ham khong ton tai, tham so sai thu tu ---
+//
+//  TradingView khong bao gio dung offline nen cac loi nay phai bat bang tay:
+//    - goi ham Pine khong ton tai (vd input.timezone) -> CE10271
+//    - truyen tham so theo thu tu cho ham co offset o vi tri do      -> CE10271
+//    - truyen float vao tham so can int / dao thu tu time & format  -> CE10123
+//    - ten tham so khong co trong chu ky                             -> CE10120
+//
+//  NGUON CHAN LY: tools/pine-ref.json (sinh boi tools/pine-ref.mjs tu
+//  folknor/pine-tools - du lieu lay tu tai lieu chinh thuc TradingView).
+//  MOI luat ben duoi deu duoc DERIVE tu do, khong danh tay. Day la quy tac P0:
+//  truoc day lint lay "cai minh nho" lam chan ly va da viet nguoc 4 lan
+//  (table.cell_clear, str.format_time, POSITIONAL_RISK, FAKE_NAMES) - moi lan deu
+//  do test chi kiem 1 chieu tao cam gia "da dung".
+//  Cap nhat:  node tools/pine-ref.mjs   roi   npm run verify
+const REF_PATH = join(ROOT, 'tools', 'pine-ref.json')
+let REF
+try {
+  REF = JSON.parse(readFileSync(REF_PATH, 'utf8'))
+} catch (e) {
+  throw new Error(`thieu ${REF_PATH} - hay chay "node tools/pine-ref.mjs" truoc (${e.message})`)
+}
+const REF_FUNCS = REF.functions
 
-  'box.new': 'left, top, right, bottom, border_color, border_width, border_style, border_radius, extend, xloc, bgcolor, text, text_size, text_color, text_halign, text_valign, text_font_family, tooltip, text_formatting, force_overlay',
-  'box.set_lefttop': 'id, left, top',
-  'box.set_rightbottom': 'id, right, bottom',
-  'box.set_border_color': 'id, color',
-  'box.set_bgcolor': 'id, color',
-  'box.set_border_width': 'id, border_width',
-  'box.delete': 'id',
+// Tat ca ten ham Pine v6: gom ca phep ep kieu (int/float/bool/string/color),
+// ham khai bao (indicator/strategy/library) va cac chu ky co tuy chon.
+// Chi can ten di kem "(" la da duoc kiem chung; ten khac se bi bao CE10271.
+// (Ham dang kieu `array.new<box>()` khong khop regex "ten(" nen duoc bo qua -
+//  khong co cach nao phan biet voi ten khong ton tai chi qua van ban.)
+const BUILTINS = new Set(Object.keys(REF_FUNCS))
 
-  'line.new': 'x1, y1, x2, y2, xloc, extend, color, style, width, force_overlay',
-  'line.set_xy1': 'id, x1, y1',
-  'line.set_xy2': 'id, x2, y2',
-  'line.set_color': 'id, color',
-  'line.delete': 'id',
+// Tu khoa / toan tu Pine - khong phai loi goi ham.
+// Bo indicator/strategy/library vi chung LA ham (co bo tham so rieng) va phai
+// van duoc kiem tra tham so nhu ham thuong.
+const DECLS = new Set(['indicator', 'strategy', 'library'])
+const KEYWORDS = new Set(REF.keywords.filter((k) => !DECLS.has(k)))
 
-  'label.new': 'x, y, text, xloc, yloc, color, style, textcolor, size, textalign, tooltip, text_font_family, force_overlay',
-  'label.set_xy': 'id, x, y',
-  'label.set_text': 'id, text',
-  'label.set_color': 'id, color',
-  'label.set_textcolor': 'id, textcolor',
-  'label.delete': 'id',
-
-  plot: 'series, title, color, linewidth, style, trackprice, histbase, offset, join, editable, show_last, display, precision, force_overlay',
-  plotshape: 'series, title, style, location, color, offset, text, textcolor, editable, size, show_last, display, format, precision, force_overlay',
-  alert: 'message, freq',
-  alertcondition: 'condition, title, message',
-
-  'input.string': 'defval, title, options, group, tooltip, inline, confirm',
-  'input.bool': 'defval, title, group, tooltip, inline, confirm',
-  'input.int': 'defval, title, minval, maxval, step, group, tooltip, inline, confirm',
-  'input.float': 'defval, title, minval, maxval, step, group, tooltip, inline, confirm',
-  'input.color': 'defval, title, group, inline, confirm',
-  'input.session': 'defval, title, days, group, tooltip, inline',
-  'input.timeframe': 'defval, title, group, tooltip, inline',
-  'input.symbol': 'defval, title, group, tooltip, inline',
-
-  'request.security': 'symbol, timeframe, expression, gaps, lookahead',
-  time: 'timeframe, session, timezone',
-  'str.format_time': 'format, time, timezone',
-  'str.tostring': 'value, format',
-  'str.replace_all': 'source, target, replacement, occurrence',
-  'str.format': 'pattern, values',
-
-  'ta.supertrend': 'factor, atrPeriod',
-  'ta.rsi': 'source, length',
-  'ta.bb': 'source, length, mult',
-  'ta.ema': 'source, length',
-  'ta.sma': 'source, length',
-  'ta.atr': 'length',
-  'ta.lowest': 'source, length',
-  'ta.highest': 'source, length',
-  'ta.change': 'source, length',
-  'ta.crossover': 'source1, source2',
-  'ta.crossunder': 'source1, source2',
-  'ta.pivotlow': 'source, leftbars, rightbars',
-  'ta.pivothigh': 'source, leftbars, rightbars',
-
-  'strategy.entry': 'id, direction, qty, limit, stop, oca_name, comment, alert_message, alert_profit, alert_loss, disable_alert',
-  'strategy.close_all': 'comment, alert_message, immediately, disable_alert',
-  'strategy.exit': 'id, from_entry, qty, qty_percent, comment, profit, loss, trail_price, trail_points, trail_offset, stop, limit, oca_name, comment_profit, comment_loss, comment_trailing, alert_message, alert_profit, alert_loss, alert_trailing, disable_alert, qty_percent_next, scale',
-
-  'array.push': 'id, value',
-  'array.shift': 'id',
-  'array.size': 'id',
-  'array.clear': 'id',
-  'array.get': 'id, index',
-  'array.set': 'id, index, value',
+// TUNG chu ky rieng cua ham. `params/types` trong ref la chu ky GOP (union) cua
+// cac overload - dung duoc cho ten tham so NHUNG KHONG dung cho vi tri, vi vi tri
+// 4 cua box.new la `border_width` (int) theo chu ky point nhung la `bottom`
+// (float) theo chu ky x/y. Luat dua vao vi tri phai dong y qua TAT CA cac chu ky.
+function signatures(spec) {
+  return spec.sigs?.length ? spec.sigs : [{ params: spec.params, types: spec.types }]
 }
 
-const PARAM_SET = new Map(Object.entries(PARAM_NAMES).map(([k, v]) => [k, new Set(v.split(',').map((s) => s.trim()))]))
+// Vi tri (bat dau tu 1) cua tham so `offset`: truyen du tham so theo thu tu den
+// vi tri do thi gia tri se bi gan cho `offset` thay cho gia tri nguoi viet mong doi.
+// Chi lay khi MOI chu ky deu co `offset` cung MOT vi tri >= 4 - vi du
+// barcolor/bgcolor/ta.alma co offset som (vi tri 1-2) nen truyen 2-3 tham so theo
+// thu tu van binh thuong. Ket qua hien tai: plot->8, plotshape/plotchar->6, plotarrow->5.
+const POSITIONAL_RISK = new Map(
+  Object.entries(REF_FUNCS)
+    .map(([name, spec]) => {
+      const sigs = signatures(spec)
+      const idx = sigs.map((s) => s.params.indexOf('offset'))
+      return idx[0] >= 4 && idx.every((i) => i === idx[0]) ? [name, idx[0] + 1] : null
+    })
+    .filter(Boolean),
+)
+
+// Kieu int "nguyen khong phon" (const/input/simple/series int). Bo qua kieu gop
+// (series int/float) va cac kieu khac (input plot_display, const string...).
+const PURE_INT = /^(?:const|input|simple|series)\s+int$/
+
+// Vi tri tham so (bat dau tu 0) phai la int - derive cho MOI ham, khong chi ta.*
+// (vd table.cell column/row, plot linewidth, array.get index...). Chi giu vi tri
+// ma TAT CA cac chu ky deu co kieu int tai do (xem signatures() ben tren).
+const INT_PARAMS = new Map(
+  Object.entries(REF_FUNCS)
+    .map(([name, spec]) => {
+      const sigs = signatures(spec)
+      const len = Math.min(...sigs.map((s) => s.params.length))
+      const idx = []
+      for (let i = 0; i < len; i++) if (sigs.every((s) => PURE_INT.test(s.types[i] || ''))) idx.push(i)
+      return [name, idx]
+    })
+    .filter(([, idx]) => idx.length),
+)
+
+// Gia tri float CHAC CHAN:
+//   - chu so thap phan / so mu (3.0, .5, 1e3) trong bieu thuc phep tinh
+//   - gan tu ham co kieu tra ve chua "float" (ta.atr -> series float, input.float)
+//   - bien da duoc nhan dinh la float (thuyet phan 3 lan)
+//   - khai bao ro kieu: `float x = ...`
+//
+// NGUYEN TAC CHONG FALSE POSITIVE (P0): bat float CHAC CHAN, khong bat "khong
+// chung minh duoc la int" (la quy tac cu da sinh loi). Trong ref con co nhieu
+// tham so co kieu `unknown` hoac gop (int/float), nen neu bat moi bieu thuc khong
+// phai so nguyen se nham code dung. Khong chac chan -> bo qua (chi mat bot khi
+// phat hien, khong mat khi dung).
+const FLOAT_LITERAL = /(?:\d+\.\d*|\.\d+)(?:[eE][-+]?\d+)?|\d+[eE][-+]?\d+/
+function isFloatReturns(ret) {
+  return typeof ret === 'string' && /float/i.test(ret) && !/int/i.test(ret)
+}
+function floatVars(code) {
+  const out = new Set()
+  for (const m of code.matchAll(/^\s*(?:var\s+)?float\s+(\w+)/gm)) out.add(m[1])
+  const assigns = [...code.matchAll(/^\s*(\w+)\s*(?::=|=(?!=))\s*(.+)$/gm)].map((m) => [m[1], m[2].trim()])
+  for (let pass = 0; pass < 3; pass++) {
+    for (const [name, rhs] of assigns) {
+      if (out.has(name) || !rhs) continue
+      if (FLOAT_LITERAL.test(rhs)) {
+        // chi tinh khi la phep tinh thuc su (tru so sanh / ternary -> ket qua co the la int)
+        if (!/[?:<>=!]/.test(rhs)) out.add(name)
+        continue
+      }
+      const call = rhs.match(/^([A-Za-z_][\w.]*)\s*\(/)
+      if (call && isFloatReturns(REF_FUNCS[call[1]]?.returns)) out.add(name)
+      else if (out.has(rhs)) out.add(name)
+    }
+  }
+  return out
+}
+
+// Ten tham so hop le (truyen ten khong co -> CE10120). Lay toan bo chu ky cua ref;
+// cac ham overload (line.new/label.new/box.new) da duoc gop chu ky nen tap ten van
+// day du cho ca 2 cach goi (point-first va x/y-first).
+const PARAM_SET = new Map(
+  Object.entries(REF_FUNCS)
+    .filter(([, spec]) => spec.params.length)
+    .map(([name, spec]) => [name, new Set(spec.params)]),
+)
 
 // Nguon chung thuc (dang ky truoc khi them rule):
 //   str.format_time(time, format, timezone) -> time la `series int`, dinh dang la string.
 //   https://www.tradingview.com/pine-script-docs/concepts/time/
 //   -> str.format_time("yyyy", time, "UTC") = CE10123 (literal string nhung can series int).
-// Cach doc: ten bang = "ham co tham so dau PHAI la UNIX time, khong duoc la chuoi".
-const ARG0_TIME_NOT_STRING = new Set(['str.format_time'])
+// Cach derive: MOI chu ky deu co tham so DAU TIEN ten "time" va kieu do la int
+// nguyen (str.format_time, hour/minute/second/dayofmonth/..., chart.point.from_time).
+// chu y: `time("D")` KHONG bi bao vi tham so dau cua cac chu ky cua ham `time`
+// la `timeframe` (string).
+const ARG0_TIME_NOT_STRING = new Set(
+  Object.entries(REF_FUNCS)
+    .filter(([, spec]) =>
+      signatures(spec).every((s) => s.params[0] === 'time' && PURE_INT.test(s.types[0] || '')),
+    )
+    .map(([name]) => name),
+)
+
+// Dung cho test (smoke.mjs) dam bao FAKE_NAMES khong bi dua nham vao ref.
+export function isPineFunction(name) {
+  return BUILTINS.has(name)
+}
 
 // tach danh sach tham so cap nhat (bat dau ngay SAU dau '(')
-function splitArgs(code, startIdx) {
+// export cho smoke.mjs kiem tra so tham so (vd CE10165 ta.pivotlow thieu rightbars)
+export function splitArgs(code, startIdx) {
   let d = 0
   let cur = ''
   const args = []
@@ -286,6 +256,10 @@ function splitArgs(code, startIdx) {
   return args
 }
 
+// --- che comment VA noi dung chuoi, giu nguyen so dong ---
+// Khong lam vay thi regex se khop nhau nham trong text tieng Viet trong input.label
+// (vd "Chi tin hieu tren nen da dong (" -> nham la goi ham "dong(").
+// Chuoi bi che thanh khoang trang nen "1.5" trong string khong bi doc la float.
 function mask(src) {
   let out = ''
   let inStr = null
@@ -348,17 +322,16 @@ export function lint(src, name = 'test') {
   const udts = new Set()
   for (const m of code.matchAll(/^\s*type\s+(\w+)/gm)) udts.add(`${m[1]}.new`)
 
-  // Bien nao la simple int (de kiem tra tham so cua ta.*)
-  const ints = intVars(code)
+  // Bien nao chac chan la float (de kiem tra tham so can int)
+  const floats = floatVars(code)
 
   // Moi noi goi ham, tach theo dau phay cap nhat + so doi tham so
   for (const m of code.matchAll(/([A-Za-z_][\w.]*)\s*\(/g)) {
     const fn = m[1]
     if (KEYWORDS.has(fn) || fn.startsWith('tm_') || fn.startsWith('f_') || locals.has(fn) || udts.has(fn)) continue
-    const known = BUILTINS.has(fn) || ['indicator', 'strategy', 'library'].includes(fn)
-    if (!known) {
+    if (!BUILTINS.has(fn)) {
       const line = code.slice(0, m.index).split('\n').length
-      warnings.push(`${name}:${line} goi ham "${fn}" - khong co trong Pine v6?`)
+      warnings.push(`${name}:${line} goi ham "${fn}" - khong co trong Pine v6? (CE10271)`)
       continue
     }
 
@@ -374,16 +347,20 @@ export function lint(src, name = 'test') {
       }
     }
 
-    // tham so phai la simple int nhung lai truyen bien float -> CE10123
-    const needInt = INT_PARAMS[fn]
+    // tham so yeu cau int nhung truyen vao float chac chan -> CE10123
+    const needInt = INT_PARAMS.get(fn)
     if (needInt) {
       for (const idx of needInt) {
         const a = args[idx]?.trim()
-        if (!a || a.includes('=')) continue
-        if (/^-?\d+$/.test(a)) continue
-        const names = [...a.matchAll(/\b(\w+)\b/g)].map((x) => x[1])
-        if (names.length && names.every((v) => ints.has(v))) continue
-        warnings.push(`${name}:${line} ${fn}() tham so "${a}" phai la simple int (so chu ky), dang la bien float`)
+        if (!a) continue
+        // truyen bang ten (`length = x`) thi van kiem tra phia sau dau =
+        const named = a.match(/^\s*[A-Za-z_]\w*\s*=(?![=<>])\s*(.+)$/)
+        const v = (named ? named[1] : a).trim()
+        if (!v) continue
+        const isFloat = FLOAT_LITERAL.test(v) || [...v.matchAll(/\b(\w+)\b/g)].some((x) => floats.has(x[1]))
+        if (isFloat) {
+          warnings.push(`${name}:${line} ${fn}() tham so ${idx + 1} "${v}" phai la simple int (so chu ky) nhung la FLOAT (CE10123)`)
+        }
       }
     }
 
@@ -415,12 +392,28 @@ export function lint(src, name = 'test') {
 
 // --- bien chua thay the ---
 function subst(src, target) {
-  return src.replace('{{DECL}}', TARGETS[target].decl)
+  // dung ham tra ve de khong bi doc $&/`$1` trong noi dung (chuong trinh con chua $)
+  return src.replace('{{DECL}}', () => TARGETS[target].decl).replace('{{SHARED}}', () => sharedCode(target))
 }
 
-export function build(target) {
-  const parts = readParts()
-  const raw = parts.map((p) => filterMarkers(subst(p.src, target), target)).join('\n')
+// Ghep parts -> code dist, DONG THOI ghi lai dong nao den tu file nao.
+// tra ve { code, origin } voi origin[i] = { from, n } cua dong thu i (0-based):
+//   from = ten file trong pine/parts/, n = so dong TRONG FILE DO.
+// `errors.mjs` dung de doan loi "line N" cua TradingView ve dung vi tri sua.
+//
+// Cac buoc khong doi so voi cach noi chuoi truoc day:
+//   1. noi cac part bang '\n' (giong join cua ban cu).
+//   2. banner (bat dau bang MOT dong rong) noi vao cuoi.
+//   3. replace(/\n{3,}/g, '\n\n')  -> nhom dong RONG lien tiep >= 2 giam con 1
+//      (truong hop o DAU chuoi: 3 dong tro len giam con 2 - khac biet nho cua regex).
+//   4. trimEnd() + '\n'.
+export function assemble(target) {
+  const lines = []
+  for (const p of readParts(target)) {
+    for (const l of filterMarkerLines(subst(p.src, target), target)) {
+      lines.push({ t: l.t, from: p.name, n: l.n })
+    }
+  }
 
   // `//@version=6` bat buoc phai la dong dau tien -> banner dat sau no.
   const banner = [
@@ -428,12 +421,38 @@ export function build(target) {
     '// =============================================================================',
     '//  AUTO-GENERATED - DO NOT EDIT',
     `//  Target: ${target}`,
-    '//  Source: pine/parts/*.pine   ->   node tools/build.mjs',
+    '//  Source: pine/parts*/ + pine/shared/*.pine   ->   node tools/build.mjs',
     `//  Built : ${new Date().toISOString()}`,
     '// =============================================================================',
   ].join('\n')
 
-  const code = (raw + banner).replace(/\n{3,}/g, '\n\n').trimEnd() + '\n'
+  // noi chuoi = gop phan dau cua dong ke cuoi (khong them dong moi)
+  const bl = banner.split('\n')
+  if (lines.length) lines[lines.length - 1].t += bl[0]
+  else lines.push({ t: bl[0], from: '(banner)', n: 0 })
+  for (let i = 1; i < bl.length; i++) lines.push({ t: bl[i], from: '(banner)', n: 0 })
+
+  // buoc 3: nhom dong rong lien tiep
+  const kept = []
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].t !== '') { kept.push(lines[i]); continue }
+    let j = i
+    while (j < lines.length && lines[j].t === '') j++
+    const L = j - i
+    const keep = i === 0 ? (L > 2 ? 2 : L) : L > 1 ? 1 : L
+    for (let k = 0; k < keep; k++) kept.push(lines[i + k])
+    i = j - 1
+  }
+
+  // buoc 4: trimEnd() + '\n'
+  while (kept.length && kept[kept.length - 1].t.trim() === '') kept.pop()
+  if (kept.length) kept[kept.length - 1] = { ...kept[kept.length - 1], t: kept[kept.length - 1].t.replace(/\s+$/, '') }
+
+  return { code: kept.map((l) => l.t).join('\n') + '\n', origin: kept }
+}
+
+export function build(target) {
+  const { code } = assemble(target)
   mkdirSync(DIST, { recursive: true })
   writeFileSync(join(DIST, TARGETS[target].file), code, 'utf8')
 
@@ -463,12 +482,14 @@ if (isMain) {
   }
 
   if (args.includes('--watch')) {
-    console.log('\nDang theoi doi pine/parts ... (Ctrl+C de dung)\n')
-    watch(PARTS, (_e, file) => {
-      if (!file?.endsWith('.pine')) return
-      console.log(`> ${file} thay doi`)
-      for (const t of targets) build(t)
-    })
+    const dirs = [...new Set([...Object.values(TARGETS).map((t) => join(ROOT, 'pine', t.dir)), SHARED])]
+    console.log('\nDang theoi doi ' + dirs.map((d) => d.slice(ROOT.length + 1)).join(' + ') + ' ... (Ctrl+C de dung)\n')
+    for (const dir of dirs)
+      watch(dir, (_e, file) => {
+        if (!file?.endsWith('.pine')) return
+        console.log(`> ${file} thay doi`)
+        for (const t of targets) build(t)
+      })
   }
 
   process.exit(bad > 0 ? 2 : 0)

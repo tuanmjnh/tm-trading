@@ -9,9 +9,6 @@ f_clamp(float v, float lo, float hi) =>
 f_tfMinutes() =>
     timeframe.in_seconds() / 60.0
 
-f_sessionOk(string sess, string tz) =>
-    not na(time(timeframe.period, sess, tz))
-
 f_isNewDay() =>
     ta.change(time("D")) != 0
 
@@ -25,12 +22,15 @@ f_fmtPx(float p) =>
     str.tostring(p, format.mintick)
 
 // -----------------------------------------------------------------------------
-//  Bien do
-//  tm_atr    - dung cho SL/TP (series float, khong gioi han)
-//  tm_atrST  - dung cho supertrend (can MOT so chu ky int rieng, xem 10_config)
+//  Bien do - dung cho SL/TP (series float, khong gioi han)
 // -----------------------------------------------------------------------------
-tm_atr   = ta.atr(14)
-tm_atrST = ta.atr(tm_m1_stAtrLen)
+tm_atr = ta.atr(14)
+
+// -----------------------------------------------------------------------------
+//  Volume VSA - Wilder MA (RMA), dung cho pane volume + filter VSA
+// -----------------------------------------------------------------------------
+tm_vol   = nz(volume)
+tm_volMA = ta.rma(tm_vol, tm_flt_vsaLen)
 
 // -----------------------------------------------------------------------------
 //  Pivot / swing dung chung cho divergence va SL theo cau truc

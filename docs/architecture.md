@@ -28,8 +28,8 @@ tm-trading/
 │  ├─ architecture.md      ← tài liệu này
 │  └─ alert-schema.md      ← đặc tả payload JSON webhook
 ├─ pine/
-│  ├─ parts/               ← SOURCE OF TRUTH (sửa ở đây, không sửa dist/)
-│  │  ├─ 00_header.pine    ← @version, indicator()/strategy() declaration
+│  ├─ parts/               ← SOURCE OF TRUTH bản TM Signals/Backtest (sửa ở đây)
+│  │  ├─ 00_header.pine    ← @version, marker {{DECL}} + {{SHARED}}
 │  │  ├─ 10_config.pine    ← toàn bộ input.* (nhóm: chung, module, filter, risk, hiển thị)
 │  │  ├─ 20_core.pine      ← tiện ích chung, ATR, swing/pivot, đoạn session
 │  │  ├─ 30_signal.pine    ← signal engine: mỗi module trả score ∈ [-1, +1]
@@ -37,18 +37,53 @@ tm-trading/
 │  │  ├─ 50_state.pine     ← máy trạng thái vị thế + repaint + cooldown
 │  │  ├─ 60_viz.pine       ← vẽ marker, box TP/SL, label, dashboard
 │  │  └─ 70_alerts.pine    ← alertcondition + alert() JSON payload
+│  ├─ parts-vsa/           ← SOURCE OF TRUTH bản TM VSA Wyckoff (00–70, riêng biệt)
+│  │  ├─ 10_inputs.pine    ← input VSA (TIM ratio, session, H/T, dashboard)
+│  │  ├─ 20_volume.pine    ← ta.rma, 6 bucket qua f_vsaColor, gate sự kiện
+│  │  ├─ 30_levels.pine    ← pivot auto → support/resistance + momentum
+│  │  ├─ 40_events.pine    ← SV/BC (bắt buộc qua cột TIM) + ST/NS/ND
+│  ├─ parts-vsa/           ← 7 lớp + 50_strategy (bridge backtest) của bộ VSA
+│  │  └─ 60_viz.pine       ← histogram pane + nhãn force_overlay + dashboard
+│  ├─ shared/              ← hàm dùng chung mọi target (f_sessionOk, f_vsaColor, f_vsaName)
 │  └─ dist/                ← OUTPUT của build tool (dán vào TradingView)
-│     ├─ tm-signals.pine
-│     └─ tm-backtest.pine
+│     ├─ TM Signals BTC.pine
+│     ├─ TM Backtest BTC.pine
+│     ├─ TM VSA Wyckoff.pine
+│     └─ TM VSA Backtest.pine
+├─ server/
+│  └─ webhook.mjs           ← webhook receiver (dời từ tools/notify, Node không dependency)
+├─ engine/                  ← BACKBONE tín hiệu/backtest (Phase 2–5, xem docs/roadmap.md)
+├─ exec/                    ← risk gate + paper/real execution (Phase 6+)
+├─ app/                     ← UI Nuxt dashboard (Phase 7+)
+├─ services/                ← market intelligence + heartbeat (Phase 8+)
+├─ ai/                      ← AI copilot gateway (Phase 11+)
+├─ data/                    ← cache klines/indicators (không commit)
+├─ reports/                 ← báo cáo PNG/MD/CSV (không commit)
 ├─ tools/
-│  ├─ build.mjs            ← assembler: parts/*.pine → dist/*.pine
-│  └─ notify/
-│     └─ server.mjs        ← webhook receiver (Node, không dependency)
+│  ├─ build.mjs            ← assembler: parts*/ + shared/ → dist (đa target)
+│  └─ ...
 └─ README.md
 ```
 
 **Quy tắc số tiền tố file = thứ tự ghép.** `00` → `70`. Bộ lọc comment `// @part` cho phép
 build tool bỏ qua hoặc thay thế khối khi sinh `strategy()` so với `indicator()`.
+
+**Đa target.** Mỗi target trong `TARGETS` (`tools/build.mjs`) khai báo `file` (tên dist),
+`dir` (thư mục parts: `parts` hay `parts-vsa`) và `shared` (danh sách file trong
+`pine/shared/` chèn vào marker `{{SHARED}}` của `00_header`). Hàm chung (`f_vsaColor`,
+`f_sessionOk`, ...) chỉ định nghĩa một lần ở `shared/` và được mọi bản dùng lại.
+
+**Strategy twin (VSA).** `vsa` và `vsa-strategy` dùng **chung** `parts-vsa`, nên logic sự kiện
+chỉ tồn tại ở một chỗ:
+
+| Target | Dist | `50_strategy` | `60_viz` |
+|---|---|---|---|
+| `vsa` | `TM VSA Wyckoff.pine` | cắt (`@part skip:vsa`) | giữ |
+| `vsa-strategy` | `TM VSA Backtest.pine` | giữ | cắt (`@part skip:vsa-strategy`) |
+
+Marker `@part skip:<target>` là **công tắc theo target**, không phải theo file — tên target có
+gạch nối vẫn hoạt động (regex `[\w-]+`). Bridge đọc thẳng `tm_lvlE/S/T` do `40_events` tính,
+nên SL/TP của lệnh backtest chính là mức mà indicator vẽ ra.
 
 ## 4. Kiến trúc lớp (Layered pipeline)
 
@@ -188,19 +223,21 @@ nên người dùng không bị hiểu nhầm là giá đã chốt.
 ## 9. Quy trình phát triển
 
 ```bash
-node tools/build.mjs          # ghép parts → dist, in cảnh báo token
-node tools/build.mjs --watch  # tự build lại khi parts thay đổi
+node tools/build.mjs          # ghép parts* + shared → dist, in cảnh báo token
+node tools/build.mjs --watch  # tự build lại khi parts/shared thay đổi
+node tools/build.mjs vsa      # chỉ build một target (indicator | strategy | vsa)
 ```
 
-Sau đó dán nội dung `pine/dist/tm-signals.pine` vào Pine Editor → Add to chart.
-`tm-backtest.pine` dùng cho Strategy Tester, tách phần `60_viz.pine` bằng `// @part skip:strategy`.
+Sau đó dán nội dung `pine/dist/TM Signals BTC.pine` vào Pine Editor → Add to chart.
+`TM Backtest BTC.pine` dùng cho Strategy Tester, tách phần `60_viz.pine` bằng `// @part skip:strategy`.
+`TM VSA Wyckoff.pine` là indicator volume (overlay = false), dán độc lập — xem `docs/vsa-wyckoff-method.md`.
 
 Quy trình chuẩn khi đổi logic:
 
-1. Sửa **chỉ trong `pine/parts/`**.
+1. Sửa **chỉ trong `pine/parts/`** (bản TM) hoặc **`pine/parts-vsa/`** (bản VSA) — không sửa `pine/dist/`.
 2. `node tools/build.mjs`.
 3. Dán lại vào TradingView, kiểm tra không lỗi biên dịch.
-4. Nếu đổi logic tín hiệu → chạy lại `tm-backtest.pine` để xem winrate/RR có còn chấp nhận được không.
+4. Nếu đổi logic tín hiệu → chạy lại `TM Backtest BTC.pine` để xem winrate/RR có còn chấp nhận được không.
 
 ## 10. Lộ trình
 

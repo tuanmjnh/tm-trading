@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="tm-trading-bg" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#020617"/>
+      <stop offset="0.55" stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#020617"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#tm-trading-bg)"/>
+  <rect x="2.5" y="2.5" width="59" height="59" rx="13.5" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+  <g stroke="rgba(255,255,255,0.5)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <polyline points="11,47 25,41 35,43 52,25"/>
+    <polyline points="44,27 52,25 50,33"/>
+  </g>
+  <g stroke-linecap="round">
+    <line x1="17.5" y1="24" x2="17.5" y2="29" stroke="#34D399" stroke-width="2.5"/>
+    <line x1="17.5" y1="40" x2="17.5" y2="46" stroke="#34D399" stroke-width="2.5"/>
+    <rect x="13" y="29" width="9" height="11" rx="1.5" fill="#34D399"/>
+    <line x1="32.5" y1="19" x2="32.5" y2="23" stroke="#F87171" stroke-width="2.5"/>
+    <line x1="32.5" y1="33" x2="32.5" y2="39" stroke="#F87171" stroke-width="2.5"/>
+    <rect x="28" y="23" width="9" height="10" rx="1.5" fill="#F87171"/>
+    <line x1="47.5" y1="12" x2="47.5" y2="17" stroke="#34D399" stroke-width="2.5"/>
+    <line x1="47.5" y1="31" x2="47.5" y2="37" stroke="#34D399" stroke-width="2.5"/>
+    <rect x="43" y="17" width="9" height="14" rx="1.5" fill="#34D399"/>
+  </g>
+</svg>

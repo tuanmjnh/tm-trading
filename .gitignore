@@ -7,3 +7,17 @@ logs/
 # Output sinh boi `npm run build` - khong sua truc tiep, khong commit.
 # Nguon chan ly luon la pine/parts/ + tools/build.mjs
 pine/dist/
+
+# Private
+private
+devlog.txt
+
+# Data & report runtime (khong commit)
+data/
+reports/
+
+# Nuxt build artifact (tu dong sinh boi prepare/dev/build)
+.nuxt/
+.output/
+# D13 backups (runtime dump, khong commit)
+backups/

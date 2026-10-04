@@ -35,6 +35,8 @@ var float tm_xEntry = na
 var float tm_xSl    = na
 var int   tm_xDir   = 0
 var int   tm_xBar   = na
+var float tm_xExit  = na
+var float tm_xR     = na
 
 // -----------------------------------------------------------------------------
 //  Su kien trong bar (consumed boi 60_viz va 70_alerts)
@@ -131,6 +133,8 @@ if tm_posDir != 0
         tm_xSl        := tm_posSl
         tm_xDir       := tm_posDir
         tm_xBar       := tm_posBar
+        tm_xExit      := tm_evSl ? tm_posSl : ((tm_evTp == 1 or tm_evTp == 4) ? tm_posTp1 : (tm_evTp == 2 ? tm_posTp2 : (tm_evTp == 3 ? tm_posTp3 : close)))
+        tm_xR         := not na(tm_posRisk) and tm_posRisk > 0 ? (tm_xExit - tm_posEntry) * tm_posDir / tm_posRisk : na
         tm_needReset  := true
 
 // -----------------------------------------------------------------------------

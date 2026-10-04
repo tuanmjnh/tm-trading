@@ -1,0 +1,50 @@
+# pnpm workspace cho tm-trading (single project — chỉ khai báo root).
+# Đổi từ npm sang pnpm (2026-10-03): node_modules symlink → tiết kiệm đĩa,
+# store dùng chung, cài nhanh. Chi tiết các bẫy đã gặp: docs/app-inheritance.md.
+
+packages:
+  - '.'
+
+# pnpm 11+ bỏ `onlyBuiltDependencies`/`ignoredBuiltDependencies` → dùng `allowBuilds`
+# (map tên gói → true/false). Quy ước: chỉ cho chạy script thật sự CẦN cho runtime;
+# script chỉ in thông điệp hoặc binding đã có sẵn prebuild thì chặn.
+allowBuilds:
+  # postinstall `node install.js` — nạp binary platform cho esbuild (Vite cần)
+  esbuild: true
+  # postinstall đổi file theo bản Vue đang dùng — pinia → vue-demi cần
+  vue-demi: true
+  # Binding đã nằm sẵn trong @msgpackr-extract/msgpackr-extract-win32-x64
+  # (node.abi115.node / node.napi.node) → không cần node-gyp
+  msgpackr-extract: false
+  # Chỉ in thông điệp
+  '@firebase/util': false
+  protobufjs: false
+
+minimumReleaseAgeExclude:
+  - '@rollup/rollup-android-arm-eabi@4.64.0'
+  - '@rollup/rollup-android-arm64@4.64.0'
+  - '@rollup/rollup-darwin-arm64@4.64.0'
+  - '@rollup/rollup-darwin-x64@4.64.0'
+  - '@rollup/rollup-freebsd-arm64@4.64.0'
+  - '@rollup/rollup-freebsd-x64@4.64.0'
+  - '@rollup/rollup-linux-arm-gnueabihf@4.64.0'
+  - '@rollup/rollup-linux-arm-musleabihf@4.64.0'
+  - '@rollup/rollup-linux-arm64-gnu@4.64.0'
+  - '@rollup/rollup-linux-arm64-musl@4.64.0'
+  - '@rollup/rollup-linux-loong64-gnu@4.64.0'
+  - '@rollup/rollup-linux-loong64-musl@4.64.0'
+  - '@rollup/rollup-linux-ppc64-gnu@4.64.0'
+  - '@rollup/rollup-linux-ppc64-musl@4.64.0'
+  - '@rollup/rollup-linux-riscv64-gnu@4.64.0'
+  - '@rollup/rollup-linux-riscv64-musl@4.64.0'
+  - '@rollup/rollup-linux-s390x-gnu@4.64.0'
+  - '@rollup/rollup-linux-x64-gnu@4.64.0'
+  - '@rollup/rollup-linux-x64-musl@4.64.0'
+  - '@rollup/rollup-openbsd-x64@4.64.0'
+  - '@rollup/rollup-openharmony-arm64@4.64.0'
+  - '@rollup/rollup-win32-arm64-msvc@4.64.0'
+  - '@rollup/rollup-win32-ia32-msvc@4.64.0'
+  - '@rollup/rollup-win32-x64-gnu@4.64.0'
+  - '@rollup/rollup-win32-x64-msvc@4.64.0'
+  - rollup@4.64.0
+  - tm-hub-client@1.0.2 || 1.0.3
