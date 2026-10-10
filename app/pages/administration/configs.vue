@@ -407,17 +407,17 @@ function copyValue(value: string) {
 const getActionOptions = (item: ConfigItem) => [
   [
     {
-      label: t('global.edit'),
+      label: t('common.edit'),
       icon: 'i-lucide-pencil',
       onSelect() { openEdit(item) }
     },
     {
-      label: t('global.copy'),
+      label: t('common.copy'),
       icon: 'i-lucide-copy',
       onSelect() { copyValue(item.value) }
     },
     {
-      label: t('global.delete'),
+      label: t('common.delete'),
       icon: 'i-lucide-trash',
       color: 'error' as const,
       onSelect() { confirmDelete(item) }
@@ -591,22 +591,12 @@ onMounted(() => load(true))
             <div v-else-if="formState.type === 'json'" class="space-y-2 w-full">
               <div class="flex items-center justify-between flex-wrap gap-2">
                 <div class="flex items-center gap-1 bg-default/40 p-0.5 rounded-lg border border-default">
-                  <UButton
-                    label="Visual Tree"
-                    icon="i-lucide-network"
-                    size="xs"
+                  <UButton label="Visual Tree" icon="i-lucide-network" size="xs"
                     :variant="jsonEditMode === 'tree' ? 'solid' : 'ghost'"
-                    :color="jsonEditMode === 'tree' ? 'primary' : 'neutral'"
-                    @click="switchJsonEditMode('tree')"
-                  />
-                  <UButton
-                    label="Raw Code"
-                    icon="i-lucide-code"
-                    size="xs"
+                    :color="jsonEditMode === 'tree' ? 'primary' : 'neutral'" @click="switchJsonEditMode('tree')" />
+                  <UButton label="Raw Code" icon="i-lucide-code" size="xs"
                     :variant="jsonEditMode === 'code' ? 'solid' : 'ghost'"
-                    :color="jsonEditMode === 'code' ? 'primary' : 'neutral'"
-                    @click="switchJsonEditMode('code')"
-                  />
+                    :color="jsonEditMode === 'code' ? 'primary' : 'neutral'" @click="switchJsonEditMode('code')" />
                 </div>
 
                 <div class="flex items-center gap-1.5">

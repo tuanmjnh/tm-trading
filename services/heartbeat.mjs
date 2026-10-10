@@ -27,6 +27,9 @@ export const DEFAULT_INTERVALS = Object.freeze({
   liquidation: Number(process.env.LIQ_INTERVAL || 900),
   confluence: Number(process.env.CONFLUENCE_INTERVAL || 86400), // Phase 10 — 1 ngay/lan
   brief: Number(process.env.AI_BRIEF_INTERVAL || 3600), // Phase 11 — hourly window check
+  retention: Number(process.env.RETENTION_INTERVAL || 21600), // §23.4 — prune every 6h
+  reconcile: Number(process.env.RECONCILE_INTERVAL || 21600), // §24.2 — venue compare every 6h
+  crossScan: Number(process.env.CROSS_SCAN_INTERVAL || 14400), // §36 — cross-venue scan every 4h
 })
 
 /** Nhắc lại Telegram sau khi overdue: 6h (đổi qua HEARTBEAT_REMIND_H). */

@@ -34,6 +34,13 @@ export function useCursorPagination<T>(options: {
       nextCursor.value = rs.nextCursor
       hasMore.value = rs.hasMore
       return rs
+    } catch (err) {
+      // A failed page must not leave hasMore=true: LazyGridList's infinite
+      // scroll re-emits load-more every time loading flips back to false,
+      // turning any transient failure (429/500/network) into a tight
+      // request storm. Stop the pager here; refresh() re-enables it.
+      hasMore.value = false
+      throw err
     } finally {
       loading.value = false
     }

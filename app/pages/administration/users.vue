@@ -236,139 +236,93 @@ const headerActions = computed<HeaderAction[]>(() => [
         />
       </div>
     </template>
-        </UButton>
-        <UButton
-          :label="$t('admin.addUser')"
-          icon="i-lucide-plus"
-          variant="soft"
-          @click="openAdd"
-        />
-      </div>
-    </template>
 
     <template #default>
-      <div class="flex-1 min-h-0 relative h-full">
-        <LazyGridList
-          v-model:selected="selected"
-          :items="users"
-          :columns="columns"
-          :loading="loading"
-          item-key="id"
-          selectable
-          :can-load-more="canLoadMore"
-          :action-options="getActionOptions"
-          @load-more="onLoadMore"
-          @refresh="fetchUsers(true)"
-        >
-          <template #createdAt="{ item }">
-            <span class="text-xs text-gray-500 dark:text-gray-400">
-              {{ formatDateString(item.createdAt) }}
-            </span>
-          </template>
+  <div class="flex-1 min-h-0 relative h-full">
+    <LazyGridList v-model:selected="selected" :items="users" :columns="columns" :loading="loading" item-key="id"
+      selectable :can-load-more="canLoadMore" :action-options="getActionOptions" @load-more="onLoadMore"
+      @refresh="fetchUsers(true)">
+      <template #createdAt="{ item }">
+        <span class="text-xs text-gray-500 dark:text-gray-400">
+          {{ formatDateString(item.createdAt) }}
+        </span>
+      </template>
 
-          <template #mobile-content="{ item }">
-            <div class="flex flex-col gap-3 p-1">
-              <!-- Top Info: Avatar, Name, Role -->
-              <div class="flex items-start justify-between">
-                <div class="flex items-center gap-3 min-w-0">
-                  <UAvatar :src="item.avatar" :alt="item.name" size="lg" />
-                  <div class="flex flex-col min-w-0">
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                      <span class="text-sm font-bold text-gray-900 dark:text-white truncate">
-                        {{ item.name }}
-                      </span>
-                      <UBadge
-                        color="primary"
-                        variant="subtle"
-                        size="xs"
-                        class="capitalize"
-                      >
-                        {{ item.role }}
-                      </UBadge>
-                    </div>
-                    <span class="text-[10px] text-gray-400">@{{ item.username || item.name.toLowerCase().replace(/\s+/g,
-                                                                                                                 '') }}</span>
-                  </div>
-                </div>
-                <UBadge
-                  v-if="item.platform"
-                  color="neutral"
-                  variant="soft"
-                  size="xs"
-                  class="uppercase"
-                >
-                  {{ item.platform }}
-                </UBadge>
-              </div>
-
-              <USeparator class="opacity-50" />
-
-              <!-- Bottom Info: Contact & Dates -->
-              <div class="flex flex-col gap-2">
-                <div class="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
-                  <UIcon name="i-lucide-mail" class="w-3.5 h-3.5 shrink-0 text-primary-500" />
-                  <span class="truncate">{{ item.email }}</span>
-                </div>
-                <div class="flex justify-between items-center text-[10px] text-gray-400 mt-1">
-                  <span class="flex items-center gap-1">
-                    <UIcon name="i-lucide-calendar" class="w-3 h-3" />
-                    {{ formatDateString(item.createdAt) }}
+      <template #mobile-content="{ item }">
+        <div class="flex flex-col gap-3 p-1">
+          <!-- Top Info: Avatar, Name, Role -->
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3 min-w-0">
+              <UAvatar :src="item.avatar" :alt="item.name" size="lg" />
+              <div class="flex flex-col min-w-0">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="text-sm font-bold text-gray-900 dark:text-white truncate">
+                    {{ item.name }}
                   </span>
-                  <span v-if="item.lastLogin" class="flex items-center gap-1">
-                    <UIcon name="i-lucide-log-in" class="w-3 h-3" />
-                    {{ formatDateString(item.lastLogin) }}
-                  </span>
+                  <UBadge color="primary" variant="subtle" size="xs" class="capitalize">
+                    {{ item.role }}
+                  </UBadge>
                 </div>
+                <span class="text-[10px] text-gray-400">@{{ item.username || item.name.toLowerCase().replace(/\s+/g,
+                  '') }}</span>
               </div>
             </div>
-          </template>
-        </LazyGridList>
-      </div>
+            <UBadge v-if="item.platform" color="neutral" variant="soft" size="xs" class="uppercase">
+              {{ item.platform }}
+            </UBadge>
+          </div>
 
-      <BaseFormModal
-        v-model:open="showModal"
-        :title="editingUser ? t('admin.editUser') : t('admin.addUser')"
-        :schema="schema"
-        :state="form"
-        :loading="saving"
-        @submit="onSubmit"
-      >
-        <UFormField :label="t('auth.email')" name="email" required>
-          <UInput v-model="form.email" type="email" class="w-full" />
-        </UFormField>
-        <UFormField :label="t('admin.username')" name="username">
-          <UInput v-model="form.username" class="w-full" />
-        </UFormField>
-        <UFormField :label="t('auth.name')" name="name" required>
-          <UInput v-model="form.name" class="w-full" />
-        </UFormField>
-        <UFormField
-          :label="editingUser ? t('admin.newPassword') : t('admin.password')"
-          name="password"
-          :required="!editingUser"
-        >
-          <BasePasswordInput v-model="form.password" class="w-full" />
-        </UFormField>
-        <UFormField :label="t('admin.role')" name="role" required>
-          <USelect v-model="form.role" :items="roles.map(r => ({ label: r.name, value: r.id }))" class="w-full" />
-        </UFormField>
-      </BaseFormModal>
+          <USeparator class="opacity-50" />
 
-      <LazyBaseConfirmModal
-        v-model:open="showDeleteModal"
-        :title="t('admin.deleteUserConfirm')"
-        :description="t('admin.deleteUserConfirmDesc', { name: deleteTarget?.name || '' })"
-        :loading="deleting"
-        @confirm="doDelete"
-      />
+          <!-- Bottom Info: Contact & Dates -->
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+              <UIcon name="i-lucide-mail" class="w-3.5 h-3.5 shrink-0 text-primary-500" />
+              <span class="truncate">{{ item.email }}</span>
+            </div>
+            <div class="flex justify-between items-center text-[10px] text-gray-400 mt-1">
+              <span class="flex items-center gap-1">
+                <UIcon name="i-lucide-calendar" class="w-3 h-3" />
+                {{ formatDateString(item.createdAt) }}
+              </span>
+              <span v-if="item.lastLogin" class="flex items-center gap-1">
+                <UIcon name="i-lucide-log-in" class="w-3 h-3" />
+                {{ formatDateString(item.lastLogin) }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </template>
+    </LazyGridList>
+  </div>
 
-      <LazyBaseConfirmModal
-        v-model:open="showBatchDeleteModal"
-        :title="t('admin.deleteUserConfirm')"
-        :description="t('admin.deleteUserConfirmDesc', { name: selected.filter(u => u.id !== currentUser?.id).map(u => u.name).join(', ') })"
-        :loading="batchDeleting"
-        @confirm="doBatchDelete"
-      />
-    </template>
-  </BasePage>
+  <BaseFormModal v-model:open="showModal" :title="editingUser ? t('admin.editUser') : t('admin.addUser')"
+    :schema="schema" :state="form" :loading="saving" @submit="onSubmit">
+    <UFormField :label="t('auth.email')" name="email" required>
+      <UInput v-model="form.email" type="email" class="w-full" />
+    </UFormField>
+    <UFormField :label="t('admin.username')" name="username">
+      <UInput v-model="form.username" class="w-full" />
+    </UFormField>
+    <UFormField :label="t('auth.name')" name="name" required>
+      <UInput v-model="form.name" class="w-full" />
+    </UFormField>
+    <UFormField :label="editingUser ? t('admin.newPassword') : t('admin.password')" name="password"
+      :required="!editingUser">
+      <BasePasswordInput v-model="form.password" class="w-full" />
+    </UFormField>
+    <UFormField :label="t('admin.role')" name="role" required>
+      <USelect v-model="form.role" :items="roles.map(r => ({ label: r.name, value: r.id }))" class="w-full" />
+    </UFormField>
+  </BaseFormModal>
+
+  <LazyBaseConfirmModal v-model:open="showDeleteModal" :title="t('admin.deleteUserConfirm')"
+    :description="t('admin.deleteUserConfirmDesc', { name: deleteTarget?.name || '' })" :loading="deleting"
+    @confirm="doDelete" />
+
+  <LazyBaseConfirmModal v-model:open="showBatchDeleteModal" :title="t('admin.deleteUserConfirm')"
+    :description="t('admin.deleteUserConfirmDesc', { name: selected.filter(u => u.id !== currentUser?.id).map(u => u.name).join(', ') })"
+    :loading="batchDeleting" @confirm="doBatchDelete" />
+</template>
+</BasePage>
 </template>

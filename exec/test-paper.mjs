@@ -16,7 +16,7 @@
 // =============================================================================
 import { readFileSync } from 'node:fs'
 
-import { findFirstExit, followExitPrice, sanitizeTps } from './paper.mjs'
+import { findFirstExit, followExitPrice, sanitizeTps, ticketSizingOf } from './paper.mjs'
 
 let pass = 0
 let fail = 0
@@ -128,6 +128,21 @@ const handoff = start >= 0 ? src.slice(start, src.indexOf('})', start) + 2) : ''
 
 check('the recordOpen() hand-off is present in the source', handoff.length > 0)
 check('runCycle never hands the RAW alert tps array to recordOpen', !/tps:\s*a\.tps/.test(handoff), handoff.slice(0, 200))
+
+// =============================================================================
+section('6. ticketSizingOf — v3 §16.1 qty/riskPct intent from the raw payload')
+
+check('qty rides the raw JSON payload', ticketSizingOf({ raw: '{"qty":0.42}' }).qty === 0.42)
+check('riskPct rides the raw JSON payload', ticketSizingOf({ raw: '{"riskPct":2}' }).pct === 2)
+check('qty wins over riskPct when both present (XOR already held at the door)', (() => { const s = ticketSizingOf({ raw: '{"qty":1,"riskPct":2}' }); return s.qty === 1 && s.pct === undefined })())
+check('object raw is read directly (server ticket shape)', ticketSizingOf({ raw: { qty: 5 } }).qty === 5)
+check('legacy bare raw (order type string) -> no sizing intent', Object.keys(ticketSizingOf({ raw: 'market' })).length === 0)
+check('empty / garbage raw -> no sizing intent, never throws', (() => { const s = ticketSizingOf({ raw: '' }); return Object.keys(s).length === 0 && Object.keys(ticketSizingOf({ raw: '{oops' })).length === 0 })())
+check('no raw at all -> no sizing intent', Object.keys(ticketSizingOf({})).length === 0)
+check('qty <= 0 or garbage qty is rejected, not coerced', (() => { const s = ticketSizingOf({ raw: '{"qty":-3}' }); return s.qty === undefined && Object.keys(s).length === 0 })())
+check('riskPct out of (0,100] falls back to nothing, not a bad pct', (() => { const s = ticketSizingOf({ raw: '{"riskPct":150}' }); return s.pct === undefined && Object.keys(s).length === 0 })())
+check('running a paper position threads the intent into the gate call', /checkOrder\([\s\S]{0,300}?\.\.\.ticketSizingOf\(a\)/.test(src))
+
 check('recordOpen receives the SANITISED ladder, not the raw array', /tps:\s*(?!a\.tps)[A-Za-z_$][\w$]*\.tps/.test(handoff))
 check('the gate still gets the RAW array (it must SEE the defect in order to reject it)', /checkOrder\([\s\S]{0,240}?tps:\s*a\.tps/.test(src))
 check('a defective ladder is rejected, with an audit entry (fail closed)', /paper_reject_tps/.test(src) && /status:\s*'rejected'/.test(src))

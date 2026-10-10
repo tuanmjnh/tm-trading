@@ -165,6 +165,192 @@ function extreme(values, length, from, to, pick) {
 }
 
 // -----------------------------------------------------------------------------
+//  Indicator primitives (Phase 7I) - array-land ports of Pine ta.* functions.
+//  Same contract as above: `null` = Pine `na`, exact Pine semantics over
+//  "looks right". The chart adapter (app/utils/indicators.ts) AND the backtest
+//  must both call these - single source of truth (roadmap 7I acceptance:
+//  "Indicator engine = backtest implementation").
+// -----------------------------------------------------------------------------
+
+/**
+ * ta.ema - exponential MA. Pine reference (seed from first valid src, NOT SMA):
+ *   ema := na(ema[1]) ? src : alpha * src + (1 - alpha) * nz(ema[1])
+ * A `na` src outputs `na` and leaves the recursion state untouched (KI-66:
+ * neither updates nor resets).
+ */
+export function ema(values, length) {
+  const out = new Array(values.length).fill(null)
+  if (!(length > 0)) return out
+  const alpha = 2 / (length + 1)
+  let prev = null
+  for (let i = 0; i < values.length; i++) {
+    const v = values[i]
+    if (!Number.isFinite(v)) continue
+    out[i] = prev == null ? v : alpha * v + (1 - alpha) * prev
+    prev = out[i]
+  }
+  return out
+}
+
+/**
+ * ta.rsi - Wilder RSI:
+ *   rs  = ta.rma(gains, length) / ta.rma(losses, length)
+ *   rsi = 100 - 100 / (1 + rs)
+ * Edge cases per Pine math: 0/0 -> na (flat window), x/0 -> +inf -> rsi = 100.
+ * The first bar has no prev close -> both series start with `na`.
+ */
+export function rsi(closes, length) {
+  const out = new Array(closes.length).fill(null)
+  if (!(length > 0)) return out
+  const gains = new Array(closes.length).fill(null)
+  const losses = new Array(closes.length).fill(null)
+  for (let i = 1; i < closes.length; i++) {
+    const c = closes[i]
+    const p = closes[i - 1]
+    if (!Number.isFinite(c) || !Number.isFinite(p)) continue
+    const d = c - p
+    gains[i] = d > 0 ? d : 0
+    losses[i] = d < 0 ? -d : 0
+  }
+  const ag = rma(gains, length)
+  const al = rma(losses, length)
+  for (let i = 0; i < closes.length; i++) {
+    if (ag[i] == null || al[i] == null) continue
+    const rs = al[i] === 0 ? (ag[i] === 0 ? NaN : Infinity) : ag[i] / al[i]
+    out[i] = Number.isFinite(rs) ? 100 - 100 / (1 + rs) : rs === Infinity ? 100 : null
+  }
+  return out
+}
+
+/**
+ * ta.stdev - POPULATION standard deviation over a strict window (any `na`
+ * inside the window -> `na`, conservatively; mirrors the sma `bad` gate).
+ */
+export function stdev(values, length) {
+  const out = new Array(values.length).fill(null)
+  if (!(length > 0)) return out
+  for (let i = length - 1; i < values.length; i++) {
+    let sum = 0
+    let ok = true
+    for (let k = i - length + 1; k <= i; k++) {
+      const v = values[k]
+      if (!Number.isFinite(v)) { ok = false; break }
+      sum += v
+    }
+    if (!ok) continue
+    const mean = sum / length
+    let sq = 0
+    for (let k = i - length + 1; k <= i; k++) {
+      const d = values[k] - mean
+      sq += d * d
+    }
+    out[i] = Math.sqrt(sq / length)
+  }
+  return out
+}
+
+/**
+ * ta.macd - EMA(fast) - EMA(slow), signal = EMA(macd), hist = macd - signal.
+ * Returns `{ macd, signal, hist }`, all aligned to `closes` (`null` = na).
+ */
+export function macd(closes, fast = 12, slow = 26, signal = 9) {
+  const ef = ema(closes, fast)
+  const es = ema(closes, slow)
+  const line = closes.map((_, i) => (ef[i] == null || es[i] == null ? null : ef[i] - es[i]))
+  const sig = ema(line, signal)
+  const hist = line.map((v, i) => (v == null || sig[i] == null ? null : v - sig[i]))
+  return { macd: line, signal: sig, hist }
+}
+
+/**
+ * ta.vwap - typical-price volume-weighted average price, ANCHORED at the first
+ * bar of the array (session anchoring comes later with session support in the
+ * chart adapter; documented deviation from Pine's default session reset).
+ * Cumulative: sum(tp * vol) / sum(vol) over all bars so far.
+ */
+export function vwap(bars) {
+  const out = new Array(bars.length).fill(null)
+  let cumPV = 0
+  let cumV = 0
+  for (let i = 0; i < bars.length; i++) {
+    const b = bars[i]
+    const v = b.volume
+    if (!Number.isFinite(v) || v < 0 || !Number.isFinite(b.high) || !Number.isFinite(b.low) || !Number.isFinite(b.close)) {
+      out[i] = null
+      continue
+    }
+    const tp = (b.high + b.low + b.close) / 3
+    cumPV += tp * v
+    cumV += v
+    out[i] = cumV > 0 ? cumPV / cumV : null
+  }
+  return out
+}
+
+/**
+ * ta.obv - on-balance volume: starts at 0, +/- volume by close direction.
+ * A bar with invalid close outputs `na` and leaves the accumulator untouched.
+ */
+export function obv(bars) {
+  const out = new Array(bars.length).fill(null)
+  let acc = 0
+  for (let i = 0; i < bars.length; i++) {
+    const b = bars[i]
+    if (!Number.isFinite(b.close) || !Number.isFinite(b.volume)) continue
+    if (i > 0) {
+      const prev = bars[i - 1].close
+      if (Number.isFinite(prev)) {
+        if (b.close > prev) acc += b.volume
+        else if (b.close < prev) acc -= b.volume
+      }
+    }
+    out[i] = acc
+  }
+  return out
+}
+
+/**
+ * ta.cmf - Chaikin money flow = sum(mfv, length) / sum(volume, length),
+ * mfv = clv * volume, clv = ((c-l) - (h-c)) / (h-l).
+ * Degenerate bar (h == l) -> multiplier 0; window with na or zero volume -> na.
+ */
+export function cmf(bars, length) {
+  const out = new Array(bars.length).fill(null)
+  if (!(length > 0)) return out
+  const mfv = bars.map((b) => {
+    const rng = b.high - b.low
+    if (!(rng > 0) || !Number.isFinite(b.close) || !Number.isFinite(b.volume)) return null
+    const clv = ((b.close - b.low) - (b.high - b.close)) / rng
+    return clv * b.volume
+  })
+  for (let i = length - 1; i < bars.length; i++) {
+    let sm = 0
+    let sv = 0
+    let ok = true
+    for (let k = i - length + 1; k <= i; k++) {
+      const v = bars[k].volume
+      if (!Number.isFinite(v) || mfv[k] == null) { ok = false; break }
+      sm += mfv[k]
+      sv += v
+    }
+    if (!ok || sv === 0) continue
+    out[i] = sm / sv
+  }
+  return out
+}
+
+/**
+ * donchian - { upper, lower, middle } from highest(high) / lowest(low).
+ * Built on the existing ta.highest/ta.lowest confirmation semantics.
+ */
+export function donchian(bars, length) {
+  const upper = highest(bars.map((b) => b.high), length)
+  const lower = lowest(bars.map((b) => b.low), length)
+  const middle = upper.map((u, i) => (u == null || lower[i] == null ? null : (u + lower[i]) / 2))
+  return { upper, lower, middle }
+}
+
+// -----------------------------------------------------------------------------
 //  f_sessionOk (pine/shared/common.pine)
 //  Pine: not na(time(timeframe.period, sess, tz))
 //

@@ -5,15 +5,7 @@
 //  Chi doc - khong bao gio duoc tinh tin hieu.
 // =============================================================================
 
-// CANH BAO: str.format_time(time, format, timezone) - `time` (series int) di TRUOC.
-// Dau tien la UNIX timestamp, thu hai moi la chuoi format. Dao nguoc -> CE10123
-// "argument of literal string type was used but a series int is expected".
-f_ts() =>
-    str.format_time(time, "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC")
-
-f_sym() =>
-    str.replace_all(syminfo.ticker, "\\", "/")
-
+// f_ts / f_sym - shared (pine/shared/common.pine)
 // JSON cua mot ke hoach gom san: side / price / sl / tps / atr / conf
 f_jsonPlan(int dir, float entry, float sl, float t1, float t2, float t3, float a, int conf) =>
     string tps = "[" + f_fmtPx(t1) + (not na(t2) ? "," + f_fmtPx(t2) + (not na(t3) ? "," + f_fmtPx(t3) : "") : "") + "]"

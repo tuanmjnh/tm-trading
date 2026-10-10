@@ -1,0 +1,16 @@
+// =============================================================================
+//  SESSION INPUTS - dung chung parts-vsa + parts-sweep (truoc do copy 2 ban)
+//  Nhom "TM · Volume" loc phien volume; "TM · Session" la moc gio dashboard.
+//  Chi 2 target nay can - cac target khac co input session rieng (xau_vol_sess...).
+// =============================================================================
+
+tm_i_sessOn  = input.bool(false, "Loc phien giao dich (XAU/XAG/forex)", group = "TM · Volume", display = display.data_window)
+tm_i_sess    = input.session("0800-1600", "Phien", group = "TM · Volume", display = display.data_window)
+// 2 nhom múi giờ (xem parts/10_config.pine): "của bạn" = loc phien 0800-1600; "NY" = nhan dien phien A/London/NY.
+// Ca 2 deu truyen tz tuong minh vao time(); doi chart TradingView sang UTC+7 chi doi hien thi, khong doi tinh toan.
+tm_i_tz      = input.string("Asia/Ho_Chi_Minh", "Múi giờ phiên của bạn", options = ["Asia/Ho_Chi_Minh", "Asia/Singapore", "Asia/Tokyo", "Asia/Bangkok", "UTC", "Europe/London", "America/New_York", "America/Los_Angeles"], group = "TM · Volume", display = display.data_window)
+
+// -----------------------------------------------------------------------------
+//  Session - moc gio cho dashboard (chuan parts-xau/80_viz.pine)
+// -----------------------------------------------------------------------------
+tm_i_sessTz = input.string("America/New_York", "Múi giờ thị trường (NY)", options = ["America/New_York", "Europe/London", "Asia/Ho_Chi_Minh", "Asia/Tokyo", "UTC"], group = "TM · Session", display = display.data_window)

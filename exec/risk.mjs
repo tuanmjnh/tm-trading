@@ -26,10 +26,20 @@
 //        'daily_loss_cap' expires with the day.
 //   Sanity: leverage, max concurrent positions, per-symbol exposure, SL/TP
 //        side checks, minimum reward:risk, zero/absurd size.
+//   D7e  Every ACTION on an existing position crosses this gate too (roadmap
+//        7P: "mọi action đi qua risk gate"): checkModify re-validates an
+//        SL/TP change (side rules + D7a budget + minRR on the RESULT),
+//        checkPartialClose validates a close qty. Both refuse while the day
+//        is halted — a kill-switch freezes the whole desk, and resume() is
+//        the operator's one-line way out. Neither re-sizes anything: the
+//        qty/notional of the position never changes by moving a level or
+//        taking a slice off.
 //
 //  CLI:  node exec/risk.mjs status | halt [reason] [--close] | resume [reason]
 // =============================================================================
 import { appendNdjson } from '../engine/store.mjs'
+import { buildPositionDoc, liveStamp } from '../engine/stamp.mjs'
+import { validateModify, partialCloseQty } from '../simulation/engine.mjs'
 import { loadEnv, ROOT } from './env.mjs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -143,6 +153,29 @@ export function sizingPct(config, winStats) {
 const reject = (code, message) => ({ ok: false, code, message })
 
 /**
+ * The halt half of the gate, SHARED BY EVERY ACTION (orders, modify, close).
+ * A halted day is a frozen desk: D7c blocks new orders until resume(), and
+ * the same freeze applies to SL/TP changes and closes — roadmap 7P wants
+ * every action through this one gate, and an operator who halted the system
+ * expects nothing to move until they resume it. `what` names the blocked
+ * action in the message ("new orders" keeps the original wording).
+ * @returns {{ok:false, code, message} | null} null = not halted
+ */
+function haltReject(day, cfg, what) {
+  if (day.halted) {
+    // Daily-cap halts get their own code so callers/logs can tell them apart
+    // from an operator kill-switch (same effect, different intent).
+    if (day.haltReason === 'daily_loss_cap') return reject('DAILY_LOSS_CAP', `daily loss cap hit (${day.realizedPnlPct.toFixed(2)}%) - ${what} blocked until next UTC day`)
+    return reject('HALTED', `system halted (${day.haltReason}) - resume required`)
+  }
+  // --- D7b: raw counter check (belt & suspenders if the flag was missed) --
+  if (day.realizedPnlPct <= -cfg.dailyLossCapPct) {
+    return reject('DAILY_LOSS_CAP', `daily loss ${day.realizedPnlPct.toFixed(2)}% <= -${cfg.dailyLossCapPct}% cap`)
+  }
+  return null
+}
+
+/**
  * A TP level must be a POSITIVE finite number, or a non-blank string that parses
  * to one. Everything else (null, undefined, '', '  ', NaN, true, [], {}) is a
  * DEFECTIVE level: returning null makes the caller reject it WITH ITS INDEX
@@ -160,7 +193,10 @@ function tpLevel(v) {
 /**
  * THE gate — pure. No IO, no Date.now(), no process.env.
  *
- * @param {object} order   { symbol, side:'BUY'|'SELL' (or dir:1|-1), entry, sl, tps[], qty? }
+ * @param {object} order   { symbol, side:'BUY'|'SELL' (or dir:1|-1), entry, sl, tps[], qty?, pct? }
+ *                         qty  = caller pre-sized (verified against every cap);
+ *                         pct  = caller risk % override (0<pct<=100) — else the
+ *                         config/kelly sizing decides. Hard caps still bind.
  * @param {object} snap    { config, day, open:[{symbol,dir,qty,entryPrice}], equity, winStats }
  * @returns {{ok:boolean, code?:string, message?:string, qty?:number,
  *            riskAmount?:number, notional?:number, rr?:number, sizingPct?:number}}
@@ -172,15 +208,17 @@ export function evaluate(order, snap) {
   const equity = Number(snap.equity)
 
   // --- D7c: kill-switch / drift / manual halt first, always ---------------
-  if (day.halted) {
-    // Daily-cap halts get their own code so callers/logs can tell them apart
-    // from an operator kill-switch (same effect, different intent).
-    if (day.haltReason === 'daily_loss_cap') return reject('DAILY_LOSS_CAP', `daily loss cap hit (${day.realizedPnlPct.toFixed(2)}%) - new orders blocked until next UTC day`)
-    return reject('HALTED', `system halted (${day.haltReason}) - resume required`)
-  }
-  // --- D7b: raw counter check (belt & suspenders if the flag was missed) --
-  if (day.realizedPnlPct <= -cfg.dailyLossCapPct) {
-    return reject('DAILY_LOSS_CAP', `daily loss ${day.realizedPnlPct.toFixed(2)}% <= -${cfg.dailyLossCapPct}% cap`)
+  const halted = haltReject(day, cfg, 'new orders')
+  if (halted) return halted
+
+  // --- §20/§21: paper account state ------------------------------------
+  // A spent paper account cannot take NEW money risk (block OPEN only — the
+  // executor's protective exits keep their explicit policy per roadmap §21).
+  // `balance` is the persistent realized balance; unavailable (Mongo down) =>
+  // fail-open: the check is skipped, it is never guessed (D12).
+  const balance = Number(snap.balance)
+  if (Number.isFinite(balance) && balance <= 0) {
+    return reject('ACCOUNT_INSOLVENT', `paper account balance ${balance.toFixed(2)} <= 0 — new opens blocked`)
   }
 
   // --- Normalize direction -------------------------------------------------
@@ -221,7 +259,10 @@ export function evaluate(order, snap) {
   if (!(riskDist > 0)) return reject('BAD_PRICE', 'SL == entry -> zero risk distance')
 
   // --- D7a: sizing --------------------------------------------------------
-  const pct = sizingPct(cfg, snap.winStats)
+  // Explicit user risk % (manual ticket) overrides the config/kelly sizing;
+  // qty pre-sizing flows through `order.qty` below. The caps (LEVERAGE,
+  // EXPOSURE, RISK_BUDGET, MIN_RR, MAX_OPEN) still bind either way.
+  const pct = Number.isFinite(order.pct) && order.pct > 0 && order.pct <= 100 ? order.pct : sizingPct(cfg, snap.winStats)
   const riskAmount = (equity * pct) / 100
   let qty
   if (Number.isFinite(order.qty) && order.qty > 0) {
@@ -257,6 +298,106 @@ export function evaluate(order, snap) {
   return { ok: true, qty, notional, rr, riskAmount, sizingPctUsed: pct }
 }
 
+/**
+ * THE gate for MODIFYING an existing position's SL/TP (roadmap 7P "modify
+ * SL/TP — mọi action đi qua risk gate"). Pure. What it re-checks:
+ *   - halt / daily cap FIRST (D7e: a halted desk is frozen);
+ *   - the SAME side/ladder rules as entry, via simulation validateModify —
+ *     SL on the losing side, every TP on the target side, a defective level
+ *     rejected WITH its index (never coerced or dropped);
+ *   - a usable resulting SL: the exit scanner and this gate both need a
+ *     positive stop, so a no-SL position must be patched WITH an sl;
+ *   - D7a budget on the RESULT: newRisk = qty * |entry - newSl| must fit the
+ *     per-trade risk budget UNLESS it is no worse than the risk the position
+ *     already carries. You may always TIGHTEN (and a position that drifted
+ *     over budget may still be de-risked); you may never widen past the
+ *     budget the entry was approved with;
+ *   - minRR against the RESULTING ladder — a modify cannot trade the
+ *     position down to a payoff the gate would never have approved at entry.
+ *
+ * What it deliberately does NOT do: re-size, or re-check leverage / exposure /
+ * maxOpen — moving a level changes neither qty nor notional.
+ *
+ * @param {object} pos    { symbol, dir, entryPrice, sl, tps, qty } — open position
+ * @param {object} patch  { sl?, tps? } — absent fields keep their current value
+ * @param {object} snap   same snapshot shape as evaluate()
+ * @returns {{ok:boolean, code?:string, message?:string, sl?:number,
+ *            tps?:number[], rr?:number, riskAmount?:number, budget?:number}}
+ */
+export function evaluateModify(pos, patch = {}, snap) {
+  const cfg = snap.config
+  const day = snap.day || resolveDay(null, null)
+  const halted = haltReject(day, cfg, 'modifying SL/TP')
+  if (halted) return halted
+
+  const qty = Number(pos?.qty)
+  if (!(Number.isFinite(qty) && qty > 0)) return reject('BAD_QTY', `position qty must be > 0 (got ${String(pos?.qty)})`)
+
+  // Side rules / ladder defects / EMPTY_PATCH — the simulation core owns them
+  // (fail closed, index named) so entry and modify share ONE implementation.
+  const v = validateModify(pos, patch)
+  if (!v.ok) return { ok: false, code: v.code, message: v.message }
+  const dir = pos.dir // v.ok => dir is 1 or -1
+  const entry = Number(pos.entryPrice) // v.ok => finite > 0
+
+  const sl = Number(v.sl)
+  if (!(Number.isFinite(sl) && sl > 0)) {
+    return reject('BAD_SL', `no usable SL after the modify (sl=${String(v.sl)}) — the exit scanner and this gate both need a positive stop; patch one`)
+  }
+  const riskDist = Math.abs(entry - sl)
+  if (!(riskDist > 0)) return reject('BAD_PRICE', 'SL == entry -> zero risk distance')
+
+  // --- D7a budget: widening the stop must not spend more than the entry got
+  const pct = sizingPct(cfg, snap.winStats)
+  const budget = (Number(snap.equity) * pct) / 100
+  const newRisk = qty * riskDist
+  const curSl = Number(pos.sl)
+  const curRisk = Number.isFinite(curSl) && curSl > 0 ? qty * Math.abs(entry - curSl) : 0
+  if (newRisk > budget * (1 + 1e-9) && newRisk > curRisk * (1 + 1e-9)) {
+    return reject('RISK_BUDGET', `new SL risks ${newRisk.toFixed(2)} > budget ${budget.toFixed(2)} (${pct}% of equity) and widens current risk ${curRisk.toFixed(2)}`)
+  }
+
+  // --- Sanity: minimum reward:risk on the RESULTING ladder -----------------
+  const tps = v.tps // v.ok => non-empty, all positive, all on the target side
+  const rr = (((tps[tps.length - 1] - entry) * dir) / riskDist)
+  if (rr < cfg.minRR) return reject('MIN_RR', `RR to last TP after modify = ${rr.toFixed(2)} < min ${cfg.minRR}`)
+
+  return { ok: true, sl, tps, rr, riskAmount: newRisk, budget }
+}
+
+/**
+ * THE gate for CLOSING an existing position (fully or partially — roadmap
+ * 7P "close/partial close, mọi action đi qua risk gate"). Pure.
+ *
+ * A close only ever REDUCES risk, so there is nothing to size, cap or
+ * RR-check; what the gate still owns:
+ *   - halt / daily cap FIRST (D7e: frozen desk, resume to unfreeze);
+ *   - the qty math itself via simulation partialCloseQty: 0 < qty <= position
+ *     qty, pct in (0, 100], qty XOR pct — the executor applies exactly the
+ *     same function, so what is approved is what happens;
+ *   - a sane entryPrice, so the PnL about to be realized is priced off a real
+ *     number (closeFill re-checks it anyway — belt and suspenders).
+ *
+ * @param {object} pos    { symbol, qty, entryPrice } — open position
+ * @param {object} target { qty? | pct? } — callers map "no body" to { pct: 100 }
+ * @param {object} snap   same snapshot shape as evaluate()
+ * @returns {{ok:boolean, code?:string, message?:string,
+ *            closeQty?:number, remainingQty?:number}}
+ */
+export function evaluatePartialClose(pos, target = {}, snap) {
+  const cfg = snap.config
+  const day = snap.day || resolveDay(null, null)
+  const halted = haltReject(day, cfg, 'closing a position')
+  if (halted) return halted
+
+  const entry = Number(pos?.entryPrice)
+  if (!(Number.isFinite(entry) && entry > 0)) return reject('BAD_PRICE', `entryPrice must be > 0 (got ${String(pos?.entryPrice)})`)
+
+  const q = partialCloseQty(pos, target)
+  if (!q.ok) return { ok: false, code: q.code, message: q.message }
+  return { ok: true, closeQty: q.qty, remainingQty: Number((Number(pos.qty) - q.qty).toFixed(8)) }
+}
+
 // =============================================================================
 //  IO layer (Mongo, fail-soft) — snapshot / persist / halt / resume
 // =============================================================================
@@ -267,14 +408,43 @@ async function getModels() {
   const db = await import('../engine/db.mjs')
   const conn = await db.connectMongo() // fail-soft: null when unavailable
   if (!conn) return null
-  const { RiskState, Position } = await import('../engine/models/index.mjs')
+  const { RiskState, Position, PaperAccount } = await import('../engine/models/index.mjs')
   try {
     await RiskState.syncIndexes()
   } catch {
     // index already there or not creatable — insert still works
   }
-  models = { RiskState, Position }
+  models = { RiskState, Position, PaperAccount }
   return models
+}
+
+// --- §20/§21: paper account state ------------------------------------------
+// The paper account is PERSISTENT (paper_accounts): the executor freezes
+// `initialBalance` at first activity so a later config change cannot rewrite
+// historical accounting. The RISK GATE must therefore size / gate off that
+// frozen seed — not the raw env value — and block NEW OPENS (only opens: the
+// protective exits keep their explicit simulator policy) once the account's
+// realized balance is spent.
+const DEFAULT_EQUITY = 10000
+
+/** Pure resolved floor: frozen seed wins, else config equity, else default. */
+export function resolvedBalance(seedInitial, configEquity) {
+  const seed = Number(seedInitial)
+  if (Number.isFinite(seed) && seed > 0) return seed
+  const cfg = Number(configEquity)
+  return Number.isFinite(cfg) && cfg > 0 ? cfg : DEFAULT_EQUITY
+}
+
+/** Frozen initialBalance from the persisted paper_accounts row (null if unavailable). */
+async function accountBase(config) {
+  const m = await getModels()
+  if (!m?.PaperAccount) return null
+  try {
+    const seed = await m.PaperAccount.findOne({ accountId: config.account }).lean()
+    return Number.isFinite(Number(seed?.initialBalance)) && Number(seed?.initialBalance) > 0 ? Number(seed.initialBalance) : null
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -285,7 +455,7 @@ export function auditLog(event, data = {}, file = RISK_FILE) {
   return appendNdjson(file, { ts: new Date().toISOString(), event, ...data })
 }
 
-/** Current equity = starting equity + realized PnL of all closed positions. */
+/** Current equity = resolved paper floor + realized PnL of all closed positions. */
 export async function equityNow(config) {
   const m = await getModels()
   if (!m) return config.equity
@@ -293,7 +463,8 @@ export async function equityNow(config) {
     { $match: { account: config.account, status: 'closed' } },
     { $group: { _id: null, sum: { $sum: '$pnlAbs' } } },
   ])
-  return config.equity + (agg?.sum || 0)
+  const base = (await accountBase(config)) ?? config.equity
+  return base + (agg?.sum || 0)
 }
 
 /** Win/loss stats for light Kelly (last 100 closed trades). null = not usable. */
@@ -327,8 +498,12 @@ export async function loadSnapshot(config) {
   if (!m) {
     // Mongo down: fail-soft with a FRESH day (no halt, no counters). The gate
     // still runs its pure checks; D7b counters are unavailable — callers see
-    // `mongoDown` and must not pretend the cap is enforced.
-    return { config, day: resolveDay(null, null), open: [], equity: config.equity, winStats: null, mongoDown: true }
+    // `mongoDown` and must not pretend the cap is enforced. `balance` starts at
+    // the resolved floor (positive) so the insolvency check stays fail-open.
+    return {
+      config, day: resolveDay(null, null), open: [], equity: config.equity,
+      balance: resolvedBalance(null, config.equity), winStats: null, mongoDown: true,
+    }
   }
   const [todayRow, latest] = await Promise.all([
     m.RiskState.findOne({ account: config.account, utcDay: today }).lean(),
@@ -339,7 +514,9 @@ export async function loadSnapshot(config) {
     equityNow(config),
     loadWinStats(config),
   ])
-  return { config, day: resolveDay(todayRow, latest), open, equity, winStats, mongoDown: false }
+  // balance = realized net (persistent §20 floor + Σ closed pnlAbs) — the same
+  // number the dashboard projects; the gate blocks new opens once it is <= 0.
+  return { config, day: resolveDay(todayRow, latest), open, equity, balance: equity, winStats, mongoDown: false }
 }
 
 /** Async gate: load snapshot -> pure evaluate. */
@@ -358,12 +535,53 @@ export async function checkOrder(order, config = loadRiskConfig()) {
 }
 
 /**
+ * Async MODIFY gate: snapshot -> evaluateModify -> audit. Same contract as
+ * checkOrder: the caller writes ONLY when decision.ok. `pos` is the open
+ * position document (lean shape), `patch` the raw { sl?, tps? } request.
+ */
+export async function checkModify(pos, patch, config = loadRiskConfig()) {
+  const snap = await loadSnapshot(config)
+  const decision = evaluateModify(pos, patch, snap)
+  auditLog(decision.ok ? 'modify_allowed' : 'modify_rejected', {
+    account: config.account,
+    symbol: pos?.symbol,
+    code: decision.ok ? 'OK' : decision.code,
+    message: decision.ok ? `sl=${decision.sl} tps=${JSON.stringify(decision.tps)} rr=${decision.rr?.toFixed(2)}` : decision.message,
+    mongoDown: snap.mongoDown,
+  })
+  return { ...decision, mongoDown: snap.mongoDown }
+}
+
+/**
+ * Async CLOSE gate (full or partial): snapshot -> evaluatePartialClose ->
+ * audit. Same write-only-on-ok contract as checkOrder.
+ */
+export async function checkPartialClose(pos, target, config = loadRiskConfig()) {
+  const snap = await loadSnapshot(config)
+  const decision = evaluatePartialClose(pos, target, snap)
+  auditLog(decision.ok ? 'partial_close_allowed' : 'partial_close_rejected', {
+    account: config.account,
+    symbol: pos?.symbol,
+    code: decision.ok ? 'OK' : decision.code,
+    message: decision.ok ? `closeQty=${decision.closeQty} remaining=${decision.remainingQty}` : decision.message,
+    mongoDown: snap.mongoDown,
+  })
+  return { ...decision, mongoDown: snap.mongoDown }
+}
+
+/**
  * Create-or-get today's row, INHERITING a non-daily halt from the latest row
  * (kill-switch / drift must survive midnight even when the first write of the
  * new day is a position close, not a halt()). Race-safe on the unique key.
+ *
+ * @param {string} account
+ * @param {object} [extra]
+ * @param {object} [_models] injected model layer (tests only — same contract as
+ *        recordOpen's `_models`, so a test can drive the WHOLE write path
+ *        without a database)
  */
-export async function ensureTodayRow(account, extra = {}) {
-  const m = await getModels()
+export async function ensureTodayRow(account, extra = {}, _models = null) {
+  const m = _models ?? await getModels()
   if (!m) return null
   const today = utcDayToday()
   const existing = await m.RiskState.findOne({ account, utcDay: today }).lean()
@@ -380,34 +598,81 @@ export async function ensureTodayRow(account, extra = {}) {
   }
 }
 
-/** D7b: count an order open. Call AFTER checkOrder returned ok. */
-export async function recordOpen({ config = loadRiskConfig(), symbol, qty, dir, entryPrice, sl, tps, externalId = null, alertKey = null, method = 'vsa' } = {}) {
-  const m = await getModels()
+/**
+ * D7b: count an order open. Call AFTER checkOrder returned ok.
+ *
+ * D1 (2026-10-05): this writes the LIVE version stamp. It used to store
+ * `paramsHash: null` with `source: 'paper'` hardcoded and no `tf`, which made
+ * every executed trade read as `unknown#unknown` and left `preset-drift` unable
+ * to compare anything. The document is built by the PURE
+ * `engine/stamp.mjs buildPositionDoc()` so the write path is testable without a
+ * database (this defect was invisible precisely because it lived inside an IO
+ * function). `tf` and `source` belong to the caller: only the executor knows
+ * which alert opened the position.
+ *
+ * @param {object}  [$]                       see below
+ * @param {string}  [$tf]                      timeframe of the opening alert
+ * @param {'paper'|'mt5'|'exchange'|'manual'} [$source]
+ * @param {object}  [$stamp]                   pre-resolved stamp (tests/backfills)
+ * @param {string}  [$auditFile]               audit target (tests pass a tmp file)
+ * @param {object}  [$_models]                 injected model layer (tests only)
+ * @param {number|null} [$fees]                MEASURED entry fee of the fill (Phase 7P)
+ * @param {'market'|'limit'|'stop'|null} [$orderType]  how the entry filled (Phase 7P)
+ * @param {number|null} [$slippage]            adverse bps applied at the fill (Phase 7P)
+ */
+export async function recordOpen({
+  config = loadRiskConfig(), symbol, qty, dir, entryPrice, sl, tps,
+  externalId = null, alertKey = null, method = 'vsa', tf = null, source = 'paper',
+  strategyVersionId = null,
+  stamp = null, auditFile = RISK_FILE, _models = null,
+  fees = null, orderType = null, slippage = null,
+  fidelity = null,
+} = {}) {
+  const m = _models ?? await getModels()
   if (!m) return { opened: false, mongoDown: true }
-  const pos = await m.Position.create({
+  // Built BEFORE the insert: a stamp that cannot be reproduced throws here, and a
+  // rejected open is better than a position that lies about its configuration.
+  const doc = buildPositionDoc({
     account: config.account,
-    source: 'paper',
+    source,
     externalId,
     symbol,
     dir,
     qty,
     entryPrice,
-    entryTime: new Date(),
     sl: sl ?? null,
     tps: tps ?? [],
-    status: 'open',
+    tf,
+    alertKey,
     method,
-    paramsHash: null,
-    signalKey: alertKey,
+    strategyVersionId,
+    fees,
+    orderType,
+    slippage,
+    fidelity,
+    stamp: stamp ?? liveStamp(),
   })
-  await ensureTodayRow(config.account) // create today's row if missing (inherits kill-switch)
+  const pos = await m.Position.create(doc)
+  // Injected models flow through too, or the test would reach the real DB here.
+  await ensureTodayRow(config.account, {}, _models) // create today's row if missing (inherits kill-switch)
   await m.RiskState.updateOne(
     { account: config.account, utcDay: utcDayToday() },
     { $inc: { tradesOpened: 1 } },
     { upsert: true },
   )
-  auditLog('position_opened', { account: config.account, symbol, dir, qty, entryPrice, alertKey, positionId: String(pos._id) })
-  return { opened: true, positionId: String(pos._id) }
+  auditLog('position_opened', {
+    account: config.account,
+    symbol,
+    dir,
+    qty,
+    entryPrice,
+    alertKey,
+    positionId: String(pos._id),
+    engineVersion: doc.stamp.engineVersion,
+    paramsHash: doc.stamp.paramsHash,
+    stampUnknown: doc.stampUnknown,
+  }, auditFile)
+  return { opened: true, positionId: String(pos._id), stamp: doc.stamp, stampUnknown: doc.stampUnknown }
 }
 
 /**
@@ -415,6 +680,19 @@ export async function recordOpen({ config = loadRiskConfig(), symbol, qty, dir, 
  * the loss cap is breached. `pnlPctOnEquity` is what lands in realizedPnlPct
  * (day-level, % of equity); position.pnlPct stays trade-level (% of notional).
  * NOTE: caller closes the Position doc first, then calls this.
+ *
+ * `reason` (the exit reason, e.g. 'data:tp') is written to the position by the
+ * CALLER (exec/paper.mjs closePosition) — it is the only component that knows the
+ * exit path; this function only counts and audits it.
+ *
+ * @param {object} [p]
+ * @param {object} [p.config]        risk config (default loadRiskConfig())
+ * @param {string} [p.symbol]
+ * @param {number} [p.pnlAbs]
+ * @param {number} [p.pnlPctOnEquity]
+ * @param {boolean} [p.win]
+ * @param {number} [p.equity]
+ * @param {string} [p.reason]
  */
 export async function recordClose({ config = loadRiskConfig(), symbol, pnlAbs, pnlPctOnEquity, win, equity, reason = 'unknown' } = {}) {
   const m = await getModels()

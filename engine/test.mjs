@@ -12,7 +12,7 @@
 //      NS/ND, cate bucket, run/momentum, session on/off.
 // =============================================================================
 
-import { sma, rma, atr, trueRange, pivotLow, pivotHigh, rollingSum, sessionOk, vsaBucket } from './ta.mjs'
+import { sma, rma, atr, trueRange, pivotLow, pivotHigh, rollingSum, sessionOk, vsaBucket, ema, rsi, stdev, macd, vwap, obv, cmf, donchian } from './ta.mjs'
 import { runVsa, DEFAULTS } from './signals.mjs'
 import * as signalsShim from './signals.mjs'
 // Cac import cho section 11/12 (methods interface + backtest - Phase 4)
@@ -23,6 +23,7 @@ import { simulateSetups } from './methods/simulate.mjs'
 import { method as paMethod, EVENT_SCORE as PA_SCORE } from './methods/priceAction.mjs'
 import { method as trendMethod, EVENT_SCORE as TREND_SCORE } from './methods/trend.mjs'
 import { method as ofMethod, EVENT_SCORE as OF_SCORE } from './methods/orderflow.mjs'
+import { method as sweepMethod, EVENT_SCORE as SWEEP_SCORE } from './methods/sweep.mjs'
 import { backtest, costsOf } from './backtest.mjs'
 import {
   summarizeBacktest, formatSummary, formatMatrix, toCsv, summaryRow, toRunDoc,
@@ -1605,6 +1606,175 @@ section('16. Phase 10 — methods moi (price-action/trend/orderflow) + simulate'
     { replaceActive: false },
   )
   check('sim replace=false: signal sau khi setup dong van nhan (vi khong con lenh)', s7.length === 2 && s7[1].result === undefined, JSON.stringify(s7))
+}
+
+section('17. Phase 11 — method sweep (quet thanh khoan + volume VSA)')
+
+{
+  check('sweep: id khop', sweepMethod.id === 'sweep', String(sweepMethod.id))
+  check('sweep: validateMethod = []', validateMethod(sweepMethod).length === 0, JSON.stringify(validateMethod(sweepMethod)))
+  check('sweep: listMethods chua sweep', listMethods().includes('sweep'), JSON.stringify(listMethods()))
+  check('sweep: EVENT_SCORE LONG > 0, SHORT < 0', SWEEP_SCORE['SWEEP LONG'] > 0 && SWEEP_SCORE['SWEEP SHORT'] < 0, JSON.stringify(SWEEP_SCORE))
+  check('sweep: defaults co feePct/slipPct + knobs toi uu',
+    Number.isFinite(sweepMethod.defaults.feePct) && Number.isFinite(sweepMethod.defaults.slipPct) &&
+    ['entryMode', 'retestBars', 'volRetestMax', 'confirmBars', 'trendFast', 'trendSlow', 'minRR', 'slMinAtr', 'slMaxAtr', 'minTouches'].every((k) => sweepMethod.defaults[k] !== undefined))
+
+  // Fixture: pivot high 110 tai bar 8; bar 20 quet len (high 112) nhung close 105.5 < 110, volume no.
+  const mkSweep = () => {
+    const out = []
+    for (let i = 0; i < 40; i++) {
+      let o = 100, h = 101, l = 99, c = 100
+      if (i === 8) { o = 105; h = 110; l = 104; c = 106 }
+      else if (i > 8 && i < 20) { o = 104; h = 107; l = 102; c = 105 }
+      else if (i === 20) { o = 106; h = 112; l = 105; c = 105.5 }
+      else if (i === 23) { o = 106; h = 111; l = 104; c = 106 }
+      else if (i > 20) { o = 105.5; h = 106.5; l = 104; c = 105 }
+      const volume = i === 20 ? 100 : 10
+      out.push({ time: 1700000000000 + i * 3600000, open: o, high: h, low: l, close: c, volume })
+    }
+    return out
+  }
+  const bars = mkSweep()
+  const base = { pivLen: 2, lvlFresh: 100, entryMode: 'market', trendFast: 0, trendSlow: 0, minRR: 0, slMinAtr: 0, slMaxAtr: 9999, volSweepMin: 1.2, wickRatio: 0.5, atrLen: 2 }
+
+  const an = sweepMethod.analyze(bars, base)
+  check('sweep: analyze du 3 truong bat buoc', ['events', 'scores', 'setups'].every((k) => an[k] !== undefined))
+  check('sweep: scores dai bang bars.length', an.scores.length === bars.length, `${an.scores.length} vs ${bars.length}`)
+  check('sweep: scores nam trong [-1,1]', an.scores.every((s) => s >= -1 && s <= 1))
+  check('sweep: phat hien quet len -> SWEEP SHORT', an.events.some((e) => e.type === 'SWEEP SHORT'), JSON.stringify(an.events))
+  check('sweep: co setup hop le (dir/risk/tp)', an.setups.length >= 1 && an.setups.every((s) => (s.dir === 1 || s.dir === -1) && s.risk > 0 && Number.isFinite(s.tp)), JSON.stringify(an.setups[0]))
+  check('sweep: params merge DEFAULTS (entryMode giu nguyen)', Number.isFinite(an.params.feePct) && an.params.entryMode === 'market')
+
+  check('sweep: volSweepMin qua cao -> 0 setup', sweepMethod.analyze(bars, { ...base, volSweepMin: 999 }).setups.length === 0)
+  check('sweep: minRR bat kha thi -> 0 setup', sweepMethod.analyze(bars, { ...base, minRR: 999 }).setups.length === 0)
+
+  // retest: khong vao ngay bar quet (bar 20) ma doi gia test lai (bar 23) voi volume thap
+  const rt = sweepMethod.analyze(bars, { ...base, entryMode: 'retest', retestBars: 10, volRetestMax: 1.2 })
+  check('sweep: retest doi test lai, khong vao bar quet', rt.setups.length >= 1 && rt.setups.every((s) => s.bar > 20), JSON.stringify(rt.setups.map((s) => s.bar)))
+
+  let bt = null
+  let bErr = null
+  try { bt = backtest(bars, { method: 'sweep', symbol: 'TESTUSDT', tf: '60', params: base }) } catch (e) { bErr = e }
+  check('sweep: backtest e2e chay duoc', bt != null && Array.isArray(bt.trades), String(bErr?.message ?? ''))
+
+  const a2 = sweepMethod.analyze(bars, base)
+  check('sweep: deterministic (2 lan giong nhau)', JSON.stringify(a2.events) === JSON.stringify(an.events) && a2.setups.length === an.setups.length)
+}
+
+// =============================================================================
+section('18. ta.mjs — Phase 7I indicator primitives (ema/rsi/stdev/macd/vwap/obv/cmf/donchian)')
+
+// --- ta.ema: Pine seed = first valid src, NOT sma ---------------------------
+{
+  // alpha = 2/(3+1) = 0.5; seed src[0]
+  const e = ema([2, 4, 6, 8], 3)
+  check('ema: seed = first src (khong phai sma)', near(e[0], 2), `got ${e[0]}`)
+  check('ema: bar 1 = 0.5*4 + 0.5*2 = 3', near(e[1], 3), `got ${e[1]}`)
+  check('ema: bar 2 = 0.5*6 + 0.5*3 = 4.5', near(e[2], 4.5), `got ${e[2]}`)
+  check('ema: bar 3 = 0.5*8 + 0.5*4.5 = 6.25', near(e[3], 6.25), `got ${e[3]}`)
+
+  // na src -> na output, recursion state untouched (resume on next valid bar)
+  const n = ema([2, null, 6], 3)
+  check('ema: na src -> na, state giu nguyen', n[0] === 2 && n[1] === null && near(n[2], 4), JSON.stringify(n))
+
+  check('ema: length <= 0 -> toan null', allNull(ema([1, 2, 3], 0)))
+}
+
+// --- ta.rsi: Wilder, hand-computed on a zigzag series -----------------------
+{
+  // closes [10,11,10,11,10], length=2 -> gains [na,1,0,1,0], losses [na,0,1,0,1]
+  // rma(gains,2): seed 0.5 @i2, then 0.75, 0.375; rma(losses,2): 0.5, 0.25, 0.625
+  const r = rsi([10, 11, 10, 11, 10], 2)
+  check('rsi: na truoc khi du seed', r[0] === null && r[1] === null, JSON.stringify(r.slice(0, 2)))
+  check('rsi: i2 = 100-100/(1+0.5/0.5) = 50', near(r[2], 50), `got ${r[2]}`)
+  check('rsi: i3 = 100-100/(1+0.75/0.25) = 75', near(r[3], 75), `got ${r[3]}`)
+  check('rsi: i4 = 100-100/(1+0.375/0.625) = 37.5', near(r[4], 37.5), `got ${r[4]}`)
+
+  // flat series: 0/0 -> na (Pine math), khong phai 50
+  const flat = rsi([10, 10, 10, 10, 10], 2)
+  check('rsi: series phang -> na (0/0)', flat[4] === null, `got ${flat[4]}`)
+
+  // all-up: losses = 0 -> +inf -> rsi = 100
+  const up = rsi([1, 2, 3, 4, 5, 6], 2)
+  check('rsi: gia tang lien tuc -> 100', near(up[5], 100), `got ${up[5]}`)
+}
+
+// --- ta.stdev: population, strict window ------------------------------------
+{
+  const s = stdev([1, 2, 3, 4], 4)
+  check('stdev: sqrt(var(pop)) = sqrt(1.25)', s[3] != null && Math.abs(s[3] - Math.sqrt(1.25)) < 1e-9, `got ${s[3]}`)
+  check('stdev: na truoc khi du length', s[0] === null && s[1] === null && s[2] === null, JSON.stringify(s))
+  check('stdev: constant -> 0', near(stdev([3, 3, 3, 3], 4)[3], 0), `got ${stdev([3, 3, 3, 3], 4)[3]}`)
+  const withNa = stdev([1, null, 3, 4], 3)
+  check('stdev: na trong cua so -> na', withNa[3] === null, `got ${withNa[3]}`)
+}
+
+// --- ta.macd: structure + exact recursion -----------------------------------
+{
+  const m = macd([1, 2, 3, 4, 5], 2, 3, 2)
+  check('macd: 3 output cung dai bars', m.macd.length === 5 && m.signal.length === 5 && m.hist.length === 5)
+  // ema2 seed=1, ema3 seed=1 -> macd[0] = 0
+  check('macd: seed ca 2 ema = src -> macd[0] = 0', near(m.macd[0], 0), `got ${m.macd[0]}`)
+  // macd[1] = 5/3 - 1.5 = 1/6; signal[1] = (2/3)*(1/6) = 1/9; hist[1] = 1/18
+  check('macd: bar 1 = 1/6', near(m.macd[1], 1 / 6), `got ${m.macd[1]}`)
+  check('macd: signal bar 1 = 1/9', near(m.signal[1], 1 / 9), `got ${m.signal[1]}`)
+  check('macd: hist = macd - signal', m.hist.every((h, i) => h === null || (m.macd[i] !== null && m.signal[i] !== null && near(h, m.macd[i] - m.signal[i], 1e-9))))
+}
+
+// --- ta.vwap: anchored typical-price VWAP -----------------------------------
+{
+  const bars = [
+    { open: 9, high: 10, low: 8, close: 9, volume: 100 }, // tp = 9
+    { open: 10, high: 12, low: 9, close: 10, volume: 300 }, // tp = 31/3
+  ]
+  const v = vwap(bars)
+  check('vwap: bar 1 = tp = 9', near(v[0], 9), `got ${v[0]}`)
+  check('vwap: bar 2 = (900+3100)/(100+300) = 10', near(v[1], 10), `got ${v[1]}`)
+}
+
+// --- ta.obv: starts 0, +/- volume by close direction ------------------------
+{
+  const bars = [
+    { open: 10, high: 11, low: 9, close: 10, volume: 5 },
+    { open: 10, high: 12, low: 9, close: 11, volume: 3 }, // up -> +3
+    { open: 11, high: 11, low: 9, close: 10, volume: 7 }, // down -> -7
+    { open: 10, high: 11, low: 9, close: 10, volume: 2 }, // flat -> unchanged
+  ]
+  const o = obv(bars)
+  check('obv: bat dau tai 0', o[0] === 0, `got ${o[0]}`)
+  check('obv: len +3 = 3', near(o[1], 3), `got ${o[1]}`)
+  check('obv: xuong -7 = -4', near(o[2], -4), `got ${o[2]}`)
+  check('obv: bang nhau -> giu nguyen', near(o[3], -4), `got ${o[3]}`)
+}
+
+// --- ta.cmf: sum(mfv)/sum(vol), degenerate bar -> na ------------------------
+{
+  const bars = [
+    { open: 9, high: 10, low: 8, close: 10, volume: 10 }, // clv = +1 -> mfv = 10
+    { open: 9, high: 10, low: 8, close: 8, volume: 20 }, // clv = -1 -> mfv = -20
+  ]
+  const c = cmf(bars, 2)
+  check('cmf: (10-20)/(10+20) = -1/3', c[1] != null && Math.abs(c[1] + 1 / 3) < 1e-9, `got ${c[1]}`)
+  check('cmf: na truoc khi du length', c[0] === null, `got ${c[0]}`)
+
+  const deg = cmf([{ open: 9, high: 9, low: 9, close: 9, volume: 5 }, { open: 9, high: 9, low: 9, close: 9, volume: 5 }], 2)
+  check('cmf: bar h==l (mfv na) -> na', deg[1] === null, `got ${deg[1]}`)
+}
+
+// --- donchian: highest(high)/lowest(low) ------------------------------------
+{
+  const bars = [
+    { open: 9, high: 10, low: 8, close: 9, volume: 1 },
+    { open: 10, high: 12, low: 9, close: 11, volume: 1 },
+    { open: 11, high: 11, low: 7, close: 8, volume: 1 },
+    { open: 8, high: 14, low: 10, close: 13, volume: 1 },
+  ]
+  const d = donchian(bars, 2)
+  check('donchian: na truoc khi du length', d.upper[0] === null && d.lower[0] === null, JSON.stringify([d.upper[0], d.lower[0]]))
+  check('donchian: upper[1] = max(10,12) = 12', near(d.upper[1], 12), `got ${d.upper[1]}`)
+  check('donchian: lower[1] = min(8,9) = 8', near(d.lower[1], 8), `got ${d.lower[1]}`)
+  check('donchian: middle = (u+l)/2', near(d.middle[1], 10), `got ${d.middle[1]}`)
+  check('donchian: upper[3] = max(11,14) = 14', near(d.upper[3], 14), `got ${d.upper[3]}`)
 }
 
 // =============================================================================

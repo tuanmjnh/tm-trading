@@ -9,15 +9,15 @@
 //  Duong nen trend (Supertrend) - bat/tat bang module M1
 // -----------------------------------------------------------------------------
 tm_stCol = tm_stDir == -1 ? color.new(#089981, 20) : color.new(#f23645, 20)
-plot(tm_m1_on ? tm_stLine : na, "Supertrend", color = tm_stCol, linewidth = 2, style = plot.style_linebr, force_overlay = true)
+plot(tm_showViz and tm_m1_on ? tm_stLine : na, "Supertrend", color = tm_stCol, linewidth = 2, style = plot.style_linebr, force_overlay = true)
 
 // -----------------------------------------------------------------------------
 //  Volume VSA (ton tai rieng o pane duoi - chi ban indicator, strategy skip file nay)
 //  Mau cot theo khoi luong so voi Volume MA (Wilder): 2.2/1.8/1.2/0.8/0.4 × MA
 // -----------------------------------------------------------------------------
 tm_volCol = f_vsaColor(tm_vol, tm_volMA, 2.2, 1.8, 1.2, 0.8, 0.4)
-plot(tm_vol, "Volume", color = tm_volCol, style = plot.style_columns, format = format.volume, display = display.pane)
-plot(tm_volMA, "Volume MA", color = color.new(color.green, 0), linewidth = 1, format = format.volume, display = display.pane)
+plot(tm_showViz and tm_showVol ? tm_vol : na, "Volume", color = tm_volCol, style = plot.style_columns, format = format.volume, display = display.pane)
+plot(tm_showViz and tm_showVolMA ? tm_volMA : na, "Volume MA", color = color.new(color.green, 0), linewidth = 1, format = format.volume, display = display.pane)
 
 // -----------------------------------------------------------------------------
 //  Marker vao lenh
@@ -29,8 +29,8 @@ tm_sellCol = tm_unconfirmed ? color.new(tm_cBear, 55) : tm_cBear
 // CANH BAO: plotshape/plot co tham so OFFSET o vi tri 6.
 // Neu truyen theo thu tu, `size = size.tiny` se gan nham vao `offset` -> CE10271.
 // Phai luon truyen bang TEN tham so.
-plotshape(tm_evEntry and tm_plan.dir == 1, title = "BUY",  style = shape.triangleup,   location = location.belowbar, color = tm_buyCol,  size = size.tiny, text = "BUY",  textcolor = tm_cBull, force_overlay = true)
-plotshape(tm_evEntry and tm_plan.dir == -1, title = "SELL", style = shape.triangledown, location = location.abovebar, color = tm_sellCol, size = size.tiny, text = "SELL", textcolor = tm_cBear, force_overlay = true)
+plotshape(tm_showViz and tm_showSig and tm_evEntry and tm_plan.dir == 1, title = "BUY",  style = shape.triangleup,   location = location.belowbar, color = tm_buyCol,  size = size.small, text = "BUY",  textcolor = tm_cBull, force_overlay = true)
+plotshape(tm_showViz and tm_showSig and tm_evEntry and tm_plan.dir == -1, title = "SELL", style = shape.triangledown, location = location.abovebar, color = tm_sellCol, size = size.small, text = "SELL", textcolor = tm_cBear, force_overlay = true)
 
 // -----------------------------------------------------------------------------
 //  Vung TP / SL cua viethe dang mo (cap nhat moi bar nen nen "chay" theo gia)
@@ -48,7 +48,7 @@ var label lbTp    = label.new(bar_index, 0.0, "", style = label.style_label_left
 tm_right = tm_posBar + tm_zoneLen
 tm_base  = tm_posDir == 1 ? tm_cBull : tm_cBear
 
-if tm_showZone and tm_posDir != 0 and not na(tm_posBar)
+if tm_showViz and tm_showZone and tm_posDir != 0 and not na(tm_posBar)
     box.set_lefttop(bxSl, tm_posBar, math.max(tm_posEntry, tm_posSl))
     box.set_rightbottom(bxSl, tm_right, math.min(tm_posEntry, tm_posSl))
     box.set_border_color(bxSl, color.new(color.gray, 55))
@@ -107,7 +107,7 @@ else
 var array<box>   tm_hist   = array.new<box>()
 var array<label> tm_histLb = array.new<label>()
 
-if tm_evClose and tm_showHist and tm_keepPlans > 0 and tm_xDir != 0 and not na(tm_xBar) and not na(tm_xExit) and not na(tm_xR)
+if tm_showViz and tm_evClose and tm_showHist and tm_keepPlans > 0 and tm_xDir != 0 and not na(tm_xBar) and not na(tm_xExit) and not na(tm_xR)
     float hTop = math.max(tm_xEntry, tm_xExit)
     float hBot = math.min(tm_xEntry, tm_xExit)
     color hCol = tm_xR > 0 ? tm_cBull : tm_xR < 0 ? tm_cBear : color.gray
@@ -121,16 +121,23 @@ if tm_evClose and tm_showHist and tm_keepPlans > 0 and tm_xDir != 0 and not na(t
 
 // CANH BAO: table.new() KHONG co tham so `size`. Kich thuoc bang duoc quyet dinh
 // boi `text_size` cua tung o table.cell(). Neu truyen size -> CE10120.
+// Session hien tai - shared f_sess* (pine/shared/common.pine)
+bool tm_sessAsia   = f_sessAsia(tm_sessTz)
+bool tm_sessLondon = f_sessLondon(tm_sessTz)
+bool tm_sessNy     = f_sessNy(tm_sessTz)
+bool tm_sessOverlap = tm_sessLondon and tm_sessNy
+string tm_sessName = f_sessName(tm_sessAsia, tm_sessLondon, tm_sessNy)
+
 var table tm_tbl = na
-if tm_showDash and na(tm_tbl)
-    tm_tbl := table.new(position.top_right, 2, 12, border_width = 1, border_color = color.new(color.gray, 80), force_overlay = true)
+if tm_showViz and tm_showDash and na(tm_tbl)
+    tm_tbl := table.new(position.top_right, 2, 13, border_width = 1, border_color = color.new(color.gray, 80), force_overlay = true)
 
 tm_font = tm_dashSize == "Tiny" ? size.tiny : tm_dashSize == "Small" ? size.small : size.normal
 
 if not na(tm_tbl) and barstate.islast
     tm_kColor = color.new(color.gray, 10)
     tm_vColor = color.silver
-    table.clear(tm_tbl, 0, 0, 1, 11)
+    table.clear(tm_tbl, 0, 0, 1, 12)
 
     table.cell(tm_tbl, 0,  0, "Che do",         text_color = tm_kColor, text_size = tm_font, text_halign = text.align_left,  bgcolor = color.new(color.black, 100))
     table.cell(tm_tbl, 1,  0, tm_confirmOnly ? "Nen dong" : "Realtime", text_color = color.silver, text_size = tm_font, text_halign = text.align_right, bgcolor = color.new(color.black, 100))
@@ -156,3 +163,6 @@ if not na(tm_tbl) and barstate.islast
     table.cell(tm_tbl, 1, 10, str.tostring(tm_dayCount) + " / " + str.tostring(tm_flt_maxDay), text_color = tm_vColor, text_size = tm_font, text_halign = text.align_right, bgcolor = color.new(color.black, 100))
     table.cell(tm_tbl, 0, 11, "Thang / That",  text_color = tm_kColor, text_size = tm_font, text_halign = text.align_left,  bgcolor = color.new(color.black, 100))
     table.cell(tm_tbl, 1, 11, str.tostring(tm_statWins) + " / " + str.tostring(tm_statLosses), text_color = tm_statTrades > 0 and tm_statWins * 100 / tm_statTrades >= 50 ? tm_cBull : color.gray, text_size = tm_font, text_halign = text.align_right, bgcolor = color.new(color.black, 100))
+
+    table.cell(tm_tbl, 0, 12, "Session",       text_color = tm_kColor, text_size = tm_font, text_halign = text.align_left,  bgcolor = color.new(color.black, 100))
+    table.cell(tm_tbl, 1, 12, tm_sessName + (tm_flt_sessOn ? (tm_okSess ? " / Trong phien" : " / Ngoai phien") : ""), text_color = tm_sessOverlap ? color.orange : tm_sessNy ? color.yellow : tm_vColor, text_size = tm_font, text_halign = text.align_right, bgcolor = color.new(color.black, 100))

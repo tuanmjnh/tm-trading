@@ -1,0 +1,72 @@
+// =============================================================================
+//  L1 - CORE UTILITIES  (ATR/ATR%, Volume VSA, RelVol, OBV, EMA, pivots, session)
+// =============================================================================
+
+// f_clamp / f_fmtPx / f_isNewDay - shared (pine/shared/common.pine)
+// --- Volatility ---------------------------------------------------------------
+x2_atr    = ta.atr(x2_atrLen)
+x2_atrPct = x2_atr / close * 100.0
+
+// --- Volume engine (VSA buckets, RelVol, TIM) ---------------------------------
+x2_vol   = nz(volume)
+x2_volMA = ta.rma(x2_vol, x2_vol_maLen)
+x2_volSessOk = not x2_vol_sessOn or f_sessionOk(x2_vol_sess, x2_vol_tz)
+x2_volEvtOk  = (x2_vol_min <= 0.0 or x2_vol >= x2_vol_min) and x2_volSessOk
+x2_volRatio  = not na(x2_volMA) and x2_volMA > 0.0 ? x2_vol / x2_volMA : 0.0
+x2_volBucket = f_vsaName(x2_vol, x2_volMA, x2_vol_spikeR, x2_vol_rVH, x2_vol_rH, x2_vol_rN, x2_vol_rL)
+x2_isTimRaw  = not na(x2_volMA) and x2_volMA > 0.0 and x2_vol >= x2_volMA * x2_vol_spikeR
+x2_isTim     = x2_isTimRaw and x2_volEvtOk
+x2_timCount  = math.sum(x2_isTim ? 1.0 : 0.0, x2_vol_purWin)
+
+// RelVolume (volume hien tai / TB volume cua so) - v2 §2
+x2_volSma20 = ta.sma(x2_vol, x2_rvLen)
+x2_relVol   = not na(x2_volSma20) and x2_volSma20 > 0.0 ? x2_vol / x2_volSma20 : 0.0
+
+// OBV (On-Balance Volume) - v2 §2, tinh thu cong vi ta.obv KHONG co trong Pine v6
+var float x2_obv = 0.0
+x2_obv := x2_obv + (close > close[1] ? x2_vol : close < close[1] ? -x2_vol : 0.0)
+// OBV slope via an array window - NOT series[offset]. A deep unbounded offset
+// trips RE10143 ("historical offset beyond the buffer's limit", e.g. 341 > 340)
+// on late/realtime bars; the array always carries exactly the needed history.
+var array<float> x2_obvHist    = array.new<float>()
+var int          x2_obvHistBar = -1
+if x2_obvHistBar != bar_index
+    array.push(x2_obvHist, x2_obv)
+    x2_obvHistBar := bar_index
+while array.size(x2_obvHist) > x2_obvLen + 2
+    array.shift(x2_obvHist)
+int   x2_obvLag  = array.size(x2_obvHist) - 1 - x2_obvLen
+float x2_obvPrev = na
+if x2_obvLag >= 0
+    x2_obvPrev := array.get(x2_obvHist, x2_obvLag)
+x2_obvSlope = x2_obv - nz(x2_obvPrev)
+
+// --- Trend stack (EMA 20/50/200) - v2 §2 ---------------------------------------
+x2_emaF = ta.ema(close, x2_emaFast)
+x2_emaM = ta.ema(close, x2_emaMid)
+x2_emaS = ta.ema(close, x2_emaSlow)
+x2_emaStackBull = x2_emaF > x2_emaM and x2_emaM > x2_emaS
+x2_emaStackBear = x2_emaF < x2_emaM and x2_emaM < x2_emaS
+
+// --- Candle metrics (dung chung cho candle + displacement + OB) ----------------
+x2_body    = math.abs(close - open)
+x2_range   = math.max(high - low, syminfo.mintick)
+x2_hiWick  = high - math.max(close, open)
+x2_loWick  = math.min(close, open) - low
+x2_bullBar = close > open
+x2_bearBar = close < open
+x2_dispBull = x2_body >= x2_cp_dispAtr * x2_atr and x2_hiWick < x2_body * 0.3
+x2_dispBear = x2_body >= x2_cp_dispAtr * x2_atr and x2_loWick < x2_body * 0.3
+
+// --- Pivots / swing extremes ---------------------------------------------------
+x2_pivH = ta.pivothigh(high, x2_ms_swLen, x2_ms_swLen)
+x2_pivL = ta.pivotlow(low,   x2_ms_swLen, x2_ms_swLen)
+x2_swingLo = ta.lowest(low,  x2_sl_swing)
+x2_swingHi = ta.highest(high, x2_sl_swing)
+
+// --- Session engine (Asia / London / NY / Overlap) - shared f_sess* (common.pine) ---
+x2_sessAsia    = f_sessAsia(x2_sessTz)
+x2_sessLondon  = f_sessLondon(x2_sessTz)
+x2_sessNy      = f_sessNy(x2_sessTz)
+x2_sessOverlap = x2_sessLondon and x2_sessNy
+x2_sessScore   = x2_sessOverlap ? 1.0 : x2_sessNy ? 0.8 : x2_sessLondon ? 0.6 : x2_sessAsia ? 0.2 : 0.0

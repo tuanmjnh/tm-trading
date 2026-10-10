@@ -1,0 +1,137 @@
+// =============================================================================
+//  L11 - VISUALIZATION
+// =============================================================================
+
+// Entry markers
+plotshape(xau_showViz and xau_showSig and xau_evEntry and xau_posDir == 1,  title = "LONG",  style = shape.triangleup,   location = location.belowbar, color = xau_cBull, size = size.small, text = "L", textcolor = xau_cBull, force_overlay = true)
+plotshape(xau_showViz and xau_showSig and xau_evEntry and xau_posDir == -1, title = "SHORT", style = shape.triangledown, location = location.abovebar, color = xau_cBear, size = size.small, text = "S", textcolor = xau_cBear, force_overlay = true)
+
+// TP/SL hit labels
+if xau_showViz and xau_showHit and xau_evTp == 1
+    label.new(bar_index, xau_posTp1, "TP1+", style = label.style_label_left, color = color.new(xau_cBull, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if xau_showViz and xau_showHit and xau_evTp == 2
+    label.new(bar_index, xau_posTp2, "TP2+", style = label.style_label_left, color = color.new(xau_cBull, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if xau_showViz and xau_showHit and xau_evTp == 3
+    label.new(bar_index, xau_posTp3, "TP3+", style = label.style_label_left, color = color.new(xau_cBull, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if xau_showViz and xau_showHit and xau_evSl
+    label.new(bar_index, xau_posSl,  "SL-",  style = label.style_label_left, color = color.new(xau_cBear, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+
+// Active position zone boxes
+var box  bxSl    = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(color.gray, 60),  bgcolor = color.new(color.gray, 88),  force_overlay = true)
+var box  bxTp1   = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(xau_cBull, 50),   bgcolor = color.new(xau_cBull, 90),   force_overlay = true)
+var box  bxTp2   = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(xau_cBull, 60),   bgcolor = color.new(xau_cBull, 93),   force_overlay = true)
+var box  bxTp3   = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(xau_cBull, 70),   bgcolor = color.new(xau_cBull, 95),   force_overlay = true)
+var line lnEntry = line.new(bar_index, 0.0, bar_index + 1, 0.0, color = color.new(color.silver, 30), style = line.style_dashed, force_overlay = true)
+var label lbInfo = label.new(bar_index, 0.0, "", style = label.style_label_left, color = color.new(color.gray, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+
+int   xau_right = xau_posDir != 0 and not na(xau_posBar) ? xau_posBar + xau_zoneLen : bar_index + 1
+color xau_base  = xau_posDir == 1 ? xau_cBull : xau_cBear
+
+if xau_showViz and xau_showZone and xau_posDir != 0 and not na(xau_posBar)
+    box.set_lefttop(bxSl,  xau_posBar, math.max(xau_posEntry, xau_posSl))
+    box.set_rightbottom(bxSl, xau_right, math.min(xau_posEntry, xau_posSl))
+    box.set_lefttop(bxTp1, xau_posBar, math.max(xau_posEntry, xau_posTp1))
+    box.set_rightbottom(bxTp1, xau_right, math.min(xau_posEntry, xau_posTp1))
+    box.set_lefttop(bxTp2, xau_posBar, math.max(xau_posEntry, xau_posTp2))
+    box.set_rightbottom(bxTp2, xau_right, math.min(xau_posEntry, xau_posTp2))
+    box.set_lefttop(bxTp3, xau_posBar, math.max(xau_posEntry, xau_posTp3))
+    box.set_rightbottom(bxTp3, xau_right, math.min(xau_posEntry, xau_posTp3))
+    line.set_xy1(lnEntry, xau_posBar, xau_posEntry)
+    line.set_xy2(lnEntry, xau_right,  xau_posEntry)
+    label.set_xy(lbInfo, xau_right, xau_posTp3)
+    string posLabel = (xau_posDir == 1 ? "LONG" : "SHORT") + "\nE " + f_fmtPx(xau_posEntry) + "\nSL " + f_fmtPx(xau_posSl) + "\nTP3 " + f_fmtPx(xau_posTp3)
+    label.set_text(lbInfo, posLabel)
+    label.set_color(lbInfo, color.new(xau_base, 10))
+else
+    box.set_lefttop(bxSl,  bar_index, na)
+    box.set_rightbottom(bxSl,  bar_index, na)
+    box.set_lefttop(bxTp1, bar_index, na)
+    box.set_rightbottom(bxTp1, bar_index, na)
+    box.set_lefttop(bxTp2, bar_index, na)
+    box.set_rightbottom(bxTp2, bar_index, na)
+    box.set_lefttop(bxTp3, bar_index, na)
+    box.set_rightbottom(bxTp3, bar_index, na)
+    line.set_xy1(lnEntry, bar_index, na)
+    line.set_xy2(lnEntry, bar_index + 1, na)
+    label.set_xy(lbInfo, bar_index, na)
+    label.set_text(lbInfo, "")
+
+// HTF EMA trend line
+plot(xau_showViz and xau_showEma and not na(htf_ema) ? htf_ema : na, "HTF EMA", color = color.new(color.yellow, 40), linewidth = 1, style = plot.style_linebr, force_overlay = true)
+
+// Volume pane - VSA 6 bucket, dong bo TM VSA Wyckoff
+xau_volCol = f_vsaColor(xau_vol, xau_volMA, xau_vol_spikeR, xau_vol_rVH, xau_vol_rH, xau_vol_rN, xau_vol_rL)
+plot(xau_showViz and xau_showVol ? xau_vol : na,   "Volume",    color = xau_volCol, style = plot.style_columns, format = format.volume)
+plot(xau_showViz and xau_vol_showMA ? xau_volMA : na, "Volume MA", color = color.new(color.green, 0), linewidth = 1, format = format.volume)
+
+// =============================================================================
+//  DASHBOARD
+// =============================================================================
+
+var table xau_tbl = na
+if xau_showViz and xau_showDash and na(xau_tbl)
+    xau_tbl := table.new(position.top_right, 2, 17, border_width = 1, border_color = color.new(color.gray, 70), force_overlay = true)
+
+xau_font = xau_dashSize == "Tiny" ? size.tiny : xau_dashSize == "Small" ? size.small : size.normal
+
+if not na(xau_tbl) and barstate.islast
+    color kC = color.new(color.gray, 10)
+    color vC = color.silver
+    color bg = color.new(color.black, 100)
+    table.clear(xau_tbl, 0, 0, 1, 16)
+
+    table.cell(xau_tbl, 0,  0, "TM XAU  " + syminfo.ticker,  text_color = color.orange, text_size = xau_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(xau_tbl, 1,  0, timeframe.period + "m",        text_color = vC,           text_size = xau_font, text_halign = text.align_right, bgcolor = bg)
+
+    color sCol = xau_score100 <= xau_scr_noTrade ? color.gray : xau_dir == 1 ? xau_cBull : xau_cBear
+    table.cell(xau_tbl, 0,  1, "Score",                       text_color = kC,   text_size = xau_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(xau_tbl, 1,  1, str.tostring(xau_score100) + " / " + xau_quality, text_color = sCol, text_size = xau_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(xau_tbl, 0,  2, "Huong",                       text_color = kC,   text_size = xau_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(xau_tbl, 1,  2, xau_dir == 1 ? "LONG" : xau_dir == -1 ? "SHORT" : "-", text_color = xau_dir == 1 ? xau_cBull : xau_dir == -1 ? xau_cBear : color.gray, text_size = xau_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(xau_tbl, 0,  3, "Structure",                   text_color = kC,   text_size = xau_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(xau_tbl, 1,  3, ms_trend == 1 ? "Bullish" : ms_trend == -1 ? "Bearish" : "Ranging", text_color = ms_trend == 1 ? xau_cBull : ms_trend == -1 ? xau_cBear : color.gray, text_size = xau_font, text_halign = text.align_right, bgcolor = bg)
+
+    bool anyBos   = ms_bosUp or ms_bosDown
+    bool anyChoch = ms_chochUp or ms_chochDown
+    table.cell(xau_tbl, 0,  4, "BOS / CHoCH",                 text_color = kC,   text_size = xau_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(xau_tbl, 1,  4, anyBos ? "BOS" : anyChoch ? "CHoCH" : "-", text_color = (ms_bosUp or ms_chochUp) ? xau_cBull : (ms_bosDown or ms_chochDown) ? xau_cBear : color.gray, text_size = xau_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(xau_tbl, 0,  5, "HTF Bias",                    text_color = kC,   text_size = xau_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(xau_tbl, 1,  5, htf_dir == 1 ? "Bull" : htf_dir == -1 ? "Bear" : "-", text_color = htf_dir == 1 ? xau_cBull : htf_dir == -1 ? xau_cBear : color.gray, text_size = xau_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(xau_tbl, 0,  6, "Liquidity",                   text_color = kC,   text_size = xau_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(xau_tbl, 1,  6, liq_sweepBull ? "Sweep+" : liq_sweepBear ? "Sweep-" : "-", text_color = liq_sweepBull ? xau_cBull : liq_sweepBear ? xau_cBear : color.gray, text_size = xau_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(xau_tbl, 0,  7, "PDH / PDL",                   text_color = kC,   text_size = xau_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(xau_tbl, 1,  7, f_fmtPx(xau_pdh) + " / " + f_fmtPx(xau_pdl), text_color = vC, text_size = xau_font, text_halign = text.align_right, bgcolor = bg)
+
+    string cpLabel = cp_dispBull ? "Displacement+" : cp_dispBear ? "Displacement-" : cp_bullEng ? "Engulf+" : cp_bearEng ? "Engulf-" : cp_bullPin ? "Pin+" : cp_bearPin ? "Pin-" : "-"
+    table.cell(xau_tbl, 0,  8, "Candle",                      text_color = kC,   text_size = xau_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(xau_tbl, 1,  8, cpLabel, text_color = cp_score > 0 ? xau_cBull : cp_score < 0 ? xau_cBear : color.gray, text_size = xau_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(xau_tbl, 0,  9, "Volume / Bucket",             text_color = kC,   text_size = xau_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(xau_tbl, 1,  9, str.tostring(vol_ratio, "#.##") + "x / " + xau_volBucket, text_color = vol_spike ? color.purple : vC, text_size = xau_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(xau_tbl, 0, 10, "TIM / " + str.tostring(xau_vol_purWin), text_color = kC, text_size = xau_font, text_halign = text.align_left, bgcolor = bg)
+    table.cell(xau_tbl, 1, 10, str.tostring(xau_timCount, "#.0") + (xau_vol_sessOn ? (xau_volSessOk ? " / Trong phien" : " / Ngoai phien") : ""), text_color = vol_spike ? color.purple : vC, text_size = xau_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(xau_tbl, 0, 11, "RSI",                         text_color = kC,   text_size = xau_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(xau_tbl, 1, 11, str.tostring(xau_rsi, "#.#"),  text_color = xau_rsi < xau_rsi_os ? xau_cBull : xau_rsi > xau_rsi_ob ? xau_cBear : vC, text_size = xau_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(xau_tbl, 0, 12, "ATR",                         text_color = kC,   text_size = xau_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(xau_tbl, 1, 12, f_fmtPx(xau_atr),             text_color = vC,   text_size = xau_font, text_halign = text.align_right, bgcolor = bg)
+
+    string sessLabel = f_sessName(sess_asia, sess_london, sess_ny)
+    table.cell(xau_tbl, 0, 13, "Session",                     text_color = kC,   text_size = xau_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(xau_tbl, 1, 13, sessLabel, text_color = sess_overlap ? color.orange : sess_ny ? color.yellow : vC, text_size = xau_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(xau_tbl, 0, 14, "Vi the",                      text_color = kC,   text_size = xau_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(xau_tbl, 1, 14, xau_posDir == 1 ? "LONG" : xau_posDir == -1 ? "SHORT" : "-", text_color = xau_posDir == 1 ? xau_cBull : xau_posDir == -1 ? xau_cBear : color.gray, text_size = xau_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(xau_tbl, 0, 15, "Lenh hom nay",                text_color = kC,   text_size = xau_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(xau_tbl, 1, 15, str.tostring(xau_dayCount) + " / " + str.tostring(xau_maxDay), text_color = vC, text_size = xau_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(xau_tbl, 0, 16, "W / L",                       text_color = kC,   text_size = xau_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(xau_tbl, 1, 16, str.tostring(xau_statWins) + " / " + str.tostring(xau_statLosses), text_color = xau_statTrades > 0 and xau_statWins * 100 / xau_statTrades >= 50 ? xau_cBull : color.gray, text_size = xau_font, text_halign = text.align_right, bgcolor = bg)

@@ -76,7 +76,11 @@ tm_flt_sess   = input.session("0800-1600", "Phien", group = "TM · Bo loc", disp
 // Pine KHONG co input.timezone(). Dung input.string voi danh sach moc gio de chon.
 // Luu y: `options` phai nam tren MOT DONG - tach nhieu dong se lam Pine parse sai
 // mang const va bao loi CE10156.
-tm_flt_tz     = input.string("Asia/Ho_Chi_Minh", "Mui gio", options = ["Asia/Ho_Chi_Minh", "Asia/Singapore", "Asia/Tokyo", "Asia/Bangkok", "UTC", "Europe/London", "America/New_York", "America/Los_Angeles"], group = "TM · Bo loc", display = display.data_window)
+// CO 2 NHOM MUI GIO (ca 2 deu chuyen vao time() tuong minh, KHONG doc chart timezone):
+//  - "Múi giờ phiên của bạn" (mac dinh Asia/Ho_Chi_Minh): loc khung gio giao dich 0800-1600 cua ban.
+//  - "Múi giờ thị trường (NY)" (mac dinh America/New_York): nhan dien phien A/London/NY (f_sess*).
+// Doi cai dat chart TradingView sang UTC+7 chi anh huong HIENTHI truc thoi gian, khong doi tinh toan.
+tm_flt_tz     = input.string("Asia/Ho_Chi_Minh", "Múi giờ phiên của bạn", options = ["Asia/Ho_Chi_Minh", "Asia/Singapore", "Asia/Tokyo", "Asia/Bangkok", "UTC", "Europe/London", "America/New_York", "America/Los_Angeles"], group = "TM · Bo loc", display = display.data_window)
 
 tm_flt_volOn  = input.bool(false, "Loc bien do (ATR toi thieu)", group = "TM · Bo loc", display = display.data_window)
 tm_flt_volMin = input.float(0.2, "ATR toi thieu % gia", minval = 0.0, step = 0.05, group = "TM · Bo loc", display = display.data_window)
@@ -114,13 +118,22 @@ tm_trailAtr   = input.float(1.2, "Trailing = ATR × hệ số", minval = 0.1, st
 tm_maxHold    = input.int(200, "Đóng vị thế sau (nến)", minval = 5, group = "TM · Risk / TP / SL", display = display.data_window)
 
 // -----------------------------------------------------------------------------
+//  SESSION - moc gio cho dashboard (chuan parts-xau/80_viz.pine)
+// -----------------------------------------------------------------------------
+tm_sessTz   = input.string("America/New_York", "Múi giờ thị trường (NY)", options = ["America/New_York", "Europe/London", "Asia/Ho_Chi_Minh", "Asia/Tokyo", "UTC"], group = "TM · Session", display = display.data_window)
+
+// -----------------------------------------------------------------------------
 //  HIEN THI
 // -----------------------------------------------------------------------------
+tm_showViz  = input.bool(true, "Tắt toàn bộ hiển thị (master)", group = "TM · Hien thi", display = display.data_window)
 tm_cBull     = input.color(color.new(#089981, 0), "Màu BUY", group = "TM · Hien thi", inline = "clr", display = display.data_window)
 tm_cBear     = input.color(color.new(#f23645, 0), "Màu SELL", group = "TM · Hien thi", inline = "clr", display = display.data_window)
+tm_showSig   = input.bool(true, "Nhan BUY/SELL", group = "TM · Hien thi", display = display.data_window)
 tm_showZone  = input.bool(true, "Vẽ vùng TP/SL", group = "TM · Hien thi", display = display.data_window)
 tm_zoneLen   = input.int(20, "Độ dài vùng (nến)", minval = 1, maxval = 200, group = "TM · Hien thi", display = display.data_window)
 tm_showHist  = input.bool(true, "Giữ lịch sử plan đã đóng", group = "TM · Hien thi", display = display.data_window)
 tm_keepPlans = input.int(10, "Số lệnh quá khứ vẽ lại", minval = 0, maxval = 50, group = "TM · Hien thi", display = display.data_window, tooltip = "So lenh da dong duoc ve lai tren chart (box tu lenh den thoat + nhan R). 0 = tat lich su.")
+tm_showVol   = input.bool(true, "Histogram Volume", group = "TM · Hien thi", display = display.data_window)
+tm_showVolMA = input.bool(true, "Volume MA", group = "TM · Hien thi", display = display.data_window)
 tm_showDash  = input.bool(true, "Dashboard", group = "TM · Hien thi", display = display.data_window)
 tm_dashSize  = input.string("Small", "Kích thước", options = ["Tiny", "Small", "Normal"], group = "TM · Hien thi", display = display.data_window)

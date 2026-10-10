@@ -1,0 +1,96 @@
+// =============================================================================
+//  L8 - SCORING ENGINE (0-100) + L9 RISK ENGINE
+//  11 nhom trong so tong 100. Moi nhom la AVERAGE cua cac chi so ben trong
+//  (khong tinh trung lap correlated - v2 §2). Tat ca trong so configurable.
+// =============================================================================
+
+// Nhom Score rieng (truoc khi nhan trong so) - moi nhom [-1, +1]
+float x2_gTrend = x2_trendScore
+float x2_gStruct = (x2_bosUp or x2_chochUp or x2_mssUp) ? 1.0 : (x2_bosDown or x2_chochDown or x2_mssDown) ? -1.0 : float(x2_trend) * 0.5
+float x2_gLiq = x2_sweepBull ? 1.0 : x2_sweepBear ? -1.0 : x2_retestBull ? 0.7 : x2_retestBear ? -0.7 : 0.0
+float x2_gLoc = x2_locationScore
+float x2_gSr = f_nearSupport(sr_zones, x2_atr) ? 1.0 : f_nearResistance(sr_zones, x2_atr) ? -1.0 : x2_nearFvgBull and not x2_nearFvgBear ? 1.0 : x2_nearFvgBear and not x2_nearFvgBull ? -1.0 : 0.0
+float x2_gCandle = x2_cpScore
+float x2_gVolume = x2_volumeScore
+float x2_gVol = x2_atrRegime * (close >= open ? 1.0 : -1.0) * 0.5 + x2_volScore * 0.5
+float x2_gMom = x2_momScore
+float x2_gSess = x2_sessScore * (close >= open ? 1.0 : -1.0)
+float x2_gMtf = x2_gMtfBias
+
+float x2_wTotal = x2_w_trend + x2_w_struct + x2_w_liq + x2_w_loc + x2_w_sr + x2_w_candle + x2_w_vol + x2_w_atr + x2_w_mom + x2_w_sess + x2_w_mtf
+
+float x2_wSum = x2_w_trend * x2_gTrend + x2_w_struct * x2_gStruct + x2_w_liq * x2_gLiq + x2_w_loc * x2_gLoc + x2_w_sr * x2_gSr + x2_w_candle * x2_gCandle + x2_w_vol * x2_gVolume + x2_w_atr * x2_gVol + x2_w_mom * x2_gMom + x2_w_sess * x2_gSess + x2_w_mtf * x2_gMtf
+
+float x2_rawScore = x2_wTotal > 0.0 ? f_clamp(x2_wSum / x2_wTotal, -1.0, 1.0) : 0.0
+float x2_score100 = math.round(50 + x2_rawScore * 50)
+int   x2_dir      = x2_rawScore > 0.0 ? 1 : x2_rawScore < 0.0 ? -1 : 0
+
+string x2_quality = x2_score100 <= x2_scr_noTrade ? "NO TRADE" : x2_score100 <= x2_scr_weak ? "WEAK" : x2_score100 <= x2_scr_setup ? "SETUP" : x2_score100 <= x2_scr_strong ? "STRONG" : "A+"
+
+// --- MTF gates (v2 §4): LTF khong duoc override HTF -----------------------------
+// Setup TF chi la bo loc; Context nguoc huong -> VETO (chan lenh), ro rang hon
+// mot cai "lang" vao diem so.
+bool x2_okSetup = not x2_htfFilter or x2_setupDir == 0 or x2_setupDir == x2_dir
+bool x2_htfVeto = x2_htfVetoOn and x2_ctxDir != 0 and x2_dir != 0 and x2_ctxDir != x2_dir
+bool x2_okMtf = x2_okSetup and not x2_htfVeto
+
+// =============================================================================
+//  L9 - RISK ENGINE  (Entry/SL/TP plan + gate logic)
+// =============================================================================
+
+type X2Plan
+    bool  valid
+    int   dir
+    float entry
+    float sl
+    float tp1
+    float tp2
+    float tp3
+    float risk
+    float rr1
+
+f_buildX2Plan(int dir) =>
+    float a      = x2_atr
+    float entry  = close
+    bool  atrOk  = not na(a) and a > 0.0
+
+    float pad    = a * x2_sl_padAtr
+    float swing  = dir == 1 ? nz(x2_swingLo, low) : nz(x2_swingHi, high)
+    float sDist  = dir == 1 ? (entry - swing) + pad : (swing - entry) + pad
+    float aDist  = a * x2_sl_atrMul
+    float base   = (aDist + sDist) * 0.5
+    float dist   = f_clamp(nz(base, aDist), a * x2_sl_minAtr, math.max(a * x2_sl_maxAtr, a * x2_sl_minAtr))
+
+    float sl     = entry - dir * dist
+    float risk   = dist
+
+    float rr2    = math.max(x2_rr2, x2_rr1)
+    float rr3    = math.max(x2_rr3, rr2)
+
+    bool  dirOk  = dir != 0
+    bool  slOk   = dist > 0.0 and (dir == 1 ? sl < entry : sl > entry)
+    bool  rrOk   = x2_rrMin <= 0.0 or x2_rr1 >= x2_rrMin
+    bool  valid  = atrOk and dirOk and slOk and rrOk
+
+    float tp1    = entry + dir * x2_rr1 * risk
+    float tp2    = entry + dir * rr2     * risk
+    float tp3    = entry + dir * rr3     * risk
+
+    X2Plan.new(valid, dir, entry, sl, tp1, tp2, tp3, risk, x2_rr1)
+
+x2_plan = f_buildX2Plan(x2_dir)
+
+var int  x2_dayCount  = 0
+var int  x2_barsSince = 999999
+x2_barsSince += 1
+
+if f_isNewDay()
+    x2_dayCount := 0
+
+bool x2_okBar    = x2_confirmOnly ? barstate.isconfirmed : true
+bool x2_okCool   = x2_barsSince >= x2_coolBars
+bool x2_okDay    = x2_dayCount < x2_maxDay
+bool x2_okScore  = x2_score100 > x2_scr_noTrade
+bool x2_okDir    = x2_dir != 0
+bool x2_okFilter = x2_okMtf and x2_okCool and x2_okDay and x2_okScore and x2_okDir
+bool x2_signal   = x2_plan.valid and x2_okFilter

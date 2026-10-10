@@ -1,0 +1,31 @@
+{
+  "trade": {
+    "orders": "Orders",
+    "ordersMongoDown": "MongoDB unavailable — orders list may be stale",
+    "ordersLive": "Live",
+    "ordersEmpty": "No orders yet",
+    "ordersError": "Error loading orders",
+    "ordersCancel": "Cancel",
+    "ordersCancelOk": "Order cancelled successfully",
+    "ordersCancelFailed": "Failed to cancel order",
+    "sides": {
+      "buy": "Buy",
+      "sell": "Sell"
+    },
+    "fills": "Fills",
+    "fillsMongoDown": "MongoDB unavailable — fills list may be stale",
+    "fillsEmpty": "No fills yet",
+    "fillsError": "Error loading fills",
+    "fillsLatency": "Latency",
+    "orderStatus": {
+      "created": "Created",
+      "riskChecked": "Risk Checked",
+      "pending": "Pending",
+      "partiallyFilled": "Partially Filled",
+      "filled": "Filled",
+      "cancelled": "Cancelled",
+      "expired": "Expired",
+      "rejected": "Rejected"
+    }
+  }
+}

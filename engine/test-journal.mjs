@@ -140,8 +140,18 @@ check('exit not on a level -> result unknown while R is still computed', e3.resu
 check('provided method is kept', e3.method === 'vsa' && !e3.unknown.includes('method'))
 
 const e4 = fromPosition({ ...pos, paramsHash: 'deadbeef', engineVersion: '0.5.0' }, { alert })
-check('stamps already on the row are kept as-is', e4.paramsHash === 'deadbeef' && e4.engineVersion === '0.5.0')
-check('explicit stamps from the caller only fill the gap', fromPosition(pos, { alert, engineVersion: '0.5.0', paramsHash: 'aa' }).paramsHash === 'aa')
+check('LEGACY top-level stamps already on the row are kept as-is', e4.paramsHash === 'deadbeef' && e4.engineVersion === '0.5.0')
+// §10.3: the new writer stores the stamp NESTED (positions.stamp.*).
+const e4b = fromPosition({ ...pos, stamp: { engineVersion: '0.5.0', paramsHash: 'cafe', kind: 'declared', params: null, since: null } }, { alert })
+check('nested positions.stamp (§10.3) is the stamp the journal reads', e4b.engineVersion === '0.5.0' && e4b.paramsHash === 'cafe' && !e4b.unknown.includes('paramsHash'))
+// §10.3.1: NO caller-side declaration — the writer is the only source of truth.
+const e4c = fromPosition(pos, { alert, engineVersion: '0.5.0', paramsHash: 'aa' })
+check('a caller CANNOT stamp a row (declaration lives only at open time)', e4c.paramsHash === UNKNOWN && e4c.engineVersion === UNKNOWN)
+// §10.3.2: the executor recorded the exit reason ON the position.
+const e4d = fromPosition({ ...pos, exitPrice: 93.4, exitReason: 'data:sl' }, { alert })
+check('positions.exitReason (§10.3.2) drives the result, not price guessing', e4d.result === 'SL', e4d.result)
+const e4e = fromPosition({ ...pos, exitPrice: 93.4 }, { alert })
+check('without a recorded reason the levels decide (gap fill -> unknown)', e4e.result === UNKNOWN)
 
 let noSymbol = false
 try { fromPosition({ ...pos, symbol: null }) } catch { noSymbol = true }
@@ -260,9 +270,9 @@ check('loadJournal reports the skipped corrupt line as a warning', loaded.warnin
 section('11. syncJournal — positions -> journal without a database')
 
 const syncFile = join(tmp, 'sync.ndjson')
-const posA = { ...pos, externalId: 'tm-sync-0' }
+const posA = { ...pos, externalId: 'tm-sync-0', stamp: { engineVersion: '0.5.0', paramsHash: 'aaa', kind: 'declared', params: null, since: null } }
 const posB = { ...pos, _id: 'p2', externalId: 'tm-sync-1', exitPrice: 95, pnlAbs: -5, pnlPct: -5 }
-const syn = await syncJournal({ mongo: false, file: syncFile, positions: [posA, posB, { _id: 'broken' }], alerts: [alert], regimeSnapshots: snaps, engineVersion: '0.5.0', paramsHash: 'aaa' })
+const syn = await syncJournal({ mongo: false, file: syncFile, positions: [posA, posB, { _id: 'broken' }], alerts: [alert], regimeSnapshots: snaps })
 check('scanned/entries counted', syn.scanned === 3 && syn.entries === 2, JSON.stringify({ scanned: syn.scanned, entries: syn.entries }))
 check('unusable position reported with a reason', syn.skipped.length === 1 && /symbol is required/.test(syn.skipped[0].reason), JSON.stringify(syn.skipped))
 check('NDJSON mirror written (always, even with Mongo off)', syn.ndjson === 2 && syn.mongo === false)
@@ -270,7 +280,12 @@ check('Mongo-unavailable is announced, not hidden', syn.warnings.some((w) => /ND
 const syn2 = await syncJournal({ mongo: false, file: syncFile, positions: [posA, posB], alerts: [alert], regimeSnapshots: snaps })
 check('re-sync is a no-op on the file store', syn2.ndjson === 0 && syn2.warnings.some((w) => /already present/.test(w)), JSON.stringify(syn2.warnings))
 const reRead = await loadJournal({ file: syncFile, mongo: false })
-check('declared stamps are applied where the position had none', reRead.entries.every((e) => e.engineVersion === '0.5.0' && e.paramsHash === 'aaa'))
+// NDJSON round-trip preserves `key` (the identity) but not the raw sourceId
+// field, so rows are matched by their derived journalKey here.
+const stampedRow = reRead.entries.find((e) => e.key === journalKey({ account: 'paper', source: 'paper', externalId: 'tm-sync-0' }))
+check('the position\'s OWN nested stamp survives the sync (§10.3)', stampedRow && stampedRow.engineVersion === '0.5.0' && stampedRow.paramsHash === 'aaa')
+const unstampedRowSync = reRead.entries.find((e) => e.key === journalKey({ account: 'paper', source: 'paper', externalId: 'tm-sync-1' }))
+check('a position with no stamp stays unknown — never invented (§10.3.1)', unstampedRowSync && unstampedRowSync.engineVersion === UNKNOWN && unstampedRowSync.paramsHash === UNKNOWN)
 check('derived R survives the round trip', reRead.entries.filter((e) => e.rMultiple === 2).length === 1)
 // Strict callers must be told the truth — checked with MONGODB_URI cleared so
 // this test can NEVER reach a real database even if the shell exports one.

@@ -40,7 +40,7 @@ interface ProviderItem {
   connection: ConnectionView | null
 }
 
-const { hubFetch, appId } = useHub()
+const { hubFetch, appId, hubUrl } = useHub()
 const targetApp = ref(appId || '')
 const loading = ref(false)
 const providers = ref<ProviderItem[]>([])
@@ -100,27 +100,82 @@ async function refresh() {
 watch(targetApp, () => refresh(), { immediate: true })
 
 async function connectOAuth(p: ProviderItem) {
-  const url = `/api/v1/oauth/${encodeURIComponent(p.key)}/auth`
-  const popup = window.open('', 'tmhub-oauth', 'width=540,height=680,noopener=no')
-  if (!popup) {
-    notify.error(t('connections.popup_blocked'))
-    return
-  }
+  // OAuth flow: get URL first, then open in popup.
+  // Do NOT check popup.closed - CoOP blocks cross-origin access and
+  // the popup often closes before the OAuth callback finishes storing the token.
+  let popup: Window | null = null
+
   try {
+    const url = `/api/v1/oauth/${encodeURIComponent(p.key)}/auth`
     const res = await hubFetch<{ success: boolean, data: { authUrl: string } }>(url, {
       method: 'POST',
       body: { app_id: targetApp.value }
     })
-    if (popup.closed) return
-    popup.location.href = res.data.authUrl
+    const authUrl = res.data?.authUrl
+    if (!authUrl) {
+      notify.error(t('connections.test_fail') + ': No auth URL returned')
+      return
+    }
+
+    popup = window.open(authUrl, 'tmhub-oauth', 'width=540,height=680')
+    if (!popup) {
+      notify.error(t('connections.popup_blocked'))
+      return
+    }
   } catch (err) {
     notify.error(getErrorMessage(err, key => t(key)))
-    try { popup.close() } catch { /* ignore */ }
+    return
   }
+
+  let isFinished = false
+  let pollAttempts = 0
+  // Poll for up to 3 minutes (120 * 1500ms) to allow full OAuth round-trip
+  const maxAttempts = 120
+
+  const cleanup = () => {
+    isFinished = true
+    clearInterval(pollTimer)
+    // Popup closes itself via the callback page (setTimeout window.close)
+    // Do NOT call popup.close() here - CoOP blocks cross-origin close
+  }
+
+  // Poll for connection status directly from TM-Hub.
+  // This is the PRIMARY mechanism - do not stop early when popup closes,
+  // because the popup closes before the OAuth callback stores the token.
+  const pollTimer = setInterval(async () => {
+    if (isFinished || !targetApp.value) return
+    pollAttempts++
+
+    try {
+      const res = await hubFetch<{ success: boolean, data: ProviderItem[] }>(
+        `/api/v1/apps/${encodeURIComponent(targetApp.value)}/connections`
+      )
+      const current = res.data?.find(item => item.key === p.key)
+      if (current?.connection?.status === 'connected') {
+        cleanup()
+        providers.value = res.data || []
+        notify.success(t('connections.saved'))
+        return
+      }
+    } catch {
+      // retry
+    }
+
+    // Only stop when max attempts reached (popup closing is NOT a stop condition)
+    if (pollAttempts >= maxAttempts) {
+      cleanup()
+      refresh()
+    }
+  }, 1500)
 }
 
 function onOAuthMessage(event: MessageEvent) {
-  if (event.origin !== window.location.origin) return
+  const allowedOrigins = [window.location.origin]
+  try {
+    if (hubUrl) allowedOrigins.push(new URL(hubUrl).origin)
+  } catch { /* ignore */ }
+  if (!allowedOrigins.includes(event.origin)) return
+
   const data = event.data as { type?: string, status?: string, reason?: string } | null
   if (!data || data.type !== 'tm-hub-oauth') return
   if (data.status === 'connected') {
@@ -132,8 +187,23 @@ function onOAuthMessage(event: MessageEvent) {
   }
 }
 
-onMounted(() => window.addEventListener('message', onOAuthMessage))
-onUnmounted(() => window.removeEventListener('message', onOAuthMessage))
+let bc: BroadcastChannel | null = null
+onMounted(() => {
+  window.addEventListener('message', onOAuthMessage)
+  try {
+    bc = new BroadcastChannel('tm-hub-oauth')
+    bc.onmessage = (event) => {
+      if (event.data?.type === 'tm-hub-oauth' && event.data?.status === 'connected') {
+        notify.success(t('connections.saved'))
+        refresh()
+      }
+    }
+  } catch { /* ignore */ }
+})
+onUnmounted(() => {
+  window.removeEventListener('message', onOAuthMessage)
+  try { bc?.close() } catch { /* ignore */ }
+})
 
 function openManual(p: ProviderItem) {
   manualProvider.value = p

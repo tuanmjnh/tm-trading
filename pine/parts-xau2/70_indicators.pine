@@ -1,0 +1,46 @@
+// =============================================================================
+//  L6 - TECHNICAL INDICATOR ENGINE  (v2 §2)
+//  Nhom theo chuc nang: Trend / Momentum / Volatility / Volume / Location.
+//  Nguyen tac: chi so CORRELATED duoc AVERAGE ben trong nhom - KHONG tinh
+//  trung lap nhu xac nhan doc lap (v2 §2).
+// =============================================================================
+
+// --- Momentum: RSI + MACD + DMI/ADX --------------------------------------------
+float x2_rsi = ta.rsi(close, x2_rsiLen)
+float x2_rsiScore = x2_rsi < x2_rsiOs ? 1.0 : x2_rsi > x2_rsiOb ? -1.0 : 0.0
+
+[ x2_macdLine, x2_macdSig, x2_macdHist ] = ta.macd(close, x2_macdF, x2_macdS, x2_macdSigLen)
+float x2_macdScore = ta.crossover(x2_macdLine, x2_macdSig) ? 1.0 : ta.crossunder(x2_macdLine, x2_macdSig) ? -1.0 : x2_macdHist > 0 ? 0.5 : x2_macdHist < 0 ? -0.5 : 0.0
+
+[ x2_diPlus, x2_diMinus, x2_adx ] = ta.dmi(x2_dmiLen, x2_dmiSmooth)
+float x2_dmiScore = x2_adx >= x2_adxMin ? (x2_diPlus > x2_diMinus ? 1.0 : -1.0) : 0.0
+
+// Momentum nhom = binh quan 3 chi so (correlated - khong nhan them trong so)
+float x2_momScore = (x2_rsiScore + x2_macdScore + x2_dmiScore) / 3.0
+
+// --- Volatility: ATR regime + ATR% + Bollinger Band Width -----------------------
+float x2_atrMa = ta.sma(x2_atr, 20)
+float x2_atrRegime = x2_atr > x2_atrMa * 1.2 ? 1.0 : x2_atr < x2_atrMa * 0.8 ? 0.0 : 0.5
+[ x2_bbMid, x2_bbUp, x2_bbLo ] = ta.bb(close, x2_bbLen, x2_bbMult)
+float x2_bbWidth = (x2_bbUp - x2_bbLo) / x2_bbMid * 100.0
+float x2_bbWidthMa = ta.sma(x2_bbWidth, x2_bbLen)
+bool  x2_bbExpand = x2_bbWidth > x2_bbWidthMa
+// Volatility score: expansion KEO THEO huong gia (khong phan chieu) -> chi do do
+float x2_volScore = x2_bbExpand ? (close > open ? 0.5 : -0.5) : 0.0
+
+// --- Volume: RelVol + OBV slope + VSA bucket (da tinh o L1) ---------------------
+float x2_relVolScore = x2_relVol >= x2_rvMin ? (close > open ? 1.0 : close < open ? -1.0 : 0.0) : 0.0
+float x2_obvScore = x2_obvSlope > 0 ? 1.0 : x2_obvSlope < 0 ? -1.0 : 0.0
+float x2_vsaScore = x2_isTim ? (x2_bullBar ? 1.0 : x2_bearBar ? -1.0 : 0.0) : 0.0
+// Volume nhom = binh quan (RelVol/OBV/VSA cung doc 1 chieu so voi gia)
+float x2_volumeScore = (x2_relVolScore + x2_obvScore + x2_vsaScore) / 3.0
+
+// --- Location: VWAP + vi tri trong daily range ----------------------------------
+float x2_vwap = ta.vwap(close)
+bool  x2_vwapOk = not na(x2_vwap)
+float x2_vwapScore = x2_vwapOk ? (close > x2_vwap ? 1.0 : close < x2_vwap ? -1.0 : 0.0) : 0.0
+float x2_dayRange = not na(x2_pdh) and not na(x2_pdl) and x2_pdh > x2_pdl ? (close - x2_pdl) / (x2_pdh - x2_pdl) * 2.0 - 1.0 : 0.0
+float x2_locationScore = (x2_vwapScore + f_clamp(x2_dayRange, -1.0, 1.0)) / 2.0
+
+// --- Trend: EMA stack + diem xuong/huong tuong doi -------------------------------
+float x2_trendScore = x2_emaStackBull ? 1.0 : x2_emaStackBear ? -1.0 : (close > x2_emaF and x2_emaF > x2_emaM ? 0.5 : close < x2_emaF and x2_emaF < x2_emaM ? -0.5 : 0.0)

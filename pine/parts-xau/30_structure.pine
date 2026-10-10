@@ -1,0 +1,217 @@
+// =============================================================================
+//  L2 - MARKET STRUCTURE ENGINE
+//  Swing High/Low -> HH/HL/LH/LL -> BOS -> CHoCH
+//  All confirmed on bar[swLen] offset to prevent repainting.
+// =============================================================================
+
+var float ms_lastHigh    = na
+var float ms_prevHigh    = na
+var float ms_lastLow     = na
+var float ms_prevLow     = na
+var int   ms_lastHighBar = na
+var int   ms_lastLowBar  = na
+var int   ms_trend       = 0    // 1=bullish, -1=bearish, 0=undefined
+
+var bool ms_bosUp    = false
+var bool ms_bosDown  = false
+var bool ms_chochUp  = false
+var bool ms_chochDown = false
+
+ms_bosUp    := false
+ms_bosDown  := false
+ms_chochUp  := false
+ms_chochDown := false
+
+if not na(xau_pivH)
+    float newH = high[xau_ms_swLen]
+    if not na(ms_lastHigh)
+        if ms_trend <= 0 and close > ms_lastHigh
+            ms_bosUp  := true
+            ms_trend  := 1
+        if ms_trend < 0 and newH > ms_lastHigh
+            ms_chochUp := true
+            ms_trend   := 1
+        ms_prevHigh := ms_lastHigh
+    ms_lastHigh    := newH
+    ms_lastHighBar := bar_index - xau_ms_swLen
+
+if not na(xau_pivL)
+    float newL = low[xau_ms_swLen]
+    if not na(ms_lastLow)
+        if ms_trend >= 0 and close < ms_lastLow
+            ms_bosDown := true
+            ms_trend   := -1
+        if ms_trend > 0 and newL < ms_lastLow
+            ms_chochDown := true
+            ms_trend     := -1
+        ms_prevLow := ms_lastLow
+    ms_lastLow    := newL
+    ms_lastLowBar := bar_index - xau_ms_swLen
+
+// BOS / CHoCH labels
+if xau_showViz and xau_ms_bosOn and ms_bosUp
+    label.new(bar_index, low,  "BOS+", style = label.style_label_up,   color = color.new(xau_cBull, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if xau_showViz and xau_ms_bosOn and ms_bosDown
+    label.new(bar_index, high, "BOS-", style = label.style_label_down, color = color.new(xau_cBear, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if xau_showViz and xau_ms_chochOn and ms_chochUp
+    label.new(bar_index, low,  "CHoCH+", style = label.style_label_up,   color = color.new(xau_cBull, 0), textcolor = color.white, size = size.tiny, force_overlay = true)
+if xau_showViz and xau_ms_chochOn and ms_chochDown
+    label.new(bar_index, high, "CHoCH-", style = label.style_label_down, color = color.new(xau_cBear, 0), textcolor = color.white, size = size.tiny, force_overlay = true)
+
+// HH/HL/LH/LL classification
+ms_isHH = not na(xau_pivH) and not na(ms_prevHigh) and high[xau_ms_swLen] > ms_prevHigh
+ms_isLH = not na(xau_pivH) and not na(ms_prevHigh) and high[xau_ms_swLen] < ms_prevHigh
+ms_isHL = not na(xau_pivL) and not na(ms_prevLow)  and low[xau_ms_swLen]  > ms_prevLow
+ms_isLL = not na(xau_pivL) and not na(ms_prevLow)  and low[xau_ms_swLen]  < ms_prevLow
+
+// =============================================================================
+//  L3 - LIQUIDITY ENGINE
+//  PDH/PDL, Session Hi/Lo, Equal Hi/Lo, Sweep detection
+// =============================================================================
+
+xau_pdh = request.security(syminfo.tickerid, "D", high[1], lookahead = barmerge.lookahead_on)
+xau_pdl = request.security(syminfo.tickerid, "D", low[1],  lookahead = barmerge.lookahead_on)
+xau_pwh = request.security(syminfo.tickerid, "W", high[1], lookahead = barmerge.lookahead_on)
+xau_pwl = request.security(syminfo.tickerid, "W", low[1],  lookahead = barmerge.lookahead_on)
+
+var float liq_sessHi = na
+var float liq_sessLo = na
+bool liq_newDay = f_isNewDay()
+if liq_newDay
+    liq_sessHi := high
+    liq_sessLo := low
+else
+    liq_sessHi := math.max(nz(liq_sessHi, high), high)
+    liq_sessLo := math.min(nz(liq_sessLo, low),  low)
+
+float liq_eqThresh = xau_atr * xau_liq_eqTol
+liq_eqHi = not na(xau_pivH) and not na(ms_prevHigh) and math.abs(high[xau_ms_swLen] - ms_prevHigh) <= liq_eqThresh
+liq_eqLo = not na(xau_pivL) and not na(ms_prevLow)  and math.abs(low[xau_ms_swLen]  - ms_prevLow)  <= liq_eqThresh
+
+// Liquidity sweep: wick past key level then closes back inside
+liq_sweepBull = (low < xau_pdl and close > xau_pdl) or (liq_eqLo and low[xau_ms_swLen] < ms_prevLow and close > ms_prevLow)
+liq_sweepBear = (high > xau_pdh and close < xau_pdh) or (liq_eqHi and high[xau_ms_swLen] > ms_prevHigh and close < ms_prevHigh)
+
+// Level lines - moi loai DUONG co checkbox hien thi rieng (PD/PW/Session/Trendline)
+//  Tat = delete line NGAY; bat lai = ve lai tai bar hien tai. Chi giua ky/phien
+//  HIEN TAI (khong giu doan lich su) de so luong ve co dinh, khong keo rong truc gia.
+var line liq_lPDH = na
+var line liq_lPDL = na
+var line liq_lPWH = na
+var line liq_lPWL = na
+var line liq_lSHi = na
+var line liq_lSLo = na
+
+// PDH / PDL
+bool liq_pdVis = xau_showViz and xau_liq_pdOn
+if liq_pdVis and (liq_newDay or na(liq_lPDH))
+    if not na(liq_lPDH)
+        line.delete(liq_lPDH)
+        line.delete(liq_lPDL)
+    liq_lPDH := line.new(bar_index, xau_pdh, bar_index + 1, xau_pdh, color = color.new(color.orange, 40), style = line.style_dashed, width = 1, force_overlay = true)
+    liq_lPDL := line.new(bar_index, xau_pdl, bar_index + 1, xau_pdl, color = color.new(color.orange, 40), style = line.style_dashed, width = 1, force_overlay = true)
+if liq_pdVis and not na(liq_lPDH)
+    line.set_x2(liq_lPDH, bar_index + 1)
+    line.set_x2(liq_lPDL, bar_index + 1)
+if not liq_pdVis and not na(liq_lPDH)
+    line.delete(liq_lPDH)
+    line.delete(liq_lPDL)
+    liq_lPDH := na
+    liq_lPDL := na
+
+// PWH / PWL
+bool liq_pwVis = xau_showViz and xau_liq_pwOn
+if liq_pwVis and (ta.change(time("W")) != 0 or na(liq_lPWH))
+    if not na(liq_lPWH)
+        line.delete(liq_lPWH)
+        line.delete(liq_lPWL)
+    liq_lPWH := line.new(bar_index, xau_pwh, bar_index + 1, xau_pwh, color = color.new(color.blue, 50), style = line.style_dotted, width = 1, force_overlay = true)
+    liq_lPWL := line.new(bar_index, xau_pwl, bar_index + 1, xau_pwl, color = color.new(color.blue, 50), style = line.style_dotted, width = 1, force_overlay = true)
+if liq_pwVis and not na(liq_lPWH)
+    line.set_x2(liq_lPWH, bar_index + 1)
+    line.set_x2(liq_lPWL, bar_index + 1)
+if not liq_pwVis and not na(liq_lPWH)
+    line.delete(liq_lPWH)
+    line.delete(liq_lPWL)
+    liq_lPWH := na
+    liq_lPWL := na
+
+// Session High / Low - chay theo Session Hi/Lo DANG CHAY (liq_sessHi/Lo)
+bool liq_sdVis = xau_showViz and xau_liq_sessOn
+if liq_sdVis and (liq_newDay or na(liq_lSHi)) and not na(liq_sessHi)
+    if not na(liq_lSHi)
+        line.delete(liq_lSHi)
+        line.delete(liq_lSLo)
+    liq_lSHi := line.new(bar_index, liq_sessHi, bar_index + 1, liq_sessHi, color = color.new(color.gray, 30), style = line.style_dashed, width = 1, force_overlay = true)
+    liq_lSLo := line.new(bar_index, liq_sessLo, bar_index + 1, liq_sessLo, color = color.new(color.gray, 30), style = line.style_dashed, width = 1, force_overlay = true)
+if liq_sdVis and not na(liq_lSHi)
+    line.set_xy1(liq_lSHi, bar_index, liq_sessHi)
+    line.set_xy2(liq_lSHi, bar_index + 1, liq_sessHi)
+    line.set_xy1(liq_lSLo, bar_index, liq_sessLo)
+    line.set_xy2(liq_lSLo, bar_index + 1, liq_sessLo)
+if not liq_sdVis and not na(liq_lSHi)
+    line.delete(liq_lSHi)
+    line.delete(liq_lSLo)
+    liq_lSHi := na
+    liq_lSLo := na
+
+// Trendline 2 diem (2 pivot gan nhat) - chi hien thi, KHONG dua vao diem so
+var float xau_tl1Lo  = na
+var int   xau_tl1LoB = na
+var float xau_tl2Lo  = na
+var int   xau_tl2LoB = na
+var float xau_tl1Hi  = na
+var int   xau_tl1HiB = na
+var float xau_tl2Hi  = na
+var int   xau_tl2HiB = na
+var line  xau_lnTlUp = na
+var line  xau_lnTlDn = na
+
+if not na(xau_pivL)
+    xau_tl1Lo  := xau_tl2Lo
+    xau_tl1LoB := xau_tl2LoB
+    xau_tl2Lo  := low[xau_ms_swLen]
+    xau_tl2LoB := bar_index - xau_ms_swLen
+if not na(xau_pivH)
+    xau_tl1Hi  := xau_tl2Hi
+    xau_tl1HiB := xau_tl2HiB
+    xau_tl2Hi  := high[xau_ms_swLen]
+    xau_tl2HiB := bar_index - xau_ms_swLen
+
+bool xau_tlUpOk = not na(xau_tl1Lo) and not na(xau_tl2Lo) and not na(xau_tl1LoB) and not na(xau_tl2LoB) and xau_tl2LoB > xau_tl1LoB
+bool xau_tlDnOk = not na(xau_tl1Hi) and not na(xau_tl2Hi) and not na(xau_tl1HiB) and not na(xau_tl2HiB) and xau_tl2HiB > xau_tl1HiB
+float xau_tlUpSlope = xau_tlUpOk ? (xau_tl2Lo - xau_tl1Lo) / float(xau_tl2LoB - xau_tl1LoB) : 0.0
+float xau_tlDnSlope = xau_tlDnOk ? (xau_tl2Hi - xau_tl1Hi) / float(xau_tl2HiB - xau_tl1HiB) : 0.0
+float xau_tlUpAt = xau_tlUpOk ? xau_tl1Lo + xau_tlUpSlope * float(bar_index - xau_tl1LoB) : na
+float xau_tlDnAt = xau_tlDnOk ? xau_tl1Hi + xau_tlDnSlope * float(bar_index - xau_tl1HiB) : na
+
+// Nguong toi da xa gia: extrapolate qua xa khong con nghia gi, ma la THU PHAM
+//  keo rong truc gia -> chart bi thu be khi bat trendline.
+bool xau_tlVis = xau_showViz and xau_liq_tlOn
+bool xau_tlUpDraw = xau_tlVis and xau_tlUpOk and not na(xau_tlUpAt) and math.abs(xau_tlUpAt - close) <= xau_liq_tlMaxDev * xau_atr
+if xau_tlUpDraw
+    if not na(xau_lnTlUp)
+        line.set_xy1(xau_lnTlUp, xau_tl1LoB, xau_tl1Lo)
+        line.set_xy2(xau_lnTlUp, bar_index, xau_tlUpAt)
+    else
+        xau_lnTlUp := line.new(xau_tl1LoB, xau_tl1Lo, bar_index, xau_tlUpAt, color = color.new(xau_cBull, 30), width = 1, force_overlay = true)
+else if not na(xau_lnTlUp)
+    line.delete(xau_lnTlUp)
+    xau_lnTlUp := na
+
+bool xau_tlDnDraw = xau_tlVis and xau_tlDnOk and not na(xau_tlDnAt) and math.abs(xau_tlDnAt - close) <= xau_liq_tlMaxDev * xau_atr
+if xau_tlDnDraw
+    if not na(xau_lnTlDn)
+        line.set_xy1(xau_lnTlDn, xau_tl1HiB, xau_tl1Hi)
+        line.set_xy2(xau_lnTlDn, bar_index, xau_tlDnAt)
+    else
+        xau_lnTlDn := line.new(xau_tl1HiB, xau_tl1Hi, bar_index, xau_tlDnAt, color = color.new(xau_cBear, 30), width = 1, force_overlay = true)
+else if not na(xau_lnTlDn)
+    line.delete(xau_lnTlDn)
+    xau_lnTlDn := na
+
+// Sweep labels
+if xau_showViz and xau_liq_sweepOn and liq_sweepBull
+    label.new(bar_index, low,  "Sweep+", style = label.style_label_up,   color = color.new(xau_cBull, 10), textcolor = color.white, size = size.tiny, force_overlay = true)
+if xau_showViz and xau_liq_sweepOn and liq_sweepBear
+    label.new(bar_index, high, "Sweep-", style = label.style_label_down, color = color.new(xau_cBear, 10), textcolor = color.white, size = size.tiny, force_overlay = true)

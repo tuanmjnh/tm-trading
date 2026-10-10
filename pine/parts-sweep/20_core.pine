@@ -1,0 +1,27 @@
+// =============================================================================
+//  LAYER 2 - CORE : ATR, volume VSA (Wilder RMA), hinh hoc nen
+//  Volume bucket dung chung f_vsaColor / f_vsaName tu pine/shared/common.pine.
+// =============================================================================
+tm_atr    = ta.atr(tm_i_atrLen)
+tm_vol    = nz(volume)
+tm_volMA  = ta.rma(tm_vol, tm_i_volLen)
+tm_ratio  = not na(tm_volMA) and tm_volMA > 0.0 ? tm_vol / tm_volMA : 0.0
+tm_bucket = f_vsaName(tm_vol, tm_volMA, tm_i_rP, tm_i_rVH, tm_i_rH, tm_i_rN, tm_i_rL)
+tm_volCol = f_vsaColor(tm_vol, tm_volMA, tm_i_rP, tm_i_rVH, tm_i_rH, tm_i_rN, tm_i_rL)
+tm_okBar  = tm_confirmOnly ? barstate.isconfirmed : true
+tm_sessOk = not tm_i_sessOn or f_sessionOk(tm_i_sess, tm_i_tz)
+
+// Hinh hoc nen - do dai rau tren/duoi so voi bien do
+tm_rng     = high - low
+tm_bodyTop = math.max(open, close)
+tm_bodyBot = math.min(open, close)
+tm_upWick  = high - tm_bodyTop
+tm_dnWick  = tm_bodyBot - low
+tm_isPur   = not na(tm_volMA) and tm_volMA > 0.0 and tm_vol >= tm_volMA * tm_i_rP
+
+// Loc xu huong (SMA nhanh/cham) — SHORT khi trend xuong, LONG khi trend len
+tm_smaFast = tm_i_trendFast > 0 ? ta.sma(close, tm_i_trendFast) : na
+tm_smaSlow = tm_i_trendSlow > 0 ? ta.sma(close, tm_i_trendSlow) : na
+tm_trendOn = tm_i_trendFast > 0 and tm_i_trendSlow > 0
+tm_trendUp = not tm_trendOn or (not na(tm_smaFast) and not na(tm_smaSlow) and tm_smaFast > tm_smaSlow)
+tm_trendDn = not tm_trendOn or (not na(tm_smaFast) and not na(tm_smaSlow) and tm_smaFast < tm_smaSlow)

@@ -21,10 +21,18 @@
 //      separate and no pooled number is produced (a warning says so);
 //    - live rows without a matching frozen preset have NO baseline: the report
 //      says "cannot compare" instead of silently measuring against another preset;
-//    - live rows with no stamp at all are reported as such. Today positions are
-//      written with `paramsHash: null` (exec/risk.mjs recordOpen), so this is the
-//      normal outcome until the live path stamps its trades — the report refuses
-//      to invent the missing half of the comparison.
+//    - live rows with NO usable stamp (`engine/stamp.mjs isStampUnknown()` —
+//      legacy positions, undeclared live rows, either half missing) are EXCLUDED
+//      from every bucket and reported as a warning with their count (docs/
+//      data-model.md §10.4). They are never bucketed as `unknown#unknown`: an
+//      empty bucket of anonymous trades is not a measurement, and the report
+//      refuses to invent the missing half of the comparison.
+//
+//  There is deliberately NO report-side declaration in this module (it used to
+//  have `--live-preset` / `--live-engine-version`): the writer (recordOpen) is
+//  authoritative, and relabelling rows on the READ side could make exactly the
+//  excluded legacy rows look comparable. The declaration lives in
+//  PAPER_LIVE_PRESET / PAPER_LIVE_PARAMS — where trades are opened (§10.3.1).
 //
 //  D12 (measurement honesty): every bucket prints its sample size; below
 //  `minTrades` R samples the verdict is "insufficient evidence" — observed
@@ -32,12 +40,12 @@
 //
 //  CLI:
 //    node engine/preset-drift.mjs [--generation v#hash] [--window 7]
-//      [--min-trades 20] [--live <file>] [--backtest <file>]
-//      [--live-preset <paramsHash>] [--live-engine-version <v>] [--json]
+//      [--min-trades 20] [--live <file>] [--backtest <file>] [--json]
 // =============================================================================
 import { pathToFileURL } from 'node:url'
 
 import { readNdjson, TRADES_FILE } from './store.mjs'
+import { isStampUnknown } from './stamp.mjs'
 import {
   UNKNOWN, EXECUTED_RESULTS, JOURNAL_FILE, MIN_TRADES_FOR_EVIDENCE,
   journalStats, rMultipleOf, timeOf, loadJournal,
@@ -118,33 +126,23 @@ export function metricRow(raw = {}) {
 }
 
 /**
- * Fill MISSING preset stamps on the live rows from an operator/sync declaration.
- * A stamp that is already present is never overwritten — declaring a preset must
- * not be able to relabel trades that already carried their own identity.
+ * Rows with NO usable version stamp are EXCLUDED from the comparison and
+ * counted, never relabelled. The rule lives in `engine/stamp.mjs
+ * isStampUnknown()` (single source of truth): legacy positions, undeclared live
+ * rows (`stampUnknown: true`), and rows where either half is missing/'unknown'.
+ *
+ * @param {object[]} rows journal entries / metric rows / positions (any shape
+ *        isStampUnknown understands)
+ * @returns {{kept: object[], excluded: number}}
  */
-export function stampLiveEntries(entries = [], { engineVersion = null, paramsHash = null } = {}) {
-  let stamped = 0
-  const out = (entries ?? []).map((e) => {
-    const next = { ...e }
-    let changed = false
-    if (engineVersion && (!next.engineVersion || next.engineVersion === UNKNOWN)) {
-      next.engineVersion = String(engineVersion)
-      changed = true
-    }
-    if (paramsHash && (!next.paramsHash || next.paramsHash === UNKNOWN)) {
-      next.paramsHash = String(paramsHash)
-      changed = true
-    }
-    if (changed) {
-      stamped++
-      next.unknown = (next.unknown ?? []).filter(
-        (f) => !(f === 'engineVersion' && next.engineVersion !== UNKNOWN)
-          && !(f === 'paramsHash' && next.paramsHash !== UNKNOWN),
-      )
-    }
-    return next
-  })
-  return { entries: out, stamped }
+export function partitionStamped(rows = []) {
+  const kept = []
+  let excluded = 0
+  for (const r of rows ?? []) {
+    if (isStampUnknown(r)) excluded++
+    else kept.push(r)
+  }
+  return { kept, excluded }
 }
 
 // =============================================================================
@@ -207,9 +205,18 @@ export function comparePresetDrift(input = {}) {
   const toleranceWinRate = threshold(input.toleranceWinRate, PRESET_DRIFT_DEFAULTS.toleranceWinRate)
   const generation = input.generation ?? null
 
-  const live = (input.live ?? []).map(metricRow)
+  // §10.4: rows with no usable stamp are EXCLUDED up front — they never reach a
+  // bucket, never become a generation, and are reported as a warning + count.
+  const { kept, excluded } = partitionStamped(input.live ?? [])
+  const live = kept.map(metricRow)
   const backtest = (input.backtest ?? []).map(metricRow)
   const warnings = []
+  if (excluded) {
+    warnings.push(
+      `${excluded} live row(s) with NO version stamp (stampUnknown / legacy, docs §10.4) `
+      + 'excluded from every bucket — never bucketed as unknown#unknown',
+    )
+  }
 
   const frozen = pickFrozenPreset(backtest, { generation })
   if (frozen.requested && frozen.missing) {
@@ -273,7 +280,9 @@ export function comparePresetDrift(input = {}) {
     ? journalStats(frozen.chosen.entries, { minTrades })
     : null
   const overallVerdict = live.length === 0
-    ? 'no live trades'
+    ? (excluded > 0
+        ? `no comparable live trades (all ${excluded} live row(s) excluded: no version stamp)`
+        : 'no live trades')
     : mixed
       ? 'refused: live dataset mixes generations (D1)'
       : verdictOf({
@@ -302,6 +311,7 @@ export function comparePresetDrift(input = {}) {
     toleranceWinRate,
     liveGenerations,
     refused: mixed,
+    excludedUnknown: excluded,
     frozen: {
       chosen: chosenGen,
       n: frozen.chosen ? journalStats(frozen.chosen.entries, { minTrades }).rSamples : 0,
@@ -328,10 +338,13 @@ export function formatPresetDrift(report) {
     lines.push(`  other presets   : ${report.frozen.candidates.filter((c) => c.generation !== report.frozen.chosen).map((c) => `${c.generation}(${c.n})`).join(', ')} — not pooled`)
   }
   lines.push(`live generations  : ${report.liveGenerations.join(', ') || 'none'}${report.refused ? '  [REFUSED to pool — D1]' : ''}`)
+  if (report.excludedUnknown) lines.push(`excluded (no stamp): ${report.excludedUnknown} live row(s) — docs §10.4, never bucketed`)
   for (const w of report.warnings) lines.push(`  !! ${w}`)
 
   if (!report.buckets.length) {
-    lines.push('buckets           : none (no live trades in the journal)')
+    lines.push(report.excludedUnknown && !report.liveGenerations.length
+      ? 'buckets           : none (every live row was excluded for having no version stamp)'
+      : 'buckets           : none (no live trades in the journal)')
   }
   for (const b of report.buckets) {
     const l = b.live
@@ -369,15 +382,15 @@ export function loadFrozenEntries({ file = TRADES_FILE } = {}) {
 
 /**
  * Live rows from the journal (Mongo when present, else the NDJSON mirror).
- * `engineVersion`/`paramsHash` here are an explicit DECLARATION used only where
- * the row itself has no stamp; existing stamps are never overwritten.
+ * NO declaration parameters: the stamp comes from each row's own writer
+ * (docs/data-model.md §10.3.1 — declaration at open time, nowhere else).
+ * Rows without a usable stamp are excluded later, inside `comparePresetDrift`.
  */
 export async function loadLiveEntries({
-  filters = {}, file = JOURNAL_FILE, mongo = 'auto', engineVersion = null, paramsHash = null, limit = 5000,
+  filters = {}, file = JOURNAL_FILE, mongo = 'auto', limit = 5000,
 } = {}) {
   const loaded = await loadJournal({ filters, file, mongo, limit })
-  const { entries, stamped } = stampLiveEntries(loaded.entries, { engineVersion, paramsHash })
-  return { source: loaded.source, entries, declaredStamps: stamped, warnings: loaded.warnings }
+  return { source: loaded.source, entries: loaded.entries, warnings: loaded.warnings }
 }
 
 /** Full pipeline: load both sides -> compare. Never throws for a missing DB. */
@@ -387,8 +400,6 @@ export async function runPresetDrift(opts = {}) {
     filters: opts.filters ?? {},
     file: opts.liveFile ?? JOURNAL_FILE,
     mongo: opts.mongo ?? 'auto',
-    engineVersion: opts.liveEngineVersion ?? null,
-    paramsHash: opts.livePreset ?? null,
     limit: opts.limit ?? 5000,
   })
   const report = comparePresetDrift({
@@ -405,10 +416,9 @@ export async function runPresetDrift(opts = {}) {
     liveRows: live.entries.length,
     frozen: frozen.source,
     frozenRows: frozen.entries.length,
-    declaredStamps: live.declaredStamps,
+    excludedNoStamp: report.excludedUnknown,
     malformedLines: (live.warnings?.length ?? 0) + (frozen.skipped ?? 0),
   }
-  if (live.declaredStamps) report.warnings.push(`${live.declaredStamps} live row(s) stamped from the declared live preset (their own stamp was missing)`)
   if (frozen.skipped) report.warnings.push(`${frozen.skipped} malformed line(s) skipped in ${frozen.source}`)
   return report
 }
@@ -430,8 +440,6 @@ if (isMain) {
       minTrades: val('--min-trades') !== undefined ? Number(val('--min-trades')) : undefined,
       liveFile: val('--live') ?? JOURNAL_FILE,
       backtestFile: val('--backtest') ?? TRADES_FILE,
-      livePreset: val('--live-preset') ?? null,
-      liveEngineVersion: val('--live-engine-version') ?? null,
     })
     console.log(args.includes('--json') ? JSON.stringify(report, null, 2) : formatPresetDrift(report))
     // Exit 0 even when drift is flagged: this is a measurement, not a gate.

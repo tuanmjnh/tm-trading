@@ -1,0 +1,26 @@
+// =============================================================================
+//  L12 - ALERTS (webhook JSON)
+// =============================================================================
+
+// f_ts / f_sym - shared (pine/shared/common.pine)
+
+f_jsonXau(int dir, float entry, float sl, float t1, float t2, float t3) =>
+    string tps = "[" + f_fmtPx(t1) + "," + f_fmtPx(t2) + "," + f_fmtPx(t3) + "]"
+    '{"side":"' + (dir == 1 ? "LONG" : "SHORT") + '","price":' + f_fmtPx(entry) + ',"sl":' + f_fmtPx(sl) + ',"tps":' + tps + ',"score":' + str.tostring(xau_score100) + ',"quality":"' + xau_quality + '","atr":' + f_fmtPx(xau_atr) + '}'
+
+xau_head   = '{"v":1,"ts":"' + f_ts() + '","symbol":"' + f_sym() + '","tf":"' + timeframe.period + '"'
+bool xau_doSend = xau_payloadMode != "Off"
+
+alertcondition(xau_evEntry and xau_posDir == 1,  "XAU LONG",         "XAU LONG  {{ticker}} {{interval}}")
+alertcondition(xau_evEntry and xau_posDir == -1, "XAU SHORT",        "XAU SHORT {{ticker}} {{interval}}")
+alertcondition(xau_evTp > 0,                     "XAU TAKE PROFIT",  "XAU TP    {{ticker}}")
+alertcondition(xau_evSl,                         "XAU STOP LOSS",    "XAU SL    {{ticker}}")
+
+if xau_okBar and xau_doSend and xau_evEntry
+    alert(xau_head + ',"action":"ENTRY",'       + f_jsonXau(xau_posDir, xau_posEntry, xau_posSl, xau_posTp1, xau_posTp2, xau_posTp3) + "}", alert.freq_once_per_bar)
+
+if xau_okBar and xau_doSend and xau_posDir != 0 and xau_evTp > 0
+    alert(xau_head + ',"action":"TAKE_PROFIT","level":' + str.tostring(xau_evTp) + "}", alert.freq_once_per_bar)
+
+if xau_okBar and xau_doSend and xau_posDir != 0 and xau_evSl
+    alert(xau_head + ',"action":"STOP_LOSS"}', alert.freq_once_per_bar)

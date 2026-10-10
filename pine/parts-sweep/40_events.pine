@@ -1,0 +1,108 @@
+// =============================================================================
+//  LAYER 4 - EVENTS : cong xac nhan (volume VSA + rau + trend) -> SWEEP LONG/SHORT
+//  entryMode: Market (vao ngay) | Retest (cho test lai volume thap) | Confirm (BOS nho)
+//  Uu tien khi cung bar co 2 huong: ben nao rau dai hon (theo ti le bien do).
+// =============================================================================
+tm_volOk = tm_i_volMinR <= 0.0 or tm_ratio >= tm_i_volMinR
+
+tm_wickUpOk  = tm_i_wickRng <= 0.0 or (tm_rng > 0.0 and tm_upWick >= tm_i_wickRng * tm_rng)
+tm_wickDnOk  = tm_i_wickRng <= 0.0 or (tm_rng > 0.0 and tm_dnWick >= tm_i_wickRng * tm_rng)
+tm_wickUpAtr = tm_i_wickAtr <= 0.0 or (not na(tm_atr) and tm_upWick >= tm_i_wickAtr * tm_atr)
+tm_wickDnAtr = tm_i_wickAtr <= 0.0 or (not na(tm_atr) and tm_dnWick >= tm_i_wickAtr * tm_atr)
+
+// Cuc tri rau quet cua setup dang hoat dong (dung cho SL o 50_risk)
+var float tm_lsLow  = na
+var float tm_lsHigh = na
+
+// Trang thai cho retest/confirm: 0 = khong cho, 1 = LONG, -1 = SHORT
+var int   tm_pmDir = 0
+var float tm_pmPx  = na
+var float tm_pmHi  = na
+var float tm_pmLo  = na
+var int   tm_pmBar = 0
+
+bool tm_mktLong  = false
+bool tm_mktShort = false
+
+// -----------------------------------------------------------------------------
+//  Phat hien quet moi (chi khi khong co pending) — loc volume + rau + trend +
+//  so lan cham level (minTouches). Khi trung: danh dau level swept (dashed).
+// -----------------------------------------------------------------------------
+bool tm_armLong  = false
+bool tm_armShort = false
+if tm_pmDir == 0 and tm_okBar and tm_sessOk and tm_i_on
+    bool okS = tm_swBuy and tm_volOk and tm_wickUpOk and tm_wickUpAtr and tm_trendDn and (tm_i_minTouches <= 0 or tm_swBuyTouch >= tm_i_minTouches)
+    bool okL = tm_swSell and tm_volOk and tm_wickDnOk and tm_wickDnAtr and tm_trendUp and (tm_i_minTouches <= 0 or tm_swSellTouch >= tm_i_minTouches)
+    if okS and okL
+        if tm_dnWick > tm_upWick
+            okS := false
+        else
+            okL := false
+    tm_armShort := okS
+    tm_armLong  := okL
+
+if tm_armShort and tm_buyIdx >= 0
+    TmLevel Lb = array.get(tm_buy, tm_buyIdx)
+    Lb.swept := true
+    line.set_style(Lb.ln, line.style_dashed)
+    line.set_x2(Lb.ln, bar_index)
+    if not na(Lb.bx)
+        box.set_right(Lb.bx, bar_index)
+    tm_lsHigh := high
+    if tm_entryMarket
+        tm_mktShort := true
+    else
+        tm_pmDir := -1
+        tm_pmPx  := tm_swBuyPx
+        tm_pmHi  := high
+        tm_pmLo  := low
+        tm_pmBar := bar_index
+if tm_armLong and tm_sellIdx >= 0
+    TmLevel Ls = array.get(tm_sell, tm_sellIdx)
+    Ls.swept := true
+    line.set_style(Ls.ln, line.style_dashed)
+    line.set_x2(Ls.ln, bar_index)
+    if not na(Ls.bx)
+        box.set_right(Ls.bx, bar_index)
+    tm_lsLow := low
+    if tm_entryMarket
+        tm_mktLong := true
+    else
+        tm_pmDir := 1
+        tm_pmPx  := tm_swSellPx
+        tm_pmHi  := high
+        tm_pmLo  := low
+        tm_pmBar := bar_index
+
+// -----------------------------------------------------------------------------
+//  Giai pending: RETEST = cham lai level voi volume thap; CONFIRM = close vuot
+//  cuc tri bar quet theo huong dao chieu. Huy khi cham SL / breakout / het cua so.
+// -----------------------------------------------------------------------------
+bool tm_resLong  = false
+bool tm_resShort = false
+if tm_pmDir != 0 and bar_index > tm_pmBar
+    bool isLong = tm_pmDir == 1
+    float slNow = isLong ? tm_pmLo - tm_i_slBuf * tm_atr : tm_pmHi + tm_i_slBuf * tm_atr
+    bool cancel = isLong ? (low <= slNow or close < tm_pmPx) : (high >= slNow or close > tm_pmPx)
+    int maxBars = tm_entryRetest ? tm_i_retestBars : tm_i_confirmBars
+    if bar_index - tm_pmBar > maxBars
+        cancel := true
+    if cancel
+        tm_pmDir := 0
+    else
+        bool trigger = tm_entryRetest ? ((isLong ? low <= tm_pmPx : high >= tm_pmPx) and (tm_i_volRetestMax <= 0.0 or tm_ratio < tm_i_volRetestMax)) : (isLong ? close > tm_pmHi : close < tm_pmLo)
+        if trigger
+            tm_resLong  := isLong
+            tm_resShort := not isLong
+            tm_lsLow    := tm_pmLo
+            tm_lsHigh   := tm_pmHi
+            tm_pmDir    := 0
+
+bool tm_sigLong  = tm_mktLong or tm_resLong
+bool tm_sigShort = tm_mktShort or tm_resShort
+
+var string tm_lastSig    = "-"
+var int    tm_lastSigBar = 0
+if tm_sigLong or tm_sigShort
+    tm_lastSig    := tm_sigLong ? "LONG" : "SHORT"
+    tm_lastSigBar := bar_index

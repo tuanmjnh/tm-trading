@@ -12,6 +12,5 @@ The single source of truth for AI coding agents is **[`AGENTS.md`](./AGENTS.md)*
   - `npm run verify` (Pine build + full test suite)
   - `npm run dev` (Dashboard on `http://localhost:4001/`)
   - `npm run typecheck`
-  - `npm run lint`
 
 Please refer to [`AGENTS.md`](./AGENTS.md) for full architecture rules, guardrails, and conventions.

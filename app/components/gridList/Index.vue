@@ -111,8 +111,16 @@ const scrollTarget = computed(() => {
   return el.querySelector?.('[data-slot="viewport"]')?.parentElement || el
 })
 
+// Circuit breaker: never emit load-more more than once per second. An empty
+// viewport is trivially "at the bottom", so without a cooldown a failing fetch
+// (loading flips true->false with canLoadMore still true) re-emits in a tight
+// loop and turns any transient API error into a request storm.
+let lastLoadMoreAt = 0
 useInfiniteScroll(scrollTarget, () => {
+  const now = Date.now()
+  if (now - lastLoadMoreAt < 1000) return
   if (!props.loading && props.canLoadMore) {
+    lastLoadMoreAt = now
     emit('load-more')
   }
 }, { distance: 10, canLoadMore: () => !props.loading && props.canLoadMore })

@@ -1,0 +1,39 @@
+// =============================================================================
+//  L12 - ALERTS (webhook JSON)
+//  Payload kem structured event: kind/dir/ts/tf/confirmed/level (v2 §1).
+// =============================================================================
+
+// f_ts / f_sym - shared (pine/shared/common.pine)
+
+f_jsonX2(int dir, float entry, float sl, float t1, float t2, float t3) =>
+    string tps = "[" + f_fmtPx(t1) + "," + f_fmtPx(t2) + "," + f_fmtPx(t3) + "]"
+    '{\"side\":\"' + (dir == 1 ? "LONG" : "SHORT" ) + '\",\"price\":' + f_fmtPx(entry) + ',\"sl\":' + f_fmtPx(sl) + ',\"tps\":' + tps + ',\"score\":' + str.tostring(x2_score100) + ',\"quality\":\"' + x2_quality + '\",\"atr\":' + f_fmtPx(x2_atr) + '}'
+
+f_jsonEvent(X2Event e) =>
+    '{\"kind\":\"' + e.kind + '\",\"dir\":\"' + e.dir + '\",\"ts\":' + str.tostring(e.srcTime) + ',\"bar\":' + str.tostring(e.srcBar) + ',\"tf\":\"' + e.tf + '\",\"confirmed\":' + (e.confirmed ? "true" : "false") + ',\"level\":' + f_fmtPx(e.level) + '}'
+
+x2_head   = '{\"v\":1,\"ts\":\"' + f_ts() + '\",\"symbol\":\"' + f_sym() + '\",\"tf\":\"' + timeframe.period + '\"'
+bool x2_doSend = x2_payloadMode != "Off"
+
+alertcondition(x2_evEntry and x2_posDir == 1,  "XAU2 LONG",        "XAU2 LONG  {{ticker}} {{interval}}")
+alertcondition(x2_evEntry and x2_posDir == -1, "XAU2 SHORT",       "XAU2 SHORT {{ticker}} {{interval}}")
+alertcondition(x2_evTp > 0,                    "XAU2 TAKE PROFIT", "XAU2 TP    {{ticker}}")
+alertcondition(x2_evSl,                        "XAU2 STOP LOSS",   "XAU2 SL    {{ticker}}")
+
+if x2_okBar and x2_doSend and x2_evEntry
+    alert(x2_head + ',\"action\":\"ENTRY\",'       + f_jsonX2(x2_posDir, x2_posEntry, x2_posSl, x2_posTp1, x2_posTp2, x2_posTp3) + "}", alert.freq_once_per_bar)
+
+if x2_okBar and x2_doSend and x2_posDir != 0 and x2_evTp > 0
+    alert(x2_head + ',\"action\":\"TAKE_PROFIT\",\"level\":' + str.tostring(x2_evTp) + "}", alert.freq_once_per_bar)
+
+if x2_okBar and x2_doSend and x2_posDir != 0 and x2_evSl
+    alert(x2_head + ',\"action\":\"STOP_LOSS\"}', alert.freq_once_per_bar)
+
+// Market-structure events (BOS/CHoCH/MSS/RETEST/FAILBRK/SWEEP/CONT/PULL)
+bool x2_evtNow = x2_okBar and x2_doSend and array.size(x2_evtBuf) > 0 and barstate.isconfirmed
+var int x2_lastEvtBar = -1
+if x2_evtNow and array.size(x2_evtBuf) > 0
+    X2Event e2 = array.get(x2_evtBuf, array.size(x2_evtBuf) - 1)
+    if e2.srcBar != x2_lastEvtBar
+        x2_lastEvtBar := e2.srcBar
+        alert(x2_head + ',\"action\":\"EVENT\",' + f_jsonEvent(e2) + "}", alert.freq_once_per_bar)

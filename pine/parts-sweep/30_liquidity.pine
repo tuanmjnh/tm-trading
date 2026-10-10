@@ -1,0 +1,124 @@
+// =============================================================================
+//  LAYER 3 - LIQUIDITY : pivot swing -> level (buy-side tren / sell-side duoi)
+//  + phat hien QUET thanh khoan (rau vuot level nhung dong cua tro lai).
+//  Kieu level lay tu "Liquidity Swings [LuxAlgo]": Wick Extremity = vung rau.
+//  Level bi dong cua VUOT HAN (breakout) -> danh dau swept (dotted), khong con
+//  la ung vien sweep nua (tranh level cu nam lai mai).
+// =============================================================================
+type TmLevel
+    float px
+    float zTop
+    float zBot
+    int   baridx
+    int   side
+    float ratio
+    int   touch
+    bool  swept
+    line  ln
+    box   bx
+    label lb
+
+f_newLevel(float px, float zTop, float zBot, int barPivot, int side, float ratio) =>
+    color c  = side == 1 ? color.new(color.red, 0) : color.new(color.teal, 0)
+    color zc = color.new(side == 1 ? color.red : color.teal, 85)
+    line  ln = line.new(barPivot, px, bar_index, px, color = tm_i_showViz and tm_i_showLvl ? c : na, style = line.style_solid, width = 1, force_overlay = true)
+    box   bx = na
+    label lb = na
+    if tm_i_showViz and tm_i_showZone
+        bx := box.new(barPivot, zTop, bar_index, zBot, border_color = na, bgcolor = zc, force_overlay = true)
+    if tm_i_showViz and tm_i_showLbl
+        lb := label.new(barPivot, side == 1 ? zTop : zBot, str.tostring(ratio, "#.0") + "x " + f_vsaName(ratio, 1.0, tm_i_rP, tm_i_rVH, tm_i_rH, tm_i_rN, tm_i_rL), style = side == 1 ? label.style_label_down : label.style_label_up, color = color.new(color.black, 20), textcolor = c, size = size.tiny, force_overlay = true)
+    TmLevel.new(px, zTop, zBot, barPivot, side, ratio, 0, false, ln, bx, lb)
+
+var array<TmLevel> tm_buy  = array.new<TmLevel>()
+var array<TmLevel> tm_sell = array.new<TmLevel>()
+
+tm_ph = ta.pivothigh(high, tm_i_phLen, tm_i_phLen)
+tm_pl = ta.pivotlow(low, tm_i_phLen, tm_i_phLen)
+
+if not na(tm_ph)
+    float zTopB = tm_ph
+    float zBotB = tm_i_zoneMode == "Wick Extremity" ? math.max(open[tm_i_phLen], close[tm_i_phLen]) : low[tm_i_phLen]
+    array.push(tm_buy, f_newLevel(tm_ph, zTopB, zBotB, bar_index - tm_i_phLen, 1, tm_ratio[tm_i_phLen]))
+if not na(tm_pl)
+    float zTopS = tm_i_zoneMode == "Wick Extremity" ? math.min(open[tm_i_phLen], close[tm_i_phLen]) : high[tm_i_phLen]
+    float zBotS = tm_pl
+    array.push(tm_sell, f_newLevel(tm_pl, zTopS, zBotS, bar_index - tm_i_phLen, -1, tm_ratio[tm_i_phLen]))
+
+// -----------------------------------------------------------------------------
+//  Quet buy-side (level TREN): rau tren vuot px nhung close tro lai DUOI px
+//  -> quet len thanh khoan, dao chieu SHORT. Chon level gan hight nhat.
+// -----------------------------------------------------------------------------
+var float tm_swBuyPx  = na
+var float tm_swBuyRat = 0.0
+var int   tm_swBuyTouch = 0
+var bool  tm_swBuy    = false
+var int   tm_buyIdx   = -1
+var float tm_bestBuyD = na
+tm_swBuyPx  := na
+tm_swBuyRat := 0.0
+tm_swBuyTouch := 0
+tm_swBuy    := false
+tm_buyIdx   := -1
+tm_bestBuyD := na
+if array.size(tm_buy) > 0
+    for i = 0 to array.size(tm_buy) - 1
+        TmLevel Lb = array.get(tm_buy, i)
+        if not Lb.swept and bar_index > Lb.baridx and bar_index - Lb.baridx <= tm_i_lvlFresh
+            if close > Lb.px
+                Lb.swept := true
+                line.set_style(Lb.ln, line.style_dotted)
+                line.set_x2(Lb.ln, bar_index)
+                if not na(Lb.bx)
+                    box.set_right(Lb.bx, bar_index)
+            else
+                if high >= Lb.px - tm_i_tolAtr * tm_atr
+                    Lb.touch := Lb.touch + 1
+                if high > Lb.px and close < Lb.px
+                    float dB = math.abs(high - Lb.px)
+                    if na(tm_bestBuyD) or dB < tm_bestBuyD
+                        tm_bestBuyD  := dB
+                        tm_buyIdx    := i
+                        tm_swBuyPx   := Lb.px
+                        tm_swBuyRat  := Lb.ratio
+                        tm_swBuyTouch := Lb.touch
+                        tm_swBuy     := true
+
+// -----------------------------------------------------------------------------
+//  Quet sell-side (level DUOI): rau duoi vuot px nhung close tro lai TREN px
+//  -> quet xuong thanh khoan, dao chieu LONG. Chon level gan low nhat.
+// -----------------------------------------------------------------------------
+var float tm_swSellPx  = na
+var float tm_swSellRat = 0.0
+var int   tm_swSellTouch = 0
+var bool  tm_swSell    = false
+var int   tm_sellIdx   = -1
+var float tm_bestSellD = na
+tm_swSellPx  := na
+tm_swSellRat := 0.0
+tm_swSellTouch := 0
+tm_swSell    := false
+tm_sellIdx   := -1
+tm_bestSellD := na
+if array.size(tm_sell) > 0
+    for i = 0 to array.size(tm_sell) - 1
+        TmLevel Ls = array.get(tm_sell, i)
+        if not Ls.swept and bar_index > Ls.baridx and bar_index - Ls.baridx <= tm_i_lvlFresh
+            if close < Ls.px
+                Ls.swept := true
+                line.set_style(Ls.ln, line.style_dotted)
+                line.set_x2(Ls.ln, bar_index)
+                if not na(Ls.bx)
+                    box.set_right(Ls.bx, bar_index)
+            else
+                if low <= Ls.px + tm_i_tolAtr * tm_atr
+                    Ls.touch := Ls.touch + 1
+                if low < Ls.px and close > Ls.px
+                    float dS = math.abs(Ls.px - low)
+                    if na(tm_bestSellD) or dS < tm_bestSellD
+                        tm_bestSellD  := dS
+                        tm_sellIdx    := i
+                        tm_swSellPx   := Ls.px
+                        tm_swSellRat  := Ls.ratio
+                        tm_swSellTouch := Ls.touch
+                        tm_swSell     := true

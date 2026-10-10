@@ -1,0 +1,82 @@
+// =============================================================================
+//  L9 - SCORING ENGINE (0-100)
+//  Each component: directional weight * [-1,+1] component score
+//  Normalized to 0-100 final score with quality label
+// =============================================================================
+
+float sc_trend  = float(ms_trend)
+float sc_struct = (ms_bosUp or ms_chochUp) ? 1.0 : (ms_bosDown or ms_chochDown) ? -1.0 : float(ms_trend) * 0.5
+float sc_liq    = liq_sweepBull ? 1.0 : liq_sweepBear ? -1.0 : 0.0
+float sc_sr     = f_nearSupport(sr_zones, xau_atr) ? 1.0 : f_nearResistance(sr_zones, xau_atr) ? -1.0 : 0.0
+
+float wTotal = xau_w_trend + xau_w_struct + xau_w_liq + xau_w_sr + xau_w_candle + xau_w_vol + xau_w_atr + xau_w_mom + xau_w_sess + xau_w_mtf
+
+float wSum = xau_w_trend * sc_trend + xau_w_struct * sc_struct + xau_w_liq * sc_liq + xau_w_sr * sc_sr + xau_w_candle * cp_score + xau_w_vol * vol_score + xau_w_atr * (cp_score > 0 ? atr_score : -atr_score) + xau_w_mom * mom_score + xau_w_sess * (cp_score >= 0 ? sess_score_raw : -sess_score_raw) + xau_w_mtf * htf_score
+
+float xau_rawScore = wTotal > 0 ? f_clamp(wSum / wTotal, -1.0, 1.0) : 0.0
+float xau_score100 = math.round(50 + xau_rawScore * 50)
+int   xau_dir      = xau_rawScore > 0 ? 1 : xau_rawScore < 0 ? -1 : 0
+
+string xau_quality = xau_score100 <= xau_scr_noTrade ? "NO TRADE" : xau_score100 <= xau_scr_weak ? "WEAK" : xau_score100 <= xau_scr_setup ? "SETUP" : xau_score100 <= xau_scr_strong ? "STRONG" : "A+"
+
+// =============================================================================
+//  L10 - RISK ENGINE  (Entry/SL/TP plan + gate logic)
+// =============================================================================
+
+type XauPlan
+    bool  valid
+    int   dir
+    float entry
+    float sl
+    float tp1
+    float tp2
+    float tp3
+    float risk
+    float rr1
+
+f_buildXauPlan(int dir) =>
+    float a      = xau_atr
+    float entry  = close
+    bool  atrOk  = not na(a) and a > 0
+
+    float pad    = a * xau_sl_padAtr
+    float swing  = dir == 1 ? nz(xau_swingLo, low) : nz(xau_swingHi, high)
+    float sDist  = dir == 1 ? (entry - swing) + pad : (swing - entry) + pad
+    float aDist  = a * xau_sl_atrMul
+    float base   = (aDist + sDist) * 0.5
+    float dist   = f_clamp(nz(base, aDist), a * xau_sl_minAtr, math.max(a * xau_sl_maxAtr, a * xau_sl_minAtr))
+
+    float sl     = entry - dir * dist
+    float risk   = dist
+
+    float rr2    = math.max(xau_rr2, xau_rr1)
+    float rr3    = math.max(xau_rr3, rr2)
+
+    bool  dirOk  = dir != 0
+    bool  slOk   = dist > 0 and (dir == 1 ? sl < entry : sl > entry)
+    bool  rrOk   = xau_rrMin <= 0 or xau_rr1 >= xau_rrMin
+    bool  valid  = atrOk and dirOk and slOk and rrOk
+
+    float tp1    = entry + dir * xau_rr1 * risk
+    float tp2    = entry + dir * rr2     * risk
+    float tp3    = entry + dir * rr3     * risk
+
+    XauPlan.new(valid, dir, entry, sl, tp1, tp2, tp3, risk, xau_rr1)
+
+xau_plan = f_buildXauPlan(xau_dir)
+
+var int  xau_dayCount  = 0
+var int  xau_barsSince = 999999
+xau_barsSince += 1
+
+if f_isNewDay()
+    xau_dayCount := 0
+
+bool xau_okBar    = xau_confirmOnly ? barstate.isconfirmed : true
+bool xau_okHtf    = not xau_htf_filter or htf_dir == 0 or htf_dir == xau_dir
+bool xau_okCool   = xau_barsSince >= xau_coolBars
+bool xau_okDay    = xau_dayCount < xau_maxDay
+bool xau_okScore  = xau_score100 > xau_scr_noTrade
+bool xau_okDir    = xau_dir != 0
+bool xau_okFilter = xau_okHtf and xau_okCool and xau_okDay and xau_okScore and xau_okDir
+bool xau_signal   = xau_plan.valid and xau_okFilter

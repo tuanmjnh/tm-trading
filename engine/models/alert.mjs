@@ -32,14 +32,21 @@ const AlertSchema = new mongoose.Schema(
 
     // Ket qua xu ly - de biet alert nao da di tiep, alert nao bi chan.
     // Paper executor (Phase 6) them 'opened'/'closed': ENTRY da mo vi the /
-    // follow-up TP/SL/TIME da dung de dong vi the.
-    status: { type: String, enum: ['received', 'rejected', 'forwarded', 'opened', 'closed'], default: 'received' },
+    // follow-up TP/SL/TIME da dung de dong vi the. v3 §17.2: 'working' = an
+    // ENTRY is risk-approved but still waiting a marketable quote (limit/stop);
+    // 'cancelled' = the user cancelled the live intent from the terminal.
+    status: { type: String, enum: ['received', 'rejected', 'forwarded', 'opened', 'closed', 'working', 'cancelled'], default: 'received' },
     rejectReason: { type: String, default: '' },
     forwarded: {
       telegram: { type: Boolean, default: false },
       discord: { type: Boolean, default: false },
     },
     raw: { type: String, default: '' },
+    // Phase 7P: unfilled remainder of a PARTIALLY filled ENTRY (paper fill
+    // model). >0 = the same approved order still owes qty on the book; the
+    // executor retries it each cycle and clears it when done (null = nothing
+    // pending). Queryable ($gt: 0) without regexing the raw payload.
+    partialRemain: { type: Number, default: null },
   },
   { timestamps: true, collection: 'alerts' },
 )

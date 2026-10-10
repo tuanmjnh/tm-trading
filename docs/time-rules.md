@@ -56,7 +56,7 @@ Không dùng `toLocaleDateString()`, không dùng `Date#getDate()` — hai hàm 
 | Nơi | Quy tắc | Code |
 |---|---|---|
 | `alert.ts` | `Date` UTC, đọc ra `toISOString()` y hệt giá trị gửi lên | `server/webhook.mjs` → `toAlertDoc()` |
-| `risk_state.utcDay` | chuỗi `YYYY-MM-DD` UTC, unique `(account, utcDay)` | `engine/models/risk-state.mjs` |
+| `risk_state.utcDay` | chuỗi `YYYY-MM-DD` UTC, unique `(account, utcDay)` | `engine/models/riskState.mjs` |
 | `runs.createdAt`, `trades.entryTime/exitTime` | `Date` UTC | `engine/models/*.mjs` |
 | NDJSON `createdAt` | ISO-8601 `Z` | `engine/store.mjs` → `withStamp()` |
 | session/bucket (Pine parity) | hàm **nhận tz tường minh**, không đọc `TZ` ngầm | `engine/ta.mjs` |

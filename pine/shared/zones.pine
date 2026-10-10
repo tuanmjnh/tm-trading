@@ -1,0 +1,48 @@
+// =============================================================================
+//  S/R ZONE ENGINE - dung chung parts-xau + parts-xau2
+//  Pivot-based supply/demand zones, ATR width, zone merging, max limit.
+//  Truoc do copy 2 ban (SrZone/xau_* vs X2SrZone/x2_*) - gop thanh 1.
+//  Bien mang dung chung `sr_zones` (moi dist la 1 script doc lap nen khong xung dot);
+//  ham nhan mang + ATR/width/maxZone lam tham so (khong tham khao bien toan cuc
+//  vi shared duoc chen TRUOC 10_config/20_core).
+// =============================================================================
+
+type SrZone
+    float top
+    float bot
+    int   side      // 1=support, -1=resistance
+    int   touches
+    bool  broken
+
+var array<SrZone> sr_zones = array.new<SrZone>()
+
+f_addZone(array<SrZone> zones, float px, int side, float atr, float width, int maxZone) =>
+    float half   = atr * width * 0.5
+    bool  merged = false
+    for z in zones
+        if math.abs((z.top + z.bot) / 2 - px) < atr * width
+            z.touches += 1
+            merged     := true
+            break
+    if not merged
+        array.push(zones, SrZone.new(px + half, px - half, side, 1, false))
+    for i = array.size(zones) - 1 to 0
+        SrZone z2 = array.get(zones, i)
+        if z2.broken
+            array.remove(zones, i)
+    while array.size(zones) > maxZone
+        array.shift(zones)
+
+f_nearSupport(array<SrZone> zones, float atr) =>
+    bool found = false
+    for z in zones
+        if not z.broken and z.side == 1 and low >= z.bot - atr * 0.3 and low <= z.top + atr * 0.3
+            found := true
+    found
+
+f_nearResistance(array<SrZone> zones, float atr) =>
+    bool found = false
+    for z in zones
+        if not z.broken and z.side == -1 and high >= z.bot - atr * 0.3 and high <= z.top + atr * 0.3
+            found := true
+    found

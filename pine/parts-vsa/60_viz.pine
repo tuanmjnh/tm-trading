@@ -3,33 +3,33 @@
 //  LAYER 6 - HIEN THI : histogram + MA (rieng cua indicator nay, khong can
 //  force_overlay) + nhan tren GIA (force_overlay) + duong H/T + dashboard.
 // =============================================================================
-plot(tm_vol, "Volume", color = tm_volCol, style = plot.style_columns, format = format.volume)
-plot(tm_i_showMA ? tm_volMA : na, "Volume MA", color = color.new(color.green, 0), linewidth = 1, format = format.volume)
+plot(tm_i_showViz and tm_i_showVol ? tm_vol : na, "Volume", color = tm_volCol, style = plot.style_columns, format = format.volume)
+plot(tm_i_showViz and tm_i_showMA ? tm_volMA : na, "Volume MA", color = color.new(color.green, 0), linewidth = 1, format = format.volume)
 
-plotshape(tm_sigSV, title = "SV", style = shape.triangleup, location = location.belowbar, color = color.purple, size = size.small, text = "SV", textcolor = color.white, force_overlay = true)
-plotshape(tm_sigBC, title = "BC", style = shape.triangledown, location = location.abovebar, color = color.red, size = size.small, text = "BC", textcolor = color.white, force_overlay = true)
-plotshape(tm_sigSTl, title = "ST LONG", style = shape.arrowup, location = location.belowbar, color = color.teal, size = size.small, text = "ST", textcolor = color.white, force_overlay = true)
-plotshape(tm_sigSTs, title = "ST SHORT", style = shape.arrowdown, location = location.abovebar, color = color.orange, size = size.small, text = "ST", textcolor = color.white, force_overlay = true)
-plotshape(tm_sigNS, title = "NS", style = shape.diamond, location = location.belowbar, color = color.blue, size = size.tiny, text = "NS", textcolor = color.white, force_overlay = true)
-plotshape(tm_sigND, title = "ND", style = shape.diamond, location = location.abovebar, color = color.silver, size = size.tiny, text = "ND", textcolor = color.black, force_overlay = true)
+plotshape(tm_i_showViz and tm_i_showSig and tm_sigSV, title = "SV", style = shape.triangleup, location = location.belowbar, color = color.purple, size = size.small, text = "SV", textcolor = color.white, force_overlay = true)
+plotshape(tm_i_showViz and tm_i_showSig and tm_sigBC, title = "BC", style = shape.triangledown, location = location.abovebar, color = color.red, size = size.small, text = "BC", textcolor = color.white, force_overlay = true)
+plotshape(tm_i_showViz and tm_i_showSig and tm_sigSTl, title = "ST LONG", style = shape.arrowup, location = location.belowbar, color = color.teal, size = size.small, text = "ST", textcolor = color.white, force_overlay = true)
+plotshape(tm_i_showViz and tm_i_showSig and tm_sigSTs, title = "ST SHORT", style = shape.arrowdown, location = location.abovebar, color = color.orange, size = size.small, text = "ST", textcolor = color.white, force_overlay = true)
+plotshape(tm_i_showViz and tm_i_showSig and tm_sigNS, title = "NS", style = shape.diamond, location = location.belowbar, color = color.blue, size = size.tiny, text = "NS", textcolor = color.white, force_overlay = true)
+plotshape(tm_i_showViz and tm_i_showSig and tm_sigND, title = "ND", style = shape.diamond, location = location.abovebar, color = color.silver, size = size.tiny, text = "ND", textcolor = color.black, force_overlay = true)
 
 // -----------------------------------------------------------------------------
 //  Duong ho tro / khang cu - tao lai moi tick cuoi (anchored tai pivot bar)
 // -----------------------------------------------------------------------------
 var line lnPLow  = na
 var line lnPHigh = na
-if not tm_i_pivOn
+if not tm_i_pivOn or not tm_i_showViz
     if not na(lnPLow)
         line.delete(lnPLow)
         lnPLow := na
     if not na(lnPHigh)
         line.delete(lnPHigh)
         lnPHigh := na
-if barstate.islast and tm_i_pivOn and tm_hasLow
+if barstate.islast and tm_i_showViz and tm_i_pivOn and tm_hasLow
     if not na(lnPLow)
         line.delete(lnPLow)
     lnPLow := line.new(tm_plowBar, tm_lastPLow, bar_index, tm_lastPLow, color = color.new(color.yellow, 40), style = line.style_dashed, width = 1, force_overlay = true)
-if barstate.islast and tm_i_pivOn and tm_hasHigh
+if barstate.islast and tm_i_showViz and tm_i_pivOn and tm_hasHigh
     if not na(lnPHigh)
         line.delete(lnPHigh)
     lnPHigh := line.new(tm_phighBar, tm_lastPHigh, bar_index, tm_lastPHigh, color = color.new(color.yellow, 40), style = line.style_dashed, width = 1, force_overlay = true)
@@ -46,7 +46,7 @@ var label lbEnt  = na
 var label lbSL   = na
 var label lbTP   = na
 var label lbRes  = na
-if barstate.islast and tm_i_lvlOn
+if barstate.islast and tm_i_showViz and tm_i_lvlOn
     if not na(lnEnt)
         line.delete(lnEnt)
         lnEnt := na
@@ -81,42 +81,51 @@ if barstate.islast and tm_i_lvlOn
 // -----------------------------------------------------------------------------
 //  Dashboard 2 cot x 9 dong - chi ve tren bar cuoi
 // -----------------------------------------------------------------------------
+// Session hien tai - shared f_sess* (pine/shared/common.pine)
+bool tm_sessAsia   = f_sessAsia(tm_i_sessTz)
+bool tm_sessLondon = f_sessLondon(tm_i_sessTz)
+bool tm_sessNy     = f_sessNy(tm_i_sessTz)
+bool tm_sessOverlap = tm_sessLondon and tm_sessNy
+string tm_sessName = f_sessName(tm_sessAsia, tm_sessLondon, tm_sessNy)
+
 var table tm_tbl = na
-if tm_i_dash and na(tm_tbl)
+if tm_i_showViz and tm_i_dash and na(tm_tbl)
     tm_tbl := table.new(position.top_right, 2, 13, border_width = 1, border_color = color.new(color.gray, 80), force_overlay = true)
 tm_dashSz = tm_i_dashSize == "Tiny" ? size.tiny : tm_i_dashSize == "Small" ? size.small : size.normal
 if not na(tm_tbl) and barstate.islast
     table.clear(tm_tbl, 0, 0, 1, 12)
-    // Nen trong suot nhu TM dashboard: o key xam + value trang/tren nen chart
+    // Nen trong suot nhu TM dashboard: o key gray-10 + value silver / nen trong
     // tuong phan ro. Truoc day dung nen xam dac (gray-on-gray) -> kho doc.
-    tm_kv = color.new(color.black, 100)
+    color kC = color.new(color.gray, 10)
+    color vC = color.silver
+    color bg = color.new(color.black, 100)
     // KHONG truyen width/height cho table.cell: theo docs TV 2 chieu do la PHAN TRAM
     // khong gian pane (vi du width = 100 = 100% -> phu het chart). De auto-size theo
     // text, giong TM dashboard dang lam.
-    table.cell(tm_tbl, 0, 0, "Che do", text_color = color.gray, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = tm_kv)
-    table.cell(tm_tbl, 1, 0, tm_confirmOnly ? "Nen dong" : "Realtime", text_color = color.white, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = tm_kv)
-    table.cell(tm_tbl, 0, 1, "TF", text_color = color.gray, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = tm_kv)
-    table.cell(tm_tbl, 1, 1, timeframe.period, text_color = color.white, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = tm_kv)
-    table.cell(tm_tbl, 0, 2, "Volume ratio", text_color = color.gray, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = tm_kv)
-    table.cell(tm_tbl, 1, 2, str.tostring(tm_ratio, "#.00") + "x", text_color = tm_isPurRaw ? color.purple : color.white, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = tm_kv)
-    table.cell(tm_tbl, 0, 3, "Bucket", text_color = color.gray, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = tm_kv)
-    table.cell(tm_tbl, 1, 3, tm_bucket, text_color = tm_isPurRaw ? color.purple : color.white, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = tm_kv)
-    table.cell(tm_tbl, 0, 4, "Cot TIM/20", text_color = color.gray, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = tm_kv)
-    table.cell(tm_tbl, 1, 4, str.tostring(tm_pur20, "#.0"), text_color = color.white, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = tm_kv)
-    table.cell(tm_tbl, 0, 5, "Su kien gan nhat", text_color = color.gray, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = tm_kv)
-    table.cell(tm_tbl, 1, 5, tm_lastEvt == "-" ? "-" : tm_lastEvt + " " + str.tostring(bar_index - tm_lastEvtBar) + " bar", text_color = color.white, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = tm_kv)
-    table.cell(tm_tbl, 0, 6, "EoM", text_color = color.gray, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = tm_kv)
-    table.cell(tm_tbl, 1, 6, tm_eomRun >= 3 ? "Yes (" + str.tostring(tm_eomRun) + ")" : "No", text_color = color.white, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = tm_kv)
-    table.cell(tm_tbl, 0, 7, "Phien", text_color = color.gray, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = tm_kv)
-    table.cell(tm_tbl, 1, 7, not tm_i_sessOn ? "Tat" : tm_sessOk ? "Trong phien" : "Ngoai phien", text_color = color.white, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = tm_kv)
-    table.cell(tm_tbl, 0, 8, "TIM gan nhat", text_color = color.gray, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = tm_kv)
-    table.cell(tm_tbl, 1, 8, na(tm_lastPurBar) ? "chua co" : str.tostring(bar_index - tm_lastPurBar) + " bar", text_color = color.white, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = tm_kv)
+    table.cell(tm_tbl, 0, 0, "Che do", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 0, tm_confirmOnly ? "Nen dong" : "Realtime", text_color = vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 1, "TF", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 1, timeframe.period, text_color = vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 2, "Volume ratio", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 2, str.tostring(tm_ratio, "#.00") + "x", text_color = tm_isPurRaw ? color.purple : vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 3, "Bucket", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 3, tm_bucket, text_color = tm_isPurRaw ? color.purple : vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 4, "Cot TIM/20", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 4, str.tostring(tm_pur20, "#.0"), text_color = vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 5, "Su kien gan nhat", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 5, tm_lastEvt == "-" ? "-" : tm_lastEvt + " " + str.tostring(bar_index - tm_lastEvtBar) + " bar", text_color = vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 6, "EoM", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 6, tm_eomRun >= 3 ? "Yes (" + str.tostring(tm_eomRun) + ")" : "No", text_color = vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 7, "Session", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 7, tm_sessName + (tm_i_sessOn ? (tm_sessOk ? " / Trong phien" : " / Ngoai phien") : ""), text_color = tm_sessOverlap ? color.orange : tm_sessNy ? color.yellow : vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 8, "TIM gan nhat", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 8, na(tm_lastPurBar) ? "chua co" : str.tostring(bar_index - tm_lastPurBar) + " bar", text_color = vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
     // --- Rang buoc phi: quyet dinh cau hinh co dung duoc khong (docs/vsa-optimization.md)
-    table.cell(tm_tbl, 0, 9, "Phi/R", text_color = color.gray, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = tm_kv)
-    table.cell(tm_tbl, 1, 9, na(tm_feeR) ? "-" : str.tostring(tm_feeR, "#.00") + "R" + (tm_feeOk ? "" : "  QUA CAO"), text_color = tm_feeOk ? color.new(color.green, 0) : color.new(color.red, 0), text_size = tm_dashSz, text_halign = text.align_right, bgcolor = tm_kv)
-    table.cell(tm_tbl, 0, 10, "slBuf toi thieu", text_color = color.gray, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = tm_kv)
-    table.cell(tm_tbl, 1, 10, na(tm_slBufMin) ? "-" : str.tostring(tm_slBufMin, "#.0") + " ATR (dang " + str.tostring(tm_i_slBuf, "#.0") + ")", text_color = tm_feeOk ? color.white : color.new(color.orange, 0), text_size = tm_dashSz, text_halign = text.align_right, bgcolor = tm_kv)
-    table.cell(tm_tbl, 0, 11, "Vao lenh / TP", text_color = color.gray, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = tm_kv)
-    table.cell(tm_tbl, 1, 11, ((tm_entryMarket or tm_wyckoffMode) ? "Market" : "Limit") + " / " + (tm_tpTheoR ? "R" : "Pivot"), text_color = color.white, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = tm_kv)
-    table.cell(tm_tbl, 0, 12, "Chien luoc", text_color = color.gray, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = tm_kv)
-    table.cell(tm_tbl, 1, 12, tm_wyckoffMode ? ("Wyckoff: " + tm_i_wyckoffEvent) : "VSA dao chieu", text_color = color.white, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = tm_kv)
+    table.cell(tm_tbl, 0, 9, "Phi/R", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 9, na(tm_feeR) ? "-" : str.tostring(tm_feeR, "#.00") + "R" + (tm_feeOk ? "" : "  QUA CAO"), text_color = tm_feeOk ? color.new(color.green, 0) : color.new(color.red, 0), text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 10, "slBuf toi thieu", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 10, na(tm_slBufMin) ? "-" : str.tostring(tm_slBufMin, "#.0") + " ATR (dang " + str.tostring(tm_i_slBuf, "#.0") + ")", text_color = tm_feeOk ? vC : color.new(color.orange, 0), text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 11, "Vao lenh / TP", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 11, ((tm_entryMarket or tm_wyckoffMode) ? "Market" : "Limit") + " / " + (tm_tpTheoR ? "R" : "Pivot"), text_color = vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 12, "Chien luoc", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 12, tm_wyckoffMode ? ("Wyckoff: " + tm_i_wyckoffEvent) : "VSA dao chieu", text_color = vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)

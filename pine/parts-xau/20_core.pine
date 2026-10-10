@@ -1,0 +1,23 @@
+// =============================================================================
+//  L1 - CORE UTILITIES
+// =============================================================================
+
+// f_clamp / f_fmtPx / f_isNewDay - shared (pine/shared/common.pine)
+xau_atr   = ta.atr(xau_atr_len)
+xau_vol   = nz(volume)
+xau_volMA = ta.rma(xau_vol, xau_vol_maLen)
+xau_volSessOk = not xau_vol_sessOn or f_sessionOk(xau_vol_sess, xau_vol_tz)
+xau_volEvtOk  = (xau_vol_min <= 0.0 or xau_vol >= xau_vol_min) and xau_volSessOk
+xau_volRatio  = not na(xau_volMA) and xau_volMA > 0.0 ? xau_vol / xau_volMA : 0.0
+xau_volBucket = f_vsaName(xau_vol, xau_volMA, xau_vol_spikeR, xau_vol_rVH, xau_vol_rH, xau_vol_rN, xau_vol_rL)
+xau_isTimRaw  = not na(xau_volMA) and xau_volMA > 0.0 and xau_vol >= xau_volMA * xau_vol_spikeR
+xau_isTim     = xau_isTimRaw and xau_volEvtOk
+xau_timCount  = math.sum(xau_isTim ? 1.0 : 0.0, xau_vol_purWin)
+
+// Universal pivots (for market structure)
+xau_pivH = ta.pivothigh(high, xau_ms_swLen, xau_ms_swLen)
+xau_pivL = ta.pivotlow(low,   xau_ms_swLen, xau_ms_swLen)
+
+// Swing extremes for SL calculation
+xau_swingLo = ta.lowest(low,   xau_sl_swing)
+xau_swingHi = ta.highest(high, xau_sl_swing)

@@ -14,7 +14,7 @@ import { join } from 'node:path'
 
 import {
   generationOf, isComparableGeneration, windowStartOf, metricRow,
-  pickFrozenPreset, stampLiveEntries, comparePresetDrift, formatPresetDrift,
+  pickFrozenPreset, partitionStamped, comparePresetDrift, formatPresetDrift,
   frozenEntriesFromTrades, loadFrozenEntries, loadLiveEntries, runPresetDrift,
   PRESET_DRIFT_DEFAULTS,
 } from './preset-drift.mjs'
@@ -142,13 +142,24 @@ check('minTrades: "" falls back to the default, NOT to 0', comparePresetDrift({ 
 check('windowDays: null/"" fall back to 7', comparePresetDrift({ live: liveFew, backtest: frozenMatch, windowDays: null }).windowDays === 7 && comparePresetDrift({ live: liveFew, backtest: frozenMatch, windowDays: '' }).windowDays === 7)
 check('toleranceR: null falls back to the default', comparePresetDrift({ live: liveFew, backtest: frozenMatch, toleranceR: null }).toleranceR === 0.25)
 
-// --- 5d) live rows with no stamp at all ------------------------------------
+// --- 5d) live rows with no stamp at all are EXCLUDED (§10.4) ------------------
 const liveUnstamped = mkmany(25, 16, { hash: null, engineVersion: null, time: '2026-10-01T00:00:00Z' }).map(metricRow)
 const repUnstamped = comparePresetDrift({ live: liveUnstamped, backtest: frozenMatch })
-check('unstamped live rows -> explicit "cannot compare" (no invented comparison)',
-  repUnstamped.buckets[0].verdict === 'cannot compare: live trades carry no engineVersion+paramsHash', repUnstamped.buckets[0].verdict)
-check('unstamped live generation is reported as unknown#unknown', repUnstamped.liveGenerations[0] === 'unknown#unknown')
-check('a single unstamped generation is not a D1 refusal', repUnstamped.refused === false)
+check('unstamped live rows -> EXCLUDED from every bucket (never unknown#unknown)',
+  repUnstamped.buckets.length === 0 && !repUnstamped.liveGenerations.includes('unknown#unknown'),
+  JSON.stringify({ buckets: repUnstamped.buckets.length, gens: repUnstamped.liveGenerations }))
+check('the excluded count is on the report', repUnstamped.excludedUnknown === 25)
+check('exclusion is announced as a warning with its count',
+  repUnstamped.warnings.some((w) => /25 live row\(s\) with NO version stamp/.test(w)), JSON.stringify(repUnstamped.warnings))
+check('all excluded -> verdict says why, not "no live trades"',
+  /all 25 live row\(s\) excluded: no version stamp/.test(repUnstamped.overallVerdict), repUnstamped.overallVerdict)
+check('a single excluded group is not a D1 refusal', repUnstamped.refused === false)
+// Mixed: stamped rows are still compared, the unstamped ones simply vanish.
+const repMixedExcl = comparePresetDrift({
+  live: [...liveSame, ...liveUnstamped], backtest: frozenMatch,
+})
+check('mixed stamped+unstamped: stamped rows still bucketed', repMixedExcl.buckets.length === 1 && repMixedExcl.buckets[0].live.n === 25)
+check('mixed: only the unstamped count is excluded', repMixedExcl.excludedUnknown === 25)
 
 // --- 5e) live preset different from the frozen baseline --------------------
 const liveOther = mkmany(25, 16, { hash: 'bbb', time: '2026-10-01T00:00:00Z' }).map(metricRow)
@@ -191,16 +202,23 @@ check('explicit frozen generation carries through the report', repRequested.froz
 check('other frozen presets are listed as candidates, not pooled', repRequested.frozen.candidates.length === 2 && repRequested.warnings.some((w) => /NOT pooled/.test(w)))
 
 // =============================================================================
-section('6. stampLiveEntries — a declaration fills gaps, never relabels')
+section('6. partitionStamped — no stamp -> excluded, never relabelled (§10.4)')
 
 const unstampedRow = { engineVersion: UNKNOWN, paramsHash: UNKNOWN, unknown: ['engineVersion', 'paramsHash', 'fees'], rMultiple: 1, result: 'TP' }
-const stamped = stampLiveEntries([unstampedRow], { engineVersion: '0.5.0', paramsHash: 'aaa' })
-check('missing stamps filled from the declaration', stamped.entries[0].engineVersion === '0.5.0' && stamped.entries[0].paramsHash === 'aaa')
-check('the unknown list is pruned accordingly', JSON.stringify(stamped.entries[0].unknown) === JSON.stringify(['fees']))
-check('declared count reported', stamped.stamped === 1)
-const keep = stampLiveEntries([{ engineVersion: '9.9.9', paramsHash: 'zzz', unknown: [] }], { engineVersion: '0.5.0', paramsHash: 'aaa' })
-check('an existing stamp is never overwritten', keep.entries[0].engineVersion === '9.9.9' && keep.entries[0].paramsHash === 'zzz' && keep.stamped === 0)
-check('no declaration -> no change', stampLiveEntries([unstampedRow], {}).stamped === 0)
+check('a row with both halves unknown is excluded',
+  partitionStamped([unstampedRow]).excluded === 1 && partitionStamped([unstampedRow]).kept.length === 0)
+const halfRow = { engineVersion: '0.5.0', paramsHash: UNKNOWN, unknown: ['paramsHash'], rMultiple: 1, result: 'TP' }
+check('a row with only ONE half usable is excluded (both halves or neither)',
+  partitionStamped([halfRow]).excluded === 1)
+const goodRow = { engineVersion: '0.5.0', paramsHash: 'aaa', unknown: ['fees'], rMultiple: 1, result: 'TP' }
+const partGood = partitionStamped([goodRow, unstampedRow, halfRow])
+check('a fully stamped row is kept', partGood.kept.length === 1 && partGood.kept[0].paramsHash === 'aaa')
+check('excluded count reported alongside the kept rows', partGood.excluded === 2)
+check('nested position stamps are understood too',
+  partitionStamped([{ stamp: { engineVersion: '0.5.0', paramsHash: 'bbb' } }]).kept.length === 1)
+check('stampUnknown:true flag forces exclusion',
+  partitionStamped([{ stampUnknown: true, engineVersion: '0.5.0', paramsHash: 'ccc' }]).excluded === 1)
+check('no rows -> nothing excluded', partitionStamped([]).excluded === 0)
 
 // =============================================================================
 section('7. formatPresetDrift — prints n, never a confident guess, never D8')
@@ -211,7 +229,7 @@ check('the frozen baseline is named with its sample size', /0\.5\.0#aaa/.test(te
 check('a small-sample bucket is labelled insufficient', /insufficient evidence/.test(formatPresetDrift(repFew)))
 check('the report says it is NOT D8 (no halt)', /NOT D8/.test(text) && /exec\/drift\.mjs/.test(text))
 check('a refused pool is printed as refused', /REFUSED/.test(formatPresetDrift(repMixed)))
-check('missing R samples per bucket are surfaced', /R missing on/.test(formatPresetDrift(comparePresetDrift({ live: [metricRow({ result: 'SL', dir: 1, entryPrice: 100, sl: 100, exitPrice: 95, entryTime: '2026-10-01T00:00:00Z' })], backtest: frozenMatch }))))
+check('missing R samples per bucket are surfaced', /R missing on/.test(formatPresetDrift(comparePresetDrift({ live: [metricRow({ result: 'SL', dir: 1, entryPrice: 100, sl: 100, exitPrice: 95, entryTime: '2026-10-01T00:00:00Z', engineVersion: '0.5.0', paramsHash: 'aaa' })], backtest: frozenMatch }))))
 
 // =============================================================================
 section('8. runPresetDrift — file IO path (tmp files, no Mongo)')
@@ -220,22 +238,42 @@ const btFile = join(tmp, 'trades.ndjson')
 const liveFile = join(tmp, 'journal.ndjson')
 const btRaw = mkmany(20, 16, { hash: 'aaa', time: '2026-09-01T00:00:00Z' }).map((r) => ({ ...r, entryPrice: 100, sl: 95, exitPrice: r.result === 'TP' ? 110 : 95, tp: 110 }))
 writeFileSync(btFile, btRaw.map((r) => JSON.stringify(r)).join('\n') + '\n')
-const liveEntries = mkmany(25, 16, { hash: null, engineVersion: null, time: '2026-10-01T00:00:00Z' }).map((r) => normalizeEntry({ ...r, source: 'paper', account: 'paper', id: `l${r.entryTime}` }))
+// The WRITER stamps its own rows now (§10.3): the file path carries real stamps,
+// no report-side declaration exists to fill them in (§10.3.1).
+const liveEntries = mkmany(25, 16, { hash: 'aaa', engineVersion: '0.5.0', time: '2026-10-01T00:00:00Z' }).map((r) => normalizeEntry({ ...r, source: 'paper', account: 'paper', id: `l${r.entryTime}` }))
 writeJournalNdjson(liveEntries, liveFile)
 
 const frozenLoaded = loadFrozenEntries({ file: btFile })
 check('frozen rows read from reports-style NDJSON', frozenLoaded.entries.length === 20 && frozenLoaded.skipped === 0)
 check('frozenEntriesFromTrades keeps the stamp', frozenEntriesFromTrades(btRaw)[0].paramsHash === 'aaa')
 
-const liveLoaded = await loadLiveEntries({ file: liveFile, mongo: false, engineVersion: '0.5.0', paramsHash: 'aaa' })
+const liveLoaded = await loadLiveEntries({ file: liveFile, mongo: false })
 check('live rows read from the journal mirror without Mongo', liveLoaded.source === 'ndjson' && liveLoaded.entries.length === 25)
-check('the declared stamp is applied and counted', liveLoaded.declaredStamps === 25)
+check('live rows carry their own writer stamp (no report-side declaration)',
+  liveLoaded.entries.every((e) => e.engineVersion === '0.5.0' && e.paramsHash === 'aaa'))
 
-const report = await runPresetDrift({ liveFile, backtestFile: btFile, mongo: false, livePreset: 'aaa', liveEngineVersion: '0.5.0' })
+const report = await runPresetDrift({ liveFile, backtestFile: btFile, mongo: false })
 check('sources reported (nothing hidden about what was read)', report.sources.live === 'ndjson' && report.sources.frozen === btFile && report.sources.liveRows === 25 && report.sources.frozenRows === 20, JSON.stringify(report.sources))
 check('the comparison runs end to end on files', report.overallVerdict === 'DRIFT', report.overallVerdict)
-check('declaration is announced in the warnings', report.warnings.some((w) => /declared live preset/.test(w)), JSON.stringify(report.warnings))
+check('nothing was excluded when every row is stamped', report.excludedUnknown === 0 && report.sources.excludedNoStamp === 0)
 check('report is JSON-serialisable (dashboard/Telegram safe)', typeof JSON.stringify(report) === 'string')
+
+// An all-unstamped journal: nothing comparable, but the report SAYS why (§10.4).
+const unstampedFile = join(tmp, 'journal-unstamped.ndjson')
+writeJournalNdjson(
+  mkmany(10, 5, { hash: null, engineVersion: null, time: '2026-10-01T00:00:00Z' })
+    .map((r) => normalizeEntry({ ...r, source: 'paper', account: 'paper', id: `u${r.entryTime}` })),
+  unstampedFile,
+)
+const repAllExcluded = await runPresetDrift({ liveFile: unstampedFile, backtestFile: btFile, mongo: false })
+check('all-unstamped journal -> every row excluded, count in the report',
+  repAllExcluded.excludedUnknown === 10 && repAllExcluded.buckets.length === 0,
+  JSON.stringify({ excluded: repAllExcluded.excludedUnknown, buckets: repAllExcluded.buckets.length }))
+check('the verdict names the exclusion instead of pretending there were no trades',
+  /all 10 live row\(s\) excluded: no version stamp/.test(repAllExcluded.overallVerdict), repAllExcluded.overallVerdict)
+check('excluded count visible in the formatted report',
+  /excluded \(no stamp\): 10/.test(formatPresetDrift(repAllExcluded)))
+check('the warning is printed too', repAllExcluded.warnings.some((w) => /10 live row\(s\) with NO version stamp/.test(w)))
 
 const empty = await runPresetDrift({ liveFile: join(tmp, 'missing.ndjson'), backtestFile: join(tmp, 'missing2.ndjson'), mongo: false })
 check('missing files -> no crash, both sides empty', empty.sources.liveRows === 0 && empty.sources.frozenRows === 0 && empty.overallVerdict === 'no live trades')

@@ -54,3 +54,97 @@ export function engineModel(modelFile: string, exportName: string): Promise<AnyM
   })
   return promise
 }
+
+// =============================================================================
+//  Simulation modules (pure core) — cung ly do: Nitro bundle tinh sai do sau
+//  duong dan tuong doi ra ngoai `server/` (simulation/ nam ngoai server/).
+//  Dung dynamic import tu process.cwd() de tranh tinh sai do sau.
+// =============================================================================
+
+type SimulationModule = typeof import('../../simulation/order.mjs')
+type FillModule = typeof import('../../simulation/fill.mjs')
+type EngineSimModule = typeof import('../../simulation/engine.mjs')
+type MarginModule = typeof import('../../simulation/margin.mjs')
+type LiquidationModule = typeof import('../../simulation/liquidation.mjs')
+type AccountSimModule = typeof import('../../simulation/account.mjs')
+
+let orderSimPromise: Promise<SimulationModule> | null = null
+let fillSimPromise: Promise<FillModule> | null = null
+let engineSimPromise: Promise<EngineSimModule> | null = null
+let marginSimPromise: Promise<MarginModule> | null = null
+let liquidationSimPromise: Promise<LiquidationModule> | null = null
+let accountSimPromise: Promise<AccountSimModule> | null = null
+
+export async function simulationOrder(): Promise<SimulationModule> {
+  if (!orderSimPromise) {
+    const file = pathToFileURL(join(process.cwd(), 'simulation', 'order.mjs')).href
+    orderSimPromise = import(/* @vite-ignore */ file) as Promise<SimulationModule>
+  }
+  return orderSimPromise
+}
+
+export async function simulationFill(): Promise<FillModule> {
+  if (!fillSimPromise) {
+    const file = pathToFileURL(join(process.cwd(), 'simulation', 'fill.mjs')).href
+    fillSimPromise = import(/* @vite-ignore */ file) as Promise<FillModule>
+  }
+  return fillSimPromise
+}
+
+export async function simulationEngine(): Promise<EngineSimModule> {
+  if (!engineSimPromise) {
+    const file = pathToFileURL(join(process.cwd(), 'simulation', 'engine.mjs')).href
+    engineSimPromise = import(/* @vite-ignore */ file) as Promise<EngineSimModule>
+  }
+  return engineSimPromise
+}
+
+export async function simulationMargin(): Promise<MarginModule> {
+  if (!marginSimPromise) {
+    const file = pathToFileURL(join(process.cwd(), 'simulation', 'margin.mjs')).href
+    marginSimPromise = import(/* @vite-ignore */ file) as Promise<MarginModule>
+  }
+  return marginSimPromise
+}
+
+export async function simulationLiquidation(): Promise<LiquidationModule> {
+  if (!liquidationSimPromise) {
+    const file = pathToFileURL(join(process.cwd(), 'simulation', 'liquidation.mjs')).href
+    liquidationSimPromise = import(/* @vite-ignore */ file) as Promise<LiquidationModule>
+  }
+  return liquidationSimPromise
+}
+
+export async function simulationAccount(): Promise<AccountSimModule> {
+  if (!accountSimPromise) {
+    const file = pathToFileURL(join(process.cwd(), 'simulation', 'account.mjs')).href
+    accountSimPromise = import(/* @vite-ignore */ file) as Promise<AccountSimModule>
+  }
+  return accountSimPromise
+}
+
+// =============================================================================
+//  Strategy service & models (runtime dynamic import to prevent Rollup
+//  relative depth calculation errors outside server/).
+// =============================================================================
+
+type StrategyServiceModule = typeof import('../../engine/strategyService.mjs')
+
+let strategyServicePromise: Promise<StrategyServiceModule> | null = null
+
+export async function strategyService(): Promise<StrategyServiceModule> {
+  if (!strategyServicePromise) {
+    const file = pathToFileURL(join(process.cwd(), 'engine', 'strategyService.mjs')).href
+    strategyServicePromise = import(/* @vite-ignore */ file) as Promise<StrategyServiceModule>
+  }
+  return strategyServicePromise
+}
+
+export function strategyProfileModel(): Promise<AnyModel | null> {
+  return engineModel('strategyProfile.mjs', 'StrategyProfile')
+}
+
+export function strategyVersionModel(): Promise<AnyModel | null> {
+  return engineModel('strategyVersion.mjs', 'StrategyVersion')
+}
+

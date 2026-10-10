@@ -1,0 +1,47 @@
+// =============================================================================
+//  L6A - VOLUME ENGINE
+//  Volume is kept separate from the momentum indicators.
+// =============================================================================
+
+float vol_ratio = xau_volRatio
+bool  vol_spike = xau_isTim
+float vol_score = vol_spike ? (cp_bullBar ? 1.0 : cp_bearBar ? -1.0 : 0.0) : 0.0
+
+// =============================================================================
+//  L6B - VOLATILITY / MOMENTUM INDICATORS
+//  ATR, RSI and Stochastic are calculated independently from Volume.
+// =============================================================================
+
+float atr_ma    = ta.sma(xau_atr, 20)
+float atr_score = xau_atr > atr_ma * 1.2 ? 1.0 : xau_atr < atr_ma * 0.8 ? 0.0 : 0.5
+
+float xau_rsi   = ta.rsi(close, xau_rsi_len)
+float rsi_score = xau_rsi < xau_rsi_os ? 1.0 : xau_rsi > xau_rsi_ob ? -1.0 : 0.0
+
+// ta.stoch() returns a single %K series. %D is the SMA of %K.
+float stoch_k = ta.stoch(close, high, low, xau_stoch_kLen)
+float stoch_d = ta.sma(stoch_k, xau_stoch_dLen)
+float stoch_ks = stoch_d
+float stoch_score = stoch_ks < 20 ? 1.0 : stoch_ks > 80 ? -1.0 : 0.0
+
+float mom_score = f_clamp((rsi_score + stoch_score) / 2.0, -1.0, 1.0)
+
+// =============================================================================
+//  L7 - SESSION ENGINE (Asia / London / NY / Overlap)
+// =============================================================================
+
+bool sess_asia    = f_sessAsia(xau_sess_tz)
+bool sess_london  = f_sessLondon(xau_sess_tz)
+bool sess_ny      = f_sessNy(xau_sess_tz)
+bool sess_overlap = sess_london and sess_ny
+
+float sess_score_raw = sess_overlap ? 1.0 : sess_ny ? 0.8 : sess_london ? 0.6 : sess_asia ? 0.2 : 0.0
+
+// =============================================================================
+//  L8 - HTF CONTEXT
+//  request.security with [1] + lookahead_on to prevent look-ahead bias
+// =============================================================================
+
+float htf_ema   = request.security(syminfo.tickerid, xau_htf_tf, ta.ema(close, xau_htf_emaLen)[1], lookahead = barmerge.lookahead_on)
+int   htf_dir   = not na(htf_ema) ? (close > htf_ema ? 1 : -1) : 0
+float htf_score = float(htf_dir)

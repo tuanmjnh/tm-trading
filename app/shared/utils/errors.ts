@@ -84,7 +84,7 @@ export function getErrorMessage(err: unknown, t: (key: string) => string): strin
 
   // 2. Check if statusMessage is an i18n key (e.g. error.invalidCredentials)
   const code = e?.statusMessage || e?.data?.statusMessage
-  if (code) {
+  if (code && /^[a-zA-Z0-9_.-]+$/.test(code)) {
     const translated = t(code)
     if (translated && translated !== code) return translated
   }
@@ -92,8 +92,10 @@ export function getErrorMessage(err: unknown, t: (key: string) => string): strin
   // 3. Map backend / TM-Hub returned messages to i18n key
   const text = e?.data?.message || e?.message
   if (text) {
-    const translated = t(text)
-    if (translated && translated !== text) return translated
+    if (/^[a-zA-Z0-9_.-]+$/.test(text)) {
+      const translated = t(text)
+      if (translated && translated !== text) return translated
+    }
 
     if (/invalid email or password/i.test(text)) return t('error.invalidCredentials')
     if (/invalid or inactive app/i.test(text)) return t('error.invalidAppId')

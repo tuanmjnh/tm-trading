@@ -26,14 +26,22 @@
 //  Honesty rules (Phase 13 / D12 spirit):
 //    - a tag that cannot be derived is recorded as `unknown` AND listed in
 //      `entry.unknown` — it is never guessed;
-//    - `fees` is null (unknown) rather than 0: paper PnL is fee-free BY DESIGN
-//      (exec/paper.mjs), so writing 0 would claim costs were measured;
+//    - `fees` is null (unknown) rather than 0: null = a doc written before
+//      Phase 7P or by a path that never measured costs — writing 0 would claim
+//      costs were measured. Since Phase 7P exec/paper.mjs writes the MEASURED
+//      round-trip fees of the simulation fill model, so a number here is real.
 //    - `regime` is a POINT-IN-TIME lookup (latest intel snapshot at or before
 //      entryTime). A later snapshot must never tag an earlier trade, otherwise
 //      the journal leaks look-ahead information into its own review;
-//    - `tf` is not stored on positions at all: it is resolved through the alert
-//      that opened the position (signalKey -> alerts.alertKey) when that lookup
-//      is supplied, otherwise it stays unknown.
+//    - `tf` comes from `positions.tf` when the executor stored it (written from
+//      the opening alert since docs/data-model.md §10.3), else from the alert
+//      that opened the position (signalKey -> alerts.alertKey), else unknown;
+//    - the version stamp is read from `positions.stamp` (§10.3) — the WRITER's
+//      declaration, the only one: this projection NEVER fills a missing stamp,
+//      so a legacy row stays `unknown` and preset-drift can exclude it;
+//    - `exitReason` is read from the position (recorded by the exit path where
+//      the decision was made, §10.3.2) and mapped to `result`; when absent the
+//      levels are consulted, `unknown` when that is not exact.
 //
 //  Layout: PURE CORE (no IO, no Mongo, no clock) + a thin IO layer, mirroring
 //  exec/risk.mjs. The query/aggregate helpers are therefore testable without a
@@ -56,8 +64,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 export const UNKNOWN = 'unknown'
 export const JOURNAL_FILE = join(ROOT, 'reports', 'journal.ndjson')
 export const JOURNAL_SCHEMA_VERSION = 1
-/** Executed-trade sources (same enum as engine/models/position.mjs). */
-export const JOURNAL_SOURCES = Object.freeze(['paper', 'mt5', 'exchange', 'manual'])
+/** Executed-trade sources (same enum as engine/models/position.mjs + replay). */
+export const JOURNAL_SOURCES = Object.freeze(['paper', 'mt5', 'exchange', 'manual', 'replay'])
 export const EXECUTED_RESULTS = Object.freeze(['TP', 'SL', 'TIME', 'OPEN', UNKNOWN])
 /** D12: below this many closed trades a bucket is not evidence, it is a rumour. */
 export const MIN_TRADES_FOR_EVIDENCE = 20
@@ -137,11 +145,12 @@ export function regimeAt(entryTime, snapshots = []) {
 }
 
 /**
- * Result of a closed position. `positions` does NOT persist why it closed
- * (exec/paper.mjs knows the reason but stores only status/pnl), so the journal
- * derives it from the recorded levels and says unknown when that is not exact.
- * A gap fill (paper fills the stop at the bar OPEN, not at the stop level) is
- * therefore unknown ON PURPOSE: calling it TP or SL would be a guess.
+ * Result of a closed position. `positions.exitReason` records WHY it closed
+ * (§10.3.2 — written by the exit path at the moment it decided), so the executor
+ * reason wins whenever it is present. Without one the recorded levels are
+ * consulted: a gap fill (paper fills the stop at the bar OPEN, not at the stop
+ * level) matches no level and therefore stays `unknown` ON PURPOSE — calling it
+ * TP or SL would be a guess.
  */
 export function deriveResult({ dir, sl, tps, exitPrice, status, exitReason = null } = {}) {
   if (exitReason) {
@@ -240,20 +249,28 @@ export function normalizeEntry(raw = {}) {
 
 /**
  * A `positions` document -> one journal row.
+ *
+ * The version stamp is read from the position itself: nested `pos.stamp.*`
+ * (docs/data-model.md §10.3) first, then the LEGACY top-level fields written
+ * before §10.3. There is deliberately NO caller-supplied stamp parameter: the
+ * writer (recordOpen) is the only source of truth, and a projection that could
+ * relabel a legacy row would defeat the stampUnknown exclusion (§10.4).
+ *
  * @param {object} pos     positions doc (lean is fine)
  * @param {object} [opts]
  * @param {object} [opts.alert]            alert doc for the opening signal (resolves tf)
  * @param {Array}  [opts.regimeSnapshots]  intel kind 'regime' docs
- * @param {string} [opts.engineVersion]    live engine stamp, when the caller knows it
- * @param {string} [opts.paramsHash]       live preset stamp, when the caller knows it
- * @param {string} [opts.exitReason]       reason string from the executor, when available
+ * @param {string} [opts.exitReason]       fallback reason when the position itself carries none
  */
 export function fromPosition(pos, opts = {}) {
   if (!pos || typeof pos !== 'object' || Array.isArray(pos)) throw new TypeError('fromPosition: position object required')
   const alert = opts.alert ?? null
   const tps = Array.isArray(pos.tps) ? pos.tps : []
   const status = String(pos.status ?? '')
-  const result = deriveResult({ dir: pos.dir, sl: pos.sl, tps, exitPrice: pos.exitPrice, status, exitReason: opts.exitReason ?? null })
+  // The executor recorded WHY on the position (§10.3.2); the caller's string is
+  // only a fallback for rows written before that field existed.
+  const result = deriveResult({ dir: pos.dir, sl: pos.sl, tps, exitPrice: pos.exitPrice, status, exitReason: pos.exitReason ?? opts.exitReason ?? null })
+  const st = pos.stamp && typeof pos.stamp === 'object' ? pos.stamp : null
   return normalizeEntry({
     source: pos.source,
     account: pos.account,
@@ -270,12 +287,12 @@ export function fromPosition(pos, opts = {}) {
     result,
     pnlAbs: pos.pnlAbs,
     pnlPct: pos.pnlPct,
-    // positions has no fee field: paper PnL is fee-free by design -> UNKNOWN.
+    // paper PnL is fee-free by design -> null (UNKNOWN) unless the executor wrote one
     fees: pos.fees,
     method: pos.method,
     regime: regimeAt(pos.entryTime, opts.regimeSnapshots ?? []),
-    engineVersion: pos.engineVersion ?? opts.engineVersion ?? null,
-    paramsHash: pos.paramsHash ?? opts.paramsHash ?? null,
+    engineVersion: st?.engineVersion ?? pos.engineVersion ?? null,
+    paramsHash: st?.paramsHash ?? pos.paramsHash ?? null,
     status,
     entryTime: pos.entryTime,
     exitTime: pos.exitTime,
@@ -511,8 +528,12 @@ export function journalQuery(f = {}) {
  * @param {object[]}[opts.regimeSnapshots]   injected intel regime rows
  * @param {number}  [opts.limit]
  * @param {string}  [opts.account]
- * @param {string}  [opts.engineVersion]     live stamp to apply where unknown
- * @param {string}  [opts.paramsHash]        live preset to apply where unknown
+ *
+ * NOTE: there is deliberately NO `engineVersion`/`paramsHash` declaration here
+ * (docs/data-model.md §10.3.1: the declaration lives in PAPER_LIVE_PRESET /
+ * PAPER_LIVE_PARAMS — where trades are OPENED — and nowhere else). This is a
+ * projection: it copies the position's own stamp or writes `unknown`, never a
+ * relabelled one.
  */
 export async function syncJournal(opts = {}) {
   const {
@@ -544,8 +565,6 @@ export async function syncJournal(opts = {}) {
   const built = entriesFromPositions(positions, {
     alerts: alerts ?? [],
     regimeSnapshots: regimes ?? [],
-    engineVersion: opts.engineVersion ?? null,
-    paramsHash: opts.paramsHash ?? null,
     recordedAt: opts.recordedAt ?? null,
   })
   stats.entries = built.entries.length
@@ -616,7 +635,7 @@ if (isMain) {
 
   try {
     if (cmd === 'sync') {
-      const out = await syncJournal({ mongo: 'auto', engineVersion: val('--engine-version'), paramsHash: val('--params-hash') })
+      const out = await syncJournal({ mongo: 'auto' })
       console.log(JSON.stringify(out, null, 2))
     } else {
       const loaded = await loadJournal({ filters, mongo: 'auto' })

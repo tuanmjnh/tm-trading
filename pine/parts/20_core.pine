@@ -3,23 +3,15 @@
 //  Khong duoc phep phu thuoc vao module tin hieu cu the nao.
 // =============================================================================
 
-f_clamp(float v, float lo, float hi) =>
-    math.max(lo, math.min(hi, v))
-
+// f_clamp / f_fmtPx / f_isNewDay - shared (pine/shared/common.pine)
 f_tfMinutes() =>
     timeframe.in_seconds() / 60.0
-
-f_isNewDay() =>
-    ta.change(time("D")) != 0
 
 // Giu 1 su kien trong `n` nen (chuyen thanh xung lien tuc de tinh diem tong hop).
 f_pulse(bool ev, int n) =>
     var int cnt = 0
     cnt := ev ? n : math.max(0, cnt - 1)
     cnt > 0
-
-f_fmtPx(float p) =>
-    str.tostring(p, format.mintick)
 
 // -----------------------------------------------------------------------------
 //  Bien do - dung cho SL/TP (series float, khong gioi han)

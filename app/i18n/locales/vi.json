@@ -1,0 +1,31 @@
+{
+  "trade": {
+    "orders": "Lệnh",
+    "ordersMongoDown": "MongoDB không khả dụng — danh sách lệnh có thể lỗi thời",
+    "ordersLive": "Đang hoạt động",
+    "ordersEmpty": "Chưa có lệnh nào",
+    "ordersError": "Lỗi tải lệnh",
+    "ordersCancel": "Huỷ",
+    "ordersCancelOk": "Đã huỷ lệnh thành công",
+    "ordersCancelFailed": "Huỷ lệnh thất bại",
+    "sides": {
+      "buy": "Mua",
+      "sell": "Bán"
+    },
+    "fills": "Thực hiện",
+    "fillsMongoDown": "MongoDB không khả dụng — danh sách thực hiện có thể lỗi thời",
+    "fillsEmpty": "Chưa có thực hiện nào",
+    "fillsError": "Lỗi tải thực hiện",
+    "fillsLatency": "Độ trễ",
+    "orderStatus": {
+      "created": "Đã tạo",
+      "riskChecked": "Đã kiểm tra rủi ro",
+      "pending": "Đang chờ",
+      "partiallyFilled": "Thực hiện một phần",
+      "filled": "Đã thực hiện",
+      "cancelled": "Đã huỷ",
+      "expired": "Hết hạn",
+      "rejected": "Đã từ chối"
+    }
+  }
+}

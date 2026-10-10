@@ -25,10 +25,10 @@ Mongoose are only required for the dashboard and the store layer.
 **Package manager is `npm`** (not pnpm). See `.npmrc` and "Environment gotchas" below.
 
 ```bash
-npm run build          # assemble pine/parts* -> pine/dist (4 targets) + lint
-npm test               # smoke + engine + journal + preset-drift + risk + paper
-                       # + drift + mt5 + db + services + ai + ai-review (12 suites)
-npm run verify         # build + test  <- the gate; must stay green
+npm run pine:build          # assemble pine/parts* -> pine/dist (6 targets) + lint
+npm test               # smoke + engine + market + journal + preset-drift + stamp + risk
+                       # + paper + drift + mt5 + db + services + ai + ai-review (14 suites)
+npm run verify         # pine:build + test  <- the gate; must stay green
 npm run typecheck      # tools/typecheck.mjs
 
 npm run dev            # Nuxt dashboard  -> http://localhost:4001/
@@ -51,9 +51,8 @@ npm run backup         # backup
 # cd ../tm-hub && pnpm seed:reset --app=trading  # reset and recreate trading data
 ```
 
-Individual suites: `test:pines`, `test:engine`, `test:journal`, `test:preset-drift`,
-`test:risk`, `test:paper`, `test:drift`, `test:db`, `test:services`, `test:ai`,
-`test:ai-review`, `test:app`.
+Individual suites: `test:pines`, `test:engine`, `test:market`, `test:journal`,
+`test:preset-drift`, `test:risk`, `test:paper`, `test:drift`, `test:db`, `test:services`, `test:ai`, `test:ai-review`, `test:app`.
 
 ## Layout
 
@@ -62,6 +61,8 @@ engine/           ta, version, keys, db, data, backtest, report, store, run, lea
                   journal (central executed-trade journal),
                   preset-drift (live preset vs frozen backtest preset)
 engine/methods/   method plugins: vsa (method 0), priceAction, trend, orderflow (+ index, all)
+market/           realtime market plane: canonical events, trading clock, candle builder,
+                  1m->4m/10m aggregation, quote/orderbook stores, bus, Binance provider
 exec/             risk, drift, paper, env
 services/         binance, news, funding, scanner, regime, liquidation, confluence,
                   telegram, heartbeat, store, run
@@ -77,7 +78,7 @@ app/              Nuxt dashboard:
   │   ├── utilities/      (text, icons, encode, random, editor)
   │   └── system/         (profile, docs, settings)
 server/           webhook.mjs (TradingView receiver)
-pine/             parts/ parts-vsa/ shared/ dist/   (build inputs; dist is generated)
+pine/             parts/ parts-vsa/ parts-sweep/ parts-xau/ parts-xau2/ shared/ dist/   (build inputs; dist is generated)
 tools/            build, smoke, errors, copy, pine-ref, typecheck, backup
 docs/             roadmap, architecture, data-model, time-rules, alert-schema, mt5-ipc,
                   method-league, vsa-wyckoff-method, vsa-optimization, app-inheritance
@@ -90,7 +91,7 @@ tests/            run-tests.mjs (app-level suite)
 `docs/vsa-wyckoff-method.md` is the **spec**; golden fixtures in `engine/test.mjs` guarantee the
 engine matches Pine. Any change to `pine/parts-vsa/` (or `engine/methods/vsa.mjs`) requires
 re-running the fixtures. `tools/build.mjs` lints Pine against `tools/pine-ref.json`, which is
-**generated** (`npm run ref`) — never hardcode Pine knowledge from memory.
+**generated** (`npm run pine:ref`) — never hardcode Pine knowledge from memory.
 
 ### 2. Every stored result carries a version stamp (D1)
 `engine/version.mjs` — `engineVersion`, `paramsHash`, `params`, `dataHash`, `universeSnapshot`,
@@ -152,7 +153,7 @@ overfitting. Read `docs/vsa-optimization.md` before proposing any parameter opti
 
 Verification is manual:
 ```bash
-npm run verify        # build Pine + run all unit/smoke suites
+npm run verify        # build + docs:check + full test suites (writes logs/test-summary.json)
+npm run docs:check      # docs ↔ repo consistency (scripts + file paths in docs must exist)
 npm run typecheck     # Nuxt vue-tsc typecheck
-npm run lint          # ESLint check
 ```

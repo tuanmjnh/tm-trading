@@ -10,8 +10,9 @@
 //    funding 1 lần, chạy lại không gửi lại).
 // =============================================================================
 import { premiumIndex, openInterest } from './binance.mjs'
-import { getIntel, saveSnapshot, insertEvents } from './store.mjs'
+import { getIntel, getDataset, getMarketFeed, saveSnapshot, insertEvents } from './store.mjs'
 import { sendTelegram } from './telegram.mjs'
+import { createFeedRecorder, fundingFeedDoc } from '../market/feedRecorder.mjs'
 
 /** Cực đoan: |rate| >= th (0.0001 = 0.01%). Env FUNDING_ALERT_RATE. */
 export const DEFAULT_ALERT_RATE = Number(process.env.FUNDING_ALERT_RATE || 0.0005)
@@ -62,12 +63,30 @@ export async function runFunding({ fetchImpl, now = new Date(), th = DEFAULT_ALE
 
   const { snapshot, extremes } = evaluateFunding(rows, { th })
   const withOi = await attachOi([...new Map([...snapshot.slice(0, 3), ...extremes].map((e) => [e.symbol, e])).values()])
+  const oiBySym = new Map(withOi.map((e) => [e.symbol, e]))
 
   const Intel = await getIntel()
   const mongo = Intel ? 'up' : 'down'
   let alerted = 0
   if (Intel) {
     const ts = now.getTime()
+    // §23.3 P1 raw funding/OI feed: one row per settlement period per symbol
+    // (D3/D4 key feed:funding:<sym>:<nextFundingTime>), MERGE mode refreshes the
+    // latest observed mark price / OI for the period. Rows that have no OI
+    // observation stay null there (honest — OI is fetched for a subset).
+    let feedWrote = 0
+    const feedRecorder = createFeedRecorder({ model: await getMarketFeed(), datasetModel: await getDataset(), kind: 'funding', source: 'binance:fapi', retentionDays: 90 })
+    for (const r of rows) {
+      const oi = oiBySym.get(r.symbol)
+      const doc = fundingFeedDoc({
+        symbol: r.symbol, rate: r.rate, price: r.price, nextFundingTime: r.nextFundingTime,
+        oiContracts: oi?.oiContracts, oiNotionalUsd: oi?.oiNotionalUsd,
+        ingestTime: ts, market: 'futures',
+      })
+      const out = await feedRecorder.record(doc, { mode: 'set' })
+      if (out?.wrote) feedWrote++
+    }
+
     await saveSnapshot('funding', snapshot.map((e) => ({
       key: `funding:${e.symbol}`,
       symbol: e.symbol,
@@ -96,5 +115,5 @@ export async function runFunding({ fetchImpl, now = new Date(), th = DEFAULT_ALE
     }
   }
 
-  return { checked: rows.length, snapshot: snapshot.length, extremes: extremes.length, alerted, mongo }
+  return { checked: rows.length, snapshot: snapshot.length, extremes: extremes.length, alerted, feedWrote, mongo }
 }

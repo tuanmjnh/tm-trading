@@ -1,0 +1,112 @@
+// =============================================================================
+//  L0 - CONFIG
+// =============================================================================
+
+// General
+xau_confirmOnly = input.bool(true,  "Chi tin hieu nen da dong (no-repaint)", group = "XAU · Chung", display = display.data_window)
+xau_payloadMode = input.string("Full", "Webhook payload", options = ["Full", "Slim", "Off"], group = "XAU · Chung", display = display.data_window)
+
+// Market Structure
+xau_ms_swLen    = input.int(5,    "Swing lookback (nen)", minval = 2, maxval = 20, group = "XAU · Market Structure", display = display.data_window)
+xau_ms_bosOn    = input.bool(true, "Hien thi BOS",        group = "XAU · Market Structure", display = display.data_window)
+xau_ms_chochOn  = input.bool(true, "Hien thi CHoCH",      group = "XAU · Market Structure", display = display.data_window)
+
+// Liquidity
+xau_liq_eqTol   = input.float(0.05, "Equal Hi/Lo tolerance (% ATR)", minval = 0.0, step = 0.01, group = "XAU · Liquidity", display = display.data_window)
+xau_liq_sweepOn = input.bool(true,  "Hien thi Liquidity Sweep",       group = "XAU · Liquidity", display = display.data_window)
+xau_liq_pdOn    = input.bool(true,  "Hien thi PDH / PDL",             group = "XAU · Liquidity", display = display.data_window)
+xau_liq_pwOn    = input.bool(true,  "Hien thi PWH / PWL",             group = "XAU · Liquidity", display = display.data_window)
+xau_liq_sessOn  = input.bool(true,  "Hien thi Session High / Low",    group = "XAU · Liquidity", display = display.data_window)
+xau_liq_tlOn    = input.bool(true,  "Trendline 2 diem",               group = "XAU · Liquidity", display = display.data_window)
+xau_liq_tlMaxDev = input.float(10.0, "Trendline toi da xa gia (x ATR)", minval = 1.0, step = 1.0, group = "XAU · Liquidity", display = display.data_window)
+
+// S/R Zones
+xau_sr_left     = input.int(10,   "Zone pivot left",  minval = 2, maxval = 50,   group = "XAU · SR Zones", display = display.data_window)
+xau_sr_right    = input.int(10,   "Zone pivot right", minval = 2, maxval = 50,   group = "XAU · SR Zones", display = display.data_window)
+xau_sr_width    = input.float(0.5, "Zone width (x ATR)", minval = 0.05, step = 0.05, group = "XAU · SR Zones", display = display.data_window)
+xau_sr_maxZone  = input.int(8,    "Max zones", minval = 1, maxval = 30,          group = "XAU · SR Zones", display = display.data_window)
+xau_sr_showOn   = input.bool(true, "Hien thi S/R zones",                         group = "XAU · SR Zones", display = display.data_window)
+
+// Candle Patterns
+xau_cp_pinRatio  = input.float(2.0, "Pin bar ratio (wick/body)", minval = 1.0, step = 0.1, group = "XAU · Candle Patterns", display = display.data_window)
+xau_cp_engulf    = input.bool(true,  "Engulfing",     group = "XAU · Candle Patterns", display = display.data_window)
+xau_cp_pin       = input.bool(true,  "Pin Bar",       group = "XAU · Candle Patterns", display = display.data_window)
+xau_cp_disp      = input.bool(true,  "Displacement",  group = "XAU · Candle Patterns", display = display.data_window)
+xau_cp_dispAtr   = input.float(1.5,  "Displacement: body >= ATR x", minval = 0.5, step = 0.1, group = "XAU · Candle Patterns", display = display.data_window)
+xau_cp_rejCandle = input.bool(true,  "Rejection Candle", group = "XAU · Candle Patterns", display = display.data_window)
+
+// Volume - VSA/Wyckoff configuration (dong bo TM VSA Wyckoff)
+xau_vol_maLen   = input.int(20,    "Cua so Volume MA (Wilder RMA)", minval = 5, maxval = 100, group = "XAU · Volume VSA", display = display.data_window)
+xau_vol_showMA  = input.bool(true, "Hien Volume MA", group = "XAU · Volume VSA", display = display.data_window)
+xau_vol_spikeR  = input.float(2.2, "TIM - cot dot bien (ratio)", minval = 1.5, step = 0.1, group = "XAU · Volume VSA", display = display.data_window)
+xau_vol_rVH     = input.float(1.8, "VeryHigh (ratio)", minval = 1.0, step = 0.1, group = "XAU · Volume VSA", display = display.data_window)
+xau_vol_rH      = input.float(1.2, "High (ratio)", minval = 0.8, step = 0.1, group = "XAU · Volume VSA", display = display.data_window)
+xau_vol_rN      = input.float(0.8, "Normal (ratio)", minval = 0.4, step = 0.1, group = "XAU · Volume VSA", display = display.data_window)
+xau_vol_rL      = input.float(0.4, "Low (ratio)", minval = 0.1, step = 0.1, group = "XAU · Volume VSA", display = display.data_window)
+xau_vol_purWin  = input.int(20, "Cua so dem cot TIM (dashboard)", minval = 5, maxval = 100, group = "XAU · Volume VSA", display = display.data_window)
+xau_vol_min     = input.float(0.0, "Volume toi thieu tuyet doi (0 = tat)", minval = 0.0, group = "XAU · Volume VSA", display = display.data_window)
+xau_vol_sessOn  = input.bool(false, "Loc phien giao dich", group = "XAU · Volume VSA", display = display.data_window)
+xau_vol_sess    = input.session("0800-1600", "Phien Volume", group = "XAU · Volume VSA", display = display.data_window)
+// 2 nhom múi giờ (xem parts/10_config.pine): "của bạn" = loc phien 0800-1600; "NY" = nhan dien phien A/London/NY.
+// Ca 2 deu truyen tz tuong minh vao time(); doi chart TradingView sang UTC+7 chi doi hien thi, khong doi tinh toan.
+xau_vol_tz      = input.string("Asia/Ho_Chi_Minh", "Múi giờ phiên của bạn", options = ["Asia/Ho_Chi_Minh", "Asia/Singapore", "Asia/Tokyo", "Asia/Bangkok", "UTC", "Europe/London", "America/New_York", "America/Los_Angeles"], group = "XAU · Volume VSA", display = display.data_window)
+
+// ATR / Momentum
+xau_atr_len     = input.int(14,    "ATR length",   minval = 1,  maxval = 200, group = "XAU · Indicators", display = display.data_window)
+xau_rsi_len     = input.int(14,    "RSI length",   minval = 2,  maxval = 200, group = "XAU · Indicators", display = display.data_window)
+xau_rsi_ob      = input.float(70,  "RSI overbought", minval = 50, maxval = 99, group = "XAU · Indicators", display = display.data_window)
+xau_rsi_os      = input.float(30,  "RSI oversold",   minval = 1,  maxval = 50, group = "XAU · Indicators", display = display.data_window)
+xau_stoch_kLen  = input.int(14,    "Stoch %K length", minval = 1, maxval = 200, group = "XAU · Indicators", display = display.data_window)
+xau_stoch_dLen  = input.int(3,     "Stoch %D smooth", minval = 1, maxval = 200, group = "XAU · Indicators", display = display.data_window)
+
+// HTF Context
+xau_htf_tf      = input.timeframe("60", "Context timeframe",   group = "XAU · HTF Filter", display = display.data_window)
+xau_htf_emaLen  = input.int(50,         "HTF EMA length", minval = 5, maxval = 500, group = "XAU · HTF Filter", display = display.data_window)
+xau_htf_filter  = input.bool(true,      "Loc theo huong HTF",  group = "XAU · HTF Filter", display = display.data_window)
+
+// Session
+xau_sess_tz     = input.string("America/New_York", "Múi giờ thị trường (NY)", options = ["America/New_York", "Europe/London", "Asia/Ho_Chi_Minh", "Asia/Tokyo", "UTC"], group = "XAU · Session", display = display.data_window)
+
+// Scoring weights
+xau_w_trend     = input.float(15, "W: Trend",        minval = 0, step = 1, group = "XAU · Scoring Weights", display = display.data_window)
+xau_w_struct    = input.float(20, "W: Structure",     minval = 0, step = 1, group = "XAU · Scoring Weights", display = display.data_window)
+xau_w_liq       = input.float(15, "W: Liquidity",     minval = 0, step = 1, group = "XAU · Scoring Weights", display = display.data_window)
+xau_w_sr        = input.float(10, "W: SR",            minval = 0, step = 1, group = "XAU · Scoring Weights", display = display.data_window)
+xau_w_candle    = input.float(10, "W: Candle",        minval = 0, step = 1, group = "XAU · Scoring Weights", display = display.data_window)
+xau_w_vol       = input.float(8,  "W: Volume",        minval = 0, step = 1, group = "XAU · Scoring Weights", display = display.data_window)
+xau_w_atr       = input.float(7,  "W: Volatility",    minval = 0, step = 1, group = "XAU · Scoring Weights", display = display.data_window)
+xau_w_mom       = input.float(5,  "W: Momentum",      minval = 0, step = 1, group = "XAU · Scoring Weights", display = display.data_window)
+xau_w_sess      = input.float(5,  "W: Session",       minval = 0, step = 1, group = "XAU · Scoring Weights", display = display.data_window)
+xau_w_mtf       = input.float(5,  "W: MTF alignment", minval = 0, step = 1, group = "XAU · Scoring Weights", display = display.data_window)
+
+// Score thresholds
+xau_scr_noTrade = input.int(49, "Score <= NO TRADE", minval = 0, maxval = 99, group = "XAU · Score Thresholds", display = display.data_window)
+xau_scr_weak    = input.int(64, "Score <= WEAK",     minval = 1, maxval = 99, group = "XAU · Score Thresholds", display = display.data_window)
+xau_scr_setup   = input.int(74, "Score <= SETUP",    minval = 1, maxval = 99, group = "XAU · Score Thresholds", display = display.data_window)
+xau_scr_strong  = input.int(84, "Score <= STRONG",   minval = 1, maxval = 99, group = "XAU · Score Thresholds", display = display.data_window)
+
+// Risk / TP / SL
+xau_sl_atrMul   = input.float(1.5, "SL = ATR x",           minval = 0.1, step = 0.1, group = "XAU · Risk", display = display.data_window)
+xau_sl_swing    = input.int(10,    "Swing lookback SL",     minval = 2, maxval = 100, group = "XAU · Risk", display = display.data_window)
+xau_sl_padAtr   = input.float(0.2, "Dem sau swing (x ATR)", minval = 0, step = 0.05,  group = "XAU · Risk", display = display.data_window)
+xau_sl_minAtr   = input.float(0.5, "SL min (x ATR)",        minval = 0.1, step = 0.1, group = "XAU · Risk", display = display.data_window)
+xau_sl_maxAtr   = input.float(3.0, "SL max (x ATR)",        minval = 0.5, step = 0.1, group = "XAU · Risk", display = display.data_window)
+xau_rr1         = input.float(1.0, "TP1 (R)",               minval = 0.1, step = 0.1, group = "XAU · Risk", display = display.data_window)
+xau_rr2         = input.float(2.0, "TP2 (R)",               minval = 0.1, step = 0.1, group = "XAU · Risk", display = display.data_window)
+xau_rr3         = input.float(3.0, "TP3 (R)",               minval = 0.1, step = 0.1, group = "XAU · Risk", display = display.data_window)
+xau_rrMin       = input.float(1.5, "RR toi thieu",          minval = 0, step = 0.1,   group = "XAU · Risk", display = display.data_window)
+xau_maxDay      = input.int(3,     "Lenh toi da / ngay",    minval = 1,                group = "XAU · Risk", display = display.data_window)
+xau_coolBars    = input.int(10,    "Cooldown (nen)",         minval = 0,                group = "XAU · Risk", display = display.data_window)
+
+// Display
+xau_showViz  = input.bool(true, "Tat toan bo hien thi (master)", group = "XAU · Display", display = display.data_window)
+xau_cBull    = input.color(color.new(#089981, 0), "Mau LONG",  group = "XAU · Display", inline = "clr", display = display.data_window)
+xau_cBear    = input.color(color.new(#f23645, 0), "Mau SHORT", group = "XAU · Display", inline = "clr", display = display.data_window)
+xau_showSig  = input.bool(true, "Nhan Entry (LONG/SHORT)", group = "XAU · Display", display = display.data_window)
+xau_showHit  = input.bool(true, "Nhan cham TP/SL", group = "XAU · Display", display = display.data_window)
+xau_showZone = input.bool(true, "Ve vung SL/TP", group = "XAU · Display", display = display.data_window)
+xau_zoneLen  = input.int(30, "Do dai vung (nen)", minval = 1, maxval = 300, group = "XAU · Display", display = display.data_window)
+xau_showEma  = input.bool(true, "Duong HTF EMA", group = "XAU · Display", display = display.data_window)
+xau_showVol  = input.bool(true, "Histogram Volume", group = "XAU · Display", display = display.data_window)
+xau_showDash = input.bool(true, "Dashboard", group = "XAU · Display", display = display.data_window)
+xau_dashSize = input.string("Small", "Dash size", options = ["Tiny", "Small", "Normal"], group = "XAU · Display", display = display.data_window)

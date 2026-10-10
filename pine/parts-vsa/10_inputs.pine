@@ -17,9 +17,7 @@ tm_i_rN      = input.float(0.8, "Normal (ratio)", minval = 0.4, step = 0.1, grou
 tm_i_rL      = input.float(0.4, "Low (ratio)", minval = 0.1, step = 0.1, group = "TM · Volume", display = display.data_window)
 tm_i_purWin  = input.int(20, "Cua so dem cot TIM (dashboard)", minval = 5, maxval = 100, group = "TM · Volume", display = display.data_window)
 tm_i_volMin  = input.float(0.0, "Volume toi thieu tuyet doi (0 = tat, cho alt coin thap)", minval = 0.0, group = "TM · Volume", display = display.data_window)
-tm_i_sessOn  = input.bool(false, "Loc phien giao dich (XAU/XAG/forex)", group = "TM · Volume", display = display.data_window)
-tm_i_sess    = input.session("0800-1600", "Phien", group = "TM · Volume", display = display.data_window)
-tm_i_tz      = input.string("Asia/Ho_Chi_Minh", "Mui gio", options = ["Asia/Ho_Chi_Minh", "Asia/Singapore", "Asia/Tokyo", "Asia/Bangkok", "UTC", "Europe/London", "America/New_York", "America/Los_Angeles"], group = "TM · Volume", display = display.data_window)
+// tm_i_sessOn / tm_i_sess / tm_i_tz / tm_i_sessTz - shared (pine/shared/sess-inputs.pine)
 
 // -----------------------------------------------------------------------------
 //  Su kien - SV/BC phai qua cong cot TIM; ST/NS/ND la xac nhan (nhac nho)
@@ -37,6 +35,9 @@ tm_i_pivLen   = input.int(20, "Do dai pivot (H/T)", minval = 5, maxval = 100, gr
 // -----------------------------------------------------------------------------
 //  Hien thi
 // -----------------------------------------------------------------------------
+tm_i_showViz   = input.bool(true, "Tat toan bo hien thi (master)", group = "TM · Hien thi", display = display.data_window)
+tm_i_showSig   = input.bool(true, "Nhan su kien VSA (SV/BC/ST/NS/ND)", group = "TM · Hien thi", display = display.data_window)
+tm_i_showVol   = input.bool(true, "Histogram Volume", group = "TM · Hien thi", display = display.data_window)
 tm_i_dash      = input.bool(true, "Dashboard", group = "TM · Hien thi", display = display.data_window)
 tm_i_dashSize  = input.string("Small", "Size dashboard", options = ["Tiny", "Small", "Normal"], group = "TM · Hien thi", display = display.data_window)
 tm_i_pivOn     = input.bool(true, "Ve duong H/T (cham)", group = "TM · Hien thi", display = display.data_window)

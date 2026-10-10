@@ -82,8 +82,10 @@ useHead({ title: computed(() => t('auth.signIn')) })
 <template>
   <div class="min-h-screen flex items-center justify-center bg-default px-4 relative">
     <div class="absolute top-4 right-4 flex items-center gap-2">
-      <UButton icon="i-lucide-settings" color="neutral" variant="soft" size="sm" :aria-label="t('settings.title')"
-        @click="isSettingsSlideoverOpen = true" />
+      <UTooltip :text="t('settings.title')">
+        <UButton icon="i-lucide-settings" color="neutral" variant="soft" size="sm" :aria-label="t('settings.title')"
+          @click="isSettingsSlideoverOpen = true" />
+      </UTooltip>
     </div>
 
     <UCard class="w-full max-w-sm sm:max-w-md">

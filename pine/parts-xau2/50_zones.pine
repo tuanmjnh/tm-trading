@@ -1,0 +1,113 @@
+// =============================================================================
+//  L4 - ZONES  (v2 §3): S/R zones + FVG + Order Block
+//  Moi vung co toggle rieng, ve lai toan bo tren bar cuoi (chuon ve object).
+// =============================================================================
+
+// --- S/R zones (pivot-based, ATR width, merge, max limit) -----------------------
+// SrZone + f_addZone / f_nearSupport / f_nearResistance - shared (pine/shared/zones.pine)
+// (ban truoc do goi `X2SrZone` / `x2_srZones` - da gop vao shared)
+if not na(ta.pivothigh(high, x2_sr_left, x2_sr_right))
+    f_addZone(sr_zones, high[x2_sr_right], -1, x2_atr, x2_sr_width, x2_sr_maxZone)
+if not na(ta.pivotlow(low, x2_sr_left, x2_sr_right))
+    f_addZone(sr_zones, low[x2_sr_right],  1, x2_atr, x2_sr_width, x2_sr_maxZone)
+
+// --- FVG (Fair Value Gap): 3 nen, giua nen 0 va nen 2 co khoang tre ------------
+type X2Fvg
+    float top
+    float bot
+    int   srcBar
+    int   dir     // 1=gap len (bull), -1=gap xuong (bear)
+    bool  dead
+
+var array<X2Fvg> x2_fvgs = array.new<X2Fvg>()
+
+bool x2_fvgBull = low > high[2] and (low - high[2]) >= x2_fvg_minAtr * x2_atr
+bool x2_fvgBear = high < low[2] and (low[2] - high) >= x2_fvg_minAtr * x2_atr
+if x2_fvgBull
+    array.push(x2_fvgs, X2Fvg.new(low, high[2], bar_index, 1, false))
+if x2_fvgBear
+    array.push(x2_fvgs, X2Fvg.new(low[2], high, bar_index, -1, false))
+if array.size(x2_fvgs) > x2_fvg_max
+    array.shift(x2_fvgs)
+// FVG bi lap (gia quay lai day gap) -> dead, khong ve nua
+for g in x2_fvgs
+    if bar_index - g.srcBar > x2_fvg_life
+        g.dead := true
+    if g.dir == 1 and close < g.bot
+        g.dead := true
+    if g.dir == -1 and close > g.top
+        g.dead := true
+
+// --- Order Block: nen truoc do dieu kien displacement (gia di manh 1 chieu) -----
+type X2Ob
+    float top
+    float bot
+    int   srcBar
+    int   dir     // 1=OB chu nghiep (nen bear truoc, gia di len), -1=OB ban
+    bool  dead
+
+var array<X2Ob> x2_obs = array.new<X2Ob>()
+
+bool x2_obBull = x2_dispBull and close[1] < open[1]
+bool x2_obBear = x2_dispBear and close[1] > open[1]
+if x2_obBull
+    array.push(x2_obs, X2Ob.new(open[1] > close[1] ? open[1] : close[1], open[1] < close[1] ? open[1] : close[1], bar_index - 1, 1, false))
+if x2_obBear
+    array.push(x2_obs, X2Ob.new(open[1] > close[1] ? open[1] : close[1], open[1] < close[1] ? open[1] : close[1], bar_index - 1, -1, false))
+if array.size(x2_obs) > x2_ob_max
+    array.shift(x2_obs)
+// OB bi pha (close di qua phia xa vung) -> dead
+for o in x2_obs
+    if o.dir == 1 and close < o.bot
+        o.dead := true
+    if o.dir == -1 and close > o.top
+        o.dead := true
+
+// --- Ve toan bo vung tren bar cuoi (checkbox rieng x2_showPriceZones) ----------
+var array<box> x2_zoneBoxes = array.new<box>()
+
+if barstate.islast and x2_showViz and x2_showPriceZones
+    for bx in x2_zoneBoxes
+        box.delete(bx)
+    array.clear(x2_zoneBoxes)
+    if x2_sr_showOn
+        for z in sr_zones
+            if z.side == 1 and close < z.bot
+                z.broken := true
+            if z.side == -1 and close > z.top
+                z.broken := true
+            if not z.broken
+                color zC  = z.side == 1 ? color.new(x2_cBull, 82) : color.new(x2_cBear, 82)
+                color zBC = z.side == 1 ? color.new(x2_cBull, 40) : color.new(x2_cBear, 40)
+                array.push(x2_zoneBoxes, box.new(bar_index - 50, z.top, bar_index + x2_zoneLen, z.bot, border_color = zBC, bgcolor = zC, force_overlay = true))
+    if x2_fvg_showOn
+        for g in x2_fvgs
+            if not g.dead
+                color gC = g.dir == 1 ? color.new(x2_cBull, 88) : color.new(x2_cBear, 88)
+                color gB = g.dir == 1 ? color.new(x2_cBull, 55) : color.new(x2_cBear, 55)
+                array.push(x2_zoneBoxes, box.new(g.srcBar, g.top, g.srcBar + x2_fvg_life, g.bot, border_color = gB, bgcolor = gC, force_overlay = true))
+    if x2_ob_showOn
+        for o in x2_obs
+            if not o.dead
+                color oC = o.dir == 1 ? color.new(#f5c542, 85) : color.new(#ff8b3d, 85)
+                color oB = o.dir == 1 ? color.new(#f5c542, 50) : color.new(#ff8b3d, 50)
+                array.push(x2_zoneBoxes, box.new(o.srcBar, o.top, o.srcBar + x2_zoneLen, o.bot, border_color = oB, bgcolor = oC, force_overlay = true))
+else if array.size(x2_zoneBoxes) > 0
+    // Tat checkbox -> xoa het box (khong de do do tren chart)
+    for bx in x2_zoneBoxes
+        box.delete(bx)
+    array.clear(x2_zoneBoxes)
+
+// Gan vung FVG/OB gan nhat -> bo loc S/R (doc lap, co toggle rieng)
+bool x2_nearFvgBull = false
+bool x2_nearFvgBear = false
+for g in x2_fvgs
+    if not g.dead and low >= g.bot - x2_atr * 0.3 and low <= g.top + x2_atr * 0.3
+        x2_nearFvgBull := true
+    if not g.dead and high >= g.bot - x2_atr * 0.3 and high <= g.top + x2_atr * 0.3
+        x2_nearFvgBear := true
+for o in x2_obs
+    if not o.dead and o.dir == 1 and low >= o.bot - x2_atr * 0.3 and low <= o.top + x2_atr * 0.3
+        x2_nearFvgBull := true
+    if not o.dead and o.dir == -1 and high >= o.bot - x2_atr * 0.3 and high <= o.top + x2_atr * 0.3
+        x2_nearFvgBear := true

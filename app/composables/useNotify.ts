@@ -89,6 +89,10 @@ export const useNotify = () => {
       notify.value = reset ? page : [...notify.value, ...page]
       return notify.value
     } catch (error) {
+      // Keep the pager stopped on failure (same contract as useCursorPagination):
+      // a failed page must not leave hasMore=true or the notification slideover's
+      // infinite scroll re-emits load-more in a tight loop against the hub.
+      hasMore.value = false
       console.error('Error fetching notifications:', error)
       return notify.value
     } finally {

@@ -82,6 +82,8 @@ function enforceRateLimit(event: H3Event, appId: string, flags: Record<string, u
 
   const gate = checkRateLimit(key, limit, WINDOW_MS)
   if (!gate.allowed) {
+    // Worth logging permanently: 429s are rare and signal a client loop or budget burst.
+    console.warn(`[api-429] ${appId} ${ip} ${getMethod(event)} ${event.path} retryAfter=${gate.retryAfterSec}s`)
     setHeader(event, 'Retry-After', gate.retryAfterSec)
     throw createError({
       statusCode: 429,

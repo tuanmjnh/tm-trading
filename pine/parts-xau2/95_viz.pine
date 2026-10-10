@@ -1,0 +1,168 @@
+// =============================================================================
+//  L11 - VISUALIZATION  (chuuan parts-xau/80_viz.pine)
+//  - Master switch x2_showViz gate MOI diem ve
+//  - table.clear moi bar cuoi; key gray-10 / value silver / bg trong suot
+//  - Dashboard 2 x 23, dong Session (London/NY...) bat buoc
+// =============================================================================
+
+// Entry markers
+plotshape(x2_showViz and x2_showSig and x2_evEntry and x2_posDir == 1,  title = "LONG",  style = shape.triangleup,   location = location.belowbar, color = x2_cBull, size = size.small, text = "L", textcolor = x2_cBull, force_overlay = true)
+plotshape(x2_showViz and x2_showSig and x2_evEntry and x2_posDir == -1, title = "SHORT", style = shape.triangledown, location = location.abovebar, color = x2_cBear, size = size.small, text = "S", textcolor = x2_cBear, force_overlay = true)
+
+// TP/SL hit labels
+if x2_showViz and x2_showHit and x2_evTp == 1
+    label.new(bar_index, x2_posTp1, "TP1+", style = label.style_label_left, color = color.new(x2_cBull, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if x2_showViz and x2_showHit and x2_evTp == 2
+    label.new(bar_index, x2_posTp2, "TP2+", style = label.style_label_left, color = color.new(x2_cBull, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if x2_showViz and x2_showHit and x2_evTp == 3
+    label.new(bar_index, x2_posTp3, "TP3+", style = label.style_label_left, color = color.new(x2_cBull, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if x2_showViz and x2_showHit and x2_evSl
+    label.new(bar_index, x2_posSl,  "SL-",  style = label.style_label_left, color = color.new(x2_cBear, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+
+// Active position zone boxes
+var box  x2_bxSl    = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(color.gray, 60),  bgcolor = color.new(color.gray, 88),  force_overlay = true)
+var box  x2_bxTp1   = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(x2_cBull, 50),   bgcolor = color.new(x2_cBull, 90),   force_overlay = true)
+var box  x2_bxTp2   = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(x2_cBull, 60),   bgcolor = color.new(x2_cBull, 93),   force_overlay = true)
+var box  x2_bxTp3   = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(x2_cBull, 70),   bgcolor = color.new(x2_cBull, 95),   force_overlay = true)
+var line x2_lnEntry = line.new(bar_index, 0.0, bar_index + 1, 0.0, color = color.new(color.silver, 30), style = line.style_dashed, force_overlay = true)
+var label x2_lbInfo = label.new(bar_index, 0.0, "", style = label.style_label_left, color = color.new(color.gray, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+
+int   x2_right = x2_posDir != 0 and not na(x2_posBar) ? x2_posBar + x2_zoneLen : bar_index + 1
+color x2_base  = x2_posDir == 1 ? x2_cBull : x2_cBear
+
+if x2_showViz and x2_showZone and x2_posDir != 0 and not na(x2_posBar)
+    box.set_lefttop(x2_bxSl,  x2_posBar, math.max(x2_posEntry, x2_posSl))
+    box.set_rightbottom(x2_bxSl, x2_right, math.min(x2_posEntry, x2_posSl))
+    box.set_lefttop(x2_bxTp1, x2_posBar, math.max(x2_posEntry, x2_posTp1))
+    box.set_rightbottom(x2_bxTp1, x2_right, math.min(x2_posEntry, x2_posTp1))
+    box.set_lefttop(x2_bxTp2, x2_posBar, math.max(x2_posEntry, x2_posTp2))
+    box.set_rightbottom(x2_bxTp2, x2_right, math.min(x2_posEntry, x2_posTp2))
+    box.set_lefttop(x2_bxTp3, x2_posBar, math.max(x2_posEntry, x2_posTp3))
+    box.set_rightbottom(x2_bxTp3, x2_right, math.min(x2_posEntry, x2_posTp3))
+    line.set_xy1(x2_lnEntry, x2_posBar, x2_posEntry)
+    line.set_xy2(x2_lnEntry, x2_right,  x2_posEntry)
+    label.set_xy(x2_lbInfo, x2_right, x2_posTp3)
+    string posLabel = (x2_posDir == 1 ? "LONG" : "SHORT") + "\nE " + f_fmtPx(x2_posEntry) + "\nSL " + f_fmtPx(x2_posSl) + "\nTP3 " + f_fmtPx(x2_posTp3)
+    label.set_text(x2_lbInfo, posLabel)
+    label.set_color(x2_lbInfo, color.new(x2_base, 10))
+else
+    box.set_lefttop(x2_bxSl,  bar_index, na)
+    box.set_rightbottom(x2_bxSl,  bar_index, na)
+    box.set_lefttop(x2_bxTp1, bar_index, na)
+    box.set_rightbottom(x2_bxTp1, bar_index, na)
+    box.set_lefttop(x2_bxTp2, bar_index, na)
+    box.set_rightbottom(x2_bxTp2, bar_index, na)
+    box.set_lefttop(x2_bxTp3, bar_index, na)
+    box.set_rightbottom(x2_bxTp3, bar_index, na)
+    line.set_xy1(x2_lnEntry, bar_index, na)
+    line.set_xy2(x2_lnEntry, bar_index + 1, na)
+    label.set_xy(x2_lbInfo, bar_index, na)
+    label.set_text(x2_lbInfo, "")
+
+// EMA 20/50/200 tren gia (overlay)
+plot(x2_showViz and x2_showEma ? x2_emaF : na, "EMA fast", color = color.new(color.teal, 0),   linewidth = 1, force_overlay = true)
+plot(x2_showViz and x2_showEma ? x2_emaM : na, "EMA mid",  color = color.new(color.orange, 0), linewidth = 1, force_overlay = true)
+plot(x2_showViz and x2_showEma ? x2_emaS : na, "EMA slow", color = color.new(color.red, 20),   linewidth = 1, force_overlay = true)
+
+// VWAP (overlay)
+plot(x2_showViz and x2_showVwap and x2_vwapOk ? x2_vwap : na, "VWAP", color = color.new(#b388ff, 0), linewidth = 1, style = plot.style_linebr, force_overlay = true)
+
+// Volume pane - VSA 6 bucket + MA
+x2_volCol = f_vsaColor(x2_vol, x2_volMA, x2_vol_spikeR, x2_vol_rVH, x2_vol_rH, x2_vol_rN, x2_vol_rL)
+plot(x2_showViz and x2_showVol ? x2_vol : na,   "Volume",    color = x2_volCol, style = plot.style_columns, format = format.volume)
+plot(x2_showViz and x2_vol_showMA ? x2_volMA : na, "Volume MA", color = color.new(color.green, 0), linewidth = 1, format = format.volume)
+
+// =============================================================================
+//  DASHBOARD  (2 x 23)
+// =============================================================================
+
+var table x2_tbl = na
+if x2_showViz and x2_showDash and na(x2_tbl)
+    x2_tbl := table.new(position.top_right, 2, 23, border_width = 1, border_color = color.new(color.gray, 70), force_overlay = true)
+
+x2_font = x2_dashSize == "Tiny" ? size.tiny : x2_dashSize == "Small" ? size.small : size.normal
+
+if not na(x2_tbl) and barstate.islast
+    color kC = color.new(color.gray, 10)
+    color vC = color.silver
+    color bg = color.new(color.black, 100)
+    table.clear(x2_tbl, 0, 0, 1, 22)
+
+    table.cell(x2_tbl, 0,  0, "TM XAU2  " + syminfo.ticker, text_color = color.orange, text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(x2_tbl, 1,  0, timeframe.period + "m",       text_color = vC,           text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    color sCol = x2_score100 <= x2_scr_noTrade ? color.gray : x2_dir == 1 ? x2_cBull : x2_cBear
+    table.cell(x2_tbl, 0,  1, "Score",                      text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(x2_tbl, 1,  1, str.tostring(x2_score100) + " / " + x2_quality, text_color = sCol, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(x2_tbl, 0,  2, "Huong",                      text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(x2_tbl, 1,  2, x2_dir == 1 ? "LONG" : x2_dir == -1 ? "SHORT" : "-", text_color = x2_dir == 1 ? x2_cBull : x2_dir == -1 ? x2_cBear : color.gray, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(x2_tbl, 0,  3, "Structure",                  text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(x2_tbl, 1,  3, x2_trend == 1 ? "Bullish" : x2_trend == -1 ? "Bearish" : "Ranging", text_color = x2_trend == 1 ? x2_cBull : x2_trend == -1 ? x2_cBear : color.gray, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    string structEvt = x2_bosUp or x2_bosDown ? "BOS" : x2_chochUp or x2_chochDown ? "CHoCH" : x2_mssUp or x2_mssDown ? "MSS" : "-"
+    table.cell(x2_tbl, 0,  4, "BOS / CHoCH / MSS",          text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(x2_tbl, 1,  4, structEvt, text_color = (x2_bosUp or x2_chochUp or x2_mssUp) ? x2_cBull : (x2_bosDown or x2_chochDown or x2_mssDown) ? x2_cBear : color.gray, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(x2_tbl, 0,  5, "Retest / Fail",              text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(x2_tbl, 1,  5, x2_retestBull or x2_retestBear ? "RETEST" : x2_failBull or x2_failBear ? "FAILBRK" : "-", text_color = x2_retestBull or x2_failBear ? x2_cBull : x2_retestBear or x2_failBull ? x2_cBear : color.gray, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(x2_tbl, 0,  6, "Event moi nhat",             text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    string x2_evtTxt = "-"
+    color x2_evtCol = color.gray
+    if array.size(x2_evtBuf) > 0
+        X2Event x2_lastEvt = array.get(x2_evtBuf, array.size(x2_evtBuf) - 1)
+        x2_evtTxt := x2_lastEvt.kind + " " + (x2_lastEvt.dir == "bull" ? "+" : "-") + (x2_lastEvt.confirmed ? "" : "?")
+        x2_evtCol := x2_lastEvt.dir == "bull" ? x2_cBull : x2_cBear
+    table.cell(x2_tbl, 1,  6, x2_evtTxt, text_color = x2_evtCol, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(x2_tbl, 0,  7, "Context TF (" + x2_ctxTf + ")", text_color = kC, text_size = x2_font, text_halign = text.align_left, bgcolor = bg)
+    table.cell(x2_tbl, 1,  7, x2_htfVeto ? "VETO" : x2_ctxDir == 1 ? "Bull" : x2_ctxDir == -1 ? "Bear" : "-", text_color = x2_htfVeto ? color.red : x2_ctxDir == 1 ? x2_cBull : x2_ctxDir == -1 ? x2_cBear : color.gray, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(x2_tbl, 0,  8, "Setup TF (" + x2_setupTf + ")", text_color = kC, text_size = x2_font, text_halign = text.align_left, bgcolor = bg)
+    table.cell(x2_tbl, 1,  8, x2_setupDir == 1 ? "Bull" : x2_setupDir == -1 ? "Bear" : "-", text_color = x2_setupDir == 1 ? x2_cBull : x2_setupDir == -1 ? x2_cBear : color.gray, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(x2_tbl, 0,  9, "Liquidity",                  text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(x2_tbl, 1,  9, x2_sweepBull ? "Sweep+" : x2_sweepBear ? "Sweep-" : "-", text_color = x2_sweepBull ? x2_cBull : x2_sweepBear ? x2_cBear : color.gray, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(x2_tbl, 0, 10, "PDH / PDL",                  text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(x2_tbl, 1, 10, f_fmtPx(x2_pdh) + " / " + f_fmtPx(x2_pdl), text_color = vC, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(x2_tbl, 0, 11, "PWH / PWL",                  text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(x2_tbl, 1, 11, f_fmtPx(x2_pwh) + " / " + f_fmtPx(x2_pwl), text_color = vC, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(x2_tbl, 0, 12, "Sess Hi / Lo",               text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(x2_tbl, 1, 12, (na(x2_sessHi) ? "-" : f_fmtPx(x2_sessHi)) + " / " + (na(x2_sessLo) ? "-" : f_fmtPx(x2_sessLo)), text_color = vC, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(x2_tbl, 0, 13, "Trendline touch",            text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(x2_tbl, 1, 13, str.tostring(x2_tlLoTouch) + " up / " + str.tostring(x2_tlHiTouch) + " dn", text_color = vC, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    string cpLabel = x2_dispBullV ? "Displacement+" : x2_dispBearV ? "Displacement-" : x2_bullEng ? "Engulf+" : x2_bearEng ? "Engulf-" : x2_bullPin ? "Pin+" : x2_bearPin ? "Pin-" : x2_bullRej ? "Rej+" : x2_bearRej ? "Rej-" : "-"
+    table.cell(x2_tbl, 0, 14, "Candle",                     text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(x2_tbl, 1, 14, cpLabel, text_color = x2_cpScore > 0 ? x2_cBull : x2_cpScore < 0 ? x2_cBear : color.gray, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(x2_tbl, 0, 15, "Volume / Bucket",            text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(x2_tbl, 1, 15, str.tostring(x2_volRatio, "#.##") + "x / " + x2_volBucket, text_color = x2_isTim ? color.purple : vC, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(x2_tbl, 0, 16, "RelVol / OBV",               text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(x2_tbl, 1, 16, str.tostring(x2_relVol, "#.##") + "x / " + (x2_obvSlope > 0 ? "+" : x2_obvSlope < 0 ? "-" : "0"), text_color = x2_obvScore > 0 ? x2_cBull : x2_obvScore < 0 ? x2_cBear : vC, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(x2_tbl, 0, 17, "RSI / MACD",                 text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(x2_tbl, 1, 17, str.tostring(x2_rsi, "#.#") + " / " + str.tostring(x2_macdHist, format.mintick), text_color = x2_rsi < x2_rsiOs ? x2_cBull : x2_rsi > x2_rsiOb ? x2_cBear : vC, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(x2_tbl, 0, 18, "ADX / DMI",                  text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(x2_tbl, 1, 18, str.tostring(x2_adx, "#.#") + " / " + (x2_diPlus > x2_diMinus ? "+" : "-"), text_color = x2_adx >= x2_adxMin ? color.purple : vC, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(x2_tbl, 0, 19, "ATR% / BBW",                 text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(x2_tbl, 1, 19, str.tostring(x2_atrPct, "#.##") + "% / " + str.tostring(x2_bbWidth, "#.##") + (x2_bbExpand ? " Exp" : " Ctr"), text_color = vC, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(x2_tbl, 0, 20, "VWAP / Vi tri ngay",         text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(x2_tbl, 1, 20, (x2_vwapOk ? f_fmtPx(x2_vwap) : "-") + " / " + str.tostring(f_clamp(x2_dayRange, -1.0, 1.0), "+#.##;-#.##"), text_color = x2_vwapScore > 0 ? x2_cBull : x2_vwapScore < 0 ? x2_cBear : vC, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(x2_tbl, 0, 21, "Session",                    text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(x2_tbl, 1, 21, x2_sessName, text_color = x2_sessOverlap ? color.orange : x2_sessNy ? color.yellow : vC, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(x2_tbl, 0, 22, "Vi the / ngay / W-L",        text_color = kC,   text_size = x2_font, text_halign = text.align_left,  bgcolor = bg)
+    string posTxt = (x2_posDir == 1 ? "LONG" : x2_posDir == -1 ? "SHORT" : "-") + " / " + str.tostring(x2_dayCount) + "/" + str.tostring(x2_maxDay) + " / " + str.tostring(x2_statWins) + "-" + str.tostring(x2_statLosses)
+    table.cell(x2_tbl, 1, 22, posTxt, text_color = x2_posDir == 1 ? x2_cBull : x2_posDir == -1 ? x2_cBear : vC, text_size = x2_font, text_halign = text.align_right, bgcolor = bg)

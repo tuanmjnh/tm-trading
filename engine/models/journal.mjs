@@ -14,7 +14,7 @@ const JournalSchema = new mongoose.Schema(
     key: { type: String, required: true, unique: true },
     schema: { type: Number, default: 1 },
 
-    source: { type: String, required: true }, // paper | mt5 | exchange | manual | unknown
+    source: { type: String, required: true }, // paper | mt5 | exchange | manual | replay | unknown
     account: { type: String, default: 'unknown' },
     sourceId: { type: String, default: null },
 

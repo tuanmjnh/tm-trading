@@ -1,0 +1,181 @@
+// =============================================================================
+//  L3 - LIQUIDITY & MARKET LOCATION  (v2 §3)
+//  PDH/PDL, PWH/PWL, Session Hi/Lo, Equal Hi/Lo, Sweep, Trendline 2 diem
+//  Moi tinh nang co toggle rieng (x2_liq_*) - test duoc doc lap.
+// =============================================================================
+
+// --- Daily / Weekly / Session levels -------------------------------------------
+x2_pdh = request.security(syminfo.tickerid, "D", high[1], lookahead = barmerge.lookahead_on)
+x2_pdl = request.security(syminfo.tickerid, "D", low[1],  lookahead = barmerge.lookahead_on)
+x2_pwh = request.security(syminfo.tickerid, "W", high[1], lookahead = barmerge.lookahead_on)
+x2_pwl = request.security(syminfo.tickerid, "W", low[1],  lookahead = barmerge.lookahead_on)
+
+// Session Hi/Lo (reset moi phien - dung ten phien hien tai lam moc)
+x2_isAsia   = x2_sessAsia and not x2_sessOverlap
+x2_isLondon = x2_sessLondon and not x2_sessNy
+x2_isNy     = x2_sessNy and not x2_sessOverlap
+string x2_sessName = f_sessName(x2_sessAsia, x2_sessLondon, x2_sessNy)
+
+var float x2_sessHi = na
+var float x2_sessLo = na
+var string x2_sessPrev = ""
+bool x2_sessChanged = x2_sessName != x2_sessPrev
+if x2_sessChanged and x2_sessName != "-"
+    x2_sessHi := high
+    x2_sessLo := low
+else if x2_sessName != "-"
+    x2_sessHi := math.max(nz(x2_sessHi, high), high)
+    x2_sessLo := math.min(nz(x2_sessLo, low),  low)
+if x2_sessName != "-"
+    x2_sessPrev := x2_sessName
+
+// --- Equal Highs / Lows ---------------------------------------------------------
+float x2_eqThresh = x2_atr * x2_liq_eqTol
+x2_eqHi = not na(x2_pivH) and not na(x2_prevHigh) and math.abs(high[x2_ms_swLen] - x2_prevHigh) <= x2_eqThresh
+x2_eqLo = not na(x2_pivL) and not na(x2_prevLow)  and math.abs(low[x2_ms_swLen]  - x2_prevLow)  <= x2_eqThresh
+
+// --- Sweep: rau vuot level nhung close tro lai ben trong ------------------------
+x2_sweepBull = (x2_liq_pdOn and low < x2_pdl and close > x2_pdl) or (x2_liq_pwOn and low < x2_pwl and close > x2_pwl) or (x2_liq_sessOn and not na(x2_sessLo) and low < x2_sessLo and close > x2_sessLo) or (x2_eqLo and low[x2_ms_swLen] < x2_prevLow and close > x2_prevLow)
+x2_sweepBear = (x2_liq_pdOn and high > x2_pdh and close < x2_pdh) or (x2_liq_pwOn and high > x2_pwh and close < x2_pwh) or (x2_liq_sessOn and not na(x2_sessHi) and high > x2_sessHi and close < x2_sessHi) or (x2_eqHi and high[x2_ms_swLen] > x2_prevHigh and close < x2_prevHigh)
+
+if x2_okConfirmed and x2_sweepBull
+    f_pushEvent("SWEEP", "bull", bar_index, time, barstate.isconfirmed, math.max(x2_pdl, nz(x2_sessLo, x2_pdl)))
+if x2_okConfirmed and x2_sweepBear
+    f_pushEvent("SWEEP", "bear", bar_index, time, barstate.isconfirmed, math.min(x2_pdh, nz(x2_sessHi, x2_pdh)))
+
+// --- Level lines (PD / PW / Session) --------------------------------------------
+//  Moi loai duong co checkbox hien thi rieng (x2_showPd / x2_showPw / x2_showSess).
+//  Tat = delete line NGAY (khong de do do); bat lai = ve lai tai bar hien tai.
+//  Chi giua ky/phien HIEN TAI (khong giu doan lich su) de so luong ve co dinh,
+//  khong day bang ve va khong keo rong truc gia (chart bi thu be khi tat nay bat).
+var line x2_lPDH = na
+var line x2_lPDL = na
+var line x2_lPWH = na
+var line x2_lPWL = na
+var line x2_lSHi = na
+var line x2_lSLo = na
+bool x2_newDay = f_isNewDay()
+
+// PDH / PDL
+bool x2_pdVis = x2_showViz and x2_showPd and x2_liq_pdOn
+if x2_pdVis and (x2_newDay or na(x2_lPDH))
+    if not na(x2_lPDH)
+        line.delete(x2_lPDH)
+        line.delete(x2_lPDL)
+    x2_lPDH := line.new(bar_index, x2_pdh, bar_index + 1, x2_pdh, color = color.new(color.orange, 40), style = line.style_dashed, width = 1, force_overlay = true)
+    x2_lPDL := line.new(bar_index, x2_pdl, bar_index + 1, x2_pdl, color = color.new(color.orange, 40), style = line.style_dashed, width = 1, force_overlay = true)
+if x2_pdVis and not na(x2_lPDH)
+    line.set_x2(x2_lPDH, bar_index + 1)
+    line.set_x2(x2_lPDL, bar_index + 1)
+if not x2_pdVis and not na(x2_lPDH)
+    line.delete(x2_lPDH)
+    line.delete(x2_lPDL)
+    x2_lPDH := na
+    x2_lPDL := na
+
+// PWH / PWL
+bool x2_pwVis = x2_showViz and x2_showPw and x2_liq_pwOn
+if x2_pwVis and (ta.change(time("W")) != 0 or na(x2_lPWH))
+    if not na(x2_lPWH)
+        line.delete(x2_lPWH)
+        line.delete(x2_lPWL)
+    x2_lPWH := line.new(bar_index, x2_pwh, bar_index + 1, x2_pwh, color = color.new(color.blue, 50), style = line.style_dotted, width = 1, force_overlay = true)
+    x2_lPWL := line.new(bar_index, x2_pwl, bar_index + 1, x2_pwl, color = color.new(color.blue, 50), style = line.style_dotted, width = 1, force_overlay = true)
+if x2_pwVis and not na(x2_lPWH)
+    line.set_x2(x2_lPWH, bar_index + 1)
+    line.set_x2(x2_lPWL, bar_index + 1)
+if not x2_pwVis and not na(x2_lPWH)
+    line.delete(x2_lPWH)
+    line.delete(x2_lPWL)
+    x2_lPWH := na
+    x2_lPWL := na
+
+// Session High / Low - chay theo Session Hi/Lo DANG CHAY cua phien hien tai
+bool x2_sdVis = x2_showViz and x2_showSess and x2_liq_sessOn
+if x2_sdVis and (x2_sessChanged or na(x2_lSHi)) and x2_sessName != "-" and not na(x2_sessHi)
+    if not na(x2_lSHi)
+        line.delete(x2_lSHi)
+        line.delete(x2_lSLo)
+    x2_lSHi := line.new(bar_index, x2_sessHi, bar_index + 1, x2_sessHi, color = color.new(color.gray, 30), style = line.style_dashed, width = 1, force_overlay = true)
+    x2_lSLo := line.new(bar_index, x2_sessLo, bar_index + 1, x2_sessLo, color = color.new(color.gray, 30), style = line.style_dashed, width = 1, force_overlay = true)
+if x2_sdVis and not na(x2_lSHi)
+    line.set_xy1(x2_lSHi, bar_index, x2_sessHi)
+    line.set_xy2(x2_lSHi, bar_index + 1, x2_sessHi)
+    line.set_xy1(x2_lSLo, bar_index, x2_sessLo)
+    line.set_xy2(x2_lSLo, bar_index + 1, x2_sessLo)
+if not x2_sdVis and not na(x2_lSHi)
+    line.delete(x2_lSHi)
+    line.delete(x2_lSLo)
+    x2_lSHi := na
+    x2_lSLo := na
+
+// --- Sweep labels ----------------------------------------------------------------
+if x2_showViz and x2_liq_sweepOn and x2_sweepBull
+    label.new(bar_index, low,  "Sweep+", style = label.style_label_up,   color = color.new(x2_cBull, 10), textcolor = color.white, size = size.tiny, force_overlay = true)
+if x2_showViz and x2_liq_sweepOn and x2_sweepBear
+    label.new(bar_index, high, "Sweep-", style = label.style_label_down, color = color.new(x2_cBear, 10), textcolor = color.white, size = size.tiny, force_overlay = true)
+
+// --- Trendline 2 diem (2 pivot gan nhat, moi pha se ve lai) ---------------------
+//  slope = (y2-y1)/(x2-x1); touch = gia cham vao duong trong tolerance x ATR
+var float x2_tl1Lo  = na
+var int   x2_tl1LoB = na
+var float x2_tl2Lo  = na
+var int   x2_tl2LoB = na
+var float x2_tl1Hi  = na
+var int   x2_tl1HiB = na
+var float x2_tl2Hi  = na
+var int   x2_tl2HiB = na
+var int   x2_tlLoTouch = 0
+var int   x2_tlHiTouch = 0
+var line  x2_lnTlUp = na
+var line  x2_lnTlDn = na
+
+if not na(x2_pivL)
+    x2_tl1Lo  := x2_tl2Lo
+    x2_tl1LoB := x2_tl2LoB
+    x2_tl2Lo  := low[x2_ms_swLen]
+    x2_tl2LoB := bar_index - x2_ms_swLen
+    x2_tlLoTouch := 0
+if not na(x2_pivH)
+    x2_tl1Hi  := x2_tl2Hi
+    x2_tl1HiB := x2_tl2HiB
+    x2_tl2Hi  := high[x2_ms_swLen]
+    x2_tl2HiB := bar_index - x2_ms_swLen
+    x2_tlHiTouch := 0
+
+bool x2_tlUpOk = not na(x2_tl1Lo) and not na(x2_tl2Lo) and not na(x2_tl1LoB) and not na(x2_tl2LoB) and x2_tl2LoB > x2_tl1LoB
+bool x2_tlDnOk = not na(x2_tl1Hi) and not na(x2_tl2Hi) and not na(x2_tl1HiB) and not na(x2_tl2HiB) and x2_tl2HiB > x2_tl1HiB
+float x2_tlUpSlope = x2_tlUpOk ? (x2_tl2Lo - x2_tl1Lo) / float(x2_tl2LoB - x2_tl1LoB) : 0.0
+float x2_tlDnSlope = x2_tlDnOk ? (x2_tl2Hi - x2_tl1Hi) / float(x2_tl2HiB - x2_tl1HiB) : 0.0
+float x2_tlUpAt = x2_tlUpOk ? x2_tl1Lo + x2_tlUpSlope * float(bar_index - x2_tl1LoB) : na
+float x2_tlDnAt = x2_tlDnOk ? x2_tl1Hi + x2_tlDnSlope * float(bar_index - x2_tl1HiB) : na
+
+if x2_tlUpOk and not na(x2_tlUpAt) and math.abs(low - x2_tlUpAt) <= x2_liq_tlTol * x2_atr
+    x2_tlLoTouch += 1
+if x2_tlDnOk and not na(x2_tlDnAt) and math.abs(high - x2_tlDnAt) <= x2_liq_tlTol * x2_atr
+    x2_tlHiTouch += 1
+
+//  Nguong toi da xa gia: duong extrapolate qua xa gia khong con nghia gi ma la
+//  THU PHAM chinh keo rong truc gia -> chart bi thu be.
+bool x2_tlVis = x2_showViz and x2_showTl and x2_liq_tlOn
+bool x2_tlUpDraw = x2_tlVis and x2_tlUpOk and not na(x2_tlUpAt) and math.abs(x2_tlUpAt - close) <= x2_liq_tlMaxDev * x2_atr
+if x2_tlUpDraw
+    if not na(x2_lnTlUp)
+        line.set_xy1(x2_lnTlUp, x2_tl1LoB, x2_tl1Lo)
+        line.set_xy2(x2_lnTlUp, bar_index, x2_tlUpAt)
+    else
+        x2_lnTlUp := line.new(x2_tl1LoB, x2_tl1Lo, bar_index, x2_tlUpAt, color = color.new(x2_cBull, 30), width = 1, force_overlay = true)
+else if not na(x2_lnTlUp)
+    line.delete(x2_lnTlUp)
+    x2_lnTlUp := na
+
+bool x2_tlDnDraw = x2_tlVis and x2_tlDnOk and not na(x2_tlDnAt) and math.abs(x2_tlDnAt - close) <= x2_liq_tlMaxDev * x2_atr
+if x2_tlDnDraw
+    if not na(x2_lnTlDn)
+        line.set_xy1(x2_lnTlDn, x2_tl1HiB, x2_tl1Hi)
+        line.set_xy2(x2_lnTlDn, bar_index, x2_tlDnAt)
+    else
+        x2_lnTlDn := line.new(x2_tl1HiB, x2_tl1Hi, bar_index, x2_tlDnAt, color = color.new(x2_cBear, 30), width = 1, force_overlay = true)
+else if not na(x2_lnTlDn)
+    line.delete(x2_lnTlDn)
+    x2_lnTlDn := na

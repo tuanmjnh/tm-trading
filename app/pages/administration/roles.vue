@@ -1,10 +1,10 @@
 <script setup lang="ts">
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useModuleExport, buildExportChildren } from '~/composables/admin/useModuleExport'
+import type { GridColumn } from '~/components/gridList/Index.vue'
 import type { Role } from '~/types/rbac'
-import { z } from 'zod'
-import { getErrorMessage } from '~/shared/utils/errors'
 import type { HeaderAction } from '~/components/base/HeaderActions.vue'
-import { buildExportChildren, useModuleExport } from '~/composables/useModuleExport'
+import { isFullAccessRole, hasAllRoutes } from '#shared/rbac'
+import { getErrorMessage } from '~/shared/utils/errors'
 
 definePageMeta({
   middleware: () => {
@@ -15,500 +15,261 @@ definePageMeta({
   }
 })
 
-const UBadge = resolveComponent('UBadge')
-const UButton = resolveComponent('UButton')
-const toast = useToast()
 const { t } = useI18n()
-const { hubFetch, appId } = useHub()
-
-const { data: rolesRes, status, refresh } = await useAsyncData('hub-roles', () =>
-  hubFetch<{ success: boolean, data: Role[] }>(`/api/v1/apps/${appId}/roles`), {
-  default: () => ({ success: true, data: [] })
+const notify = useNotify()
+const auth = useAuth()
+const { appId } = useHub()
+const roles = useAdminRoles()
+const { viewMode } = useAdminGridView('roles-view-mode')
+const { title, description } = useAdminPageChrome({
+  titleKey: 'admin.rolesTitle',
+  descKey: 'admin.rolesDesc'
 })
-const defaultModules = [
-  { module: 'users', actions: ['read', 'write', 'delete'] },
-  { module: 'roles', actions: ['read', 'write', 'delete'] },
-  { module: 'media', actions: ['read', 'write', 'delete'] },
-  { module: 'notifications', actions: ['read', 'write', 'delete'] },
-  { module: 'system', actions: ['read', 'write'] },
-  { module: 'chat', actions: ['read', 'write'] }
-]
-const modulesRes = ref({ success: true, data: defaultModules })
-const { data: routesRes } = await useAsyncData('hub-routes', () =>
-  hubFetch<{ success: boolean, data: { routes: any[], tree: any[] } }>(`/api/v1/apps/${appId}/routes`), {
-  default: () => ({ success: true, data: { routes: [], tree: [] } })
-})
+const { buildRowActions } = useAdminRowActions()
+const { exporting: exportingRoles, exportModule: exportRoles } = useModuleExport()
 
-const modules = computed(() => modulesRes.value?.data || [])
-const routeTree = computed(() => routesRes.value?.data?.tree || [])
-
-const showModal = ref(false)
+const isCreateOpen = ref(false)
+const copySource = ref<{ name?: string, description?: string, permissions?: string[] } | null>(null)
+const isEditOpen = ref(false)
+const isDeleteOpen = ref(false)
 const editingRole = ref<Role | null>(null)
-const form = reactive({
-  name: '',
-  description: '',
-  allowedRoutes: [] as string[],
-  permissions: [] as { module: string, actions: string[] }[]
-})
-const saving = ref(false)
-const searchQuery = ref('')
-const treeRef = ref()
-
-const schema = computed(() => z.object({
-  name: z.string().min(2, t('admin.nameMin')),
-  description: z.string().optional(),
-  allowedRoutes: z.array(z.string()).optional(),
-  permissions: z.array(z.object({
-    module: z.string(),
-    actions: z.array(z.string())
-  })).optional()
-}))
-
-const getAllRouteIds = (nodes: any[]): string[] => {
-  let ids: string[] = []
-  nodes.forEach((node) => {
-    if (node.id) ids.push(node.id)
-    if (node.children) ids = ids.concat(getAllRouteIds(node.children))
-  })
-  return ids
-}
-
-const findParentIds = (nodes: any[], targetId: string, parents: string[] = []): string[] | null => {
-  for (const node of nodes) {
-    if (node.id === targetId) return parents
-    if (node.children) {
-      const result = findParentIds(node.children, targetId, [...parents, node.id])
-      if (result) return result
-    }
-  }
-  return null
-}
-
-const homeRouteId = computed(() => routeTree.value.find((n: any) => n.path === '/')?.id)
-
-const allowedRoutesProxy = computed({
-  get: () => {
-    const current = form.allowedRoutes || []
-    const result = [...current]
-    if (homeRouteId.value && !result.includes(homeRouteId.value)) {
-      result.push(homeRouteId.value)
-    }
-    return result
-  },
-  set: (val) => {
-    const newVal = [...val]
-    if (homeRouteId.value && !newVal.includes(homeRouteId.value)) {
-      newVal.push(homeRouteId.value)
-    }
-    form.allowedRoutes = newVal
-  }
-})
-
-const allRouteIds = computed(() => getAllRouteIds(routeTree.value))
-const isAllSelected = computed(() => {
-  return allRouteIds.value.length > 0 && allowedRoutesProxy.value.length === allRouteIds.value.length
-})
-
-const handleToggleAll = () => {
-  if (isAllSelected.value) {
-    const keepIds: string[] = []
-    if (homeRouteId.value) keepIds.push(homeRouteId.value)
-    allowedRoutesProxy.value = keepIds
-  } else {
-    allowedRoutesProxy.value = [...allRouteIds.value]
-  }
-}
-
-const onNodeSelect = ({ node, isSelected }: { node: any, isSelected: boolean }) => {
-  if (node.path === '/') return
-
-  if (isSelected) {
-    const parentIds = findParentIds(routeTree.value, node.id) || []
-    const childIds = getAllRouteIds(node.children || [])
-    const newIds = new Set([...allowedRoutesProxy.value, node.id, ...parentIds, ...childIds])
-    allowedRoutesProxy.value = Array.from(newIds)
-  } else {
-    const childIds = getAllRouteIds(node.children || [])
-    const removeIds = new Set([node.id, ...childIds])
-    allowedRoutesProxy.value = allowedRoutesProxy.value.filter((id: string) => !removeIds.has(id))
-  }
-}
-
-const filterNodes = (nodes: any[], query: string): any[] => {
-  if (!query) return nodes
-  return nodes.reduce((acc, node) => {
-    const matches = node.label.toLowerCase().includes(query.toLowerCase()) || node.path.toLowerCase().includes(query.toLowerCase())
-    const children = node.children ? filterNodes(node.children, query) : []
-
-    if (matches || children.length > 0) {
-      acc.push({ ...node, children })
-    }
-    return acc
-  }, [] as any[])
-}
-
-const filteredRoutes = computed(() => filterNodes(routeTree.value, searchQuery.value))
-
-function openAdd() {
-  editingRole.value = null
-  form.name = ''
-  form.description = ''
-  form.allowedRoutes = homeRouteId.value ? [homeRouteId.value] : []
-  form.permissions = modules.value.map((m: any) => ({ module: m.key, actions: [] }))
-  showModal.value = true
-}
-
-function openEdit(r: Role) {
-  editingRole.value = r
-  form.name = r.name
-  form.description = r.description
-  form.allowedRoutes = [...(r.allowedRoutes || [])]
-  form.permissions = modules.value.map((m: any) => {
-    const existing = r.permissions.find(p => p.module === m.key)
-    return { module: m.key, actions: existing ? [...existing.actions] : [] }
-  })
-  showModal.value = true
-}
-
-function toggleAction(moduleKey: string, action: string) {
-  const perm = form.permissions.find(p => p.module === moduleKey)
-  if (!perm) return
-  const idx = perm.actions.indexOf(action)
-  if (idx >= 0) perm.actions.splice(idx, 1)
-  else perm.actions.push(action)
-}
-
-const allActions = ['read', 'write', 'delete', 'manage']
-
-async function onSubmit() {
-  if (saving.value) return
-  saving.value = true
-  try {
-    const body = {
-      name: form.name,
-      description: form.description,
-      allowedRoutes: form.allowedRoutes,
-      permissions: form.permissions.filter(p => p.actions.length > 0)
-    }
-    if (editingRole.value) {
-      await hubFetch(`/api/v1/apps/${appId}/roles?id=${editingRole.value.id}`, { method: 'PUT', body })
-      toast.add({ title: t('admin.roleUpdated'), icon: 'i-lucide-check', color: 'success' })
-    } else {
-      await hubFetch(`/api/v1/apps/${appId}/roles`, { method: 'POST', body })
-      toast.add({ title: t('admin.roleCreated'), icon: 'i-lucide-check', color: 'success' })
-    }
-    showModal.value = false
-    refresh()
-  } catch (err: any) {
-    toast.add({ title: getErrorMessage(err, key => t(key)), color: 'error' })
-  } finally { saving.value = false }
-}
-
-async function confirmDelete(r: Role) {
-  if (r.isSystem) {
-    toast.add({ title: t('admin.cannotDeleteSystem'), color: 'error' })
-    return
-  }
-  deleteTarget.value = r
-  showDeleteModal.value = true
-}
-
-const deleteTarget = ref<Role | null>(null)
-const showDeleteModal = ref(false)
-const deleting = ref(false)
-
-const showBatchDeleteModal = ref(false)
-const batchDeleting = ref(false)
-
-async function doDelete() {
-  if (deleting.value || !deleteTarget.value) return
-  deleting.value = true
-  try {
-    await hubFetch(`/api/v1/apps/${appId}/roles?id=${deleteTarget.value.id}`, { method: 'DELETE' })
-    toast.add({ title: t('admin.roleDeleted'), icon: 'i-lucide-check', color: 'success' })
-    deleteTarget.value = null
-    showDeleteModal.value = false
-    refresh()
-  } catch (err: any) {
-    toast.add({ title: getErrorMessage(err, key => t(key)), color: 'error' })
-  } finally {
-    deleting.value = false
-  }
-}
-
-async function doBatchDelete() {
-  const targets = selected.value.filter(r => !r.isSystem)
-  if (batchDeleting.value || targets.length === 0) return
-  batchDeleting.value = true
-  try {
-    const ids = targets.map(r => r.id).join(',')
-    await hubFetch(`/api/v1/apps/${appId}/roles?id=${ids}`, { method: 'DELETE' })
-    toast.add({ title: t('admin.roleDeleted'), icon: 'i-lucide-check', color: 'success' })
-    selected.value = []
-    showBatchDeleteModal.value = false
-    refresh()
-  } catch (err: any) {
-    toast.add({ title: getErrorMessage(err, key => t(key)), color: 'error' })
-  } finally {
-    batchDeleting.value = false
-  }
-}
-
+const deletingIds = ref<string[]>([])
 const selected = ref<Role[]>([])
+const searchQuery = ref('')
 
-const columns = computed(() => [
-  { key: 'name', label: t('admin.name'), class: 'w-48' },
-  { key: 'description', label: t('admin.description'), class: 'flex-1' },
+const isRoot = computed(() => auth.user.value?.permissions?.includes('*') || auth.user.value?.role === 'root')
+
+watch(() => appId, async (id) => {
+  if (!id) return
+  await roles.setApp(id)
+  await roles.fetchRoutes(id).catch(() => { })
+}, { immediate: true })
+
+const filteredRoles = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return roles.items.value
+  return roles.items.value.filter(r =>
+    r.name.toLowerCase().includes(q)
+    || (r.description || '').toLowerCase().includes(q)
+    || r.id.toLowerCase().includes(q)
+  )
+})
+
+const openEdit = (role: Role) => {
+  editingRole.value = role
+  isEditOpen.value = true
+}
+
+const openCreate = () => {
+  copySource.value = null
+  isCreateOpen.value = true
+}
+
+const openCopy = (role: Role) => {
+  copySource.value = {
+    name: `${role.name} (${t('common.copy')})`,
+    description: role.description || '',
+    permissions: role.permissions.flatMap(p => p.actions.map(a => `${p.module}.${a}`))
+  }
+  isCreateOpen.value = true
+}
+
+const confirmDelete = (ids: string[]) => {
+  deletingIds.value = ids
+  isDeleteOpen.value = true
+}
+
+const deletingNames = computed(() =>
+  deletingIds.value
+    .map(id => roles.items.value.find(r => r.id === id)?.name || id)
+    .join(', ')
+)
+
+const handleDelete = async () => {
+  if (!deletingIds.value.length || !appId) return
+  try {
+    await roles.deleteRole(appId, deletingIds.value)
+    notify.success(t('admin.roleDeleted'))
+    isDeleteOpen.value = false
+    deletingIds.value = []
+    selected.value = []
+  } catch (err) {
+    notify.error(getErrorMessage(err, key => t(key)))
+  }
+}
+
+const rowActions = (role: Role) => buildRowActions([
+  { type: 'edit', onSelect: () => openEdit(role) },
+  { type: 'copy', onSelect: () => openCopy(role) },
+  { type: 'delete', visible: isRoot.value && !role.isSystem, onSelect: () => confirmDelete([role.id]) }
+])
+
+const columns = computed<GridColumn[]>(() => [
+  { key: 'name', label: t('common.name'), class: 'w-44' },
+  { key: 'description', label: t('common.description') },
+  { key: 'permissions', label: t('admin.permissions.title'), class: 'w-48' },
+  { key: 'allowedRoutes', label: t('admin.accessibleRoutes'), class: 'w-32' },
   { key: 'isSystem', label: t('admin.system'), class: 'w-24' }
 ])
 
-const getActionOptions = (item: Role) => [
-  [
-    {
-      label: t('global.edit'),
-      icon: 'i-lucide-pencil',
-      onSelect() { openEdit(item) }
-    },
-    {
-      label: t('global.delete'),
-      icon: 'i-lucide-trash',
-      color: 'error' as const,
-      disabled: item.isSystem,
-      onSelect() { confirmDelete(item) }
-    }
-  ]
-]
-const { exporting, exportModule } = useModuleExport()
+const moduleLabel = (key: string) => {
+  const label = t(`admin.modules.${key}`)
+  return label === `admin.modules.${key}` ? key : label
+}
 
+const mobileBar = useMobileBar()
 const headerActions = computed<HeaderAction[]>(() => [
-  {
-    key: 'import',
-    icon: 'i-lucide-file-up',
-    label: t('import.open'),
-    overflow: true,
-    onSelect: () => navigateTo({ path: '/resources/import', query: { target: 'roles' } })
-  },
   {
     key: 'export',
     icon: 'i-lucide-file-down',
     label: t('admin.export.action'),
     overflow: true,
-    disabled: exporting.value,
-    children: buildExportChildren(t, fmt => exportModule('roles', fmt))
+    disabled: exportingRoles.value,
+    children: buildExportChildren(t, fmt => exportRoles(appId, 'roles', fmt))
   },
   {
     key: 'delete',
     icon: 'i-lucide-trash',
-    label: `${t('global.delete')} (${selected.value.length})`,
+    label: `${t('common.delete')} (${selected.value.length})`,
     color: 'error',
-    visible: selected.value.length > 0,
-    onSelect: () => { showBatchDeleteModal.value = true }
+    visible: isRoot.value && selected.value.length > 0,
+    onSelect: () => confirmDelete(selected.value.filter(r => !r.isSystem).map(r => r.id))
   },
   {
-    key: 'add',
+    key: 'create',
     icon: 'i-lucide-plus',
     label: t('admin.addRole'),
     color: 'primary',
     primary: true,
-    onSelect: openAdd
+    onSelect: openCreate
   }
 ])
+
+mobileBar.registerActions(computed(() => [
+  ...headerActionsToMobile(headerActions.value),
+  {
+    icon: 'i-lucide-refresh-cw',
+    label: t('common.refresh'),
+    onSelect: () => roles.refresh()
+  }
+]))
+mobileBar.registerInfo(computed(() => ({
+  count: filteredRoles.value.length,
+  hasMore: roles.hasMore.value,
+  loading: roles.loading.value
+})))
+
+useHead({ title })
 </script>
 
 <template>
-  <BasePage id="admin-roles" :title="$t('admin.rolesPermissions')">
+  <BasePage id="roles" :title="title" :description="description">
     <template #right>
       <div class="flex items-center gap-2">
         <BaseHeaderActions :actions="headerActions" />
-        <UButton
-          icon="i-lucide-refresh-cw"
-          variant="soft"
-          color="neutral"
-          size="sm"
-          :loading="status === 'pending'"
-          @click="refresh"
-        />
-      </div>
-    </template>
-        </UButton>
-        <UButton
-          :label="$t('admin.addRole')"
-          icon="i-lucide-plus"
-          variant="soft"
-          @click="openAdd"
-        />
+        <UButton icon="i-lucide-refresh-cw" variant="soft" size="sm" :loading="roles.loading.value"
+          @click="roles.refresh()" />
       </div>
     </template>
 
-    <template #default>
-      <div class="flex-1 min-h-0 relative h-full">
-        <LazyGridList
-          v-model:selected="selected"
-          :items="rolesRes?.data || []"
-          :columns="columns"
-          :loading="status === 'pending'"
-          item-key="id"
-          selectable
-          :action-options="getActionOptions"
-          @refresh="refresh"
-        >
-          <template #isSystem="{ item }">
-            <UBadge
-              v-if="item.isSystem"
-              :label="t('global.yes')"
-              color="neutral"
-              variant="subtle"
-            />
-          </template>
+    <template #toolbar>
+      <UDashboardToolbar>
+        <template #left>
+          <div class="flex items-center gap-2 w-full min-w-0 sm:w-auto">
+            <UInput v-model="searchQuery" icon="i-lucide-search" :placeholder="t('common.search')" size="sm"
+              class="w-full sm:w-64" />
+          </div>
+        </template>
+        <template #right>
+          <AdminViewModeToggle v-model="viewMode" />
+        </template>
+      </UDashboardToolbar>
+    </template>
 
-          <template #mobile-content="{ item }">
-            <div class="flex flex-col gap-2">
-              <div class="flex justify-between items-start gap-2">
-                <span class="text-sm font-bold truncate">{{ item.name }}</span>
-                <UBadge
-                  v-if="item.isSystem"
-                  variant="subtle"
-                  color="neutral"
-                  class="text-[10px] shrink-0"
-                >
-                  {{ t('admin.system') }}
-                </UBadge>
-              </div>
-              <span v-if="item.description" class="text-xs text-gray-500 line-clamp-2 leading-relaxed italic">
-                {{ item.description }}
+    <template #footer>
+      <SharedListFooter :count="filteredRoles.length" :has-more="roles.hasMore.value" :loading="roles.loading.value" />
+    </template>
+
+    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6">
+      <LazyGridList :items="filteredRoles" :columns="columns"
+        :loading="roles.initialLoading.value || roles.loading.value" :can-load-more="roles.hasMore.value"
+        :action-options="rowActions" :selectable="isRoot" v-model:selected="selected" v-model:view-mode="viewMode"
+        item-key="id" storage-key="roles-view-mode" @load-more="roles.loadMore()" @refresh="roles.refresh()"
+        @click="openEdit">
+        <template #name="{ item }">
+          <div class="min-w-0">
+            <span class="font-medium text-xs text-highlighted truncate block">{{ item.name }}</span>
+            <p class="text-[11px] text-muted truncate md:hidden">{{ item.description || '—' }}</p>
+          </div>
+        </template>
+
+        <template #description="{ item }">
+          <span class="text-[11px] text-muted truncate">{{ item.description || '—' }}</span>
+        </template>
+
+        <template #permissions="{ item }">
+          <div class="flex flex-wrap gap-1">
+            <UBadge v-if="isFullAccessRole(item.permissions)" :label="t('admin.fullAccess')" color="success"
+              variant="subtle" size="xs" icon="i-lucide-crown" />
+            <template v-else>
+              <UBadge v-for="p in (item.permissions || []).slice(0, 3)" :key="p.module" :label="moduleLabel(p.module)"
+                variant="subtle" size="xs" />
+              <span v-if="(item.permissions || []).length > 3" class="text-xs text-muted">
+                +{{ item.permissions.length - 3 }}
               </span>
-              <div class="flex items-center gap-1 mt-1">
-                <div class="flex items-center gap-1">
-                  <UIcon name="i-lucide-route" class="size-3.5 text-primary-500" />
-                  <span class="text-[10px] text-gray-500">
-                    {{ t('admin.allowedRoutes') }}: {{ item.allowedRoutes === '*' ? t('admin.all')
-                      : (item.allowedRoutes?.length || 0) }}
-                  </span>
-                </div>
-                <div class="flex items-center gap-1 ml-auto">
-                  <UIcon name="i-lucide-shield-check" class="size-3.5 text-info-500" />
-                  <span class="text-[10px] text-gray-500">
-                    {{ t('admin.permissions') }}: {{ item.permissions?.length || 0 }}
-                  </span>
-                </div>
+            </template>
+          </div>
+        </template>
+
+        <template #allowedRoutes="{ item }">
+          <UBadge v-if="hasAllRoutes(item.allowedRoutes)" :label="t('admin.allRoutes')" color="info" variant="subtle"
+            size="xs" />
+          <span v-else class="text-xs text-muted">
+            {{ t('admin.routesCount', { n: (item.allowedRoutes || []).length }) }}
+          </span>
+        </template>
+
+        <template #isSystem="{ item }">
+          <AdminStatusBadge v-if="item.isSystem" :label="t('admin.system')" color="warning" />
+          <span v-else class="text-xs text-muted">—</span>
+        </template>
+
+        <template #mobile-content="{ item }">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <p class="font-semibold text-xs truncate">{{ item.name }}</p>
+                <AdminStatusBadge v-if="item.isSystem" :label="t('admin.system')" color="warning" />
               </div>
-            </div>
-          </template>
-        </LazyGridList>
-      </div>
-
-      <BaseFormModal
-        v-model:open="showModal"
-        :title="editingRole ? t('admin.editRole') : t('admin.addRole')"
-        :schema="schema"
-        :state="form"
-        :loading="saving"
-        :ui="{ content: 'w-full max-w-3xl' }"
-        @submit="onSubmit"
-      >
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <UFormField :label="t('admin.name')" name="name" required>
-            <UInput v-model="form.name" class="w-full" />
-          </UFormField>
-          <UFormField :label="t('admin.description')" name="description">
-            <UInput v-model="form.description" class="w-full" />
-          </UFormField>
-        </div>
-
-        <UFormField :label="$t('admin.permissions')">
-          <div class="space-y-2">
-            <div class="flex justify-between items-center">
-              <div class="flex gap-2">
-                <UInput
-                  v-model="searchQuery"
-                  icon="i-lucide-search"
-                  size="sm"
-                  class="w-52"
-                />
-                <UTooltip :text="treeRef?.isAllExpanded ? $t('common.collapse_all') : $t('common.expand_all')">
-                  <UButton
-                    :icon="treeRef?.isAllExpanded ? 'i-lucide-minimize-2' : 'i-lucide-maximize-2'"
-                    color="neutral"
-                    variant="ghost"
-                    size="sm"
-                    @click="treeRef?.toggleAll()"
-                  />
-                </UTooltip>
-                <UTooltip :text="isAllSelected ? $t('common.uncheck_all') : $t('common.check_all')">
-                  <UButton
-                    :icon="isAllSelected ? 'i-lucide-list-checks' : 'i-lucide-check-square'"
-                    color="neutral"
-                    variant="ghost"
-                    size="sm"
-                    @click="handleToggleAll"
-                  />
-                </UTooltip>
-              </div>
-              <UBadge color="primary" variant="subtle">
-                {{ allowedRoutesProxy.length }}
-              </UBadge>
-            </div>
-
-            <div class="max-h-[40vh] overflow-y-auto border border-default rounded-lg p-2">
-              <SharedHeTreeMenu
-                ref="treeRef"
-                :model-value="filteredRoutes"
-                :selected-keys="allowedRoutesProxy"
-                :field-names="{ id: 'id', label: 'label', children: 'children' }"
-                :default-expand-all="false"
-                :draggable="false"
-                @node:select="onNodeSelect"
-              >
-                <template #title="{ node }">
-                  <span class="text-sm font-medium text-gray-700 dark:text-gray-200 truncate block">
-                    {{ t(`nav.${node.label.replace('nav.', '')}`) || node.label }}
-                  </span>
-                  <span class="text-xs text-gray-500">{{ node.path }}</span>
+              <p class="text-[11px] text-muted mt-0.5 line-clamp-2">{{ item.description || '—' }}</p>
+              <div class="flex flex-wrap gap-1 mt-2">
+                <UBadge v-if="isFullAccessRole(item.permissions)" :label="t('admin.fullAccess')" color="success"
+                  variant="subtle" size="xs" icon="i-lucide-crown" />
+                <template v-else>
+                  <UBadge v-for="p in (item.permissions || []).slice(0, 4)" :key="p.module"
+                    :label="moduleLabel(p.module)" variant="subtle" size="xs" />
                 </template>
-              </SharedHeTreeMenu>
-            </div>
-          </div>
-        </UFormField>
-
-        <UFormField :label="t('admin.permissions')" :description="$t('admin.actionsHelp')">
-          <div class="space-y-2 w-full">
-            <div
-              v-for="perm in form.permissions"
-              :key="perm.module"
-              class="flex items-center justify-between p-2 rounded-md border border-default"
-            >
-              <span class="text-sm font-medium capitalize">{{ perm.module }}</span>
-              <div class="flex gap-1">
-                <UBadge
-                  v-for="action in allActions"
-                  :key="action"
-                  :label="$t(`admin.${action}`)"
-                  :variant="perm.actions.includes(action) ? 'solid' : 'subtle'"
-                  :color="perm.actions.includes(action) ? 'primary' : 'neutral'"
-                  class="cursor-pointer capitalize"
-                  @click="toggleAction(perm.module, action)"
-                />
+                <UBadge v-if="hasAllRoutes(item.allowedRoutes)" :label="t('admin.allRoutes')" color="info"
+                  variant="subtle" size="xs" />
               </div>
             </div>
+            <AdminRowActions :items="rowActions(item)" />
           </div>
-        </UFormField>
-      </BaseFormModal>
+        </template>
 
-      <LazyBaseConfirmModal
-        v-model:open="showDeleteModal"
-        :title="t('admin.deleteRoleConfirm')"
-        :description="t('admin.deleteRoleConfirmDesc', { name: deleteTarget?.name || '' })"
-        :loading="deleting"
-        @confirm="doDelete"
-      />
+        <template #empty>
+          <AdminEmptyState :title="t('common.no_results')" />
+        </template>
+      </LazyGridList>
+    </div>
 
-      <LazyBaseConfirmModal
-        v-model:open="showBatchDeleteModal"
-        :title="t('admin.deleteRoleConfirm')"
-        :description="t('admin.deleteRoleConfirmDesc', { name: selected.filter(r => !r.isSystem).map(r => r.name).join(', ') })"
-        :loading="batchDeleting"
-        @confirm="doBatchDelete"
-      />
-    </template>
+    <RolesCreateModal v-model:open="isCreateOpen" :app-id="appId" :routes="roles.routes.value"
+      :initial-data="copySource" :route-tree="roles.routeTree.value" @created="roles.refresh()" />
+    <RolesEditModal v-model:open="isEditOpen" :role="editingRole" :app-id="appId" :routes="roles.routes.value"
+      :route-tree="roles.routeTree.value" @updated="roles.refresh()" />
+    <BaseConfirmModal v-model:open="isDeleteOpen" :title="t('admin.deleteRoleConfirm')"
+      :description="t('admin.deleteRoleConfirmDesc', { name: deletingNames })" :confirm-label="t('common.delete')"
+      :cancel-label="t('common.cancel')" color="error" icon="i-lucide-alert-triangle" :loading="roles.mutating.value"
+      @confirm="handleDelete" />
   </BasePage>
 </template>

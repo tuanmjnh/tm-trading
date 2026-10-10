@@ -20,22 +20,22 @@ const DIST = join(ROOT, 'pine', 'dist')
 
 const TARGETS = {
   indicator: {
-    file: 'TM Signals BTC.pine',
+    file: 'TM Signals.pine',
     dir: 'parts',
     shared: ['common.pine'],
     // Giu tren MOT dong: khai bao script la vi tri nhay parse, khong sua.
-    decl: `indicator("TM Signals BTC", "TM Signals BTC", overlay = false, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)`,
+    decl: `indicator("TM Signals", shorttitle = "TM·SIG", overlay = false, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)`,
   },
   strategy: {
-    file: 'TM Backtest BTC.pine',
+    file: 'TM Backtest.pine',
     dir: 'parts',
     shared: ['common.pine'],
-    decl: `strategy("TM Backtest BTC", "TM Backtest BTC", overlay = true, pyramiding = 0, calc_on_order_fills = true, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 1, commission_type = strategy.commission.percent, commission_value = 0.05, slippage = 0)`,
+    decl: `strategy("TM Backtest", shorttitle = "TM·BT", overlay = true, pyramiding = 0, calc_on_order_fills = true, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 1, commission_type = strategy.commission.percent, commission_value = 0.05, slippage = 0)`,
   },
   vsa: {
     file: 'TM VSA Wyckoff.pine',
     dir: 'parts-vsa',
-    shared: ['common.pine'],
+    shared: ['common.pine', 'sess-inputs.pine'],
     decl: `indicator("TM VSA Wyckoff", "TM VSA Wyckoff", overlay = false, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)`,
   },
   // Ban backtest cua VSA - CUNG nguon parts-vsa, chi khac khai bao strategy va
@@ -45,8 +45,35 @@ const TARGETS = {
   'vsa-strategy': {
     file: 'TM VSA Backtest.pine',
     dir: 'parts-vsa',
-    shared: ['common.pine'],
+    shared: ['common.pine', 'sess-inputs.pine'],
     decl: `strategy("TM VSA Backtest", "TM VSA Backtest", overlay = true, pyramiding = 0, calc_on_order_fills = true, process_orders_on_close = true, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, commission_value = 0.05, slippage = 0)`,
+  },
+  // Phase 11 - Liquidity Sweep: quet thanh khoan (pivot swing kieu LuxAlgo) +
+  // rau tu choi + xac nhan volume VSA -> tin hieu dao chieu. overlay = false nen
+  // histogram volume nam o pane rieng (giong TM VSA Wyckoff); MOI hinh ve tren
+  // gia (level/box/nhan/Entry-SL-TP/dashboard) phai kem force_overlay = true.
+  sweep: {
+    file: 'TM Liquidity Sweep.pine',
+    dir: 'parts-sweep',
+    shared: ['common.pine', 'sess-inputs.pine'],
+    decl: `indicator("TM Liquidity Sweep", "TM Liquidity Sweep", overlay = false, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)`,
+  },
+  xau: {
+    file: 'TM XAU Signals.pine',
+    dir: 'parts-xau',
+    shared: ['common.pine', 'zones.pine'],
+    decl: `indicator("TM XAU Signals", shorttitle = "TM·XAU", overlay = false, dynamic_requests = true, max_boxes_count = 200, max_lines_count = 200, max_labels_count = 200)`,
+  },
+  // Phase 12 - XAU v2 (docs/indicator-XAU/master-prompt v2.md): event UDT co
+  // timestamp/tf/confirmed/level, MSS + retest + failed breakout, FVG + Order
+  // Block + trendline, indicator engine nhom theo chuc nang (MACD/DMI/BB/VWAP/
+  // OBV/RelVol), MTF Context + HTF VETO. overlay=false -> moi hinh ve tren gia
+  // phai kem force_overlay = true (giong parts-xau).
+  xau2: {
+    file: 'TM XAU Signals 2.pine',
+    dir: 'parts-xau2',
+    shared: ['common.pine', 'zones.pine'],
+    decl: `indicator("TM XAU Signals 2", shorttitle = "TM·XAU2", overlay = false, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)`,
   },
 }
 

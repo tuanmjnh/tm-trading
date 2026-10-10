@@ -1,0 +1,16 @@
+// =============================================================================
+//  L7 - MTF CONTEXT  (v2 §4)
+//  Context TF (H4/D/W/M) + Setup TF (H1/M15); entry = chart TF (M5/M15).
+//  Chi tinh bias o day - cong gate (VETO/Setup) nam o 80_scoring_risk sau khi
+//  co diem so, de khong dung lai thu tu (score -> dir -> gate).
+//  request.security [1] + lookahead_on -> khong nhin tuong lai.
+// =============================================================================
+
+float x2_ctxEma = request.security(syminfo.tickerid, x2_ctxTf, ta.ema(close, x2_ctxLen)[1], lookahead = barmerge.lookahead_on)
+int   x2_ctxDir = not na(x2_ctxEma) ? (close > x2_ctxEma ? 1 : -1) : 0
+
+float x2_setupEma = request.security(syminfo.tickerid, x2_setupTf, ta.ema(close, x2_setupLen)[1], lookahead = barmerge.lookahead_on)
+int   x2_setupDir = not na(x2_setupEma) ? (close > x2_setupEma ? 1 : -1) : 0
+
+// MTF alignment score: binh quan 2 bias (co the dung cho trong so)
+float x2_gMtfBias = (float(x2_ctxDir) + float(x2_setupDir)) / 2.0

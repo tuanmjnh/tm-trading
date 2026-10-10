@@ -1,0 +1,40 @@
+// =============================================================================
+//  L5 - CANDLE PATTERN ENGINE  (v2 §1)
+//  Rejection, Displacement, Pin, Engulfing -> diem [-1, +1] (cp_score)
+//  Moi pattern co toggle rieng (x2_cp_*).
+// =============================================================================
+
+float x2_prevBody = math.abs(close[1] - open[1])
+
+// Pin Bar (rejection nhe)
+bool x2_bullPin = x2_bullBar and x2_loWick >= x2_cp_pinRatio * x2_body
+bool x2_bearPin = x2_bearBar and x2_hiWick >= x2_cp_pinRatio * x2_body
+
+// Engulfing
+bool x2_bullEng = x2_bullBar and close[1] < open[1] and close >= open[1] and open <= close[1] and x2_body >= x2_prevBody
+bool x2_bearEng = x2_bearBar and close[1] > open[1] and close <= open[1] and open >= close[1] and x2_body >= x2_prevBody
+
+// Displacement candle (body lon + close o cuc tri + volume spike)
+bool x2_dispBullV = x2_dispBull and x2_bullBar and x2_vol >= x2_vol_spikeR * x2_volMA
+bool x2_dispBearV = x2_dispBear and x2_bearBar and x2_vol >= x2_vol_spikeR * x2_volMA
+
+// Rejection candle (rau day chiem phan lon bien do, thanh mong)
+bool x2_bullRej = x2_hiWick >= x2_range * 0.55 and x2_loWick <= x2_range * 0.15 and x2_bullBar
+bool x2_bearRej = x2_loWick >= x2_range * 0.55 and x2_hiWick <= x2_range * 0.15 and x2_bearBar
+
+float x2_cpBull = 0.0
+float x2_cpBear = 0.0
+if x2_cp_pin
+    x2_cpBull += x2_bullPin ? 1.0 : 0.0
+    x2_cpBear += x2_bearPin ? 1.0 : 0.0
+if x2_cp_engulf
+    x2_cpBull += x2_bullEng ? 1.0 : 0.0
+    x2_cpBear += x2_bearEng ? 1.0 : 0.0
+if x2_cp_disp
+    x2_cpBull += x2_dispBullV ? 1.2 : 0.0
+    x2_cpBear += x2_dispBearV ? 1.2 : 0.0
+if x2_cp_rej
+    x2_cpBull += x2_bullRej ? 0.8 : 0.0
+    x2_cpBear += x2_bearRej ? 0.8 : 0.0
+
+float x2_cpScore = x2_cpBull > x2_cpBear ? math.min(1.0, x2_cpBull / 3.0) : x2_cpBear > x2_cpBull ? -math.min(1.0, x2_cpBear / 3.0) : 0.0

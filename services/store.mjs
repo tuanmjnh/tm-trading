@@ -21,6 +21,94 @@ export async function getIntel() {
   return intelMemo
 }
 
+/** Model `datasets` (retention manifest §23.4) — null = Mongo down. */
+let datasetMemo = null
+export async function getDataset() {
+  if (datasetMemo) return datasetMemo
+  const mg = await connectMongo()
+  if (!mg) return null
+  const mod = await import('../engine/models/dataset.mjs')
+  datasetMemo = mod.Dataset
+  return datasetMemo
+}
+
+/** Model `market_feed` (raw feed ledger §23.3 P1) — null = Mongo down. */
+let marketFeedMemo = null
+export async function getMarketFeed() {
+  if (marketFeedMemo) return marketFeedMemo
+  const mg = await connectMongo()
+  if (!mg) return null
+  const mod = await import('../engine/models/marketFeed.mjs')
+  marketFeedMemo = mod.MarketFeed
+  return marketFeedMemo
+}
+
+/** Model `notification_logs` (Notification Router audit §25) — null = Mongo down. */
+let notificationLogMemo = null
+export async function getNotificationLog() {
+  if (notificationLogMemo) return notificationLogMemo
+  const mg = await connectMongo()
+  if (!mg) return null
+  const mod = await import('../engine/models/notificationLog.mjs')
+  notificationLogMemo = mod.NotificationLog
+  return notificationLogMemo
+}
+
+/** Model `experiments` (Experiment Engine §28.1) — null = Mongo down. */
+let experimentMemo = null
+export async function getExperiment() {
+  if (experimentMemo) return experimentMemo
+  const mg = await connectMongo()
+  if (!mg) return null
+  const mod = await import('../engine/models/experiment.mjs')
+  experimentMemo = mod.Experiment
+  return experimentMemo
+}
+
+/** Model `experiment_runs` (Experiment Engine §28.2 arms) — null = Mongo down. */
+let experimentRunMemo = null
+export async function getExperimentRun() {
+  if (experimentRunMemo) return experimentRunMemo
+  const mg = await connectMongo()
+  if (!mg) return null
+  const mod = await import('../engine/models/experimentRun.mjs')
+  experimentRunMemo = mod.ExperimentRun
+  return experimentRunMemo
+}
+
+/** Model `ai_proposals` (AI Research §27.3) — null = Mongo down. */
+let aiProposalMemo = null
+export async function getAiProposal() {
+  if (aiProposalMemo) return aiProposalMemo
+  const mg = await connectMongo()
+  if (!mg) return null
+  const mod = await import('../engine/models/aiProposal.mjs')
+  aiProposalMemo = mod.AiProposal
+  return aiProposalMemo
+}
+
+/** Model `strategy_versions` (Strategy Version Lifecycle §29) — null = Mongo down. */
+let strategyVersionMemo = null
+export async function getStrategyVersion() {
+  if (strategyVersionMemo) return strategyVersionMemo
+  const mg = await connectMongo()
+  if (!mg) return null
+  const mod = await import('../engine/models/strategyVersion.mjs')
+  strategyVersionMemo = mod.StrategyVersion
+  return strategyVersionMemo
+}
+
+/** Model `strategy_profiles` (Strategy Profile §26.1) — null = Mongo down. */
+let strategyProfileMemo = null
+export async function getStrategyProfile() {
+  if (strategyProfileMemo) return strategyProfileMemo
+  const mg = await connectMongo()
+  if (!mg) return null
+  const mod = await import('../engine/models/strategyProfile.mjs')
+  strategyProfileMemo = mod.StrategyProfile
+  return strategyProfileMemo
+}
+
 /**
  * Ghi snapshot 1 kind: xóa toàn bộ kind cũ, chèn bộ hiện tại.
  * rows: [{ key, symbol?, title?, score?, ts: Date|number, data }]

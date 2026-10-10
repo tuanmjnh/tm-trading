@@ -1,0 +1,77 @@
+// =============================================================================
+//  L4 - S/R ZONE ENGINE
+//  Pivot-based supply/demand zones, ATR width, zone merging, max limit
+// =============================================================================
+
+// SrZone + f_addZone / f_nearSupport / f_nearResistance - shared (pine/shared/zones.pine)
+if not na(ta.pivothigh(high, xau_sr_left, xau_sr_right))
+    f_addZone(sr_zones, high[xau_sr_right], -1, xau_atr, xau_sr_width, xau_sr_maxZone)
+if not na(ta.pivotlow(low, xau_sr_left, xau_sr_right))
+    f_addZone(sr_zones, low[xau_sr_right],  1, xau_atr, xau_sr_width, xau_sr_maxZone)
+
+var array<box> sr_boxes = array.new<box>()
+
+if barstate.islast and xau_showViz and xau_sr_showOn
+    for bx in sr_boxes
+        box.delete(bx)
+    array.clear(sr_boxes)
+    for z in sr_zones
+        if z.side == 1 and close < z.bot
+            z.broken := true
+        if z.side == -1 and close > z.top
+            z.broken := true
+        if not z.broken
+            color zC  = z.side == 1 ? color.new(xau_cBull, 82) : color.new(xau_cBear, 82)
+            color zBC = z.side == 1 ? color.new(xau_cBull, 40) : color.new(xau_cBear, 40)
+            array.push(sr_boxes, box.new(bar_index - 50, z.top, bar_index + xau_zoneLen, z.bot, border_color = zBC, bgcolor = zC, force_overlay = true))
+else if array.size(sr_boxes) > 0
+    // Tat checkbox -> xoa het box (khong de do do tren chart)
+    for bx in sr_boxes
+        box.delete(bx)
+    array.clear(sr_boxes)
+
+// =============================================================================
+//  L5 - CANDLE PATTERN ENGINE
+//  Score [-1, +1]: Pin Bar, Engulfing, Displacement, Rejection
+// =============================================================================
+
+float cp_body    = math.abs(close - open)
+float cp_range   = math.max(high - low, syminfo.mintick)
+float cp_hiWick  = high - math.max(close, open)
+float cp_loWick  = math.min(close, open) - low
+bool  cp_bullBar = close > open
+bool  cp_bearBar = close < open
+float cp_prevBody = math.abs(close[1] - open[1])
+
+// Pin Bar
+bool cp_bullPin = cp_bullBar and cp_loWick >= xau_cp_pinRatio * cp_body
+bool cp_bearPin = cp_bearBar and cp_hiWick >= xau_cp_pinRatio * cp_body
+
+// Engulfing
+bool cp_bullEng = cp_bullBar and close[1] < open[1] and close >= open[1] and open <= close[1] and cp_body >= cp_prevBody
+bool cp_bearEng = cp_bearBar and close[1] > open[1] and close <= open[1] and open >= close[1] and cp_body >= cp_prevBody
+
+// Displacement candle (strong body + close at extreme + volume spike)
+bool cp_dispBull = cp_bullBar and cp_body >= xau_cp_dispAtr * xau_atr and cp_hiWick < cp_body * 0.3 and xau_vol >= xau_vol_spikeR * xau_volMA
+bool cp_dispBear = cp_bearBar and cp_body >= xau_cp_dispAtr * xau_atr and cp_loWick < cp_body * 0.3 and xau_vol >= xau_vol_spikeR * xau_volMA
+
+// Rejection candle
+bool cp_bullRej = cp_hiWick >= cp_range * 0.55 and cp_loWick <= cp_range * 0.15 and cp_bullBar
+bool cp_bearRej = cp_loWick >= cp_range * 0.55 and cp_hiWick <= cp_range * 0.15 and cp_bearBar
+
+float cp_bull = 0.0
+float cp_bear = 0.0
+if xau_cp_pin
+    cp_bull += cp_bullPin ? 1.0 : 0.0
+    cp_bear += cp_bearPin ? 1.0 : 0.0
+if xau_cp_engulf
+    cp_bull += cp_bullEng ? 1.0 : 0.0
+    cp_bear += cp_bearEng ? 1.0 : 0.0
+if xau_cp_disp
+    cp_bull += cp_dispBull ? 1.2 : 0.0
+    cp_bear += cp_dispBear ? 1.2 : 0.0
+if xau_cp_rejCandle
+    cp_bull += cp_bullRej ? 0.8 : 0.0
+    cp_bear += cp_bearRej ? 0.8 : 0.0
+
+float cp_score = cp_bull > cp_bear ? math.min(1.0, cp_bull / 3.0) : cp_bear > cp_bull ? -math.min(1.0, cp_bear / 3.0) : 0.0

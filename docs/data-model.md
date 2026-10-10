@@ -177,18 +177,21 @@ test của chúng **vẫn chạy khi không cài / không có Mongo**.
 
 ```bash
 npm run test:db      # 58 assertion, cần MongoDB; tự SKIP (exit 0) nếu không có
-npm test             # smoke + engine + journal + preset-drift + risk + drift
-                     # + mt5 + db + services + ai + ai-review
+npm test             # smoke + engine + journal + preset-drift + stamp + risk
+                     # + paper + drift + mt5 + db + services + ai + ai-review
 ```
 
-> Phase 13 added three suites to `npm test`: `test:journal` (122 assertions),
-> `test:preset-drift` (88) and `test:ai-review` (71). All three are pure — no
+> Phase 13 added three suites to `npm test`: `test:journal` (126 assertions),
+> `test:preset-drift` (98) and `test:ai-review` (71). All three are pure — no
 > Mongo, no network, no API key — and they assert that no DB connection was
 > opened. See §10.
 > The TP-ladder hardening added a fourth: `test:paper` (47), which covers
 > `findFirstExit` / `sanitizeTps` / `followExitPrice` (pure) plus narrow source
 > guards for the two `runCycle` wiring points that cannot be unit-tested without
 > Mongo. `test:risk` grew to 79.
+> The live version stamp (§10.3) added a fifth: `test:stamp` (52 assertions),
+> which drives `recordOpen()` through an INJECTED fake model layer — so the
+> write path is executed and its document inspected, without a database.
 
 `engine/test-db.mjs` dùng DB riêng `tm-trading-test` và **xoá sạch sau khi chạy**.
 Nếu Mongo không sẵn sàng, in `SKIP` **rất rõ** và thoát 0 — để `npm run verify` vẫn xanh trên máy
@@ -330,12 +333,12 @@ Shape (one row per executed trade):
 | `key` | `j1_` + sha256 of `{v, account, source, externalId\|id}` — derived from the upstream identity, **not** a second order-id scheme |
 | `source` | `paper` · `mt5` · `exchange` · `manual` (else `unknown`) |
 | `account`, `sourceId` | upstream account + `positions.externalId` (or `_id`) |
-| `symbol`, `tf`, `dir` | `tf` is NOT stored on `positions`: it is resolved through `alerts.alertKey = positions.signalKey`, else `unknown` |
+| `symbol`, `tf`, `dir` | `positions.tf` (written from the opening alert since §10.3); a LEGACY position has none, so the projection still falls back to `alerts.alertKey = positions.signalKey`, else `unknown` |
 | `entryPrice`, `exitPrice`, `sl`, `tps`, `qty` | filled from the position |
 | `result` | `TP` · `SL` · `TIME` · `OPEN` · `unknown` — derived from the recorded levels (an exact level match); a gap fill (paper fills the stop at the bar OPEN) stays `unknown` instead of being guessed |
 | `rMultiple` | derived from `dir`/`entryPrice`/`sl`/`exitPrice`; `null` when the risk distance is 0 or the exit is absent |
 | `pnlAbs`, `pnlPct` | as recorded by the executor |
-| `fees` | `null` = UNKNOWN. Paper PnL is fee-free BY DESIGN, so `0` would claim costs were measured |
+| `fees` | `positions.fees` (null on every paper row: fee-free by design). `null` = UNKNOWN, so `0` would claim costs were measured |
 | `method`, `regime`, `engineVersion`, `paramsHash` | tags; `unknown` when not derivable. `regime` is a **point-in-time** lookup (latest `intel` kind `regime` snapshot with `ts <= entryTime`) so the journal cannot leak look-ahead information |
 | `entryTime`, `exitTime`, `recordedAt` | UTC (D2) |
 | `unknown[]` | names of the tracked fields this row could NOT derive — queryable, so "we do not know" is visible in the data |
@@ -356,7 +359,79 @@ from, to})` (date range is **half-open [from, to)** in UTC ms), `journalStats()`
 the IO pair `syncJournal()` / `loadJournal()` (Mongo when available, NDJSON
 otherwise — `loadJournal` always reports which of the two it read).
 
-### 10.3 Preset drift — `engine/preset-drift.mjs` (Phase 13 item 3)
+### 10.3 Version stamp on the LIVE path — `positions.stamp` (D1)
+
+Until 2026-10-05 nothing on the live path wrote a version stamp: `recordOpen()`
+stored `paramsHash: null`, `source: 'paper'` was hardcoded and `positions` had no
+`tf`, no `exitReason` and no fee field. Every live row therefore read as
+`unknown#unknown` in §10.4 and the report could only say "cannot compare".
+
+The live path now stamps its own trades. `positions` gained:
+
+| Field | Meaning |
+|---|---|
+| `stamp.engineVersion` | `ENGINE_VERSION` of the engine that opened the position (`engine/version.mjs`) |
+| `stamp.paramsHash` | hash of the parameter set the live path is RUNNING — always produced by `paramsHash(params)` (§2.1), never by a second hashing scheme. `null` **only** when no live preset was declared (§10.3.1) |
+| `stamp.params` | the canonical parameter set itself — the same rule as `runs.params`: a hash proves "same config", only the parameters make a run reproducible |
+| `stamp.kind` | `declared` (an operator declared the live preset) or `unknown` (no declaration → `paramsHash: null`) |
+| `stamp.since` | when that declaration was observed (UTC) |
+| `stampUnknown` | `true` on positions written before this change. Consumers MUST exclude them instead of reading a missing stamp as a bucket |
+| `tf` | timeframe from the opening alert (`alerts.tf`); `null` when the alert had none |
+| `exitReason` | why the position closed: `alert:TAKE_PROFIT` · `alert:STOP_LOSS` · `alert:TIME_CLOSE` · `data:tp` · `data:sl` · `manual` · `unknown` (see §10.3.2) |
+| `fees` | `null` = UNKNOWN, never `0`: paper PnL is fee-free BY DESIGN, so `0` would claim that costs were measured |
+
+`stamp` is a nested sub-document on purpose (instead of three top-level fields):
+it is one identity that is written together and read together, `stampUnknown` /
+`stamp.kind` describe the stamp itself rather than the position, and a reader can
+pass `pos.stamp` straight to the journal/preview-path without picking fields
+apart. The per-trade fields that do NOT come from the engine's identity (`tf`,
+`exitReason`, `fees`) stay top-level, exactly like `method` and `signalKey`.
+
+The writer is `buildPositionDoc()` (pure) inside `engine/stamp.mjs` → `recordOpen()`;
+`exec/paper.mjs` supplies `tf`, `source` and the real exit reason. Backfilling is
+deliberately NOT performed: an existing position gets no invented preset. A
+position without a stamp is marked `stampUnknown: true` so it is visible in the
+data, and §10.4 excludes it from every bucket.
+
+#### 10.3.1 Where the LIVE preset comes from — declaration, never a guess
+
+`engine/stamp.mjs` is the single place that decides. Resolution order:
+
+1. `PAPER_LIVE_PRESET` (env) — an already-computed `paramsHash` (e.g. taken from a
+   backtest run in the dashboard). Trusted as-is: the live path cannot recompute
+   the hash of parameters it does not have.
+2. `PAPER_LIVE_PARAMS` (env) — the full parameter set (JSON, or a
+   `path/to/params.json` file) the live path runs with. It is passed through
+   `canonicalParams()`/`paramsHash()`, so it cannot drift from the backtest side.
+   `engineVersion` inside it names the generation the trade belongs to and is
+   removed before hashing (it is not an engine parameter).
+3. Neither → `paramsHash: null`, `stampUnknown: true`. **No fallback to the
+   engine `DEFAULTS`**: the stamp is the identity of the *live* configuration, and
+   the current DEFAULTS say nothing about the values TradingView was actually
+   running when the trade was opened. A tool cannot compare a declaration with a
+   label.
+
+`engineVersion` is always written: the engine that executed the fill IS known.
+
+#### 10.3.2 `exitReason` must be real
+
+Only the exit path knows why a trade closed, so the executor records it where the
+decision is made and nowhere else:
+
+| Value | Written by |
+|---|---|
+| `alert:TAKE_PROFIT` / `alert:STOP_LOSS` | the follow-up TradingView alert branch (the event TradingView already saw) |
+| `alert:TIME_CLOSE` | TIME_CLOSE → market fill at the latest close |
+| `data:tp` / `data:sl` | `findFirstExit()` returned `kind: 'tp'` / `kind: 'sl'` |
+| `manual` | an operator closed the position |
+| `unknown` | the legacy default; nothing guessed it |
+
+`engine/journal.mjs` maps it to the journal `result` (`TP`/`SL`/`TIME`), which is
+why a *gap* fill now keeps `data:sl` (kind is exact) while the old level-matching
+heuristic had to answer `unknown`. `exitReason` never invents a kind the exit path
+did not return: `findFirstExit()` returning `null` writes nothing at all.
+
+### 10.4 Preset drift — `engine/preset-drift.mjs` (Phase 13 item 3)
 
 **Not D8.** `exec/drift.mjs` (D8) compares the NUMBER of TradingView ENTRY alerts
 against the number of setups the engine sees on the same symbol/TF in a 24h
@@ -370,11 +445,21 @@ Rules: buckets are per generation **and** per UTC-aligned time window
 **refused** (no pooled number, warning printed — D1); a live stamp with no frozen
 counterpart yields "cannot compare" (no substitution, no silent pick); a bucket
 below `--min-trades` (default 20 R samples) is labelled **insufficient evidence**
-and prints no delta — only observations. `--live-preset` /
-`--live-engine-version` fill MISSING live stamps (an operator declaration, never
-an overwrite); today the live path writes `positions.paramsHash = null`
-(`exec/risk.mjs recordOpen`), so this is the normal outcome until the live path
-stamps its trades.
+and prints no delta — only observations.
+
+Live rows with NO stamp (`stampUnknown`, i.e. positions written before §10.3) are
+**excluded from every bucket** and reported as a warning with their count. They are
+never bucketed under `unknown#unknown`: an empty bucket of anonymous trades is not
+a measurement, and a bucket labelled `unknown` reads like a preset called
+"unknown" on a dashboard.
+
+`--live-preset` / `--live-engine-version` were REMOVED together with this change
+(they used to fill missing stamps on the report side). Now that the WRITER
+(`recordOpen`) is authoritative, a report-side declaration would be a second
+source of truth: it could relabel legacy trades — the exact rows §10.3 says must
+stay excluded — and make an unverifiable claim comparable. The declaration lives
+in `PAPER_LIVE_PRESET`/`PAPER_LIVE_PARAMS` (§10.3.1), i.e. where the trades are
+open, and nowhere else.
 
 ```bash
 npm run journal -- sync      # positions -> journal (NDJSON always, Mongo optional)
@@ -383,5 +468,6 @@ npm run preset:drift -- --window 7 --min-trades 20
 npm run ai:review            # SCAFFOLD (Phase 13 item 2): digest + prompt + proposals
 ```
 
-Tests: `npm run test:journal` · `npm run test:preset-drift` · `npm run test:ai-review`,
-all wired into `npm test`, no Mongo/network/API key required.
+Tests: `npm run test:journal` · `npm run test:preset-drift` · `npm run test:stamp`
+· `npm run test:ai-review`, all wired into `npm test`, no Mongo/network/API key
+required.

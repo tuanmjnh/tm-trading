@@ -1,0 +1,175 @@
+// =============================================================================
+//  L2 - MARKET STRUCTURE ENGINE  (v2 §1)
+//  Swing -> HH/HL/LH/LL -> BOS -> CHoCH -> MSS -> Retest -> Failed Breakout
+//           -> Trend continuation / Pullback
+//  Moi event deu la structured data (UDT X2Event): source timestamp, timeframe,
+//  confirmation state, price levels. Confirmed events khong repaint.
+// =============================================================================
+
+type X2Event
+    string kind      // BOS / CHoCH / MSS / RETEST / FAILBRK / CONT / PULL / SWEEP
+    string dir       // bull / bear
+    int    srcBar    // bar_index cua nguon (khong phai bar hien tai)
+    int    srcTime   // timestamp UTC cua nguon
+    string tf        // timeframe.period luc do
+    bool   confirmed // barstate.isconfirmed luc event xay ra
+    float  level     // gia quan trong (swing/level bi pha)
+
+var array<X2Event> x2_evtBuf = array.new<X2Event>()
+
+f_pushEvent(string kind, string dir, int srcBar, int srcTime, bool confirmed, float level) =>
+    array.push(x2_evtBuf, X2Event.new(kind, dir, srcBar, srcTime, timeframe.period, confirmed, level))
+    if array.size(x2_evtBuf) > 50
+        array.shift(x2_evtBuf)
+
+// --- State --------------------------------------------------------------------
+var float x2_lastHigh    = na
+var float x2_prevHigh    = na
+var float x2_lastLow     = na
+var float x2_prevLow     = na
+var int   x2_lastHighBar = na
+var int   x2_lastLowBar  = na
+var int   x2_trend       = 0    // 1=bull, -1=bear, 0=undefined
+
+var bool x2_bosUp    = false
+var bool x2_bosDown  = false
+var bool x2_chochUp  = false
+var bool x2_chochDown = false
+var bool x2_mssUp    = false
+var bool x2_mssDown  = false
+
+var float x2_brkLevel = na    // level moi bi pha (dung cho retest/fail)
+var int   x2_brkDir   = 0
+var int   x2_brkBar   = na
+
+x2_bosUp    := false
+x2_bosDown  := false
+x2_chochUp  := false
+x2_chochDown := false
+x2_mssUp    := false
+x2_mssDown  := false
+
+bool x2_okConfirmed = not x2_confirmOnly or barstate.isconfirmed
+
+// --- Pivot processing ---------------------------------------------------------
+if not na(x2_pivH)
+    float x2_newH = high[x2_ms_swLen]
+    int   x2_newHBar = bar_index - x2_ms_swLen
+    if not na(x2_lastHigh)
+        if x2_trend <= 0 and close > x2_lastHigh
+            x2_bosUp   := true
+            x2_trend   := 1
+            x2_brkLevel := x2_lastHigh
+            x2_brkDir  := 1
+            x2_brkBar  := x2_newHBar
+        if x2_trend < 0 and x2_newH > x2_lastHigh
+            x2_chochUp := true
+            x2_trend   := 1
+            x2_brkLevel := x2_lastHigh
+            x2_brkDir  := 1
+            x2_brkBar  := x2_newHBar
+        x2_prevHigh := x2_lastHigh
+    x2_lastHigh    := x2_newH
+    x2_lastHighBar := x2_newHBar
+
+if not na(x2_pivL)
+    float x2_newL = low[x2_ms_swLen]
+    int   x2_newLBar = bar_index - x2_ms_swLen
+    if not na(x2_lastLow)
+        if x2_trend >= 0 and close < x2_lastLow
+            x2_bosDown := true
+            x2_trend   := -1
+            x2_brkLevel := x2_lastLow
+            x2_brkDir  := -1
+            x2_brkBar  := x2_newLBar
+        if x2_trend > 0 and x2_newL < x2_lastLow
+            x2_chochDown := true
+            x2_trend     := -1
+            x2_brkLevel  := x2_lastLow
+            x2_brkDir   := -1
+            x2_brkBar   := x2_newLBar
+        x2_prevLow := x2_lastLow
+    x2_lastLow    := x2_newL
+    x2_lastLowBar := x2_newLBar
+
+// --- MSS: pha vung bang displacement candle (body >= ATR x, dong ngoai cuc tri) -
+if x2_bosUp and x2_dispBull
+    x2_mssUp := true
+if x2_bosDown and x2_dispBear
+    x2_mssDown := true
+if x2_chochUp and x2_dispBull
+    x2_mssUp := true
+if x2_chochDown and x2_dispBear
+    x2_mssDown := true
+
+// --- HH/HL/LH/LL classification ------------------------------------------------
+x2_isHH = not na(x2_pivH) and not na(x2_prevHigh) and high[x2_ms_swLen] > x2_prevHigh
+x2_isLH = not na(x2_pivH) and not na(x2_prevHigh) and high[x2_ms_swLen] < x2_prevHigh
+x2_isHL = not na(x2_pivL) and not na(x2_prevLow)  and low[x2_ms_swLen]  > x2_prevLow
+x2_isLL = not na(x2_pivL) and not na(x2_prevLow)  and low[x2_ms_swLen]  < x2_prevLow
+
+// --- Retest: gia tro lai vung moi bi pha (trong cua so retestBars) -------------
+x2_retestBull = x2_ms_retestOn and x2_brkDir == 1 and not na(x2_brkLevel) and not na(x2_brkBar) and bar_index - x2_brkBar <= x2_ms_retestBars and low <= x2_brkLevel + x2_ms_retestTol * x2_atr and close > x2_brkLevel
+x2_retestBear = x2_ms_retestOn and x2_brkDir == -1 and not na(x2_brkLevel) and not na(x2_brkBar) and bar_index - x2_brkBar <= x2_ms_retestBars and high >= x2_brkLevel - x2_ms_retestTol * x2_atr and close < x2_brkLevel
+
+// --- Failed Breakout: pha roi dong tro lai ben trong trong failBars -------------
+x2_failBull = x2_ms_failOn and x2_brkDir == -1 and not na(x2_brkLevel) and not na(x2_brkBar) and bar_index - x2_brkBar <= x2_ms_failBars and close > x2_brkLevel
+x2_failBear = x2_ms_failOn and x2_brkDir == 1 and not na(x2_brkLevel) and not na(x2_brkBar) and bar_index - x2_brkBar <= x2_ms_failBars and close < x2_brkLevel
+
+// --- Trend continuation / Pullback --------------------------------------------
+x2_contBull = x2_ms_contOn and x2_trend == 1 and x2_isHH
+x2_contBear = x2_ms_contOn and x2_trend == -1 and x2_isLL
+x2_pullBull = x2_ms_pullOn and x2_trend == 1 and low <= x2_emaM and close > x2_emaM
+x2_pullBear = x2_ms_pullOn and x2_trend == -1 and high >= x2_emaM and close < x2_emaM
+
+// --- Structured events (ghi vao UDT buffer - chi khi nen da dong) --------------
+if x2_okConfirmed and x2_bosUp
+    f_pushEvent("BOS", "bull", x2_lastHighBar, time, barstate.isconfirmed, x2_lastHigh)
+if x2_okConfirmed and x2_bosDown
+    f_pushEvent("BOS", "bear", x2_lastLowBar, time, barstate.isconfirmed, x2_lastLow)
+if x2_okConfirmed and x2_chochUp
+    f_pushEvent("CHoCH", "bull", x2_lastHighBar, time, barstate.isconfirmed, x2_lastHigh)
+if x2_okConfirmed and x2_chochDown
+    f_pushEvent("CHoCH", "bear", x2_lastLowBar, time, barstate.isconfirmed, x2_lastLow)
+if x2_okConfirmed and x2_mssUp
+    f_pushEvent("MSS", "bull", x2_lastHighBar, time, barstate.isconfirmed, x2_lastHigh)
+if x2_okConfirmed and x2_mssDown
+    f_pushEvent("MSS", "bear", x2_lastLowBar, time, barstate.isconfirmed, x2_lastLow)
+if x2_okConfirmed and x2_retestBull
+    f_pushEvent("RETEST", "bull", bar_index, time, barstate.isconfirmed, x2_brkLevel)
+if x2_okConfirmed and x2_retestBear
+    f_pushEvent("RETEST", "bear", bar_index, time, barstate.isconfirmed, x2_brkLevel)
+if x2_okConfirmed and x2_failBull
+    f_pushEvent("FAILBRK", "bull", bar_index, time, barstate.isconfirmed, x2_brkLevel)
+if x2_okConfirmed and x2_failBear
+    f_pushEvent("FAILBRK", "bear", bar_index, time, barstate.isconfirmed, x2_brkLevel)
+if x2_okConfirmed and x2_contBull
+    f_pushEvent("CONT", "bull", x2_lastHighBar, time, barstate.isconfirmed, x2_lastHigh)
+if x2_okConfirmed and x2_contBear
+    f_pushEvent("CONT", "bear", x2_lastLowBar, time, barstate.isconfirmed, x2_lastLow)
+if x2_okConfirmed and x2_pullBull
+    f_pushEvent("PULL", "bull", bar_index, time, barstate.isconfirmed, x2_emaM)
+if x2_okConfirmed and x2_pullBear
+    f_pushEvent("PULL", "bear", bar_index, time, barstate.isconfirmed, x2_emaM)
+
+// --- Labels (gate bang master switch) -----------------------------------------
+if x2_showViz and x2_ms_bosOn and x2_bosUp
+    label.new(bar_index, low,  "BOS+", style = label.style_label_up,   color = color.new(x2_cBull, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if x2_showViz and x2_ms_bosOn and x2_bosDown
+    label.new(bar_index, high, "BOS-", style = label.style_label_down, color = color.new(x2_cBear, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if x2_showViz and x2_ms_chochOn and x2_chochUp
+    label.new(bar_index, low,  "CHoCH+", style = label.style_label_up,   color = color.new(x2_cBull, 0), textcolor = color.white, size = size.tiny, force_overlay = true)
+if x2_showViz and x2_ms_chochOn and x2_chochDown
+    label.new(bar_index, high, "CHoCH-", style = label.style_label_down, color = color.new(x2_cBear, 0), textcolor = color.white, size = size.tiny, force_overlay = true)
+if x2_showViz and x2_ms_mssOn and x2_mssUp and not x2_bosUp
+    label.new(bar_index, low,  "MSS+", style = label.style_label_up,   color = color.new(#f5c542, 10), textcolor = color.black, size = size.tiny, force_overlay = true)
+if x2_showViz and x2_ms_mssOn and x2_mssDown and not x2_bosDown
+    label.new(bar_index, high, "MSS-", style = label.style_label_down, color = color.new(#f5c542, 10), textcolor = color.black, size = size.tiny, force_overlay = true)
+if x2_showViz and x2_ms_retestOn and x2_retestBull
+    label.new(bar_index, low, "RT+", style = label.style_label_up, color = color.new(x2_cBull, 40), textcolor = color.white, size = size.tiny, force_overlay = true)
+if x2_showViz and x2_ms_retestOn and x2_retestBear
+    label.new(bar_index, high, "RT-", style = label.style_label_down, color = color.new(x2_cBear, 40), textcolor = color.white, size = size.tiny, force_overlay = true)
+if x2_showViz and x2_ms_failOn and x2_failBull
+    label.new(bar_index, low, "FAIL+", style = label.style_label_up, color = color.new(color.gray, 10), textcolor = color.white, size = size.tiny, force_overlay = true)
+if x2_showViz and x2_ms_failOn and x2_failBear
+    label.new(bar_index, high, "FAIL-", style = label.style_label_down, color = color.new(color.gray, 10), textcolor = color.white, size = size.tiny, force_overlay = true)

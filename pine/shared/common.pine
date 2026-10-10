@@ -15,3 +15,37 @@ f_vsaColor(float vol, float ma, float rP, float rVH, float rH, float rN, float r
 
 f_vsaName(float vol, float ma, float rP, float rVH, float rH, float rN, float rL) =>
     vol >= ma * rP ? "TIM" : vol >= ma * rVH ? "VeryHigh" : vol >= ma * rH ? "High" : vol >= ma * rN ? "Normal" : vol >= ma * rL ? "Low" : "VeryLow"
+
+// --- Pure math / formatting (truoc do copy 3 ban trong parts/, parts-xau/, parts-xau2/) ---
+f_clamp(float v, float lo, float hi) =>
+    math.max(lo, math.min(hi, v))
+
+f_fmtPx(float p) =>
+    str.tostring(p, format.mintick)
+
+f_isNewDay() =>
+    ta.change(time("D")) != 0
+
+// --- Alert JSON helpers (truoc do copy trong parts/70_alerts + xau/90 + xau2/99) ---
+// CANH BAO: str.format_time(time, format, timezone) - `time` (series int) di TRUOC.
+// Dau tien la UNIX timestamp, thu hai moi la chuoi format. Dao nguoc -> CE10123
+// "argument of literal string type was used but a series int is expected".
+f_ts() =>
+    str.format_time(time, "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC")
+
+f_sym() =>
+    str.replace_all(syminfo.ticker, "\\", "/")
+
+// --- Session windows - chuan 5 ban (parts/vsa/sweep/xau/xau2 dashboard) ---
+//  Asia 1700-0200 / London 0200-1000 / NY 0700-1500 (moc gio NY, xem docs/time-rules.md)
+f_sessAsia(string tz) =>
+    not na(time(timeframe.period, "1700-0200", tz))
+
+f_sessLondon(string tz) =>
+    not na(time(timeframe.period, "0200-1000", tz))
+
+f_sessNy(string tz) =>
+    not na(time(timeframe.period, "0700-1500", tz))
+
+f_sessName(bool asia, bool london, bool ny) =>
+    london and ny ? "London/NY" : ny ? "New York" : london ? "London" : asia ? "Asia" : "-"

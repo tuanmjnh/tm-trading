@@ -1,0 +1,94 @@
+// =============================================================================
+//  LAYER 5 - RISK : Entry/SL/TP cho setup sweep gan nhat + theo doi cham TP/SL.
+//  Entry = close bar tin hieu (market). SL = ngoai cuc tri rau quet + slBuf x ATR,
+//  BAT BUOC nam trong [slMinAtr, slMaxAtr] x ATR (tranh phi an edge / stop qua xa).
+//  TP = level thanh khoan doi dien gan nhat cho RR >= minRR; fallback rrFb x R.
+// =============================================================================
+f_tpLong(float entry, float risk) =>
+    float best = na
+    if array.size(tm_buy) > 0
+        for i = 0 to array.size(tm_buy) - 1
+            TmLevel L = array.get(tm_buy, i)
+            if not L.swept and bar_index - L.baridx <= tm_i_lvlFresh and L.px >= entry + tm_i_minRR * risk
+                if na(best) or L.px < best
+                    best := L.px
+    not na(best) ? best : (tm_i_rrFb >= tm_i_minRR ? entry + tm_i_rrFb * risk : na)
+
+f_tpShort(float entry, float risk) =>
+    float best = na
+    if array.size(tm_sell) > 0
+        for i = 0 to array.size(tm_sell) - 1
+            TmLevel L = array.get(tm_sell, i)
+            if not L.swept and bar_index - L.baridx <= tm_i_lvlFresh and L.px <= entry - tm_i_minRR * risk
+                if na(best) or L.px > best
+                    best := L.px
+    not na(best) ? best : (tm_i_rrFb >= tm_i_minRR ? entry - tm_i_rrFb * risk : na)
+
+var float  tm_setE       = na
+var float  tm_setS       = na
+var float  tm_setT       = na
+var int    tm_setB       = 0
+var int    tm_setDir     = 0
+var bool   tm_setDone    = false
+var string tm_setRes     = ""
+var int    tm_setDoneBar = 0
+var bool   tm_setFill    = false
+var int    tm_setFillBar = 0
+var float  tm_setRisk    = na
+
+if tm_sigLong
+    float eL  = close
+    float sL  = tm_lsLow - tm_i_slBuf * tm_atr
+    float rkL = eL - sL
+    float tpL = f_tpLong(eL, rkL)
+    if rkL > 0.0 and rkL >= tm_i_slMinAtr * tm_atr and rkL <= tm_i_slMaxAtr * tm_atr and not na(tpL)
+        tm_setE       := eL
+        tm_setS       := sL
+        tm_setT       := tpL
+        tm_setB       := bar_index
+        tm_setDir     := 1
+        tm_setDone    := false
+        tm_setRes     := ""
+        tm_setDoneBar := 0
+        tm_setFill    := true
+        tm_setFillBar := bar_index
+        tm_setRisk    := rkL
+if tm_sigShort
+    float eS  = close
+    float sS  = tm_lsHigh + tm_i_slBuf * tm_atr
+    float rkS = sS - eS
+    float tpS = f_tpShort(eS, rkS)
+    if rkS > 0.0 and rkS >= tm_i_slMinAtr * tm_atr and rkS <= tm_i_slMaxAtr * tm_atr and not na(tpS)
+        tm_setE       := eS
+        tm_setS       := sS
+        tm_setT       := tpS
+        tm_setB       := bar_index
+        tm_setDir     := -1
+        tm_setDone    := false
+        tm_setRes     := ""
+        tm_setDoneBar := 0
+        tm_setFill    := true
+        tm_setFillBar := bar_index
+        tm_setRisk    := rkS
+
+// Tu dong dong setup: entry market da khop ngay; xet TP/SL tu bar sau (uu tien SL).
+if not na(tm_setE) and not tm_setDone and bar_index > tm_setB
+    if tm_setFill
+        if tm_setDir == 1
+            if low <= tm_setS
+                tm_setDone    := true
+                tm_setRes     := "SL"
+                tm_setDoneBar := bar_index
+            else if high >= tm_setT
+                tm_setDone    := true
+                tm_setRes     := "TP"
+                tm_setDoneBar := bar_index
+        else if tm_setDir == -1
+            if high >= tm_setS
+                tm_setDone    := true
+                tm_setRes     := "SL"
+                tm_setDoneBar := bar_index
+            else if low <= tm_setT
+                tm_setDone    := true
+                tm_setRes     := "TP"
+                tm_setDoneBar := bar_index

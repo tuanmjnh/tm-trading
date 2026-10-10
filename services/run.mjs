@@ -23,6 +23,10 @@ import { runRegime } from './regime.mjs'
 import { runLiquidation, startLiqCollector } from './liquidation.mjs'
 import { runConfluence } from './confluence.mjs'
 import { runBrief } from '../ai/daily-brief.mjs'
+import { runRetentionService } from '../exec/retention.mjs'
+import { runReconcileService } from './reconcile.mjs'
+import { runCrossScan } from './crossScan.mjs'
+import { notify } from '../notify/service.mjs'
 
 loadEnv()
 
@@ -38,6 +42,12 @@ const SERVICES = [
   // Phase 11 — AI daily brief: window-gated (AI_BRIEF_HOURS), skips cleanly
   // when AI_API_KEY is empty; same env-read pattern as confluence above.
   { name: 'brief', run: runBrief, intervalSec: Number(process.env.AI_BRIEF_INTERVAL || DEFAULT_INTERVALS.brief), tag: '[ai:brief]' },
+  // Phase 23.4 — data retention enforcement (retentionDays on the manifest).
+  { name: 'retention', run: runRetentionService, intervalSec: Number(process.env.RETENTION_INTERVAL || DEFAULT_INTERVALS.retention), tag: '[retention]' },
+  // §24.2 — compare recorded candles against venue REST; flag suspect datasets.
+  { name: 'reconcile', run: runReconcileService, intervalSec: Number(process.env.RECONCILE_INTERVAL || DEFAULT_INTERVALS.reconcile), tag: '[reconcile]' },
+  // §36 — cross-venue spread/funding/OI scanner (fail-soft, REST only).
+  { name: 'crossScan', run: runCrossScan, intervalSec: Number(process.env.CROSS_SCAN_INTERVAL || DEFAULT_INTERVALS.crossScan), tag: '[cross-scan]' },
 ]
 
 const log = (tag, msg) => console.log(`${new Date().toISOString()} ${tag} ${msg}`)
@@ -59,6 +69,12 @@ async function runOne(s) {
     const msg = String(e?.message || e).slice(0, 300)
     beat(s.name, { lastErrorAt: new Date().toISOString(), lastError: msg })
     log(s.tag, `FAIL ${Date.now() - t0}ms ${msg}`)
+    // §25 — loud failures: a crashed service is an 'important' service event.
+    // 1h measured dedupe window per service (every repeat is audited, one ping).
+    void notify(
+      { kind: 'service', priority: 'important', name: `service.error.${s.name}`, title: `Service ${s.name} that vong chay`, body: `${s.tag} ${msg}`, at: Date.now() },
+      { dedupeWindowMs: 3_600_000 },
+    ).catch(() => {})
     return null
   }
 }

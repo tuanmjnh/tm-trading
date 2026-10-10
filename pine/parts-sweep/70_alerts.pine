@@ -1,0 +1,5 @@
+// =============================================================================
+//  LAYER 7 - ALERTS : 1 dieu kien = 1 canh bao (message ASCII)
+// =============================================================================
+alertcondition(tm_sigLong, "SWEEP LONG", "SWEEP LONG · {{ticker}} · {{interval}} · quet day + rau duoi")
+alertcondition(tm_sigShort, "SWEEP SHORT", "SWEEP SHORT · {{ticker}} · {{interval}} · quet dinh + rau tren")

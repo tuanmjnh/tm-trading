@@ -11,13 +11,23 @@ export const useWebPush = () => {
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
+  const isElectronEnv = (): boolean => {
+    if (typeof window === 'undefined') return false
+    return !!(window as any).electronAPI?.isElectron || (typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent))
+  }
+
   const checkSupport = () => {
     if (typeof window === 'undefined') return false
 
-    const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
+    const hasNotification = 'Notification' in window
+    const hasServiceWorker = 'serviceWorker' in navigator
+    const hasPushManager = 'PushManager' in window
+
+    // In Electron or desktop wrappers, native desktop Notification is supported
+    const supported = hasNotification && (isElectronEnv() || (hasServiceWorker && hasPushManager))
     isSupported.value = supported
 
-    if (supported) {
+    if (hasNotification) {
       permission.value = Notification.permission
     }
 
@@ -38,6 +48,30 @@ export const useWebPush = () => {
       console.error('Error requesting notification permission:', err)
       error.value = getErrorMessage(err, key => t(key))
       return 'denied'
+    }
+  }
+
+  const showNativeNotification = async (title: string, body?: string) => {
+    if (typeof window === 'undefined') return
+    const electronAPI = (window as any).electronAPI
+    if (electronAPI?.system?.showNotification) {
+      try {
+        const res = await electronAPI.system.showNotification({ title, body })
+        if (res) return
+      } catch (e) {
+        console.warn('[Electron] system:showNotification call failed, falling back to Notification API:', e)
+      }
+    }
+
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification(title, {
+          body,
+          icon: '/favicon.ico'
+        })
+      } catch (e) {
+        console.warn('Native notification display failed:', e)
+      }
     }
   }
 
@@ -70,81 +104,168 @@ export const useWebPush = () => {
     isLoading.value = true
     error.value = null
 
+    const isElectron = isElectronEnv()
+
+    // 1. Electron environment: use native desktop notification channel directly
+    if (isElectron) {
+      try {
+        let desktopEndpoint = ''
+        try {
+          desktopEndpoint = localStorage.getItem(`desktop_endpoint_${appId}`) || ''
+        } catch {
+          // ignore
+        }
+        if (!desktopEndpoint) {
+          desktopEndpoint = `desktop://electron_${Math.random().toString(36).slice(2, 10)}`
+          try {
+            localStorage.setItem(`desktop_endpoint_${appId}`, desktopEndpoint)
+          } catch {
+            // ignore
+          }
+        }
+
+        await hubFetch(`/api/v1/apps/${appId}/notifications/subscribe`, {
+          method: 'POST',
+          body: {
+            endpoint: desktopEndpoint,
+            deviceType: 'desktop'
+          }
+        }).catch((hubErr) => {
+          console.warn('[WebPush] Hub subscription sync warning:', hubErr)
+        })
+
+        try {
+          localStorage.setItem(`desktop_notifications_${appId}`, 'true')
+        } catch {
+          // ignore
+        }
+
+        isSubscribed.value = true
+        showNativeNotification(
+          t('settings.desktop', 'Desktop'),
+          t('settings.desktopNotifDesc', 'Receive desktop notifications.')
+        )
+        return true
+      } catch (err) {
+        console.error('[WebPush] Error registering desktop device:', err)
+        error.value = getErrorMessage(err, key => t(key))
+        return false
+      } finally {
+        isLoading.value = false
+      }
+    }
+
+    // 2. Standard Web Browser environment (Chrome, Edge, Firefox, Brave)
     try {
       const resConfig = await hubFetch<{ success: boolean; data: any }>(`/api/v1/apps/${appId}/configs/public`)
       const sysConfig: Record<string, string> = resConfig?.data?.values || resConfig?.data || {}
 
-      const registration = await navigator.serviceWorker.ready
-      let subscriptionData: Record<string, unknown> = {}
+      let registration: ServiceWorkerRegistration | null = null
+      try {
+        registration = await navigator.serviceWorker.ready
+      } catch {
+        // serviceWorker not ready
+      }
 
+      let subscriptionData: Record<string, unknown> = {}
       const provider = sysConfig.NOTIFICATION_PROVIDER || 'firebase'
       const hasFirebaseConfig = !!(sysConfig.FIREBASE_API_KEY && sysConfig.FIREBASE_PROJECT_ID)
 
-      if (provider === 'firebase' && hasFirebaseConfig) {
-        console.log('[FirebasePush] Initializing Firebase Cloud Messaging...')
-
-        const firebaseConfig = {
-          apiKey: sysConfig.FIREBASE_API_KEY,
-          authDomain: sysConfig.FIREBASE_AUTH_DOMAIN || `${sysConfig.FIREBASE_PROJECT_ID}.firebaseapp.com`,
-          projectId: sysConfig.FIREBASE_PROJECT_ID,
-          storageBucket: sysConfig.FIREBASE_STORAGE_BUCKET || `${sysConfig.FIREBASE_PROJECT_ID}.firebasestorage.app`,
-          messagingSenderId: sysConfig.FIREBASE_MESSAGING_SENDER_ID || '',
-          appId: sysConfig.FIREBASE_APP_ID || '',
-          measurementId: sysConfig.FIREBASE_MEASUREMENT_ID || ''
-        }
-
-        const { initializeApp, getApps, getApp } = await import('firebase/app')
-        const { getMessaging, getToken } = await import('firebase/messaging')
-
-        const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp()
-        const messaging = getMessaging(app)
-
-        if (registration.active) {
-          registration.active.postMessage({
-            type: 'SET_FIREBASE_CONFIG',
-            config: firebaseConfig
-          })
-        }
-
-        const fcmToken = await getToken(messaging, {
-          serviceWorkerRegistration: registration,
-          vapidKey: sysConfig.WEB_PUSH_PUBLIC_KEY
-        })
-
-        if (!fcmToken) {
-          throw new Error('Failed to retrieve FCM Token')
-        }
-
-        currentFcmToken.value = fcmToken
+      let fcmToken: string | null = null
+      if (registration && provider === 'firebase' && hasFirebaseConfig) {
         try {
-          localStorage.setItem(`fcm_token_${appId}`, fcmToken)
-        } catch {
-          // storage fallback
-        }
+          console.log('[FirebasePush] Initializing Firebase Cloud Messaging...')
 
-        subscriptionData = { fcmToken }
-      } else {
+          const firebaseConfig = {
+            apiKey: sysConfig.FIREBASE_API_KEY,
+            authDomain: sysConfig.FIREBASE_AUTH_DOMAIN || `${sysConfig.FIREBASE_PROJECT_ID}.firebaseapp.com`,
+            projectId: sysConfig.FIREBASE_PROJECT_ID,
+            storageBucket: sysConfig.FIREBASE_STORAGE_BUCKET || `${sysConfig.FIREBASE_PROJECT_ID}.firebasestorage.app`,
+            messagingSenderId: sysConfig.FIREBASE_MESSAGING_SENDER_ID || '',
+            appId: sysConfig.FIREBASE_APP_ID || '',
+            measurementId: sysConfig.FIREBASE_MEASUREMENT_ID || ''
+          }
+
+          const { initializeApp, getApps, getApp } = await import('firebase/app')
+          const { getMessaging, getToken } = await import('firebase/messaging')
+
+          const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp()
+          const messaging = getMessaging(app)
+
+          if (registration.active) {
+            registration.active.postMessage({
+              type: 'SET_FIREBASE_CONFIG',
+              config: firebaseConfig
+            })
+          }
+
+          fcmToken = await getToken(messaging, {
+            serviceWorkerRegistration: registration,
+            vapidKey: sysConfig.FIREBASE_VAPID_KEY || sysConfig.WEB_PUSH_PUBLIC_KEY
+          })
+
+          if (fcmToken) {
+            currentFcmToken.value = fcmToken
+            try {
+              localStorage.setItem(`fcm_token_${appId}`, fcmToken)
+            } catch {
+              // ignore
+            }
+            subscriptionData = { fcmToken }
+          }
+        } catch (fcmErr) {
+          console.warn('[FirebasePush] FCM registration failed, falling back to standard VAPID Web Push:', fcmErr)
+        }
+      }
+
+      // Fallback to standard VAPID Web Push
+      if (!subscriptionData.fcmToken && registration) {
         const vapidPublicKey = sysConfig.WEB_PUSH_PUBLIC_KEY
-        if (!vapidPublicKey) {
-          throw new Error('VAPID public key not configured in system settings')
-        }
+        if (vapidPublicKey) {
+          console.log('[WebPush] Using standard VAPID Web Push Public Key:', vapidPublicKey)
+          try {
+            const pushSubscription = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource
+            })
 
-        console.log('[WebPush] Using VAPID Public Key:', vapidPublicKey)
-
-        const pushSubscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource
-        })
-
-        const json = pushSubscription.toJSON()
-        subscriptionData = {
-          endpoint: pushSubscription.endpoint,
-          keys: {
-            p256dh: json.keys?.p256dh,
-            auth: json.keys?.auth
+            const json = pushSubscription.toJSON()
+            subscriptionData = {
+              endpoint: pushSubscription.endpoint,
+              keys: {
+                p256dh: json.keys?.p256dh,
+                auth: json.keys?.auth
+              }
+            }
+            subscription.value = pushSubscription
+          } catch (pushErr: any) {
+            const msg = String(pushErr?.message || pushErr)
+            if (msg.includes('push service not available') || pushErr?.name === 'AbortError') {
+              console.warn('[WebPush] Push service not available in browser. Falling back to local desktop notifications.')
+            } else {
+              throw pushErr
+            }
           }
         }
-        subscription.value = pushSubscription
+      }
+
+      // If push service was unavailable or rejected, fall back to desktop notification endpoint
+      if (!subscriptionData.endpoint && !subscriptionData.fcmToken) {
+        let desktopEndpoint = ''
+        try {
+          desktopEndpoint = localStorage.getItem(`desktop_endpoint_${appId}`) || ''
+        } catch {
+          // ignore
+        }
+        if (!desktopEndpoint) {
+          desktopEndpoint = `desktop://browser_${Math.random().toString(36).slice(2, 10)}`
+          try {
+            localStorage.setItem(`desktop_endpoint_${appId}`, desktopEndpoint)
+          } catch {
+            // ignore
+          }
+        }
+        subscriptionData = { endpoint: desktopEndpoint }
       }
 
       await hubFetch(`/api/v1/apps/${appId}/notifications/subscribe`, {
@@ -155,9 +276,62 @@ export const useWebPush = () => {
         }
       })
 
+      try {
+        localStorage.setItem(`desktop_notifications_${appId}`, 'true')
+      } catch {
+        // ignore
+      }
+
       isSubscribed.value = true
+      showNativeNotification(
+        t('settings.desktop', 'Desktop'),
+        t('settings.desktopNotifDesc', 'Receive desktop notifications.')
+      )
       return true
-    } catch (err) {
+    } catch (err: any) {
+      const msg = String(err?.message || err)
+      if (msg.includes('push service not available') || err?.name === 'AbortError') {
+        try {
+          let desktopEndpoint = ''
+          try {
+            desktopEndpoint = localStorage.getItem(`desktop_endpoint_${appId}`) || ''
+          } catch {
+            // ignore
+          }
+          if (!desktopEndpoint) {
+            desktopEndpoint = `desktop://browser_${Math.random().toString(36).slice(2, 10)}`
+            try {
+              localStorage.setItem(`desktop_endpoint_${appId}`, desktopEndpoint)
+            } catch {
+              // ignore
+            }
+          }
+
+          await hubFetch(`/api/v1/apps/${appId}/notifications/subscribe`, {
+            method: 'POST',
+            body: {
+              endpoint: desktopEndpoint,
+              deviceType
+            }
+          }).catch(() => {})
+
+          try {
+            localStorage.setItem(`desktop_notifications_${appId}`, 'true')
+          } catch {
+            // ignore
+          }
+
+          isSubscribed.value = true
+          showNativeNotification(
+            t('settings.desktop', 'Desktop'),
+            t('settings.desktopNotifDesc', 'Receive desktop notifications.')
+          )
+          return true
+        } catch {
+          // ignore
+        }
+      }
+
       console.error('[WebPush] Error registering device:', err)
       error.value = getErrorMessage(err, key => t(key))
       return false
@@ -171,13 +345,18 @@ export const useWebPush = () => {
     error.value = null
 
     try {
-      const registration = await navigator.serviceWorker.ready
-      const pushSub = await registration.pushManager.getSubscription()
-
       let identifier = ''
-      if (pushSub) {
-        identifier = pushSub.endpoint
-        await pushSub.unsubscribe()
+      if ('serviceWorker' in navigator && !isElectronEnv()) {
+        try {
+          const registration = await navigator.serviceWorker.ready
+          const pushSub = await registration.pushManager.getSubscription()
+          if (pushSub) {
+            identifier = pushSub.endpoint
+            await pushSub.unsubscribe()
+          }
+        } catch {
+          // ignore
+        }
       }
 
       let storedFcm = currentFcmToken.value
@@ -187,16 +366,29 @@ export const useWebPush = () => {
         // ignore
       }
 
-      await hubFetch(`/api/v1/apps/${appId}/notifications/unsubscribe`, {
-        method: 'POST',
-        body: {
-          endpoint: identifier,
-          fcmToken: storedFcm || undefined
-        }
-      })
+      let storedDesktopEndpoint = ''
+      try {
+        storedDesktopEndpoint = localStorage.getItem(`desktop_endpoint_${appId}`) || ''
+      } catch {
+        // ignore
+      }
+
+      const endpointToUnsub = identifier || storedDesktopEndpoint
+
+      if (endpointToUnsub || storedFcm) {
+        await hubFetch(`/api/v1/apps/${appId}/notifications/unsubscribe`, {
+          method: 'POST',
+          body: {
+            endpoint: endpointToUnsub || undefined,
+            fcmToken: storedFcm || undefined
+          }
+        }).catch(() => {})
+      }
 
       try {
         localStorage.removeItem(`fcm_token_${appId}`)
+        localStorage.removeItem(`desktop_notifications_${appId}`)
+        localStorage.removeItem(`desktop_endpoint_${appId}`)
       } catch {
         // ignore
       }
@@ -218,23 +410,53 @@ export const useWebPush = () => {
     if (!checkSupport()) return false
 
     try {
-      const registration = await navigator.serviceWorker.getRegistration()
-      if (!registration) return false
-
-      const pushSubscription = await registration.pushManager.getSubscription()
-
-      let storedFcm = null
+      // 1. Check local desktop notification setting
+      let isDesktopSaved = false
       try {
-        storedFcm = localStorage.getItem(`fcm_token_${appId}`)
+        isDesktopSaved = localStorage.getItem(`desktop_notifications_${appId}`) === 'true'
       } catch {
         // ignore
       }
 
-      if (pushSubscription || storedFcm) {
-        if (pushSubscription) subscription.value = pushSubscription
-        if (storedFcm) currentFcmToken.value = storedFcm
+      if (isDesktopSaved && Notification.permission === 'granted') {
         isSubscribed.value = true
         return true
+      }
+
+      // 2. Check service worker push subscription for standard browsers
+      if ('serviceWorker' in navigator && !isElectronEnv()) {
+        let registration = await navigator.serviceWorker.getRegistration()
+        if (!registration) {
+          try {
+            registration = await Promise.race([
+              navigator.serviceWorker.ready,
+              new Promise<undefined>(resolve => setTimeout(() => resolve(undefined), 1200))
+            ])
+          } catch {
+            // ignore
+          }
+        }
+
+        if (registration) {
+          try {
+            const pushSubscription = await registration.pushManager.getSubscription()
+            let storedFcm = null
+            try {
+              storedFcm = localStorage.getItem(`fcm_token_${appId}`)
+            } catch {
+              // ignore
+            }
+
+            if (pushSubscription || storedFcm) {
+              if (pushSubscription) subscription.value = pushSubscription
+              if (storedFcm) currentFcmToken.value = storedFcm
+              isSubscribed.value = true
+              return true
+            }
+          } catch {
+            // pushManager might throw in restricted environments
+          }
+        }
       }
 
       isSubscribed.value = false
@@ -262,6 +484,7 @@ export const useWebPush = () => {
     requestPermission,
     registerDevice,
     unregisterDevice,
-    checkSubscription
+    checkSubscription,
+    showNativeNotification
   }
 }

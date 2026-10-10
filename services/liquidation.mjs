@@ -24,7 +24,8 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, appendFileSync, sta
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { premiumIndex, openInterest, ticker24h, fapi } from './binance.mjs'
-import { getIntel, saveSnapshot, insertEvents } from './store.mjs'
+import { getIntel, getDataset, getMarketFeed, saveSnapshot, insertEvents } from './store.mjs'
+import { createFeedRecorder, liquidationFeedDoc, LIQUIDATION_RETENTION_DAYS } from '../market/feedRecorder.mjs'
 import { sendTelegram } from './telegram.mjs'
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..')
@@ -271,6 +272,17 @@ export async function runLiquidation({ fetchImpl, now = new Date(), send = sendT
   const mongo = Intel ? 'up' : 'down'
   let alerted = 0
   if (Intel) {
+    // §23.3 P1 raw liquidation feed: mirror the file ledger into market_feed as
+    // immutable facts (D4 key feed:liquidation:<sym>:<ts>:<price>:<qty>) so the
+    // events are queryable. Idempotent — overlapping read windows skip dupes.
+    let feedWrote = 0
+    const feedRecorder = createFeedRecorder({ model: await getMarketFeed(), datasetModel: await getDataset(), kind: 'liquidation', source: 'binance:fapi', retentionDays: LIQUIDATION_RETENTION_DAYS })
+    for (const e of events) {
+      const out = await feedRecorder.record(liquidationFeedDoc({
+        symbol: e.symbol, price: e.price, qty: e.usd ? e.usd / e.price : null, side: e.side, eventTime: e.ts, ingestTime: ts, market: 'futures',
+      }))
+      if (out?.wrote) feedWrote++
+    }
     await saveSnapshot('zone', rows.map((r) => ({
       key: `zone:${r.symbol}`,
       symbol: r.symbol,
@@ -310,6 +322,7 @@ export async function runLiquidation({ fetchImpl, now = new Date(), send = sendT
     events: events.length,
     clusters: clusters.length,
     alerted,
+    feedWrote,
     mongo,
   }
 }

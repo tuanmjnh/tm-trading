@@ -1,0 +1,120 @@
+// =============================================================================
+//  L10 - STATE MACHINE
+//  Position lifecycle: open -> manage (TP/SL) -> close -> reset next bar
+// =============================================================================
+
+var int   x2_posDir    = 0
+var float x2_posEntry  = na
+var float x2_posSl     = na
+var float x2_posTp1    = na
+var float x2_posTp2    = na
+var float x2_posTp3    = na
+var float x2_posRisk   = na
+var int   x2_posBars   = 0
+var int   x2_posStage  = 0
+var int   x2_posBar    = na
+var bool  x2_needReset = false
+
+var int x2_statTrades = 0
+var int x2_statWins   = 0
+var int x2_statLosses = 0
+
+var float x2_xEntry = na
+var float x2_xSl    = na
+var int   x2_xDir   = 0
+var int   x2_xBar   = na
+var float x2_xExit  = na
+var float x2_xR     = na
+
+var bool x2_evEntry = false
+var int  x2_evTp    = 0
+var bool x2_evSl    = false
+var bool x2_evClose = false
+
+x2_evEntry := false
+x2_evTp    := 0
+x2_evSl    := false
+x2_evClose := false
+
+// 1. Deferred reset
+if x2_needReset
+    x2_needReset := false
+    x2_posDir    := 0
+    x2_posBars   := 0
+    x2_posStage  := 0
+    x2_posEntry  := na
+    x2_posSl     := na
+    x2_posTp1    := na
+    x2_posTp2    := na
+    x2_posTp3    := na
+    x2_posRisk   := na
+    x2_posBar    := na
+
+// 2. Manage open position
+if x2_posDir != 0
+    bool  isUp  = x2_posDir == 1
+    float t1    = x2_posStage < 1 ? x2_posTp1 : na
+    float t2    = x2_posStage < 2 ? x2_posTp2 : na
+    float t3    = x2_posStage < 3 ? x2_posTp3 : na
+
+    bool hitSl = isUp ? low  <= x2_posSl : high >= x2_posSl
+    bool hit1  = not na(t1) and (isUp ? high >= t1 : low <= t1)
+    bool hit2  = not na(t2) and (isUp ? high >= t2 : low <= t2)
+    bool hit3  = not na(t3) and (isUp ? high >= t3 : low <= t3)
+    bool closed = false
+
+    if hitSl and (hit1 or hit2 or hit3)
+        closed := true
+        x2_evSl    := true
+        x2_evClose := true
+        x2_statLosses += 1
+    else if hitSl
+        closed := true
+        x2_evSl    := true
+        x2_evClose := true
+        x2_statLosses += 1
+    else if hit3
+        x2_evTp    := 3
+        x2_posStage := 3
+        closed       := true
+        x2_evClose  := true
+        x2_statWins += 1
+    else if hit2
+        x2_evTp    := 2
+        x2_posStage := 2
+    else if hit1
+        x2_evTp    := 1
+        x2_posStage := 1
+
+    if not closed and x2_posBars > 300
+        closed       := true
+        x2_evClose  := true
+
+    if closed
+        x2_statTrades += 1
+        x2_xEntry     := x2_posEntry
+        x2_xSl        := x2_posSl
+        x2_xDir       := x2_posDir
+        x2_xBar       := x2_posBar
+        x2_xExit      := x2_evSl ? x2_posSl : x2_evTp == 3 ? x2_posTp3 : x2_evTp == 2 ? x2_posTp2 : x2_posTp1
+        x2_xR         := not na(x2_posRisk) and x2_posRisk > 0.0 ? (x2_xExit - x2_posEntry) * float(x2_posDir) / x2_posRisk : na
+        x2_needReset  := true
+
+// 3. Open new position
+if x2_okBar and x2_signal and x2_posDir == 0
+    x2_posDir   := x2_plan.dir
+    x2_posEntry := x2_plan.entry
+    x2_posSl    := x2_plan.sl
+    x2_posTp1   := x2_plan.tp1
+    x2_posTp2   := x2_plan.tp2
+    x2_posTp3   := x2_plan.tp3
+    x2_posRisk  := x2_plan.risk
+    x2_posBars  := 0
+    x2_posStage := 0
+    x2_posBar   := bar_index
+    x2_evEntry  := true
+    x2_dayCount := x2_dayCount + 1
+    x2_barsSince := 0
+
+if x2_posDir != 0 and not x2_evEntry and not x2_needReset
+    x2_posBars += 1

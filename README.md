@@ -4,12 +4,12 @@
 dashboard Nuxt, **risk gate** và execution (paper → MT5/exchange).
 
 Bộ chỉ báo TradingView (Pine Script **v6**) là **công cụ hỗ trợ** — nguồn tín hiệu và
-đối chiếu tay — **không phải sản phẩm chính**. Định hướng đầy đủ: `docs/roadmap.md`.
+đối chiếu tay — **không phải sản phẩm chính**. Định hướng đầy đủ: `docs/tm-trading-roadmap-v2.md`.
 
 ```
 tm-trading/
 ├─ docs/
-│  ├─ roadmap.md           kế hoạch tổng thể 13 phase + quyết định nền tảng (D1–D14)
+│  ├─ tm-trading-roadmap-v2.md kế hoạch tổng thể V2 + quyết định nền tảng (D1–D22)
 │  ├─ data-model.md        schema/index/version của mọi collection  (Phase 3)
 │  ├─ app-inheritance.md   kế thừa app/ từ tm-hub: giữ/cắt gì + bẫy môi trường
 │  ├─ architecture.md      kiến trúc, luồng dữ liệu, quy ước mở rộng
@@ -20,7 +20,8 @@ tm-trading/
 ├─ pine/                   ← CÔNG CỤ HỖ TRỢ (không phải sản phẩm)
 │  ├─ parts/*.pine         ← SỬA Ở ĐÂY (nguồn duy nhất — TM Signals/Backtest)
 │  ├─ parts-vsa/*.pine     ← nguồn bộ TM VSA Wyckoff + TM VSA Backtest
-│  ├─ shared/*.pine        ← hàm dùng chung mọi target (f_sessionOk, f_vsaColor, ...)
+│  ├─ shared/*.pine        ← code dùng chung: common.pine (mọi target), sess-inputs.pine
+│                            (vsa+sweep), zones.pine (xau+xau2) — xem docs §4.3
 │  └─ dist/*.pine          ← output, dán vào TradingView
 ├─ server/
 │  └─ webhook.mjs          webhook receiver (Telegram / Discord)
@@ -41,14 +42,14 @@ tm-trading/
 ## 1. Cài đặt & chạy
 
 Cần **Node.js ≥ 18**. Repo có dependency (Mongoose + bộ Nuxt kế thừa từ `tm-hub`) nên phải
-`npm install` trước. **Pine tooling và engine core vẫn zero-dep** — `npm run build`,
-`npm run test:pines`, `npm run test:engine` chạy được kể cả khi chưa cài đủ gói UI.
+`npm install` trước. **Pine tooling và engine core vẫn zero-dep** — `npm run pine:build`,
+`npm run pine:test`, `npm run test:engine` chạy được kể cả khi chưa cài đủ gói UI.
 
 ```bash
 npm install            # Mongoose + Nuxt UI (cache trong workspace qua .npmrc)
-npm run build          # ghép pine/parts* + pine/shared -> pine/dist
+npm run pine:build          # ghép pine/parts* + pine/shared -> pine/dist
 npm test               # smoke (173) + engine (176) + db (49, tự SKIP nếu không có Mongo)
-npm run verify         # build + test
+npm run verify         # pine:build + docs:check + test
 npm run dev            # dashboard Nuxt -> http://localhost:4001/
 ```
 
@@ -58,27 +59,33 @@ npm run dev            # dashboard Nuxt -> http://localhost:4001/
 
 | Script | Việc |
 |---|---|
-| `npm run build` | Build cả **4** bản (indicator + strategy + VSA + VSA backtest) |
-| `npm run watch` | Tự build lại mỗi khi `pine/parts*/` hoặc `pine/shared/` đổi |
-| `npm run signal` | Chỉ build bản indicator |
-| `npm run backtest` | Chỉ build bản strategy |
-| `npm run vsa` | Chỉ build bản TM VSA Wyckoff |
-| `npm run vsa:backtest` | Chỉ build bản TM VSA Backtest |
-| `npm run copy` | Build rồi copy `TM Signals BTC.pine` vào clipboard |
-| `npm run copy:backtest` | Copy `TM Backtest BTC.pine` vào clipboard |
-| `npm run copy:vsa` | Copy `TM VSA Wyckoff.pine` vào clipboard |
-| `npm run copy:vsa:backtest` | Copy `TM VSA Backtest.pine` vào clipboard |
+| `npm run pine:build` | Build cả **7** bản (indicator + strategy + VSA + VSA backtest + sweep + XAU + XAU2) |
+| `npm run pine:watch` | Tự build lại mỗi khi `pine/parts*/` hoặc `pine/shared/` đổi |
+| `npm run pine:signal` | Chỉ build bản indicator |
+| `npm run pine:backtest` | Chỉ build bản strategy |
+| `npm run pine:vsa` | Chỉ build bản TM VSA Wyckoff |
+| `npm run pine:vsa:backtest` | Chỉ build bản TM VSA Backtest |
+| `npm run pine:sweep` | Chỉ build bản TM Liquidity Sweep |
+| `npm run pine:xau` | Chỉ build bản TM XAU Signals |
+| `npm run pine:xau2` | Chỉ build bản TM XAU Signals 2 (master-prompt v2) |
+| `npm run pine:copy` | Build rồi copy `TM Signals.pine` vào clipboard |
+| `npm run pine:copy:backtest` | Copy `TM Backtest.pine` vào clipboard |
+| `npm run pine:copy:vsa` | Copy `TM VSA Wyckoff.pine` vào clipboard |
+| `npm run pine:copy:vsa:backtest` | Copy `TM VSA Backtest.pine` vào clipboard |
+| `npm run pine:copy:sweep` | Copy `TM Liquidity Sweep.pine` vào clipboard |
+| `npm run pine:copy:xau` | Copy `TM XAU Signals.pine` vào clipboard |
+| `npm run pine:copy:xau2` | Copy `TM XAU Signals 2.pine` vào clipboard |
 | `npm run notify` | Chạy webhook receiver |
-| `npm test` | `test:pines` + `test:engine` + `test:db` |
-| `npm run test:pines` | Smoke test Pine + webhook (173 assertion) |
+| `npm test` | `pine:test` + `test:engine` + `test:db` |
+| `npm run pine:test` | Smoke test Pine + webhook (250 assertion) |
 | `npm run test:engine` | Golden fixtures + hợp đồng plugin + backtest + report + data + CLI (360 assertion) |
 | `npm run test:db` | Schema/index/dedupe trên MongoDB thật (49 assertion) |
 | `npm run engine:run` | CLI backtest → CSV + bảng symbol × TF (`--help` để xem lựa chọn) |
 | `npm run errors` | Dịch lỗi TradingView về đúng dòng trong `pine/parts*/` |
-| `npm run verify` | `build` + `test` |
+| `npm run verify` | `pine:build` + `docs:check` + `test` |
 | `npm run clean` | Xoá `pine/dist/` và `logs/` |
 
-> `npm run build` trả exit code **2** nếu có cảnh báo lint — dùng được trong CI.
+> `npm run pine:build` trả exit code **2** nếu có cảnh báo lint — dùng được trong CI.
 
 Pine không có `#include`, nên logic được viết tách file ở `pine/parts/` (bản TM),
 `pine/parts-vsa/` (bản TM VSA Wyckoff + TM VSA Backtest — **chung một nguồn**) và hàm chung ở
@@ -94,13 +101,13 @@ Pine không có `#include`, nên logic được viết tách file ở `pine/part
 Cách nhanh nhất:
 
 ```bash
-npm run copy        # build + copy san vao clipboard
+npm run pine:copy        # build + copy san vao clipboard
 ```
 
 Rồi mở Pine Editor → `Ctrl+V` → **Add to chart**.
 
-Cách thủ công: dán toàn bộ nội dung `pine/dist/TM Signals BTC.pine`.
-`pine/dist/TM Backtest BTC.pine` dán tương tự, mở tab **Strategy Tester** để xem winrate/RR.
+Cách thủ công: dán toàn bộ nội dung `pine/dist/TM Signals.pine`.
+`pine/dist/TM Backtest.pine` dán tương tự, mở tab **Strategy Tester** để xem winrate/RR.
 
 Tạo alert: chọn đúng indicator → **Create Alert** → Webhook URL
 `https://<domain-cua-ban>/tm-alert`, header `User-Agent: TradingView`.
@@ -116,7 +123,7 @@ Tạo alert: chọn đúng indicator → **Create Alert** → Webhook URL
 | `CE10123` `"literal string" ... but a "series int" is expected` | Sai **thứ tự** tham số. Đúng là **`str.format_time(time, format, timezone)`** — `time` (UNIX timestamp, `series int`) đứng đầu, `format` đứng sau. Viết `str.format_time("yyyy-MM-dd", time, "UTC")` là lỗi. (Nguồn: [Concepts / Time](https://www.tradingview.com/pine-script-docs/concepts/time/)) |
 | `CE10271` ở `plotshape`/`plot` | Truyền tham số theo thứ tự làm giá trị rơi vào `offset` (vị trí 6). Luôn truyền bằng **tên tham số** |
 
-`build.mjs` đã có lint tự bắt cả sáu loại lỗi này — chạy `npm run build` sẽ báo trước khi bạn dán lên TradingView.
+`build.mjs` đã có lint tự bắt cả sáu loại lỗi này — chạy `npm run pine:build` sẽ báo trước khi bạn dán lên TradingView.
 
 **Khi TradingView vẫn báo lỗi**, nó chỉ ghi `line N` trên *file dist* — không biết lỗi ở part nào. Dán nguyên văn thông báo vào một file rồi:
 
@@ -130,14 +137,14 @@ node tools/errors.mjs loi.txt --target strategy
 `tools/bad-snippets.json` không quay lại — đó là vòng kiểm tra hai chiều còn thiếu
 của lint (trước đây test chỉ khẳng định rule *tự viết* là đúng).
 
-> **Nguồn chân lý của lint: `tools/pine-ref.json` (sinh bằng `npm run ref`).**
+> **Nguồn chân lý của lint: `tools/pine-ref.json` (sinh bằng `npm run pine:ref`).**
 > `BUILTINS`, danh sách từ khóa, tên/thứ tự tham số, tham số cần `int` và tham số
 > đầu phải là UNIX time **đều được derive** từ file đó — không còn danh sách tay
 > trong `build.mjs`. Nguồn là [folknor/pine-tools](https://github.com/folknor/pine-tools)
 > (dữ liệu lấy từ tài liệu chính thức TradingView), đã đối chiếu với
 > [codenamedevan/pinescriptv6](https://github.com/codenamedevan/pinescriptv6).
 >
-> - **Muốn thêm/sửa tham chiếu?** `npm run ref` rồi `npm run verify`. Không sửa tay
+> - **Muốn thêm/sửa tham chiếu?** `npm run pine:ref` rồi `npm run verify`. Không sửa tay
 >   `build.mjs` — đó chính là lý do trước đây lint bị viết ngược 4 lần
 >   (`table.cell_clear`, `str.format_time`, `POSITIONAL_RISK`, `FAKE_NAMES`).
 > - **Tên sai** (không có trong Pine v6) nằm trong `FAKE_NAMES` của

@@ -11,7 +11,7 @@
 //
 //  Run:  node exec/test-risk.mjs   (wired into `npm test`)
 // =============================================================================
-import { evaluate, resolveDay, sizingPct, loadRiskConfig, RISK_DEFAULTS, KELLY_MIN_N, auditLog } from './risk.mjs'
+import { evaluate, evaluateModify, evaluatePartialClose, resolveDay, sizingPct, loadRiskConfig, RISK_DEFAULTS, KELLY_MIN_N, auditLog, resolvedBalance } from './risk.mjs'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -52,6 +52,7 @@ const snap = (over = {}) => ({
   day: { ...FRESH, ...(over.day || {}) },
   open: over.open || [],
   equity: over.equity !== undefined ? over.equity : 10000,
+  balance: over.balance !== undefined ? over.balance : 10000, // §20 realized balance
   winStats: over.winStats || null,
 })
 // BUY 63250.5, SL 63012.1 -> riskDist 238.4 (0.377%); last TP 64000 -> RR 3.14
@@ -218,6 +219,116 @@ check('audit entry carries ISO ts', typeof JSON.parse(lines[0]).ts === 'string' 
 auditLog('second', {}, pth)
 check('auditLog appends (2nd line, not overwrite)', readFileSync(pth, 'utf8').trim().split('\n').length === 2)
 rmSync(auditDir, { recursive: true, force: true }) // tmp only — real audit untouched
+
+// =============================================================================
+section('10. evaluateModify — SL/TP changes through the gate (Phase 7P D7e)')
+
+// qty 10, entry 100, sl 95: current risk 50, budget 1% of 10000 = 100.
+const MP = { symbol: 'BTCUSDT', dir: 1, entryPrice: 100, sl: 95, tps: [110, 120], qty: 10, status: 'open' }
+const mod = (pos, patch, over = {}) => evaluateModify(pos, patch, snap(over))
+
+const m1 = mod(MP, { sl: 97 })
+check('tighten SL -> ok, result carries sl/tps/rr/budget', m1.ok === true && m1.sl === 97 && m1.tps[0] === 110 && close(m1.rr, 20 / 3) && close(m1.riskAmount, 30) && close(m1.budget, 100), JSON.stringify(m1))
+const m2 = mod(MP, { tps: [115, 130] })
+check('tps-only patch keeps the current SL', m2.ok === true && m2.sl === 95 && m2.tps[0] === 115 && close(m2.rr, 30 / 5))
+check('sl + tps together', (() => { const r = mod(MP, { sl: 96, tps: [112] }); return r.ok && r.sl === 96 && close(r.rr, 12 / 4) })())
+
+check('halted (kill_switch) -> HALTED', mod(MP, { sl: 97 }, { day: { halted: true, haltReason: 'kill_switch' } }).code === 'HALTED')
+check('halted (daily_loss_cap) -> DAILY_LOSS_CAP', mod(MP, { sl: 97 }, { day: { halted: true, haltReason: 'daily_loss_cap', realizedPnlPct: -5.2 } }).code === 'DAILY_LOSS_CAP')
+check('raw cap breach (flag missed) -> DAILY_LOSS_CAP', mod(MP, { sl: 97 }, { day: { realizedPnlPct: -5.5 } }).code === 'DAILY_LOSS_CAP')
+
+check('SL past entry (long) -> BAD_SL (simulation side rule)', mod(MP, { sl: 105 }).code === 'BAD_SL')
+check('SL == entry -> BAD_SL', mod(MP, { sl: 100 }).code === 'BAD_SL')
+check('TP below entry -> BAD_TPS', mod(MP, { tps: [90] }).code === 'BAD_TPS')
+check('defective TP level -> BAD_TPS naming its index', /tps\[1\]/.test(mod(MP, { tps: [110, null] }).message || ''))
+check('empty patch -> EMPTY_PATCH', mod(MP, {}).code === 'EMPTY_PATCH')
+check('position qty <= 0 -> BAD_QTY', mod({ ...MP, qty: 0 }, { sl: 97 }).code === 'BAD_QTY')
+
+const noSl = { ...MP, sl: null }
+check('no-SL position + tps-only patch -> BAD_SL (scanner needs a stop)', mod(noSl, { tps: [115] }).code === 'BAD_SL')
+check('no-SL position + sl patch -> ok (gives it one)', mod(noSl, { sl: 97 }).ok === true)
+check('no-SL position: fresh SL must fit the budget', mod(noSl, { sl: 88 }).code === 'RISK_BUDGET') // 10 * 12 = 120 > 100
+
+check('widen within budget -> ok', mod(MP, { sl: 93 }).ok === true) // risk 70 <= 100
+check('widen exactly TO the budget -> ok (boundary)', mod(MP, { sl: 90 }).ok === true) // risk 100
+check('widen past the budget -> RISK_BUDGET', mod(MP, { sl: 88 }).code === 'RISK_BUDGET') // risk 120 > 100 and > current 50
+const over = { ...MP, qty: 30 } // current risk 150 > budget 100 (drifted)
+check('over-budget position: TIGHTENING below current risk -> ok', mod(over, { sl: 96 }).ok === true) // 120 <= current 150
+check('over-budget position: widening further -> RISK_BUDGET', mod(over, { sl: 94 }).code === 'RISK_BUDGET') // 180 > 100 and > 150
+
+check('resulting RR below min -> MIN_RR', mod(MP, { tps: [104] }).code === 'MIN_RR') // rr 4/5 = 0.8
+check('resulting RR exactly min -> ok (boundary)', mod(MP, { tps: [107.5] }).ok === true) // rr 1.5
+const SHORT = { symbol: 'X', dir: -1, entryPrice: 100, sl: 105, tps: [90, 80], qty: 10, status: 'open' }
+check('short: tighten SL -> ok', mod(SHORT, { sl: 103 }).ok === true)
+check('short: widen SL past budget -> RISK_BUDGET', mod(SHORT, { sl: 112 }).code === 'RISK_BUDGET') // 10 * 12 = 120
+check('short: SL below entry -> BAD_SL', mod(SHORT, { sl: 95 }).code === 'BAD_SL')
+
+// =============================================================================
+section('11b. evaluate — manual ticket riskPct override (v3 §16.1-16.2)')
+
+// riskDist 238.4 (LONG): config sizing = 1% of 10000 = 100. An explicit riskPct
+// overrides the config/kelly sizing while every cap still binds.
+const pct2 = evaluate({ ...WIDE, pct: 2 }, snap({ config: { ...cfg, riskPerTradePct: 1 } })) // riskDist 5 -> qty 40
+check('happy pct override: qty sized to 2% equity', pct2.ok === true && close(pct2.qty, 40) && close(pct2.sizingPctUsed, 2), JSON.stringify(pct2))
+check('absent pct keeps config sizing', (() => {
+  const r = evaluate(WIDE, snap({ config: { ...cfg, riskPerTradePct: 1 } }))
+  return r.ok === true && close(r.qty, 20) && close(r.sizingPctUsed, 1)
+})())
+check('aggressive pct still hits the leverage cap', evaluate({ ...WIDE, pct: 50 }, snap({ equity: 10000 })).code === 'LEVERAGE') // qty 1000 -> 10x
+check('provided qty + pct: qty wins, budget uses the override pct', (() => {
+  const r = evaluate({ ...WIDE, qty: 10, pct: 1 }, snap({ equity: 10000 }))
+  return r.ok === true && close(r.qty, 10) && close(r.riskAmount, 100)
+})())
+check('pre-sized qty over the override budget -> RISK_BUDGET', evaluate({ ...WIDE, qty: 30, pct: 1 }, snap({ equity: 10000 })).code === 'RISK_BUDGET') // 30*5=150 > 100
+check('invalid pct (0 / 101) falls back to config sizing', (() => {
+  const r = evaluate({ ...WIDE, pct: 150 }, snap({ config: { ...cfg, riskPerTradePct: 4 }, equity: 10000 }))
+  return r.ok === true && close(r.sizingPctUsed, 4)
+})())
+
+// =============================================================================
+section('11. evaluatePartialClose — close/partial close through the gate (Phase 7P D7e)')
+
+const CP = { symbol: 'BTCUSDT', qty: 2, entryPrice: 100, status: 'open' }
+const pclose = (pos, target, over = {}) => evaluatePartialClose(pos, target, snap(over))
+
+const p1 = pclose(CP, { pct: 50 })
+check('pct 50 of qty 2 -> closeQty 1, remaining 1', p1.ok === true && close(p1.closeQty, 1) && close(p1.remainingQty, 1), JSON.stringify(p1))
+check('abs qty accepted', (() => { const r = pclose(CP, { qty: 0.75 }); return r.ok && close(r.closeQty, 0.75) && close(r.remainingQty, 1.25) })())
+check('qty == position qty -> full close (remaining 0)', (() => { const r = pclose(CP, { qty: 2 }); return r.ok && r.closeQty === 2 && r.remainingQty === 0 })())
+check('pct 100 -> full close', pclose(CP, { pct: 100 }).ok === true && pclose(CP, { pct: 100 }).remainingQty === 0)
+
+check('qty > position -> TOO_LARGE', pclose(CP, { qty: 3 }).code === 'TOO_LARGE')
+check('pct 150 -> BAD_PCT', pclose(CP, { pct: 150 }).code === 'BAD_PCT')
+check('pct 0 -> BAD_PCT', pclose(CP, { pct: 0 }).code === 'BAD_PCT')
+check('neither qty nor pct -> MISSING', pclose(CP, {}).code === 'MISSING')
+check('qty AND pct -> AMBIGUOUS', pclose(CP, { qty: 1, pct: 50 }).code === 'AMBIGUOUS')
+check('position qty 0 -> BAD_QTY', pclose({ ...CP, qty: 0 }, { pct: 50 }).code === 'BAD_QTY')
+check('qty <= 0 -> BAD_QTY', pclose(CP, { qty: -1 }).code === 'BAD_QTY')
+
+check('halted (kill_switch) -> HALTED (frozen desk, closes too)', pclose(CP, { pct: 50 }, { day: { halted: true, haltReason: 'kill_switch' } }).code === 'HALTED')
+check('raw daily-cap breach -> DAILY_LOSS_CAP', pclose(CP, { pct: 50 }, { day: { realizedPnlPct: -6 } }).code === 'DAILY_LOSS_CAP')
+check('entryPrice 0 -> BAD_PRICE', pclose({ ...CP, entryPrice: 0 }, { pct: 50 }).code === 'BAD_PRICE')
+check('entryPrice garbage -> BAD_PRICE', pclose({ ...CP, entryPrice: 'x' }, { pct: 50 }).code === 'BAD_PRICE')
+
+// =============================================================================
+section('12. §20/§21 paper account state — spent balance blocks NEW opens only')
+
+check('balance <= 0 -> ACCOUNT_INSOLVENT', evaluate(LONG, snap({ balance: -5 })).code === 'ACCOUNT_INSOLVENT')
+check('balance == 0 -> ACCOUNT_INSOLVENT', evaluate(LONG, snap({ balance: 0 })).code === 'ACCOUNT_INSOLVENT')
+check('positive balance -> allowed (default snap has 10000)', evaluate(LONG, snap()).ok === true)
+check('insolvency beats sizing (even a zero-risk order)', evaluate({ ...WIDE, qty: 0.001 }, snap({ balance: -1 })).code === 'ACCOUNT_INSOLVENT')
+check('balance missing in snap -> fail-open (never guessed, D12)', evaluate(LONG, { config: cfg, day: FRESH, open: [], equity: 10000, winStats: null }).ok === true)
+check('closed desk freezes nothing — evaluateModify still routes to halt, not balance', (() => {
+  // modify never re-checks balance (protective); a spent account may still de-risk
+  const r = evaluateModify({ symbol: 'X', dir: 1, entryPrice: 100, sl: 95, tps: [110], qty: 2 }, { sl: 94 }, snap({ balance: -1 }))
+  return r.ok === true
+})())
+
+section('12b. resolvedBalance — frozen paper seed wins over env, env over default')
+check('frozen initialBalance wins over a later config change', resolvedBalance(12000, 10000) === 12000)
+check('no seed -> config equity', resolvedBalance(null, 15000) === 15000)
+check('garbage seed -> config equity', resolvedBalance('x', 15000) === 15000)
+check('no seed no equity -> 10000 default', resolvedBalance(null, null) === 10000)
 
 // =============================================================================
 console.log(`\n${fail === 0 ? 'PASS' : 'FAIL'} — ${pass} pass, ${fail} fail\n`)

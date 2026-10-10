@@ -2,14 +2,8 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// Gốc project (nuxt.config.ts nằm ở root) — alias tự tính, KHÔNG hardcode
-// đường dẫn máy khác (bẫy đã gặp khi copy alias của tm-hub sang đây).
 const ROOT_DIR = fileURLToPath(new URL('.', import.meta.url))
 
-// pnpm KHÔNG hoist `prosemirror-*` lên node_modules gốc (khác npm) →
-// `vite.optimizeDeps.include` bên dưới sẽ không resolve được. Map về virtual
-// store `.pnpm/node_modules` — đúng cách tm-hub làm (xem nuxt.config của hub).
-// Chỉ gắn alias khi đang chạy pnpm (thư mục tồn tại) để vẫn chạy được với npm.
 const PNPM_VIRTUAL = join(ROOT_DIR, 'node_modules', '.pnpm', 'node_modules')
 const PROSEMIRROR_PKGS = [
   'prosemirror-state',
@@ -25,16 +19,16 @@ const PROSEMIRROR_PKGS = [
   'prosemirror-dropcursor',
   'prosemirror-tables'
 ]
-const PROSEMIRROR_ALIASES: Record<string, string> = existsSync(PNPM_VIRTUAL)
+const PROSEMIRROR_ALIASES = existsSync(PNPM_VIRTUAL)
   ? Object.fromEntries(PROSEMIRROR_PKGS.map(name => [name, join(PNPM_VIRTUAL, name)]))
   : {}
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-01',
-  // SPA mode — deploy target: Vercel / Netlify (Nitro still serves /api/** as serverless)
   ssr: false,
   spaLoadingTemplate: 'spa-loading-template.html',
   devtools: { enabled: false },
+  sourcemap: { client: true, server: false },
   experimental: {
     appManifest: false
   },
@@ -64,15 +58,11 @@ export default defineNuxtConfig({
     }
   },
   css: ['~/assets/css/main.css'],
-
-  // Avoid @nuxt/icon scanning the entire library at build time (lag on Vercel).
-  // Scanning is disabled so dynamic icons (loaded at runtime) resolve normally.
   icon: {
     clientBundle: {
       scan: false
     }
   },
-
   app: {
     head: {
       charset: 'utf-8',
@@ -84,15 +74,18 @@ export default defineNuxtConfig({
       ]
     }
   },
-
+  devServer: {
+    host: '0.0.0.0', // Allow access from other devices on the same network
+    port: 4001,
+  },
   pwa: {
-    registerType: 'autoUpdate',
+    injectRegister: false,
     manifest: {
       id: 'tm-trading-pwa',
       scope: '/',
       name: 'TM Trading',
       short_name: 'TM Trading',
-      description: 'Trade desk tự động: engine tín hiệu + backtest + risk gate',
+      description: 'Automated trading desk: signal engine + backtesting + risk gate',
       theme_color: '#0f172a',
       background_color: '#0f172a',
       display: 'standalone',
@@ -115,23 +108,8 @@ export default defineNuxtConfig({
           purpose: 'any maskable'
         }
       ]
-    },
-    workbox: {
-      importScripts: ['/push-sw.js'],
-      navigateFallback: '/',
-      cleanupOutdatedCaches: true,
-      skipWaiting: true,
-      clientsClaim: true,
-      globIgnores: ['**/node_modules/**/*', 'push-sw.js', 'workbox-*.js'],
-      globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,svg,ico}']
-    },
-    devOptions: {
-      enabled: process.env.NODE_ENV === 'development',
-      type: 'module',
-      suppressWarnings: true
     }
   },
-
   runtimeConfig: {
     supabaseUrl: process.env.SUPABASE_URL || '',
     supabaseKey: process.env.SUPABASE_KEY || '',
@@ -146,13 +124,7 @@ export default defineNuxtConfig({
     redisHost: process.env.REDIS_HOST || 'localhost',
     redisPort: parseInt(process.env.REDIS_PORT || '6379', 10),
     public: {
-      // KHÔNG đặt SUPABASE_KEY vào public — nó được serialize vào window.__NUXT__
-      // và sẽ lộ service-role key cho trình duyệt (bypass toàn bộ RLS).
-      // Toàn bộ truy cập DB đi qua server /api (runtimeConfig.supabaseKey — không public).
       apiPrefix: '/api/v1',
-      // --- tm-hub: tm-trading la SATELLITE APP, khong phai provider ---
-      // hubAppId = appId lay duoc khi TAO APP trong tm-hub (bat buoc de xac thuc).
-      // hubUrl   = dia chi tm-hub; mac dinh 4000 vi do la cong tm-hub dang chay.
       hubUrl: process.env.NUXT_PUBLIC_HUB_URL || process.env.HUB_URL || 'http://localhost:4000',
       hubAppId: process.env.NUXT_PUBLIC_HUB_APP_ID || process.env.HUB_APP_ID || ''
     }
@@ -170,16 +142,6 @@ export default defineNuxtConfig({
       redirectOn: 'root'
     }
   },
-  // Nuxt UI Editor (TipTap/ProseMirror): ép TẤT CẢ graphs (@nuxt/ui, @tiptap/*,
-  // prosemirror-tables) dùng chung MỘT bản prebundle của prosemirror — 2 bundle
-  // riêng gây "Adding different instances of a keyed plugin (plugin$)" /
-  // "Duplicate use of selection JSON ID cell".
-  // - alias: bare 'prosemirror-*' không resolve được từ app root (pnpm không
-  //   hoist) → tm-hub map về virtual store `.pnpm/node_modules`.
-  //   ĐÃ BỎ ở tm-trading: đó là đường dẫn TUYỆT ĐỐI trỏ vào máy tm-hub
-  //   (D:/Applications/tm-hub/...), chạy ở nơi khác là hỏng. tm-trading dùng npm
-  //   nên node_modules hoist phẳng → bare 'prosemirror-*' resolve bình thường.
-  // - include: optimize ngay từ đầu, tránh runtime re-optimize flicker (giữ lại).
   vite: {
     plugins: [
       {
@@ -206,9 +168,7 @@ export default defineNuxtConfig({
       }
     ],
     resolve: {
-      // Xem chú thích PROSEMIRROR_ALIASES ở đầu file (pnpm không hoist).
       alias: {
-        ...PROSEMIRROR_ALIASES,
         '#app-manifest': join(ROOT_DIR, 'shared/stubs/app-manifest.ts')
       }
     },
@@ -238,13 +198,17 @@ export default defineNuxtConfig({
         '@tiptap/pm/schema-list',
         '@tiptap/pm/gapcursor',
         '@tiptap/pm/dropcursor',
+        '@tiptap/pm/tables',
         '@tiptap/pm/tables'
       ]
     }
   },
   nitro: {
-    // Không scan server/modules/ thành Nitro modules (đây là domain logic / services nội bộ).
     ignore: ['modules/**', '**/modules/**'],
+    experimental: { websocket: true },
+    alias: {
+      services: join(ROOT_DIR, 'services') + '/',
+    },
     routeRules: {
       '/api/**': {
         cors: true,

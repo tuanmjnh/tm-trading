@@ -148,9 +148,6 @@ async function onSubmit() {
 <template>
   <BaseFormModal v-model:open="open" :title="t('routes.new')" :schema="schema" :state="state" :loading="loading"
     :submit-label="t('common.create')" @submit="onSubmit">
-    <UFormField :label="t('common.selectApp')" name="app" required>
-      <AdminAppSelectField v-model="selectedApp" />
-    </UFormField>
     <UFormField :label="t('routes.id')" name="id" required>
       <UInput v-model="state.id" class="w-full" placeholder="home" />
     </UFormField>

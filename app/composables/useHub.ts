@@ -55,7 +55,9 @@ export const useHub = () => {
 
     return (await $fetch(fullUrl, {
       ...options,
-      headers
+      headers,
+      // Include cookies for cross-origin requests (OAuth state cookie)
+      credentials: 'include'
     })) as T
   }
 

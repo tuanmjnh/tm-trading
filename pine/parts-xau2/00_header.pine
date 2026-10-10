@@ -1,0 +1,42 @@
+//@version=6
+{{DECL}}
+{{SHARED}}
+
+// =============================================================================
+//  TM XAU SIGNALS 2  -  v2.0.0
+//  Indicator phan tich XAUUSDT theo docs/indicator-XAU/master-prompt v2.md
+//  (ban nang cap cua TM XAU Signals - parts-xau)
+//
+//  Layer structure:
+//    L0  CONFIG       - input nhom (Moi tinh nang co toggle rieng - v2 §3)
+//    L1  CORE         - ATR/ATR%, volume VSA, RelVol, OBV, EMA 20/50/200,
+//                       displacement, pivots, session detect
+//    L2  MARKET STR   - Swing, HH/HL/LH/LL, BOS, CHoCH, MSS, Retest,
+//                       Failed Breakout, Continuation, Pullback  -> UDT X2Event
+//    L3  LIQUIDITY    - PDH/PDL, PWH/PWL, Session Hi/Lo, Equal Hi/Lo, Sweep,
+//                       Trendline 2 diem (touchCount/slope/break)
+//    L4  ZONES        - S/R zones + FVG + Order Block (tuong doi, rieng toggle)
+//    L5  CANDLE       - Pin, Engulfing, Displacement, Rejection
+//    L6  INDICATORS   - nhom theo chuc nang (v2 §2):
+//                       Trend / Momentum(RSI+MACD+DMI) / Volatility(ATR%+BBW) /
+//                       Volume(RelVol+OBV+VSA) / Location(VWAP+day range)
+//    L7  MTF CONTEXT  - Context TF (H4/D/W/M) + Setup TF (H1/M15); entry = chart
+//                       TF - LTF khong duoc override HTF (v2 §4, co VETO ro rang)
+//    L8  SCORING      - 0-100, 11 nhom trong so tong 100 (khong tinh trung lap
+//                       chi so correlated - moi nhom duoc AVERAGE ben trong)
+//    L9  RISK         - Entry/SL/TP plan + gate
+//    L10 STATE        - position lifecycle
+//    L11 VIZ          - dashboard chuan parts-xau/80_viz.pine (table.clear +
+//                       key gray-10 / value silver / nen trong suot + dong Session)
+//    L12 ALERTS       - webhook JSON: moi event kem {kind,dir,ts,tf,confirmed,level}
+//
+//  Core principles:
+//    - No repaint on confirmed signals (barstate.isconfirmed gate)
+//    - No future data leakage (request.security [1] + lookahead_on)
+//    - Moi event UDT X2Event: source timestamp + timeframe + confirmed + level
+//    - Tat ca nguong/trong so deu configurable (khong hard-code)
+//
+//  Pham vi: master-prompt v2 §5-9 (ablation / backtest / statistical validation /
+//  feature selection / AI) thuoc engine side (engine/, docs/) - KHONG phai phan
+//  cua Pine indicator nay.
+// =============================================================================

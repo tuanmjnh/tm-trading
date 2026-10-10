@@ -3,7 +3,7 @@
 //  TM TRADING - CLIPBOARD HELPER
 //  Copy san file .pine tu pine/dist vao clipboard de dan thang vao Pine Editor.
 //
-//  Usage: node tools/copy.mjs [ten-file]     (mac dinh: TM Signals BTC.pine)
+//  Usage: node tools/copy.mjs [ten-file]     (mac dinh: TM Signals.pine)
 // =============================================================================
 
 import { readFileSync } from 'node:fs'
@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const target = process.argv[2] || 'TM Signals BTC.pine'
+const target = process.argv[2] || 'TM Signals.pine'
 const file = join(ROOT, 'pine', 'dist', target)
 
 const code = readFileSync(file, 'utf8')

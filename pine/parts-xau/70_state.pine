@@ -1,0 +1,121 @@
+// =============================================================================
+//  L11 - STATE MACHINE
+//  Position lifecycle: open -> manage (TP/SL) -> close -> reset next bar
+//  NOTE: reset is deferred to next bar so visualization layer can read final values.
+// =============================================================================
+
+var int   xau_posDir    = 0
+var float xau_posEntry  = na
+var float xau_posSl     = na
+var float xau_posTp1    = na
+var float xau_posTp2    = na
+var float xau_posTp3    = na
+var float xau_posRisk   = na
+var int   xau_posBars   = 0
+var int   xau_posStage  = 0
+var int   xau_posBar    = na
+var bool  xau_needReset = false
+
+var int   xau_statTrades = 0
+var int   xau_statWins   = 0
+var int   xau_statLosses = 0
+
+var float xau_xEntry = na
+var float xau_xSl    = na
+var int   xau_xDir   = 0
+var int   xau_xBar   = na
+var float xau_xExit  = na
+var float xau_xR     = na
+
+var bool xau_evEntry = false
+var int  xau_evTp    = 0
+var bool xau_evSl    = false
+var bool xau_evClose = false
+
+xau_evEntry := false
+xau_evTp    := 0
+xau_evSl    := false
+xau_evClose := false
+
+// 1. Deferred reset
+if xau_needReset
+    xau_needReset := false
+    xau_posDir    := 0
+    xau_posBars   := 0
+    xau_posStage  := 0
+    xau_posEntry  := na
+    xau_posSl     := na
+    xau_posTp1    := na
+    xau_posTp2    := na
+    xau_posTp3    := na
+    xau_posRisk   := na
+    xau_posBar    := na
+
+// 2. Manage open position
+if xau_posDir != 0
+    bool  isUp  = xau_posDir == 1
+    float t1    = xau_posStage < 1 ? xau_posTp1 : na
+    float t2    = xau_posStage < 2 ? xau_posTp2 : na
+    float t3    = xau_posStage < 3 ? xau_posTp3 : na
+
+    bool hitSl = isUp ? low  <= xau_posSl : high >= xau_posSl
+    bool hit1  = not na(t1) and (isUp ? high >= t1 : low <= t1)
+    bool hit2  = not na(t2) and (isUp ? high >= t2 : low <= t2)
+    bool hit3  = not na(t3) and (isUp ? high >= t3 : low <= t3)
+    bool closed = false
+
+    if hitSl and (hit1 or hit2 or hit3)
+        closed := true
+        xau_evSl    := true
+        xau_evClose := true
+        xau_statLosses += 1
+    else if hitSl
+        closed := true
+        xau_evSl    := true
+        xau_evClose := true
+        xau_statLosses += 1
+    else if hit3
+        xau_evTp    := 3
+        xau_posStage := 3
+        closed       := true
+        xau_evClose  := true
+        xau_statWins += 1
+    else if hit2
+        xau_evTp    := 2
+        xau_posStage := 2
+    else if hit1
+        xau_evTp    := 1
+        xau_posStage := 1
+
+    if not closed and xau_posBars > 300
+        closed       := true
+        xau_evClose  := true
+
+    if closed
+        xau_statTrades += 1
+        xau_xEntry     := xau_posEntry
+        xau_xSl        := xau_posSl
+        xau_xDir       := xau_posDir
+        xau_xBar       := xau_posBar
+        xau_xExit      := xau_evSl ? xau_posSl : xau_evTp == 3 ? xau_posTp3 : xau_evTp == 2 ? xau_posTp2 : xau_posTp1
+        xau_xR         := not na(xau_posRisk) and xau_posRisk > 0 ? (xau_xExit - xau_posEntry) * float(xau_posDir) / xau_posRisk : na
+        xau_needReset  := true
+
+// 3. Open new position
+if xau_okBar and xau_signal and xau_posDir == 0
+    xau_posDir   := xau_plan.dir
+    xau_posEntry := xau_plan.entry
+    xau_posSl    := xau_plan.sl
+    xau_posTp1   := xau_plan.tp1
+    xau_posTp2   := xau_plan.tp2
+    xau_posTp3   := xau_plan.tp3
+    xau_posRisk  := xau_plan.risk
+    xau_posBars  := 0
+    xau_posStage := 0
+    xau_posBar   := bar_index
+    xau_evEntry  := true
+    xau_dayCount := xau_dayCount + 1
+    xau_barsSince := 0
+
+if xau_posDir != 0 and not xau_evEntry and not xau_needReset
+    xau_posBars += 1

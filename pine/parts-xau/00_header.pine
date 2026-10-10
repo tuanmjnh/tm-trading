@@ -1,0 +1,30 @@
+//@version=6
+{{DECL}}
+{{SHARED}}
+
+// =============================================================================
+//  TM XAU SIGNALS  -  v1.0.0
+//  Indicator phan tich XAUUSDT theo kien truc docs/indicator-XAU/master-prompt.md
+//
+//  Layer structure:
+//    L0  CONFIG      - input knobs
+//    L1  CORE        - ATR, volume, pivot helpers
+//    L2  MARKET STR  - Swing, HH/HL/LH/LL, BOS, CHoCH
+//    L3  LIQUIDITY   - PDH/PDL, Session Hi/Lo, EqHi/EqLo, Sweep
+//    L4  S/R ZONES   - dynamic supply/demand zone detection
+//    L5  CANDLE PAT  - reversal + displacement patterns
+//    L6A VOLUME     - Volume ratio, spike score
+//    L6B INDICATORS  - ATR regime, RSI, Stoch
+//    L7  SESSION     - Asia / London / NY detection
+//    L8  HTF CONTEXT - Higher timeframe EMA bias
+//    L9  SCORING     - weighted 0-100 composite score
+//    L10 RISK ENGINE - Entry/SL/TP plan + all gates
+//    L11 STATE + VIZ - Position lifecycle + visualization
+//    L12 ALERTS      - webhook JSON
+//
+//  Core principles:
+//    - No repaint on confirmed signals (barstate.isconfirmed gate)
+//    - No future data leakage (request.security uses [1] + lookahead_on)
+//    - No trade without Risk Engine approval
+//    - All weights configurable
+// =============================================================================

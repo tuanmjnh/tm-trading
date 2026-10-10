@@ -1,0 +1,78 @@
+// =============================================================================
+//  LAYER 1 - INPUTS : tham so nguoi dung (group "TM ...") cho bo Liquidity Sweep
+//  Y tuong: gia QUET qua level thanh khoan (lay stop) roi RUT RAU, xac nhan
+//  bang volume VSA -> tin hieu dao chieu. Level tu pivot swing kieu
+//  "Liquidity Swings [LuxAlgo]"; volume lay tu file "VSA Volume.pine".
+//
+//  Cac knob duoi day khop voi engine/methods/sweep.mjs de do duoc bang
+//  backtest/league. Config mac dinh = ban robust nhat qua walk-forward:
+//  retest + trend 50/200 + RR>=2 + SL [0.5,3]xATR.
+// =============================================================================
+
+tm_confirmOnly = input.bool(true, "Chi tin khi nen dong", group = "TM · Chung", display = display.data_window)
+tm_i_on        = input.bool(true, "Bat tin hieu sweep", group = "TM · Chung", display = display.data_window)
+
+// -----------------------------------------------------------------------------
+//  Thanh khoan - level tu pivot swing (Wick Extremity = vung rau, giong LuxAlgo)
+// -----------------------------------------------------------------------------
+tm_i_phLen      = input.int(14, "Pivot lookback (H/T)", minval = 2, maxval = 100, group = "TM · Thanh khoan", display = display.data_window)
+tm_i_zoneMode   = input.string("Wick Extremity", "Swing area", options = ["Wick Extremity", "Full Range"], group = "TM · Thanh khoan", display = display.data_window)
+tm_i_lvlFresh   = input.int(300, "Level con hieu luc (nen)", minval = 10, maxval = 2000, group = "TM · Thanh khoan", display = display.data_window)
+tm_i_maxLvl     = input.int(8, "So level giu moi ben", minval = 1, maxval = 30, group = "TM · Thanh khoan", display = display.data_window)
+tm_i_tolAtr     = input.float(0.5, "Ban kinh cham level (x ATR)", minval = 0.05, step = 0.05, group = "TM · Thanh khoan", display = display.data_window)
+tm_i_minTouches = input.int(0, "Level phai cham >= N lan (0 = tat)", minval = 0, maxval = 20, group = "TM · Thanh khoan", display = display.data_window)
+
+// -----------------------------------------------------------------------------
+//  Sweep - rau vuot level + loc theo xu huong (SMA nhanh/cham)
+// -----------------------------------------------------------------------------
+tm_i_wickRng   = input.float(0.5, "Rau boi >= (ti le bien do nen)", minval = 0.0, maxval = 1.0, step = 0.05, group = "TM · Sweep", display = display.data_window)
+tm_i_wickAtr   = input.float(0.0, "Rau boi >= (x ATR, 0 = tat)", minval = 0.0, step = 0.1, group = "TM · Sweep", display = display.data_window)
+tm_i_trendFast = input.int(50, "Trend fast - SMA (0 = tat)", minval = 0, maxval = 500, group = "TM · Sweep", display = display.data_window)
+tm_i_trendSlow = input.int(200, "Trend slow - SMA (0 = tat)", minval = 0, maxval = 1000, group = "TM · Sweep", display = display.data_window)
+
+// -----------------------------------------------------------------------------
+//  Volume VSA - 6 bucket theo RMA Wilder; cong xac nhan = ratio toi thieu
+// -----------------------------------------------------------------------------
+tm_i_volLen  = input.int(20, "Volume MA (Wilder RMA)", minval = 5, maxval = 100, group = "TM · Volume", display = display.data_window)
+tm_i_showMA  = input.bool(true, "Hien Volume MA", group = "TM · Volume", display = display.data_window)
+tm_i_volMinR = input.float(1.2, "Volume toi thieu luc quet (ratio, 0 = tat)", minval = 0.0, step = 0.1, group = "TM · Volume", display = display.data_window)
+tm_i_rP      = input.float(2.2, "TIM (ratio)", minval = 1.5, step = 0.1, group = "TM · Volume", display = display.data_window)
+tm_i_rVH     = input.float(1.8, "VeryHigh (ratio)", minval = 1.0, step = 0.1, group = "TM · Volume", display = display.data_window)
+tm_i_rH      = input.float(1.2, "High (ratio)", minval = 0.8, step = 0.1, group = "TM · Volume", display = display.data_window)
+tm_i_rN      = input.float(0.8, "Normal (ratio)", minval = 0.4, step = 0.1, group = "TM · Volume", display = display.data_window)
+tm_i_rL      = input.float(0.4, "Low (ratio)", minval = 0.1, step = 0.1, group = "TM · Volume", display = display.data_window)
+tm_i_atrLen  = input.int(14, "ATR", minval = 2, maxval = 100, group = "TM · Volume", display = display.data_window)
+// tm_i_sessOn / tm_i_sess / tm_i_tz / tm_i_sessTz - shared (pine/shared/sess-inputs.pine)
+
+// -----------------------------------------------------------------------------
+//  Vao lenh / Risk / Hien thi
+//  entryMode = don bay chinh (do bang walk-forward):
+//   - Market : vao ngay bar quet (nhieu lenh nhat, da do la AM).
+//   - Retest : cho gia TEST LAI level voi volume THAP roi moi vao (robust nhat).
+//   - Confirm: cho bar XAC NHAN dao chieu (close vuot cuc tri bar quet).
+// -----------------------------------------------------------------------------
+tm_i_entryMode    = input.string("Retest (volume thap)", "Kieu vao lenh", options = ["Market (close)", "Retest (volume thap)", "Confirm (BOS nho)"], group = "TM · Vao lenh", display = display.data_window)
+tm_i_retestBars   = input.int(10, "Cua so retest (nen)", minval = 1, maxval = 50, group = "TM · Vao lenh", display = display.data_window)
+tm_i_volRetestMax = input.float(1.2, "Volume toi da khi retest (ratio)", minval = 0.1, maxval = 5.0, step = 0.1, group = "TM · Vao lenh", display = display.data_window)
+tm_i_confirmBars  = input.int(10, "Cua so confirm (nen)", minval = 1, maxval = 50, group = "TM · Vao lenh", display = display.data_window)
+tm_i_minRR        = input.float(2.0, "RR toi thieu cua TP", minval = 0.5, step = 0.5, group = "TM · Vao lenh", display = display.data_window)
+
+tm_i_slBuf     = input.float(0.5, "SL buffer (x ATR)", minval = 0.0, step = 0.1, group = "TM · Risk", display = display.data_window)
+tm_i_slMinAtr  = input.float(0.5, "SL toi thieu (x ATR)", minval = 0.0, step = 0.1, group = "TM · Risk", display = display.data_window)
+tm_i_slMaxAtr  = input.float(3.0, "SL toi da (x ATR)", minval = 0.5, step = 0.5, group = "TM · Risk", display = display.data_window)
+tm_i_rrFb      = input.float(2.0, "TP fallback (R)", minval = 0.5, step = 0.5, group = "TM · Risk", display = display.data_window)
+
+// tm_i_sessTz - shared (pine/shared/sess-inputs.pine, group "TM · Session")
+
+tm_i_showViz   = input.bool(true, "Tat toan bo hien thi (master)", group = "TM · Hien thi", display = display.data_window)
+tm_i_showSig  = input.bool(true, "Nhan SWEEP LONG/SHORT", group = "TM · Hien thi", display = display.data_window)
+tm_i_showVol  = input.bool(true, "Histogram Volume", group = "TM · Hien thi", display = display.data_window)
+tm_i_showLvl  = input.bool(true, "Ve level thanh khoan", group = "TM · Hien thi", display = display.data_window)
+tm_i_showZone = input.bool(true, "Ve vung rau (wick zone)", group = "TM · Hien thi", display = display.data_window)
+tm_i_showLbl  = input.bool(true, "Nhan volume tren level", group = "TM · Hien thi", display = display.data_window)
+tm_i_lvlOn    = input.bool(true, "Ve Entry/SL/TP (setup gan nhat)", group = "TM · Hien thi", display = display.data_window)
+tm_i_dash     = input.bool(true, "Dashboard", group = "TM · Hien thi", display = display.data_window)
+tm_i_dashSize = input.string("Small", "Size dashboard", options = ["Tiny", "Small", "Normal"], group = "TM · Hien thi", display = display.data_window)
+
+tm_entryMarket = tm_i_entryMode == "Market (close)"
+tm_entryRetest = tm_i_entryMode == "Retest (volume thap)"

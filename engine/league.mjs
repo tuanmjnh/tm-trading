@@ -77,7 +77,8 @@ export async function league(argv = process.argv.slice(2)) {
   const a = parseArgs(argv)
   if (a.help || a.h) {
     console.log(` league: --methods <csv> --symbols <csv> --tfs <csv> --limit <n> --out <md>
-         --no-write (chi in) --refresh (fetch lau) --market <fapi|spot>`)
+         --out-json <path> (JSON snapshot cho dashboard) --no-write (chi in)
+         --refresh (fetch lau) --market <fapi|spot>`)
     return 0
   }
 
@@ -103,6 +104,7 @@ export async function league(argv = process.argv.slice(2)) {
   const refresh = !!a.refresh
   const noWrite = !!a['no-write']
   const out = String(a.out ?? join('docs', 'method-league.md'))
+  const outJson = String(a['out-json'] ?? '')
 
   const rows = []      // tung o: {method, symbol, tf, bars, row(summaryRow)}
   const pooled = new Map() // method -> {trades, params, name}
@@ -195,7 +197,25 @@ export async function league(argv = process.argv.slice(2)) {
   console.log(detTable)
   if (notes.length) console.log(`\nNote:\n  ${notes.join('\n  ')}`)
 
-  // --- Ghi Markdown ---
+  // --- Ghi Markdown (+ JSON snapshot cho dashboard) ---
+  if (outJson) {
+    const payload = {
+      generatedAt: new Date().toISOString(),
+      engineVersion: ENGINE_VERSION,
+      symbols,
+      tfs,
+      limit,
+      poolOut: poolOut.map((s) => ({
+        id: s.id, name: s.name, trades: s.trades, open: s.open,
+        winRate: s.winRate, profitFactor: s.pf, netPct: s.netPct, expectancy: s.expectancy,
+      })),
+      rows: rows.map((r) => ({ method: r.method, symbol: r.symbol, tf: r.tf, bars: r.bars, row: r.row })),
+    }
+    mkdirSync(dirname(outJson), { recursive: true })
+    writeFileSync(outJson, JSON.stringify(payload, null, 2), 'utf8')
+    console.log(`\nDa ghi JSON ${outJson}`)
+  }
+
   if (!noWrite) {
     const win = Number.isFinite(tMin) && Number.isFinite(tMax)
       ? `${new Date(tMin).toISOString().slice(0, 16).replace('T', ' ')} -> ${new Date(tMax).toISOString().slice(0, 16).replace('T', ' ')} (UTC)`

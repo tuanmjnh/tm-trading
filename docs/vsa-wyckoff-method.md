@@ -2,8 +2,8 @@
 
 Tài liệu chuẩn hóa từ 11 ảnh trong `private/longkaco/` — 5 cặp *setup → kết quả* + 1 ảnh standalone.
 Mục đích: chuẩn hóa method + spec cho **bộ chỉ báo riêng** — nay đã triển khai là
-**`TM VSA Wyckoff`** (`pine/parts-vsa/`, cài bằng `npm run copy:vsa` — chi tiết §8).
-**Không nhét vào `TM Signals BTC`** — bản đó chỉ có filter volume + histogram phụ; `TM VSA Wyckoff` là indicator độc lập.
+**`TM VSA Wyckoff`** (`pine/parts-vsa/`, cài bằng `npm run pine:copy:vsa` — chi tiết §8).
+**Không nhét vào `TM Signals`** — bản đó chỉ có filter volume + histogram phụ; `TM VSA Wyckoff` là indicator độc lập.
 
 > **TRỌNG TÂM: cột TÍM (purple, ratio ≥ 2.2× MA) = volume đột biến.** Toàn bộ method xoay quanh
 > việc tìm bar tím **tại level**. Các màu còn lại (đỏ/cam/lá/xanh/xám) chỉ là bối cảnh — không
@@ -224,21 +224,21 @@ Thực tế trong ảnh:
 
 ## 8. Chỉ báo đã triển khai — `TM VSA Wyckoff` (Pine v6)
 
-> **Đã build, smoke PASS 158/0.** Cài: `npm run copy:vsa` → Pine Editor → `Ctrl+V` → **Add to chart**.
+> **Đã build, smoke PASS 158/0.** Cài: `npm run pine:copy:vsa` → Pine Editor → `Ctrl+V` → **Add to chart**.
 > ⚠️ **Sửa 2026-10-01** (xem [vsa-optimization.md](./vsa-optimization.md)): Entry là lệnh **limit**
 > nên auto-close nay **chỉ xét TP/SL sau khi entry đã khớp** (`tm_lvlFill`); cùng bar vừa khớp vừa
 > xuyên SL → tính SL. Dashboard thêm dòng **Phi/R** + **slBuf tối thiểu** — ràng buộc toán học:
 > `fee_R = phí_round-trip / (slBuf × ATR%)`, và **`slBuf = 0.5` là bất khả thi trên 5m/15m**.
 > Cột TÍM (ratio ≥ `tm_i_rP` = 2.2× MA Wilder) là **gate bắt buộc**: SV/BC chỉ được phát khi có cột TIM.
-> Kinh nghiệm `TM Signals BTC`: mọi creation vẽ **phải** gắn `force_overlay = true` (có 9 chỗ);
+> Kinh nghiệm `TM Signals`: mọi creation vẽ **phải** gắn `force_overlay = true` (có 9 chỗ);
 > histogram/MA là pane của chính indicator nên KHÔNG cần `display.pane`; chạy `npm run verify` trước khi dán.
 
 ### 8.1 Cấu trúc (đã có thật)
 
 - `indicator("TM VSA Wyckoff", "TM VSA Wyckoff", overlay = false, dynamic_requests = true, max_* = 500)` — 397 dòng dist.
 - Nguồn: `pine/parts-vsa/` — `00_header, 10_inputs, 20_volume, 30_levels, 40_events, 50_strategy, 60_viz, 70_alerts`; **không đụng** `pine/parts/` của TM.
-- Dùng chung `pine/shared/common.pine` (marker `{{SHARED}}`): `f_sessionOk` (loc phiên XAU/XAG), `f_vsaColor` / `f_vsaName` (6 bucket) — `TM Signals BTC` cũng dùng lại 2 hàm này.
-- Target `vsa` trong `tools/build.mjs` (`dir: parts-vsa`); scripts: `npm run vsa`, `npm run copy:vsa`.
+- Dùng chung `pine/shared/common.pine` (marker `{{SHARED}}`): `f_sessionOk` (loc phiên XAU/XAG), `f_vsaColor` / `f_vsaName` (6 bucket) — `TM Signals` cũng dùng lại 2 hàm này.
+- Target `vsa` trong `tools/build.mjs` (`dir: parts-vsa`); scripts: `npm run pine:vsa`, `npm run pine:copy:vsa`.
 
 ### 8.1b Bản twin backtest — `TM VSA Backtest` (263 dòng)
 
@@ -252,7 +252,7 @@ Cùng một nguồn `parts-vsa`, chỉ khác **khai báo `strategy(...)`** và b
 - Vì dùng chung `20_volume` / `30_levels` / `40_events`, **logic sự kiện không thể lệch** giữa 2 bản — smoke test so sánh trực tiếp các dòng `tm_sig* =` và `tm_lvl* :=` của hai file dist.
 - Bridge **đọc thẳng** `tm_lvlE/S/T` do `40_events` tính, không tính lại SL/TP → backtest và indicator dùng đúng một bộ mức.
 - Vào lệnh ngay bar tạo setup ST (`tm_btLong = tm_i_btOn and tm_sigSTl and tm_hasSV`), khối lượng = `%equity / close`.
-- Scripts: `npm run vsa:backtest`, `npm run copy:vsa:backtest`.
+- Scripts: `npm run pine:vsa:backtest`, `npm run pine:copy:vsa:backtest`.
 - `alertcondition` có ở **cả hai** bản (`flags.topLevelOnly`, hợp lệ trong cả indicator lẫn strategy).
 
 ### 8.2 Inputs (tên thật, mặc định)

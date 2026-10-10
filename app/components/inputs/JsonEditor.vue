@@ -62,7 +62,7 @@ const handleBlur = () => {
   </div>
 </template>
 
-<style>
+<style scoped>
 /* Ensure the editor takes the full height of the container */
 .json-editor-container {
   /* vanilla-jsoneditor CSS variables override for dark mode if needed */

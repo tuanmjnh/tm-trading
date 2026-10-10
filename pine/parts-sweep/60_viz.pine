@@ -1,0 +1,138 @@
+// =============================================================================
+//  LAYER 6 - HIEN THI :
+//   - PANE RIENG: histogram volume 6 mau VSA + MA (giong TM VSA Wyckoff)
+//   - TREN GIA (force_overlay): keo dai/don level, nhan SWEEP, Entry/SL/TP, dashboard
+// =============================================================================
+plot(tm_i_showViz and tm_i_showVol ? tm_vol : na, "Volume", color = tm_volCol, style = plot.style_columns, format = format.volume)
+plot(tm_i_showViz and tm_i_showMA ? tm_volMA : na, "Volume MA", color = color.new(color.green, 0), linewidth = 1, format = format.volume)
+
+if array.size(tm_buy) > 0
+    for i = 0 to array.size(tm_buy) - 1
+        TmLevel Le = array.get(tm_buy, i)
+        if not Le.swept
+            line.set_x2(Le.ln, bar_index)
+            if not na(Le.bx)
+                box.set_right(Le.bx, bar_index)
+while array.size(tm_buy) > tm_i_maxLvl
+    TmLevel Lp = array.shift(tm_buy)
+    if not na(Lp.ln)
+        line.delete(Lp.ln)
+    if not na(Lp.bx)
+        box.delete(Lp.bx)
+    if not na(Lp.lb)
+        label.delete(Lp.lb)
+
+if array.size(tm_sell) > 0
+    for i = 0 to array.size(tm_sell) - 1
+        TmLevel Lse = array.get(tm_sell, i)
+        if not Lse.swept
+            line.set_x2(Lse.ln, bar_index)
+            if not na(Lse.bx)
+                box.set_right(Lse.bx, bar_index)
+while array.size(tm_sell) > tm_i_maxLvl
+    TmLevel Lps = array.shift(tm_sell)
+    if not na(Lps.ln)
+        line.delete(Lps.ln)
+    if not na(Lps.bx)
+        box.delete(Lps.bx)
+    if not na(Lps.lb)
+        label.delete(Lps.lb)
+
+plotshape(tm_i_showViz and tm_i_showSig and tm_sigLong, title = "SWEEP LONG", style = shape.triangleup, location = location.belowbar, color = color.new(color.green, 0), size = size.small, text = "SWEEP", textcolor = color.white, force_overlay = true)
+plotshape(tm_i_showViz and tm_i_showSig and tm_sigShort, title = "SWEEP SHORT", style = shape.triangledown, location = location.abovebar, color = color.new(color.red, 0), size = size.small, text = "SWEEP", textcolor = color.white, force_overlay = true)
+
+// -----------------------------------------------------------------------------
+//  Duong Entry/SL/TP - setup sweep gan nhat (state tu 50_risk), ve lai moi tick cuoi
+// -----------------------------------------------------------------------------
+var line  lnEnt = na
+var line  lnSL  = na
+var line  lnTP  = na
+var label lbEnt = na
+var label lbSL  = na
+var label lbTP  = na
+var label lbRes = na
+if barstate.islast and tm_i_showViz and tm_i_lvlOn
+    if not na(lnEnt)
+        line.delete(lnEnt)
+        lnEnt := na
+    if not na(lnSL)
+        line.delete(lnSL)
+        lnSL := na
+    if not na(lnTP)
+        line.delete(lnTP)
+        lnTP := na
+    if not na(lbEnt)
+        label.delete(lbEnt)
+        lbEnt := na
+    if not na(lbSL)
+        label.delete(lbSL)
+        lbSL := na
+    if not na(lbTP)
+        label.delete(lbTP)
+        lbTP := na
+    if not na(lbRes)
+        label.delete(lbRes)
+        lbRes := na
+    if not na(tm_setE) and not tm_setDone
+        lnEnt := line.new(tm_setB, tm_setE, bar_index, tm_setE, color = color.white, style = line.style_solid, width = 1, force_overlay = true)
+        lnSL  := line.new(tm_setB, tm_setS, bar_index, tm_setS, color = color.red, style = line.style_dashed, width = 1, force_overlay = true)
+        lnTP  := line.new(tm_setB, tm_setT, bar_index, tm_setT, color = color.green, style = line.style_dashed, width = 1, force_overlay = true)
+        lbEnt := label.new(bar_index, tm_setE, "Entry " + str.tostring(tm_setE, format.mintick) + (tm_setFill ? " da khop" : " cho khop") + " (" + str.tostring(tm_setRisk / tm_atr, "#.0") + " ATR)", style = label.style_label_right, color = color.new(color.white, 0), textcolor = color.black, size = size.tiny, force_overlay = true)
+        lbSL  := label.new(bar_index, tm_setS, "SL " + str.tostring(tm_setS, format.mintick) + "  R " + str.tostring(math.abs(tm_setT - tm_setE) / math.abs(tm_setE - tm_setS), "#.0"), style = label.style_label_right, color = color.new(color.red, 0), textcolor = color.white, size = size.tiny, force_overlay = true)
+        lbTP  := label.new(bar_index, tm_setT, "TP " + str.tostring(tm_setT, format.mintick), style = label.style_label_right, color = color.new(color.green, 0), textcolor = color.white, size = size.tiny, force_overlay = true)
+    else if not na(tm_setE) and tm_setDone
+        lbRes := label.new(tm_setDoneBar, tm_setRes == "TP" ? tm_setT : tm_setS, tm_setRes, style = tm_setRes == "TP" ? (tm_setDir == 1 ? label.style_label_down : label.style_label_up) : (tm_setDir == 1 ? label.style_label_up : label.style_label_down), color = tm_setRes == "TP" ? color.new(color.green, 0) : color.new(color.red, 0), textcolor = color.white, size = size.tiny, force_overlay = true)
+
+// -----------------------------------------------------------------------------
+//  Dashboard 2 cot x 10 dong - chi ve tren bar cuoi
+// -----------------------------------------------------------------------------
+// Session hien tai - shared f_sess* (pine/shared/common.pine)
+bool tm_sessAsia   = f_sessAsia(tm_i_sessTz)
+bool tm_sessLondon = f_sessLondon(tm_i_sessTz)
+bool tm_sessNy     = f_sessNy(tm_i_sessTz)
+bool tm_sessOverlap = tm_sessLondon and tm_sessNy
+string tm_sessName = f_sessName(tm_sessAsia, tm_sessLondon, tm_sessNy)
+
+var table tm_tbl = na
+if tm_i_showViz and tm_i_dash and na(tm_tbl)
+    tm_tbl := table.new(position.top_right, 2, 10, border_width = 1, border_color = color.new(color.gray, 80), force_overlay = true)
+tm_dashSz = tm_i_dashSize == "Tiny" ? size.tiny : tm_i_dashSize == "Small" ? size.small : size.normal
+var int tm_cntB = 0
+var int tm_cntS = 0
+if not na(tm_tbl) and barstate.islast
+    tm_cntB := 0
+    tm_cntS := 0
+    if array.size(tm_buy) > 0
+        for i = 0 to array.size(tm_buy) - 1
+            TmLevel Lc = array.get(tm_buy, i)
+            if not Lc.swept
+                tm_cntB := tm_cntB + 1
+    if array.size(tm_sell) > 0
+        for i = 0 to array.size(tm_sell) - 1
+            TmLevel Lcs = array.get(tm_sell, i)
+            if not Lcs.swept
+                tm_cntS := tm_cntS + 1
+    table.clear(tm_tbl, 0, 0, 1, 9)
+    color kC = color.new(color.gray, 10)
+    color vC = color.silver
+    color bg = color.new(color.black, 100)
+    table.cell(tm_tbl, 0, 0, "Che do", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 0, tm_confirmOnly ? "Nen dong" : "Realtime", text_color = vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 1, "TF", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 1, timeframe.period, text_color = vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 2, "Level tren (buy-side)", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 2, str.tostring(tm_cntB) + " level", text_color = vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 3, "Level duoi (sell-side)", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 3, str.tostring(tm_cntS) + " level", text_color = vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 4, "Volume ratio", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 4, str.tostring(tm_ratio, "#.00") + "x", text_color = tm_isPur ? color.purple : vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 5, "Bucket", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 5, tm_bucket, text_color = tm_isPur ? color.purple : vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 6, "Sweep gan nhat", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 6, tm_lastSig == "-" ? "-" : tm_lastSig + " " + str.tostring(bar_index - tm_lastSigBar) + " bar", text_color = vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 7, "Vao lenh", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 7, tm_entryMarket ? "Market" : tm_entryRetest ? "Retest" : "Confirm", text_color = vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 8, "Setup (dir / R)", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 8, not na(tm_setE) ? (tm_setDir == 1 ? "LONG " : "SHORT ") + str.tostring(tm_setRisk / tm_atr, "#.0") + " ATR" + (tm_setDone ? " " + tm_setRes : "") : "-", text_color = vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
+    table.cell(tm_tbl, 0, 9, "Session", text_color = kC, text_size = tm_dashSz, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1, 9, tm_sessName + (tm_i_sessOn ? (tm_sessOk ? " / Trong phien" : " / Ngoai phien") : ""), text_color = tm_sessOverlap ? color.orange : tm_sessNy ? color.yellow : vC, text_size = tm_dashSz, text_halign = text.align_right, bgcolor = bg)
