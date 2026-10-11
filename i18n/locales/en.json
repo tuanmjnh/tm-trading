@@ -1058,6 +1058,51 @@
     "portfolio": "Portfolio",
     "bots": "Trading Bots"
   },
+  "marketSources": {
+    "title": "Market Data Sources",
+    "desc": "Live health probes for each market data provider. Distinct from generic connection records, which live under Shared Resources.",
+    "distinctNote": "Provider health is probed per venue and is independent of the tm-hub connection catalogue.",
+    "venue": "Venue",
+    "status": "Status",
+    "latency": "Latency",
+    "instruments": "Instruments",
+    "refresh": "Refresh",
+    "empty": "No market data sources",
+    "emptyHint": "No market data venues are registered.",
+    "statusLabels": {
+      "up": "Up",
+      "down": "Down",
+      "unknown": "Unknown"
+    }
+  },
+  "systemHealth": {
+    "title": "System Health",
+    "desc": "Overall platform health: database, background services and runtime.",
+    "status": "Status",
+    "database": "Database",
+    "version": "Version",
+    "uptime": "Uptime",
+    "latency": "Latency",
+    "checkedAt": "Checked at",
+    "services": "Services",
+    "servicesEmpty": "No service heartbeats recorded yet.",
+    "interval": "Interval",
+    "lastRun": "Last run",
+    "lastError": "Last error",
+    "overdue": "Overdue",
+    "refresh": "Refresh",
+    "empty": "Health unavailable",
+    "emptyHint": "The health endpoint could not be reached.",
+    "statusLabels": {
+      "healthy": "Healthy",
+      "degraded": "Degraded"
+    },
+    "dbLabels": {
+      "ok": "OK",
+      "unconfigured": "Unconfigured",
+      "error": "Error"
+    }
+  },
   "notifications": {
     "title": "Notifications",
     "system": "System",

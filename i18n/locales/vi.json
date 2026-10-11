@@ -1058,6 +1058,51 @@
     "portfolio": "Danh mục đầu tư",
     "bots": "Bot giao dịch"
   },
+  "marketSources": {
+    "title": "Nguồn dữ liệu thị trường",
+    "desc": "Kiểm tra trực tiếp tình trạng từng nhà cung cấp dữ liệu thị trường. Tách biệt với các bản ghi kết nối chung (nằm trong Tài nguyên chia sẻ).",
+    "distinctNote": "Tình trạng nhà cung cấp được thăm dò theo từng sàn, độc lập với danh mục kết nối của tm-hub.",
+    "venue": "Sàn",
+    "status": "Tình trạng",
+    "latency": "Độ trễ",
+    "instruments": "Công cụ",
+    "refresh": "Làm mới",
+    "empty": "Không có nguồn dữ liệu thị trường",
+    "emptyHint": "Chưa có sàn dữ liệu thị trường nào được đăng ký.",
+    "statusLabels": {
+      "up": "Hoạt động",
+      "down": "Gián đoạn",
+      "unknown": "Không rõ"
+    }
+  },
+  "systemHealth": {
+    "title": "Sức khỏe hệ thống",
+    "desc": "Tình trạng tổng thể nền tảng: cơ sở dữ liệu, các dịch vụ nền và thời gian chạy.",
+    "status": "Tình trạng",
+    "database": "Cơ sở dữ liệu",
+    "version": "Phiên bản",
+    "uptime": "Thời gian chạy",
+    "latency": "Độ trễ",
+    "checkedAt": "Kiểm tra lúc",
+    "services": "Dịch vụ",
+    "servicesEmpty": "Chưa ghi nhận nhịp tim dịch vụ nào.",
+    "interval": "Chu kỳ",
+    "lastRun": "Lần chạy cuối",
+    "lastError": "Lỗi cuối",
+    "overdue": "Quá hạn",
+    "refresh": "Làm mới",
+    "empty": "Không có dữ liệu sức khỏe",
+    "emptyHint": "Không thể kết nối tới endpoint sức khỏe.",
+    "statusLabels": {
+      "healthy": "Khỏe mạnh",
+      "degraded": "Suy giảm"
+    },
+    "dbLabels": {
+      "ok": "OK",
+      "unconfigured": "Chưa cấu hình",
+      "error": "Lỗi"
+    }
+  },
   "notifications": {
     "title": "Thông báo",
     "system": "Hệ thống",
