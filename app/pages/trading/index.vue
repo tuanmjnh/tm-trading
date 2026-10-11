@@ -47,7 +47,13 @@ const { title, description } = useAdminPageChrome({
 useHead({ title })
 
 const feed = useMarketStream()
-const symbol = ref('BTCUSDT')
+// Market Explorer deep-links (/trading?instrument=BTCUSDT — §57.4 B). The
+// symbols watch below falls back to the first served symbol if invalid.
+const route = useRoute()
+const querySymbol = typeof route.query.instrument === 'string' && /^[A-Z0-9]{5,20}$/.test(route.query.instrument)
+  ? route.query.instrument
+  : 'BTCUSDT'
+const symbol = ref(querySymbol)
 const timeframe = ref('1m')
 
 onMounted(() => {
