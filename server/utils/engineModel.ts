@@ -148,3 +148,21 @@ export function strategyVersionModel(): Promise<AnyModel | null> {
   return engineModel('strategyVersion.mjs', 'StrategyVersion')
 }
 
+// -----------------------------------------------------------------------------
+//  Data Center models (§58.9 Slice 4) — dataset retention manifest, recorded
+//  closed candles, and the raw feed ledger. Read-only in the dashboard; the
+//  recorder/supervisor owns every write.
+// -----------------------------------------------------------------------------
+
+export function datasetModel(): Promise<AnyModel | null> {
+  return engineModel('dataset.mjs', 'Dataset')
+}
+
+export function candleModel(): Promise<AnyModel | null> {
+  return engineModel('candle.mjs', 'Candle')
+}
+
+export function marketFeedModel(): Promise<AnyModel | null> {
+  return engineModel('marketFeed.mjs', 'MarketFeed')
+}
+
