@@ -1,66 +1,13 @@
 // =============================================================================
 //  Legacy route redirects (V3.3 §58.2 route re-home).
 //
-//  The trading sidebar IA moved every page under menu-matching folders (see
-//  docs/navigation-audit.md). This middleware keeps old bookmarks/links working
-//  by 301-redirecting the legacy paths to their new locations, preserving any
-//  sub-path (dynamic ids) and the query string.
-//
-//  Implemented as Nitro middleware rather than `routeRules.redirect` because
-//  route rules cannot re-emit a captured dynamic segment (e.g. `/runs/:id`).
-//
-//  `/markets` is intentionally NOT redirected: the old explorer path and the new
-//  markets index share the same URL, so the new page wins.
+//  Applies the redirect table from `server/utils/legacy-redirect.ts` with a 301,
+//  preserving any sub-path (dynamic ids) and the query string. Implemented as
+//  Nitro middleware rather than `routeRules.redirect` because route rules cannot
+//  re-emit a captured dynamic segment (e.g. `/runs/:id`). See docs/navigation-audit.md.
 // =============================================================================
 
-const LEGACY_REDIRECTS: ReadonlyArray<{ from: string, to: string }> = [
-  { from: '/intel', to: '/markets' },
-  { from: '/scanner', to: '/markets/scanner' },
-  { from: '/calendar', to: '/markets/calendar' },
-
-  { from: '/trade', to: '/trading' },
-  { from: '/signals', to: '/trading/signals' },
-  { from: '/paper', to: '/trading/paper' },
-  { from: '/orders', to: '/trading/orders' },
-  { from: '/positions', to: '/trading/positions' },
-  { from: '/accounts', to: '/trading/accounts' },
-
-  { from: '/strategies', to: '/strategy-lab' },
-  { from: '/indicators', to: '/strategy-lab/indicators' },
-  { from: '/methods', to: '/strategy-lab/methods' },
-  { from: '/bots', to: '/strategy-lab/bots' },
-
-  { from: '/lab/new', to: '/test-center' },
-  { from: '/runs', to: '/test-center/runs' },
-  { from: '/forward-tests', to: '/test-center/forward' },
-  { from: '/replay', to: '/test-center/replay' },
-
-  { from: '/data', to: '/data-research/data' },
-  { from: '/research', to: '/data-research/research' },
-  { from: '/journal', to: '/data-research/journal' },
-
-  { from: '/resources/notifications', to: '/alerts/history' },
-  { from: '/resources/inbox', to: '/alerts/inbox' },
-  { from: '/resources/media', to: '/shared-resources' },
-  { from: '/resources', to: '/shared-resources' },
-
-  { from: '/administration/users', to: '/admin-system' },
-  { from: '/administration', to: '/admin-system' },
-
-  { from: '/system', to: '/admin-system' },
-  { from: '/health', to: '/admin-system/health' },
-
-  { from: '/utilities', to: '/tools' }
-]
-
-/** Matches `path` against a legacy prefix on a path-segment boundary. */
-function matchLegacy(path: string): { to: string, rest: string } | null {
-  for (const { from, to } of LEGACY_REDIRECTS) {
-    if (path === from) return { to, rest: '' }
-    if (path.startsWith(`${from}/`)) return { to, rest: path.slice(from.length) }
-  }
-  return null
-}
+import { matchLegacy } from '../utils/legacy-redirect'
 
 export default defineEventHandler((event) => {
   const method = event.method

@@ -281,6 +281,10 @@ segment.
 
 - **Collision**: `/markets` — the legacy explorer path and the new Markets index (intel) are the same
   URL, so it is **not** redirected; the new page wins. `/alerts` is unchanged for the same reason.
+- **`/utilities/text` precedence**: the old Text-tool page is now the Tools **index** (`/tools`), so an
+  exact rule must precede the generic `/utilities` prefix rule — otherwise the prefix rewrite sends it
+  to the non-existent `/tools/text`. Guarded by `tests/legacy-redirect.test.ts` (every redirect target
+  must resolve to a page file).
 
 ### Impact
 
