@@ -140,3 +140,39 @@ describe('§58.10 #12 — status is recorded only with evidence', () => {
     assert.match(src, /58\.10/)
   })
 })
+
+describe('§57.4/§58.5 — API-backed leaves are real pages, not stubs', () => {
+  test('markets/explorer consumes the Instrument Catalog API (no second symbol list)', () => {
+    const src = read('app/pages/markets/explorer.vue')
+    assert.doesNotMatch(src, /comingSoon/, 'explorer must not be a "coming soon" stub')
+    assert.match(src, /useMarketCatalog/)
+    assert.match(src, /useSystemHealth/, 'explorer must surface live provider health')
+    const api = read('app/composables/useMarketCatalog.ts')
+    assert.match(api, /\/api\/v1\/instruments/)
+    assert.match(api, /\/api\/v1\/venues/)
+  })
+
+  test('trading/paper projects the persisted paper account + risk gate (D1)', () => {
+    const src = read('app/pages/trading/paper.vue')
+    assert.doesNotMatch(src, /comingSoon/, 'paper must not be a "coming soon" stub')
+    assert.match(src, /usePaperAccounts/)
+    const api = read('app/composables/usePaperAccounts.ts')
+    assert.match(api, /\/api\/v1\/paper\/accounts/)
+    assert.match(api, /\/api\/v1\/risk\/status/)
+  })
+
+  test('trading/orders is the read+cancel paper order lifecycle (D14)', () => {
+    const src = read('app/pages/trading/orders.vue')
+    assert.doesNotMatch(src, /comingSoon/, 'orders must not be a "coming soon" stub')
+    assert.match(src, /usePaperOrders/)
+    assert.match(src, /cancelable/, 'cancel must be driven by the server cancelable flag')
+    const api = read('app/composables/usePaperOrders.ts')
+    assert.match(api, /\/api\/v1\/orders/)
+    assert.match(api, /\/cancel/)
+  })
+
+  test('the terminal accepts instrument deep-links from the explorer (§57.4 B)', () => {
+    const src = read('app/pages/trading/index.vue')
+    assert.match(src, /route\.query\.instrument/)
+  })
+})
