@@ -133,8 +133,8 @@ Inspected, not assumed:
 | `/research` | Data & Research | partial | API `/research/proposals`, `/research/trades`; no page |
 | `/research/experiments` | Data & Research | partial | API `/research/experiments/**`; no page |
 | `/alerts` | Alerts & Notifications | planned | no API/page |
-| `/system/data-sources` | Administration & System | partial | API `/market-sources/health`; no page |
-| `/health` | Administration & System | partial | API `/health.get.ts`; no page |
+| `/system/data-sources` | Administration & System | implemented | `app/pages/admin-system/data-sources.vue` (per-venue provider probes); API `/market-sources/health` |
+| `/health` | Administration & System | implemented | `app/pages/admin-system/health.vue` (DB + D9 service heartbeats); API `/health.get.ts` |
 | `/administration/apps` | Administration & System | planned | no local page (Hub-owned) |
 
 ## 5. Conflicts, duplicates, missing pages, misleading labels
@@ -145,7 +145,7 @@ Inspected, not assumed:
 - **`/resources/queues` vs bots/test runs**: queues page is shared Hub job infra; keep distinct (§58.3).
 - **`/runs` naming**: route id `research_runs`, name `runs`; label was "Backtest". Relabel to "Historical Runs" for the Test Center; path unchanged (compatibility).
 - **`/resources/import` vs administration import**: two import surfaces exist (`administration/import.vue` orphan + `/resources/import`). Only `/resources/import` is in the registry and target; leave the orphan as a deep link.
-- **Missing pages for partial APIs**: `/markets`, `/orders`, `/paper`, `/strategies`, `/indicators`, `/methods`, `/research`, `/research/experiments`, `/system/data-sources`, `/health` — APIs exist, UI pending. Hidden in the menu until implemented (§57.2/§58.1 rule 5).
+- **Missing pages for partial APIs**: `/markets`, `/orders`, `/paper`, `/strategies`, `/indicators`, `/methods`, `/research`, `/research/experiments` — APIs exist, UI pending. Hidden in the menu until implemented (§57.2/§58.1 rule 5). (`/system/data-sources` and `/health` are now implemented — see §9.)
 - **Hidden enforcement gap**: Hub returns `is_visible:false` routes unfiltered; the sidebar only filtered top-level `isVisible`. Milestone 1 makes `isVisible` filtering recursive (leaf + group).
 
 ## 6. i18n
@@ -193,6 +193,13 @@ Idempotency / safety:
   - **Mobile**: the sidebar collapses under `lg`; the bottom action/info bar (`app/components/nav/BottomNav.vue`) is presentation-only and menu-agnostic, so it needs no per-route change.
   - Active-state highlighting is delegated to Nuxt UI `UNavigationMenu` (`to` on leaves); it has no route-specific local override that the reorg invalidates.
 - **Closure evidence (2026-10-11)** — V3.3 §58 slices 1–6 complete. tm-trading: `typecheck` PASS 4/4, `npm test` 2254/0 (16 suites), `test:app` 613/0 (144 suites), `nuxt build` OK. tm-hub placement seed committed (`984b4ca`, `typecheck:seed` exit 0). `docs:check` retains 26 pre-existing failures (missing `market:*`/`indicator:*`/`terminal:*`/`paper:*`/`replay:*`/`research:*` docs), unrelated to §58.
+- **§58.10 acceptance verification (2026-10-11)** — the remaining acceptance criteria re-checked against code + live runtime, and locked by `tests/nav-acceptance.test.ts`:
+  - **#6 provider health ≠ connections** — `server/api/v1/market-sources/health.get.ts` probes each market venue (`VENUE_IDS`); the generic catalogue stays Hub-backed (`app/pages/shared-resources/connections.vue`). Both are surfaced separately: `app/pages/admin-system/data-sources.vue` (per-venue probes) and `app/pages/admin-system/health.vue` (DB + D9 service heartbeats), via `useSystemHealth()`. The two §4 rows for `/system/data-sources` and `/health` move from **partial** → **implemented**.
+  - **#7 distinct entities** — `server/utils/engineModel.ts` maps StrategyProfile/StrategyVersion, BotProfile/BotInstance, Experiment/ExperimentRun, AiProposal, Dataset, Candle, MarketFeed to distinct model files; Bot Profile vs Bot Instance is an explicit contract.
+  - **#8 test-run provenance** — `startTestRun` echoes the D1 stamp (engineVersion/paramsHash) + `seriesId`; research arms carry `strategyVersionId` (version ↔ experiment traceability).
+  - **#9 AI guardrails** — proposals only; `server/utils/research.ts` persists an experiment doc and "never touches a preset, a profile or the risk gate"; no `ai/*.mjs` writes a strategy version.
+  - **#10 idempotent seed** — `seedSystemRoute` upserts by `(app_id,id)`; `cleanOldRoutes` deletes only ids absent from the new list.
+  - **#12 evidence** — this section *is* the evidence; no status is marked done without it.
 
 ## 10. Route re-home — pages mirror the menu groups (§58.2)
 
