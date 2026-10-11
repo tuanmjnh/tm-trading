@@ -31,6 +31,7 @@
     "pine:test": "node tools/smoke.mjs",
     "test:engine": "node engine/test.mjs",
     "test:market": "node market/test.mjs",
+    "test:realtime": "node realtime/test.mjs",
     "test:journal": "node engine/test-journal.mjs",
     "test:preset-drift": "node engine/test-preset-drift.mjs",
     "test:stamp": "node exec/test-stamp.mjs",

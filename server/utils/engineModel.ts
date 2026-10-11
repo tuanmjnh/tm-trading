@@ -149,6 +149,35 @@ export function strategyVersionModel(): Promise<AnyModel | null> {
 }
 
 // -----------------------------------------------------------------------------
+//  Bot contracts (§57.4 G/H, §58.6): Bot Profile != Bot Instance. Both are
+//  read-only in the dashboard for now — the supervisor owns lifecycle writes.
+// -----------------------------------------------------------------------------
+
+export function botProfileModel(): Promise<AnyModel | null> {
+  return engineModel('botProfile.mjs', 'BotProfile')
+}
+
+export function botInstanceModel(): Promise<AnyModel | null> {
+  return engineModel('botInstance.mjs', 'BotInstance')
+}
+
+// -----------------------------------------------------------------------------
+//  Research models (§30.7) — Experiment Engine §28 + AI Research §27.3.
+// -----------------------------------------------------------------------------
+
+export function experimentModel(): Promise<AnyModel | null> {
+  return engineModel('experiment.mjs', 'Experiment')
+}
+
+export function experimentRunModel(): Promise<AnyModel | null> {
+  return engineModel('experimentRun.mjs', 'ExperimentRun')
+}
+
+export function aiProposalModel(): Promise<AnyModel | null> {
+  return engineModel('aiProposal.mjs', 'AiProposal')
+}
+
+// -----------------------------------------------------------------------------
 //  Data Center models (§58.9 Slice 4) — dataset retention manifest, recorded
 //  closed candles, and the raw feed ledger. Read-only in the dashboard; the
 //  recorder/supervisor owns every write.

@@ -31,17 +31,17 @@ const items = computed<DropdownMenuItem[][]>(() => [
     {
       label: t('profile.title'),
       icon: 'i-lucide-user-circle',
-      to: '/system/profile'
+      to: '/admin-system/profile'
     },
     {
       label: t('settings.title'),
       icon: 'i-lucide-settings',
-      to: '/system/settings'
+      to: '/admin-system/settings'
     },
     {
       label: t('nav.docs'),
       icon: 'i-lucide-book-open',
-      to: '/system/docs'
+      to: '/admin-system/docs'
     }
   ],
   [

@@ -61,9 +61,9 @@ Peer đó chỉ cần cho Vue 2; với Vue 3 nó là `peerOptional` không dùng
 
 | Chỗ | Giá trị | Vì sao giữ |
 |---|---|---|
-| `app/pages/resources/connections.vue` | `'tm-hub-oauth'` | Là **loại kết nối** trong dữ liệu, đổi là hỏng logic |
-| `app/pages/system/docs.vue` | `from 'tm-hub-client'` | Tên **package bên ngoài** |
-| `app/pages/administration/logs.vue` | `hubAppId` fallback `'tm-hub'` | Khoá tra cứu app |
+| `app/pages/shared-resources/connections.vue` | `'tm-hub-oauth'` | Là **loại kết nối** trong dữ liệu, đổi là hỏng logic |
+| `app/pages/admin-system/docs.vue` | `from 'tm-hub-client'` | Tên **package bên ngoài** |
+| `app/pages/admin-system/logs.vue` | `hubAppId` fallback `'tm-hub'` | Khoá tra cứu app |
 | `app/components/utilities/IconsPanel.vue` | `'tm-hub:icon-favorites'` | Khoá `localStorage` (đổi được nhưng sẽ mất prefs) |
 
 ### ⚠️ QUAN TRỌNG: tm-trading là **SATELLITE APP**, không phải bản sao của tm-hub
@@ -177,7 +177,7 @@ giá trị trong **cả `en.json` và `vi.json`** ("Hub Control Center" → "Tra
 list "Lần chạy gần đây". Các khoá `dashboard.*` khác (`ready`, `viewAll`) vẫn dùng ở trang
 `admin/apps` + `NotificationsSlideover` → **giữ nguyên**.
 
-**Trang Runs** (chuẩn BasePage + `LazyGridList` như `app/pages/administration/logs.vue`):
+**Trang Runs** (chuẩn BasePage + `LazyGridList` như `app/pages/admin-system/logs.vue`):
 
 - `server/utils/reports.ts` — đọc `reports/*.ndjson`, gộp theo **series**
   `engineVersion~symbol~tf~paramsHash`, khui trùng lệnh theo nội dung, tổng hợp qua

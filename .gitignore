@@ -13,7 +13,7 @@ private
 devlog.txt
 
 # Data & report runtime (khong commit)
-data/
+/data
 reports/
 
 # Nuxt build artifact (tu dong sinh boi prepare/dev/build)

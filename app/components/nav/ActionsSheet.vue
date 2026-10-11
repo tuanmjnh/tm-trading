@@ -69,7 +69,7 @@ const basicActions = computed<MobileAction[]>(() => [
   {
     icon: 'i-lucide-user-circle',
     label: t('profile.title'),
-    onSelect: () => navigateTo('/system/profile')
+    onSelect: () => navigateTo('/admin-system/profile')
   }
 ])
 

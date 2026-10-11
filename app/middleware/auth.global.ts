@@ -1,45 +1,7 @@
 import type { RouteTreeNode } from '~/types/rbac'
+import { flattenVisiblePaths, navAllows } from '~/utils/navTree'
 
 const PUBLIC_PATHS = new Set(['/login', '/register'])
-
-/**
- * Route membership check.
- * Matches URL path with nav routes (exact, param pattern, or prefix).
- */
-function navAllows(navPath: string, urlPath: string): boolean {
-  if (!navPath || navPath.startsWith('#')) return false
-  if (navPath === '*') return true
-  if (navPath === '/') return urlPath === '/'
-
-  const navSegs = navPath.replace(/\/+$/, '').split('/')
-  const urlSegs = urlPath.replace(/\/+$/, '').split('/')
-
-  if (navSegs.length === urlSegs.length) {
-    let ok = true
-    for (let i = 0; i < navSegs.length; i++) {
-      const seg = navSegs[i] ?? ''
-      if (seg.startsWith(':') && seg.length > 1) continue
-      if (seg !== (urlSegs[i] ?? '')) { ok = false; break }
-    }
-    if (ok) return true
-  }
-
-  const prefix = navPath.replace(/\/+$/, '')
-  return urlPath === prefix || urlPath.startsWith(`${prefix}/`)
-}
-
-/** Flatten RouteTreeNode[] into flat paths for membership validation. */
-function flattenPaths(nodes: RouteTreeNode[]): string[] {
-  const out: string[] = []
-  const walk = (list: RouteTreeNode[]) => {
-    for (const n of list) {
-      out.push(n.path)
-      if (n.children?.length) walk(n.children)
-    }
-  }
-  walk(nodes)
-  return out
-}
 
 export default defineNuxtRouteMiddleware(async (to) => {
   if (import.meta.server) return
@@ -77,7 +39,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
       accessible = data || []
       allowedRoutes.value = accessible
     }
-    const paths = flattenPaths(accessible)
+    const paths = flattenVisiblePaths(accessible)
     if (paths.length > 0 && !paths.some(p => navAllows(p, path))) {
       return navigateTo({ path: '/' })
     }

@@ -8,6 +8,7 @@ import {
   placeReplayOrder,
   readReplaySession,
   replayHttpError,
+  resetReplaySession,
   resetReplaySessions,
   stepReplaySession,
   validateCreateSessionBody,
@@ -387,5 +388,63 @@ describe('replay broker — cycle (fill + exit + journal)', () => {
     assert.equal(read.events.length, 1) // future bars still hidden (D17)
     assert.equal(read.orders.length, 1)
     assert.equal(read.positions.length, 1)
+  })
+})
+
+describe('replay reset — rewind to bar 0', () => {
+  it('rewinds cursor/mode and clears played events, orders and positions', async () => {
+    const { s } = await brokerSession({
+      getCandles: candlesOf([[0, 100, 101, 99, 100.5], [1, 100.5, 102, 100, 101.5], [2, 101.5, 103, 101, 102.5]]),
+      checkOrder: gateOk(0.01)
+    })
+    await placeReplayOrder(s.id, ticket({ tps: [101] }))
+    await stepReplaySession(s.id, 1) // entry at bar0 close
+    await stepReplaySession(s.id, 1) // bar1 high 102 touches TP 101
+    const before = readReplaySession(s.id, 0)
+    assert.equal(before.events.length, 2)
+    assert.equal(before.orders.length, 1)
+    assert.equal(before.positions.length, 1)
+    assert.equal(before.positions[0].status, 'closed')
+
+    const reset = await resetReplaySession(s.id)
+    assert.equal(reset.cursor, 0)
+    assert.equal(reset.mode, 'ready')
+    assert.equal(reset.total, 3)
+    assert.equal(reset.id, s.id) // same channel stays valid
+
+    const after = readReplaySession(s.id, 0)
+    assert.equal(after.events.length, 0)
+    assert.equal(after.orders.length, 0)
+    assert.equal(after.positions.length, 0)
+  })
+
+  it('the rebuilt player replays the SAME bars deterministically (no re-fetch)', async () => {
+    const { s } = await brokerSession({ bars: 5 })
+    await stepReplaySession(s.id, 3)
+    await resetReplaySession(s.id)
+    const stepped = await stepReplaySession(s.id, 2)
+    assert.equal(stepped.events.length, 2)
+    assert.equal(stepped.events[0].openTime, T0)
+    assert.equal(stepped.events[1].openTime, T0 + 60_000)
+    assert.equal(stepped.session.cursor, 2)
+  })
+
+  it('reset from a playing session parks it back in ready (timer cleared)', async () => {
+    const { s } = await brokerSession({ bars: 5 })
+    playReplaySession(s.id, 5)
+    assert.equal(readReplaySession(s.id).session.mode, 'playing')
+    const reset = await resetReplaySession(s.id)
+    assert.equal(reset.mode, 'ready')
+    assert.equal(reset.speed, 1) // rebuilt player = fresh defaults
+  })
+
+  it('unknown session -> 404 replay_not_found', async () => {
+    await assert.rejects(
+      resetReplaySession('rp_nope'),
+      (e: unknown) => {
+        const r = e as ReplayError
+        return r instanceof ReplayError && r.statusCode === 404 && r.statusMessage === 'replay_not_found'
+      }
+    )
   })
 })

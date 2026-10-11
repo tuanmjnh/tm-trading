@@ -14,7 +14,7 @@ const openState = ref(true)
 
 const fallbackNav = computed<NavItem[]>(() => [
   { label: t('nav.overview'), icon: 'i-lucide-layout-dashboard', to: '/' },
-  { label: t('nav.docs'), icon: 'i-lucide-book-open', to: '/system/docs' }
+  { label: t('nav.docs'), icon: 'i-lucide-book-open', to: '/admin-system/docs' }
 ])
 
 const navItems = computed<NavItem[]>(() => dbNav.value.length ? dbNav.value : fallbackNav.value)
@@ -54,13 +54,13 @@ const groups = computed<CommandPaletteGroup[]>(() => [
         id: 'profile',
         label: t('profile.title'),
         icon: 'i-lucide-user-circle',
-        to: '/system/profile'
+        to: '/admin-system/profile'
       },
       {
         id: 'settings',
         label: t('settings.title'),
         icon: 'i-lucide-settings',
-        to: '/system/settings'
+        to: '/admin-system/settings'
       },
       {
         id: 'help',

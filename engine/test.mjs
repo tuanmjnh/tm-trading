@@ -1778,5 +1778,31 @@ section('18. ta.mjs — Phase 7I indicator primitives (ema/rsi/stdev/macd/vwap/o
 }
 
 // =============================================================================
+// 58. indicators.mjs — canonical registry contract (roadmap §30.3 / Phase 7I)
+import { INDICATORS, INDICATOR_MAP, resolveParams, calculateIndicator } from './indicators.mjs'
+
+{
+  const ids = new Set(INDICATORS.map((d) => d.id))
+  check('registry: ids unique', ids.size === INDICATORS.length, `${INDICATORS.length} entries`)
+  check('registry: roadmap core registered', ['sma','ema','rma','atr','rsi','vwap','macd','bb','volume','volma','obv','cmf','donchian'].every((id) => ids.has(id)))
+  for (const def of INDICATORS) {
+    check(`registry ${def.id}: version is a numeric string`, /^\d+$/.test(def.version))
+    check(`registry ${def.id}: outputs non-empty`, def.outputs.length > 0)
+  }
+
+  const sma = INDICATOR_MAP.sma
+  check('resolveParams: schema default applied', resolveParams(sma, null).length === 20, JSON.stringify(resolveParams(sma, null)))
+  check('resolveParams: clamps above max', resolveParams(sma, { length: 9999 }).length === 500)
+  check('resolveParams: drops unknown keys', Object.keys(resolveParams(sma, { bogus: 1 })).join(',') === 'length')
+  check('calculateIndicator: unknown id is empty', Object.keys(calculateIndicator('nope', [])).length === 0)
+
+  const up = Array.from({ length: 30 }, (_, i) => ({ open: 100 + i, high: 102 + i, low: 99 + i, close: 101 + i, volume: 10 }))
+  const out = calculateIndicator('sma', up, { length: 5 })
+  check('calculateIndicator sma: aligned to bars', out.sma.length === up.length)
+  check('calculateIndicator sma: warmup null then value', out.sma[3] === null && out.sma[4] !== null)
+  check('calculateIndicator donchian: aligned outputs', calculateIndicator('donchian', up, { length: 5 }).upper.length === up.length)
+}
+
+// =============================================================================
 console.log(`\n${fail === 0 ? 'PASS' : 'FAIL'} — ${pass} pass, ${fail} fail\n`)
 process.exit(fail === 0 ? 0 : 1)

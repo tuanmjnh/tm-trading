@@ -210,6 +210,8 @@ export default defineNuxtConfig({
       services: join(ROOT_DIR, 'services') + '/',
     },
     routeRules: {
+      // Legacy §58.2 route re-home redirects live in server/middleware/legacy-redirect.ts
+      // (301s that must preserve dynamic segments, e.g. /runs/:id -> /test-center/runs/:id).
       '/api/**': {
         cors: true,
         headers: {

@@ -161,6 +161,9 @@ interface SessionRec {
   market: 'spot' | 'futures'
   createdAt: string
   timer: ReturnType<typeof setTimeout> | null
+  /** Source bars the player was built from — kept so reset() can rebuild a
+   *  fresh deterministic player + broker without re-fetching history. */
+  bars: CandleEvent[]
   /** In-memory order/position book (replayBroker) — never persisted. */
   broker: BrokerState
   /** Deps resolved once at create (defaults filled in) — always callable. */
@@ -369,6 +372,7 @@ export async function createReplaySession(
     market: input.market,
     createdAt: new Date().toISOString(),
     timer: null,
+    bars: candles,
     broker: createBrokerState(),
     deps: {
       getCandles: deps.getCandles,
@@ -432,6 +436,30 @@ export async function stepReplaySession(id: string, candles: number): Promise<Re
     orders: rec.broker.orders,
     positions: rec.broker.positions
   }
+}
+
+// -----------------------------------------------------------------------------
+//  POST /sessions/:id/reset — rewind a session to bar 0.
+//
+//  Deterministic (D1): the player is rebuilt from the SAME source bars the
+//  session was created with (never a re-fetch, never a new historical slice),
+//  and the in-memory broker book is dropped. Cursor -> 0, mode -> 'ready',
+//  the played-events buffer empties, orders/positions clear. The session id is
+//  kept (the client's channel stays valid) and the auto-timer is stopped first
+//  so play/step/reset never race. Unknown id -> 404 replay_not_found.
+// -----------------------------------------------------------------------------
+
+export async function resetReplaySession(id: string): Promise<ReplaySummary> {
+  const rec = getRec(id)
+  clearTimer(rec)
+  const mod = await replayMod()
+  rec.player = mod.createReplayPlayer({
+    symbol: rec.player.symbol,
+    timeframe: rec.player.timeframe,
+    bars: rec.bars
+  })
+  rec.broker = createBrokerState()
+  return summaryOf(rec)
 }
 
 // -----------------------------------------------------------------------------

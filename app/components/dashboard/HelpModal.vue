@@ -42,7 +42,7 @@ const shortcuts = computed(() => [
               icon="i-lucide-book-open"
               variant="outline"
               size="sm"
-              to="/system/docs"
+              to="/admin-system/docs"
               @click="isHelpModalOpen = false"
             />
           </div>

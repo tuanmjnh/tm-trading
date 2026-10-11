@@ -24,6 +24,7 @@ const SUITES = [
   ['pines', 'tools/smoke.mjs', []],
   ['engine', 'engine/test.mjs', []],
   ['market', 'market/test.mjs', []],
+  ['realtime', 'realtime/test.mjs', []],
   ['journal', 'engine/test-journal.mjs', []],
   ['preset-drift', 'engine/test-preset-drift.mjs', []],
   ['stamp', 'exec/test-stamp.mjs', []],
@@ -33,7 +34,7 @@ const SUITES = [
   ['drift', 'exec/test-drift.mjs', []],
   ['mt5', 'exec/mt5/test.mjs', []],
   ['db', 'engine/test-db.mjs', []],
-  ['services', 'tests/run-with-aliases.mjs', ['services/test.mjs']],
+  ['services', 'services/test.mjs', []],
   ['ai', 'ai/test.mjs', []],
   ['ai-review', 'ai/test-review.mjs', []],
 ]

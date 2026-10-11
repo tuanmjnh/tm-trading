@@ -67,30 +67,17 @@ export const useNavMenu = () => {
 
   function buildNavItems(open: Ref<boolean>): NavigationMenuItem[] {
     const router = useRouter()
-    // Batch 4 (hub-route cleanup): hub's route tree still advertises hub-domain pages
-    // (admin/apps, resources/*, ...) whose local files were deleted. Only surface nodes
-    // that resolve to an actual local page so the menu never links to a 404.
-    // Groups (nodes with children) are kept when at least one descendant survives —
-    // a group's own path (e.g. "/admin") often has no page of its own.
+    // Hub's route tree may still advertise pages whose local files do not exist.
+    // Only surface nodes that resolve to an actual local page so the menu never
+    // links to a 404, and drop hidden routes (is_visible:false, §58.2) together
+    // with their subtree. Groups survive only when a descendant survives.
     const localPaths = new Set(router.getRoutes().map(r => r.path.replace(/\/+$/, '') || '/'))
-    const hasLocalPage = (p?: string | null): boolean => {
-      if (!p || p.startsWith('#')) return false
-      if (p === '*') return true
-      return localPaths.has(p.replace(/\/+$/, '') || '/')
-    }
-    const filterLocal = (nodes: RouteTreeNode[]): RouteTreeNode[] =>
-      nodes.flatMap((n) => {
-        if (n.children?.length) {
-          const kids = filterLocal(n.children)
-          return kids.length > 0 ? [{ ...n, children: kids }] : []
-        }
-        return hasLocalPage(n.path) ? [n] : []
-      })
-
     const hidden = new Set(['settings'])
-    return filterLocal(allowedRoutes.value)
-      .filter((node: RouteTreeNode) => !hidden.has(node.name) && node.isVisible !== false)
-      .map((node: RouteTreeNode) => mapRouteToNav(node, open))
+    const nodes = selectNavRoutes(allowedRoutes.value, {
+      hasLocalPage: createHasLocalPage(localPaths),
+      hiddenNames: hidden
+    })
+    return nodes.map((node: RouteTreeNode) => mapRouteToNav(node, open))
   }
 
   return {

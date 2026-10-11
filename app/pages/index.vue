@@ -185,7 +185,7 @@ const confScoreClass = (v: number) => (v >= 0.15 ? 'text-success' : v <= -0.15 ?
 const confPartClass = (v: number) => (v > 0 ? 'text-success bg-success/10' : v < 0 ? 'text-error bg-error/10' : 'text-dimmed bg-default/50')
 
 function openRun(item: RunSeries) {
-  navigateTo(`/runs/${encodeURIComponent(item.id)}`)
+  navigateTo(`/test-center/runs/${encodeURIComponent(item.id)}`)
 }
 
 const rowActions = (item: RunSeries) => buildRowActions([
@@ -205,7 +205,7 @@ useHead({ title: computed(() => t('dashboard.title')) })
           variant="soft"
           color="primary"
           size="sm"
-          to="/runs"
+          to="/test-center/runs"
           :ui="{ label: 'hidden md:block' }"
         />
         <UButton
@@ -803,7 +803,7 @@ useHead({ title: computed(() => t('dashboard.title')) })
                 size="xs"
                 :label="t('dashboard.viewAll')"
                 trailing-icon="i-lucide-arrow-right"
-                to="/runs"
+                to="/test-center/runs"
               />
               <AdminViewModeToggle v-model="viewMode" />
             </div>
