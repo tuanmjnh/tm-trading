@@ -124,3 +124,49 @@ export interface RunsListResponse {
     skippedTrades: number
   }
 }
+
+// =============================================================================
+//  Test Builder launch (roadmap §58.9 Slice 3) — POST /api/v1/runs.
+//
+//  Launches ONE engine backtest through `engine/run.mjs runOne`; that call
+//  persists the run with the full D1 stamp (engineVersion/paramsHash/dataHash/
+//  gitRev) into reports/*.ndjson (what Historical Runs reads) and, if Mongo is
+//  up, the `runs` collection. The response echoes the identity so the UI can
+//  deep-link straight into /test-center/runs/:seriesId — never a fabricated
+//  result (D12).
+// =============================================================================
+
+export interface TestRunRequest {
+  method?: string
+  symbol: string
+  tf: string
+  market?: 'fapi' | 'spot'
+  limit?: number
+  preset?: string
+  params?: Record<string, unknown>
+  refresh?: boolean
+}
+
+export interface TestRunResult {
+  symbol: string
+  tf: string
+  market: string
+  method: string
+  preset: string | null
+  engineVersion: string
+  paramsHash: string
+  /** Mongo `_id` when the run was also persisted there; null for NDJSON-only. */
+  runId: string | null
+  bars: number
+  source: string
+  warnings: string[]
+  /** Dashboard series key — pivot into /test-center/runs/:id. */
+  seriesId: string
+  /** Engine `summarizeBacktest()` block (trades/winRate/netPct/maxDrawdownPct...). */
+  stats: Record<string, unknown>
+}
+
+export interface TestRunResponse {
+  success: boolean
+  data: TestRunResult
+}
