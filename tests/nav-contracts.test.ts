@@ -11,17 +11,33 @@ import { join } from 'node:path'
  * menu-matching folders (see docs/navigation-audit.md); legacy paths 301-redirect.
  */
 const EXPECTED_VISIBLE_LEAF_PATHS = [
+  // 1. Overview
   '/',
+  // 2. Markets
   '/markets',
+  '/markets/explorer',
+  '/markets/scanner',
+  '/markets/calendar',
+  // 3. Trading
   '/trading',
   '/trading/signals',
+  '/trading/paper',
+  '/trading/orders',
   '/trading/positions',
   '/trading/accounts',
+  // 4. Strategy Lab
+  '/strategy-lab',
+  '/strategy-lab/indicators',
+  '/strategy-lab/methods',
+  '/strategy-lab/bots',
+  '/strategy-lab/bots/instances',
+  // 5. Test Center
   '/test-center',
   '/test-center/runs',
   '/test-center/runs/compare',
   '/test-center/forward',
   '/test-center/replay',
+  // 6. Data & Research
   '/data-research/data',
   '/data-research/data/datasets',
   '/data-research/data/recordings',
@@ -30,21 +46,29 @@ const EXPECTED_VISIBLE_LEAF_PATHS = [
   '/data-research/research',
   '/data-research/research/experiments',
   '/data-research/journal',
+  // 7. Alerts & Notifications
+  '/alerts',
   '/alerts/history',
   '/alerts/inbox',
+  // 8. Shared Resources
   '/shared-resources',
   '/shared-resources/import',
   '/shared-resources/connections',
   '/shared-resources/queues',
+  // 9. Administration & System
   '/admin-system',
   '/admin-system/roles',
   '/admin-system/permissions',
+  '/admin-system/apps',
   '/admin-system/routes',
   '/admin-system/configs',
+  '/admin-system/data-sources',
+  '/admin-system/health',
   '/admin-system/logs',
   '/admin-system/profile',
   '/admin-system/docs',
   '/admin-system/settings',
+  // Secondary Tools
   '/tools',
   '/tools/icons',
   '/tools/encode',

@@ -185,7 +185,13 @@ Idempotency / safety:
 ## 9. Slice status
 
 - **Slice 1 (this deliverable)** — audit doc + §58.2 menu presentation + i18n + hidden-route enforcement. Implemented routes only are visible; new trading-domain pages remain hidden with `is_visible:false`.
-- Slices 2–6 (Strategy Lab, Test Center, Data Center, AI Research, shared-core placement) build the hidden routes into real pages and flip `is_visible` to `true` once their tests pass.
+- Slices 2–5 (Strategy Lab, Test Center, Data Center, AI Research) build the hidden routes into real pages and flip `is_visible` to `true` once their tests pass.
+- **Slice 6 — shared-core placement and polish**:
+  - **Placement** lives in the Hub seed (`../tm-hub/scripts/seed/data.ts`, `createTradingRoutes`): Media/Inbox/Notifications/Connections/Import/Queues are under **Shared Resources** + **Alerts & Notifications**; users/roles/permissions/apps/routes/configs/data-sources/health/logs/profile/docs/settings under **Administration & System**; utilities under the secondary **Tools** group (last). Leaf ids are stable; only `parent_id`/`sort`/`path` moved (§10).
+  - **Validation performed in this repo**: every route seeded visible resolves to a page (`tests/nav-contracts.test.ts`, full target-IA leaf set) and every §58.2 group/leaf label resolves in both locales (`tests/nav-i18n.test.ts`).
+  - **Admin visibility** is not local presentation logic: the Hub `GET /api/v1/auth/routes` prunes by `required_permission`/`allowed_routes`, and the sidebar additionally drops `is_visible:false` subtrees and any route without a local page (`app/utils/navTree.ts`), so an unimplemented or unauthorized item never surfaces as a link.
+  - **Mobile**: the sidebar collapses under `lg`; the bottom action/info bar (`app/components/nav/BottomNav.vue`) is presentation-only and menu-agnostic, so it needs no per-route change.
+  - Active-state highlighting is delegated to Nuxt UI `UNavigationMenu` (`to` on leaves); it has no route-specific local override that the reorg invalidates.
 
 ## 10. Route re-home — pages mirror the menu groups (§58.2)
 
