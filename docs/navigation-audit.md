@@ -118,21 +118,21 @@ Inspected, not assumed:
 
 | proposed | target group | Status | Evidence / dependency |
 |---|---|---|---|
-| `/markets` | Markets | partial | API `/markets/**`, `/instruments/**`, `/venues` exist; no page |
+| `/markets` | Markets | implemented | Markets index is Intel (`app/pages/markets/index.vue`); Market Explorer implemented at `/markets/explorer` (`app/pages/markets/explorer.vue`) on `/instruments/**` + `/venues` + `/market-sources/health` (2026-10-11) |
 | `/scanner` | Markets | planned | `services/scanner.mjs` exists; no API endpoint/page |
 | `/calendar` | Markets | planned | `services/news.mjs`; no calendar provider/API/page |
-| `/paper` | Trading | partial | API `/paper/**`; no page |
-| `/orders` | Trading | partial | API `/orders/**`; no page |
-| `/strategies` | Strategy Lab | partial | API `/strategies/**`; no page |
-| `/indicators` | Strategy Lab | partial | API `/indicators/**`, `/indicator-runs/**`; no page |
-| `/methods` | Strategy Lab | partial | API `/methods/**`; no page |
-| `/bots`, `/bots/instances` | Strategy Lab | planned | no API/page |
-| `/lab/new` | Test Center | planned | no builder page |
-| `/forward-tests` | Test Center | planned | no page/API |
-| `/data`, `/data/{datasets,recordings,quality,lineage}` | Data & Research | planned | services/tests only; no `/data` API |
-| `/research` | Data & Research | partial | API `/research/proposals`, `/research/trades`; no page |
-| `/research/experiments` | Data & Research | partial | API `/research/experiments/**`; no page |
-| `/alerts` | Alerts & Notifications | planned | no API/page |
+| `/paper` | Trading | implemented | `app/pages/trading/paper.vue` (account equity/risk/exposure/PnL + risk gate); APIs `/paper/accounts*`, `/risk/status` (2026-10-11) |
+| `/orders` | Trading | implemented | `app/pages/trading/orders.vue` (lifecycle + cancel guarded by `cancelable`); APIs `/orders/**` (2026-10-11) |
+| `/strategies` | Strategy Lab | implemented | `app/pages/strategy-lab/index.vue`; API `/strategies/**` (Slice 2) |
+| `/indicators` | Strategy Lab | implemented | `app/pages/strategy-lab/indicators.vue`; APIs `/indicators/**`, `/indicator-runs/**` (Slice 2) |
+| `/methods` | Strategy Lab | implemented | `app/pages/strategy-lab/methods.vue`; API `/methods/**` (Slice 2) |
+| `/bots`, `/bots/instances` | Strategy Lab | implemented | `app/pages/strategy-lab/bots/index.vue`, `bots/instances.vue`; APIs `/bots/profiles*`, `/bots/instances*` (Slice 2) |
+| `/lab/new` | Test Center | implemented | builder merged into `/test-center` (`app/pages/test-center/index.vue`; test-run contract via `/runs` POST) (Slice 3) |
+| `/forward-tests` | Test Center | implemented | `app/pages/test-center/forward.vue` (`useForwardTests`) (Slice 3) |
+| `/data`, `/data/{datasets,recordings,quality,lineage}` | Data & Research | implemented | `app/pages/data-research/data/*`; APIs `/data/{datasets,recordings,quality,lineage}` (Slice 4) |
+| `/research` | Data & Research | implemented | `app/pages/data-research/research/index.vue`; APIs `/research/proposals`, `/research/trades` (Slice 5) |
+| `/research/experiments` | Data & Research | implemented | `app/pages/data-research/research/experiments*.vue`; API `/research/experiments/**` (Slice 5) |
+| `/alerts` | Alerts & Notifications | planned | no alert-rule service/API; visible leaf shows Coming Soon until the rule service lands |
 | `/system/data-sources` | Administration & System | implemented | `app/pages/admin-system/data-sources.vue` (per-venue provider probes); API `/market-sources/health` |
 | `/health` | Administration & System | implemented | `app/pages/admin-system/health.vue` (DB + D9 service heartbeats); API `/health.get.ts` |
 | `/administration/apps` | Administration & System | planned | no local page (Hub-owned) |
@@ -145,7 +145,7 @@ Inspected, not assumed:
 - **`/resources/queues` vs bots/test runs**: queues page is shared Hub job infra; keep distinct (§58.3).
 - **`/runs` naming**: route id `research_runs`, name `runs`; label was "Backtest". Relabel to "Historical Runs" for the Test Center; path unchanged (compatibility).
 - **`/resources/import` vs administration import**: two import surfaces exist (`administration/import.vue` orphan + `/resources/import`). Only `/resources/import` is in the registry and target; leave the orphan as a deep link.
-- **Missing pages for partial APIs**: `/markets`, `/orders`, `/paper`, `/strategies`, `/indicators`, `/methods`, `/research`, `/research/experiments` — APIs exist, UI pending. Hidden in the menu until implemented (§57.2/§58.1 rule 5). (`/system/data-sources` and `/health` are now implemented — see §9.)
+- **Missing pages for partial APIs**: none remain — `/markets` (explorer), `/orders`, `/paper`, `/strategies`, `/indicators`, `/methods`, `/research`, `/research/experiments` all have real pages now (Slices 2–5 + the 2026-10-11 leaves below). Still Coming Soon by design (no working service/API, §58.5): `/markets/scanner`, `/markets/calendar`, `/alerts` (rule service), `/admin-system/apps` (Hub-owned).
 - **Hidden enforcement gap**: Hub returns `is_visible:false` routes unfiltered; the sidebar only filtered top-level `isVisible`. Milestone 1 makes `isVisible` filtering recursive (leaf + group).
 
 ## 6. i18n
@@ -200,6 +200,11 @@ Idempotency / safety:
   - **#9 AI guardrails** — proposals only; `server/utils/research.ts` persists an experiment doc and "never touches a preset, a profile or the risk gate"; no `ai/*.mjs` writes a strategy version.
   - **#10 idempotent seed** — `seedSystemRoute` upserts by `(app_id,id)`; `cleanOldRoutes` deletes only ids absent from the new list.
   - **#12 evidence** — this section *is* the evidence; no status is marked done without it.
+- **Remaining API-backed leaves (2026-10-11)** — the last Trading-domain stubs with working APIs were implemented and are locked by `tests/nav-acceptance.test.ts`:
+  - **`/markets/explorer`** — `app/pages/markets/explorer.vue` + `useMarketCatalog` over `/instruments` (+`/venues`, `/market-sources/health`): search by canonical/native symbol, base/quote, venue; type + status filters; per-venue provider-health dots and an "up/total" availability column; rows deep-link the terminal via `/trading?instrument=<engineSymbol>` (§57.4 B — the terminal reads `route.query.instrument`, falling back to the first served symbol). No second symbol list exists.
+  - **`/trading/paper`** — `app/pages/trading/paper.vue` + `usePaperAccounts` over `/paper/accounts/:id` (the §20 server projection) + `/risk/status`: equity/balance/realized/daily/unrealized, notional/margin/free/utilization/max-drawdown, kill-switch (halted + reason) per account, UTC day. Dashboard never recomputes (D1/D12).
+  - **`/trading/orders`** — `app/pages/trading/orders.vue` + `usePaperOrders` over `/orders` (+`/orders/:id/cancel`): §17.2 lifecycle list with status/symbol filters and global meta counts; the Cancel action is offered only when the server says `cancelable` and stays compare-and-swap guarded server-side (D14).
+  - Gates re-run after these pages: `typecheck` PASS 4/4, `test:app` green, `npm test` green, `nuxt build` OK.
 
 ## 10. Route re-home — pages mirror the menu groups (§58.2)
 
