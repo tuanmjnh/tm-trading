@@ -192,6 +192,7 @@ Idempotency / safety:
   - **Admin visibility** is not local presentation logic: the Hub `GET /api/v1/auth/routes` prunes by `required_permission`/`allowed_routes`, and the sidebar additionally drops `is_visible:false` subtrees and any route without a local page (`app/utils/navTree.ts`), so an unimplemented or unauthorized item never surfaces as a link.
   - **Mobile**: the sidebar collapses under `lg`; the bottom action/info bar (`app/components/nav/BottomNav.vue`) is presentation-only and menu-agnostic, so it needs no per-route change.
   - Active-state highlighting is delegated to Nuxt UI `UNavigationMenu` (`to` on leaves); it has no route-specific local override that the reorg invalidates.
+- **Closure evidence (2026-10-11)** — V3.3 §58 slices 1–6 complete. tm-trading: `typecheck` PASS 4/4, `npm test` 2254/0 (16 suites), `test:app` 613/0 (144 suites), `nuxt build` OK. tm-hub placement seed committed (`984b4ca`, `typecheck:seed` exit 0). `docs:check` retains 26 pre-existing failures (missing `market:*`/`indicator:*`/`terminal:*`/`paper:*`/`replay:*`/`research:*` docs), unrelated to §58.
 
 ## 10. Route re-home — pages mirror the menu groups (§58.2)
 
