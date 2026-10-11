@@ -1,15 +1,310 @@
 <script setup lang="ts">
+import type { Proposal, StrategyResearch } from '~~/types/research'
+import type { StrategyProfile } from '~~/types/strategy'
+import { getErrorMessage } from '~/shared/utils/errors'
+
+// AI Research workspace (roadmap §58.9 Slice 5, §27 / §57.9-N).
+//
+// The "Analyze" surface: pick a strategy and read the VERSIONED evidence the AI
+// worked from — its profile/version pointer, and every recorded proposal with
+// its supporting evidence and sample size. Every evidence row exposes its
+// sample count, and a proposal whose evidence is too thin is flagged
+// insufficient (D12: the AI must report insufficient sample, never invent it).
+//
+// The "Proposals" surface: each structured hypothesis (§27.3) can be turned into
+// an experiment by a human. That only writes a `proposed` experiment draft — it
+// can never touch the live strategy version (D7, §57.11).
 const { t } = useI18n()
-const title = computed(() => t('nav.ai_research'))
+const notify = useNotify()
+const router = useRouter()
+const api = useResearch()
+const strategies = useStrategies()
+
+const { title, description } = useAdminPageChrome({
+  titleKey: 'research.analyzeTitle',
+  descKey: 'research.analyzeDesc'
+})
+
+const MIN_TRADES = 30
+
+const strategyId = ref('')
+const knownStrategies = ref<StrategyProfile[]>([])
+const research = ref<StrategyResearch | null>(null)
+const allProposals = ref<Proposal[]>([])
+const isLoading = ref(false)
+const creatingId = ref<string | null>(null)
+
+async function load() {
+  isLoading.value = true
+  try {
+    const id = strategyId.value.trim()
+    if (id) {
+      research.value = await api.strategy(id)
+      if (!research.value) research.value = { profile: null, versions: [], experiments: [], proposals: [], mongo: 'down' }
+    } else {
+      research.value = null
+    }
+    allProposals.value = await api.proposals({ limit: 100 })
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(async () => {
+  knownStrategies.value = await strategies.list()
+  await load()
+})
+
+const shownProposals = computed<Proposal[]>(() => research.value ? research.value.proposals : allProposals.value)
+
+const profile = computed<Record<string, unknown> | null>(() => research.value?.profile ?? null)
+const profileName = computed(() => (profile.value?.name as string) || strategyId.value || '—')
+const activeVersion = computed(() => (profile.value?.strategyVersionId as string) || null)
+
+// Evidence limitations (D12): roll up sample sizes across the proposals shown.
+const evidenceStats = computed(() => {
+  const samples = shownProposals.value.flatMap(p => (p.evidence ?? []).map(e => e.sampleSize))
+  const total = samples.reduce((a, b) => a + b, 0)
+  const min = samples.length ? Math.min(...samples) : null
+  const insufficient = samples.length === 0 || samples.some(s => s < MIN_TRADES)
+  return { count: samples.length, total, min, insufficient }
+})
+
+async function approve(proposal: Proposal) {
+  creatingId.value = proposal.proposalId
+  try {
+    const exp = await api.createExperiment(proposal)
+    notify.success(t('research.createExperiment'))
+    if (exp?._id) router.push(`/data-research/research/experiments/${encodeURIComponent(exp._id)}`)
+  } catch (err) {
+    notify.error(t('research.createExperiment'), getErrorMessage(err, key => t(key)))
+  } finally {
+    creatingId.value = null
+  }
+}
+
+const fmtVal = (v: unknown) => (v === null || v === undefined ? '—' : typeof v === 'object' ? JSON.stringify(v) : String(v))
+const fmtChange = (c: { parameter: string; from: unknown; to: unknown }) =>
+  `${c.parameter}: ${fmtVal(c.from)} → ${fmtVal(c.to)}`
+
+const mobileBar = useMobileBar()
+mobileBar.registerActions(computed(() => [
+  { icon: 'i-lucide-refresh-cw', label: t('common.refresh'), onSelect: load }
+]))
+
 useHead({ title })
 </script>
 
 <template>
-  <BasePage id="research" :title="title" :description="t('common.comingSoonDesc')">
-    <AdminEmptyState
-      :title="t('common.comingSoon')"
-      :description="t('common.comingSoonDesc')"
-      icon="i-lucide-sparkles"
-    />
+  <BasePage id="research" :title="title" :description="description">
+    <template #right>
+      <div class="flex items-center gap-2">
+        <UButton
+          icon="i-lucide-test-tube"
+          :label="t('research.viewExperiments')"
+          variant="soft"
+          color="neutral"
+          size="sm"
+          to="/data-research/research/experiments"
+          :ui="{ label: 'hidden md:block' }"
+        />
+        <UButton
+          icon="i-lucide-refresh-cw"
+          variant="soft"
+          color="neutral"
+          size="sm"
+          :loading="isLoading"
+          @click="load"
+        />
+      </div>
+    </template>
+
+    <template #toolbar>
+      <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
+        <UInput
+          v-model="strategyId"
+          :placeholder="t('research.strategyPlaceholder')"
+          icon="i-lucide-search"
+          size="xs"
+          class="w-56"
+          :aria-label="t('research.strategyId')"
+          @keyup.enter="load"
+        />
+        <UButton icon="i-lucide-corner-down-left" :label="t('research.load')" size="xs" color="primary" variant="soft" @click="load" />
+        <span v-if="knownStrategies.length" class="text-[11px] text-dimmed ms-1">{{ t('research.knownStrategies') }}</span>
+        <UButton
+          v-for="s in knownStrategies"
+          :key="s._id"
+          :label="s.name || s.profileId || s._id"
+          size="xs"
+          :color="strategyId === s._id ? 'primary' : 'neutral'"
+          :variant="strategyId === s._id ? 'soft' : 'ghost'"
+          @click="strategyId = s._id; load()"
+        />
+      </div>
+    </template>
+
+    <div class="flex flex-col gap-6 w-full pb-24 lg:pb-6">
+      <UAlert
+        v-if="research && research.mongo === 'down'"
+        color="warning"
+        variant="subtle"
+        icon="i-lucide-database-zap"
+        :title="t('research.mongoDown')"
+      />
+      <UAlert
+        color="neutral"
+        variant="subtle"
+        icon="i-lucide-shield-check"
+        :title="t('research.guardrail')"
+      />
+
+      <!-- Evidence: the versioned set the AI read -->
+      <UCard v-if="research">
+        <template #header>
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-lucide-fingerprint" class="w-4 h-4 text-primary" />
+              <h3 class="font-semibold text-sm">{{ t('research.evidenceTitle') }}</h3>
+            </div>
+            <UBadge v-if="research.mongo === 'down'" :label="t('research.mongoDownShort')" color="warning" variant="subtle" size="xs" />
+          </div>
+        </template>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div class="min-w-0">
+            <div class="text-[11px] font-medium text-muted uppercase tracking-wider">{{ t('research.profileLabel') }}</div>
+            <div class="text-sm font-semibold text-highlighted truncate mt-1">{{ profileName }}</div>
+          </div>
+          <div class="min-w-0">
+            <div class="text-[11px] font-medium text-muted uppercase tracking-wider">{{ t('research.activeVersionLabel') }}</div>
+            <div class="text-sm font-semibold text-highlighted truncate mt-1">{{ activeVersion || t('research.none') }}</div>
+          </div>
+          <div class="min-w-0">
+            <div class="text-[11px] font-medium text-muted uppercase tracking-wider">{{ t('research.versionsLabel') }}</div>
+            <div class="text-sm font-semibold text-highlighted mt-1">{{ research.versions.length }}</div>
+          </div>
+          <div class="min-w-0">
+            <div class="text-[11px] font-medium text-muted uppercase tracking-wider">{{ t('research.sampleTitle') }}</div>
+            <div class="text-sm font-semibold mt-1" :class="evidenceStats.insufficient ? 'text-warning' : 'text-success'">
+              {{ t('research.totalSamples') }} {{ evidenceStats.total }}
+            </div>
+          </div>
+        </div>
+
+        <UAlert
+          class="mt-4"
+          :color="evidenceStats.insufficient ? 'warning' : 'success'"
+          variant="subtle"
+          :icon="evidenceStats.insufficient ? 'i-lucide-triangle-alert' : 'i-lucide-check-circle'"
+          :title="evidenceStats.insufficient ? t('research.insufficientSample') : t('research.sufficient')"
+          :description="`${t('research.minSample')}: ${evidenceStats.min ?? 'n/a'} / ${MIN_TRADES}`"
+        />
+      </UCard>
+
+      <!-- Proposals -->
+      <div class="flex items-center gap-2">
+        <UIcon name="i-lucide-lightbulb" class="w-4 h-4 text-primary" />
+        <h3 class="font-semibold text-sm">{{ t('research.proposalsTitle') }}</h3>
+        <UBadge :label="`${shownProposals.length}`" variant="subtle" size="xs" />
+      </div>
+
+      <div v-if="shownProposals.length" class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <UCard v-for="p in shownProposals" :key="p.proposalId">
+          <template #header>
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <div class="text-sm font-semibold text-highlighted line-clamp-2">{{ p.hypothesis }}</div>
+                <div class="text-[10px] font-mono text-dimmed mt-0.5 truncate">{{ p.proposalId }}</div>
+              </div>
+              <UBadge v-if="p.status" :label="p.status" color="info" variant="subtle" size="xs" class="shrink-0" />
+            </div>
+          </template>
+
+          <div class="space-y-4">
+            <div v-if="p.strategyVersionId" class="text-[11px] text-muted">
+              {{ t('research.targetVersion') }}: <span class="font-mono text-highlighted">{{ p.strategyVersionId }}</span>
+            </div>
+
+            <div>
+              <div class="text-[11px] font-medium text-muted uppercase tracking-wider mb-1">{{ t('research.changes') }}</div>
+              <div v-if="p.changes?.length" class="flex flex-wrap gap-1.5">
+                <UBadge
+                  v-for="(c, i) in p.changes"
+                  :key="i"
+                  :label="fmtChange(c)"
+                  color="neutral"
+                  variant="subtle"
+                  size="xs"
+                  class="font-mono"
+                />
+              </div>
+              <span v-else class="text-[11px] text-dimmed">{{ t('research.none') }}</span>
+            </div>
+
+            <div>
+              <div class="text-[11px] font-medium text-muted uppercase tracking-wider mb-1">{{ t('research.evidence') }}</div>
+              <div v-if="p.evidence?.length" class="space-y-1">
+                <div
+                  v-for="(e, i) in p.evidence"
+                  :key="i"
+                  class="flex items-center justify-between gap-3 text-[11px]"
+                >
+                  <span class="font-mono text-muted truncate">{{ e.metric }}</span>
+                  <span class="flex items-center gap-2 shrink-0">
+                    <span class="font-mono text-highlighted">{{ e.value }}</span>
+                    <UBadge
+                      :label="`n=${e.sampleSize}`"
+                      :color="e.sampleSize < MIN_TRADES ? 'warning' : 'neutral'"
+                      variant="subtle"
+                      size="xs"
+                    />
+                  </span>
+                </div>
+              </div>
+              <span v-else class="text-[11px] text-dimmed">{{ t('research.evidenceNone') }}</span>
+            </div>
+
+            <div v-if="p.risks?.length">
+              <div class="text-[11px] font-medium text-muted uppercase tracking-wider mb-1">{{ t('research.risks') }}</div>
+              <ul class="text-[11px] text-muted list-disc list-inside space-y-0.5">
+                <li v-for="(r, i) in p.risks" :key="i">{{ r }}</li>
+              </ul>
+            </div>
+
+            <div>
+              <div class="text-[11px] font-medium text-muted uppercase tracking-wider mb-1">{{ t('research.recommendedTest') }}</div>
+              <div v-if="p.recommendedTest?.symbols?.length || p.recommendedTest?.timeframes?.length" class="flex flex-wrap gap-1.5">
+                <UBadge v-for="s in p.recommendedTest.symbols" :key="`s-${s}`" :label="s" color="primary" variant="subtle" size="xs" class="font-mono" />
+                <UBadge v-for="tf in p.recommendedTest.timeframes" :key="`tf-${tf}`" :label="tf" color="info" variant="subtle" size="xs" class="font-mono" />
+              </div>
+              <span v-else class="text-[11px] text-dimmed">{{ t('research.noTestPlan') }}</span>
+            </div>
+          </div>
+
+          <template #footer>
+            <div class="flex justify-end">
+              <UButton
+                icon="i-lucide-flask-conical"
+                :label="t('research.createExperiment')"
+                color="primary"
+                variant="soft"
+                size="sm"
+                :loading="creatingId === p.proposalId"
+                @click="approve(p)"
+              />
+            </div>
+          </template>
+        </UCard>
+      </div>
+
+      <div v-else class="py-6">
+        <AdminEmptyState
+          :title="t('research.proposalsEmpty')"
+          :description="t('research.proposalsEmptyDesc')"
+          icon="i-lucide-lightbulb"
+        />
+      </div>
+    </div>
   </BasePage>
 </template>

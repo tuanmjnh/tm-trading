@@ -291,3 +291,96 @@ export async function runExperimentArm(id: string, input: RunArmInput, deps: Run
   }
   return { role: input.role, summary: res.summary ?? null, runIds: res.runIds ?? [] }
 }
+
+// -----------------------------------------------------------------------------
+//  GET /research/experiments — list recorded experiments (§28.1). Fail-soft:
+//  Mongo down => empty list + mongo='down'. `status` narrows to one lifecycle
+//  state (e.g. ?status=proposed reviews what the AI proposed and awaits).
+// -----------------------------------------------------------------------------
+
+export interface ListExperimentsQuery {
+  status?: string
+  limit: number
+}
+
+export interface ListExperimentsDeps {
+  model?: typeof experimentModel
+}
+
+export async function listExperiments(q: ListExperimentsQuery, deps: ListExperimentsDeps = {}): Promise<{ rows: Record<string, unknown>[]; mongo: 'up' | 'down' }> {
+  const Experiment = await (deps.model ?? experimentModel)()
+  if (!Experiment) return { rows: [], mongo: 'down' }
+  const filter: Record<string, unknown> = {}
+  if (q.status) filter.status = q.status
+  try {
+    const rows = await Experiment.find(filter).sort({ createdAt: -1 }).limit(q.limit).lean()
+    return { rows, mongo: 'up' }
+  } catch {
+    return { rows: [], mongo: 'down' }
+  }
+}
+
+// -----------------------------------------------------------------------------
+//  POST /research/experiments/:id/move — advance the §28.1 lifecycle one legal
+//  step (proposed -> approved -> ... -> paper_validation). The engine's
+//  transition() refuses illegal jumps; this only maps its code to HTTP. A human
+//  drives the state machine — nothing here reaches `accepted` (only decide()).
+// -----------------------------------------------------------------------------
+
+export interface MoveExperimentDeps {
+  service?: ExperimentService
+}
+
+export async function moveExperimentResearch(id: string, to: string, deps: MoveExperimentDeps = {}): Promise<Record<string, unknown>> {
+  const human = String(id ?? '').trim()
+  if (!human) throw new ResearchError('experiment id required', 400, 'invalid_id')
+  const state = String(to ?? '').trim()
+  if (!state) throw new ResearchError('target state required', 400, 'invalid_state')
+
+  const service = deps.service ?? await experimentService()
+  const res = await service.moveExperiment(human, state)
+  if (!res.ok) throw experimentWriteError(String(res.code ?? 'experiment_failed'))
+  return res.exp as unknown as Record<string, unknown>
+}
+
+// -----------------------------------------------------------------------------
+//  POST /research/experiments/:id/decide — accept/reject (§28.1 / §28.3). Accept
+//  re-runs the §28.3 gate over the persisted arms; a failing gate is 409
+//  acceptance_gate_failed. The same gates are visible on the detail endpoint, so
+//  the UI can show WHY a candidate was not accepted.
+// -----------------------------------------------------------------------------
+
+export interface DecideExperimentDeps {
+  service?: ExperimentService
+}
+
+export interface DecideExperimentOptions {
+  minTrades?: number
+  maxDegenerate?: number
+  ddSlackPct?: number
+}
+
+export async function decideExperiment(id: string, accept: boolean, opts: DecideExperimentOptions = {}, deps: DecideExperimentDeps = {}): Promise<Record<string, unknown>> {
+  const human = String(id ?? '').trim()
+  if (!human) throw new ResearchError('experiment id required', 400, 'invalid_id')
+
+  const service = deps.service ?? await experimentService()
+  const res = await service.decide({ experimentId: human, accept, opts })
+  if (!res.ok) throw experimentWriteError(String(res.code ?? 'experiment_failed'))
+  return res.exp as unknown as Record<string, unknown>
+}
+
+/**
+ * Map an engine write code to an HTTP intent, shared by move/decide so both
+ * surfaces fail the same way: unknown experiment -> 404, store down -> 503, an
+ * illegal/again transition or a failed acceptance gate -> 409.
+ */
+function experimentWriteError(code: string): ResearchError {
+  if (code === 'EXP_NOT_FOUND') return new ResearchError(code, 404, 'experiment_not_found')
+  if (code === 'MONGO_DOWN') return new ResearchError(code, 503, 'mongo_down')
+  if (code.startsWith('EXP_ILLEGAL') || code === 'EXP_ALREADY' || code.startsWith('EXP_BAD_STATE')) {
+    return new ResearchError(code, 409, 'illegal_transition')
+  }
+  if (code === 'EXP_GATE_FAILED') return new ResearchError(code, 409, 'acceptance_gate_failed')
+  return new ResearchError(code, 500, 'experiment_failed')
+}

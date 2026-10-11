@@ -806,6 +806,147 @@
     "no_history": "Không có lịch sử nào",
     "clear_history_desc": "Bạn có chắc chắn muốn xóa lịch sử không?"
   },
+  "research": {
+    "analyzeTitle": "Nghiên cứu AI",
+    "analyzeDesc": "Đọc tập bằng chứng đã được đánh phiên bản mà AI dựa vào và phê duyệt đề xuất thành thí nghiệm",
+    "experimentsTitle": "Thí nghiệm",
+    "experimentsDesc": "Duyệt các ứng viên AI qua vòng đời thí nghiệm đến khi chấp nhận",
+    "viewResearch": "Nghiên cứu",
+    "viewExperiments": "Thí nghiệm",
+    "backToList": "Tất cả thí nghiệm",
+    "strategyId": "Mã chiến lược",
+    "strategyPlaceholder": "Mã hồ sơ chiến lược…",
+    "load": "Tải",
+    "knownStrategies": "Đã biết:",
+    "guardrail": "Đề xuất chỉ là dữ liệu. Việc chấp nhận một thí nghiệm không bao giờ thay đổi phiên bản chiến lược đang chạy — đó vẫn là một bước riêng, có thể kiểm toán.",
+    "mongoDown": "Không truy cập được kho lưu trữ — hiển thị trống thay vì dữ liệu cũ.",
+    "mongoDownShort": "kho lưu trữ ngừng",
+    "evidenceTitle": "Tập bằng chứng",
+    "profileLabel": "Hồ sơ",
+    "activeVersionLabel": "Phiên bản đang chạy",
+    "versionsLabel": "Phiên bản",
+    "sampleTitle": "Mẫu bằng chứng",
+    "totalSamples": "Σ mẫu",
+    "minSample": "Mẫu nhỏ nhất",
+    "sufficient": "Cỡ mẫu đủ để xem xét các đề xuất này.",
+    "insufficientSample": "Cỡ mẫu chưa đủ — hãy coi các đề xuất này là giả thuyết, không phải kết luận.",
+    "none": "Không",
+    "targetVersion": "Phiên bản mục tiêu",
+    "proposalsTitle": "Đề xuất AI",
+    "proposalsEmpty": "Chưa có đề xuất",
+    "proposalsEmptyDesc": "Tầng AI sẽ ghi các đề xuất có cấu trúc vào đây sau khi phân tích một tập bằng chứng.",
+    "createExperiment": "Tạo thí nghiệm",
+    "changes": "Thay đổi",
+    "evidence": "Bằng chứng",
+    "evidenceNone": "Chưa ghi bằng chứng",
+    "risks": "Rủi ro",
+    "recommendedTest": "Kiểm thử đề xuất",
+    "noTestPlan": "Chưa nêu kế hoạch kiểm thử",
+    "open": "Mở",
+    "experimentsEmpty": "Chưa có thí nghiệm",
+    "experimentsEmptyHint": "Tạo từ một đề xuất hoặc chờ tầng AI ghi một đề xuất.",
+    "detail": {
+      "title": "Thí nghiệm",
+      "noExperiment": "Không tìm thấy thí nghiệm",
+      "proposalLabel": "Đề xuất",
+      "strategyVersionLabel": "Phiên bản",
+      "createdLabel": "Tạo lúc"
+    },
+    "actions": {
+      "title": "Vòng đời",
+      "advanceTo": "Chuyển sang",
+      "accept": "Chấp nhận",
+      "reject": "Từ chối",
+      "terminal": "Thí nghiệm này đã kết thúc — không còn chuyển trạng thái."
+    },
+    "history": { "title": "Lịch sử" },
+    "comparison": {
+      "title": "Ứng viên so với cơ sở",
+      "complete": "đầy đủ",
+      "incomplete": "chưa đầy đủ",
+      "metric": "Chỉ số",
+      "baseline": "Cơ sở",
+      "candidate": "Ứng viên",
+      "delta": "Δ",
+      "empty": "Chưa có nhánh nào so sánh được"
+    },
+    "metrics": {
+      "winRate": "Tỷ lệ thắng",
+      "profitFactor": "Hệ số lợi nhuận",
+      "expectancyR": "Kỳ vọng (R)",
+      "medianR": "Trung vị R",
+      "netPct": "Lợi nhuận %",
+      "maxDrawdownPct": "Sụt giảm tối đa %"
+    },
+    "arms": {
+      "title": "Các nhánh",
+      "role": "Nhánh",
+      "trades": "Lệnh",
+      "winRate": "Thắng",
+      "profitFactor": "PF",
+      "expectancy": "Kỳ vọng",
+      "net": "Lợi %",
+      "maxDD": "Sụt tối đa",
+      "notRun": "chưa chạy"
+    },
+    "roles": {
+      "baseline": "cơ sở",
+      "candidate": "ứng viên",
+      "random": "ngẫu nhiên",
+      "holdout": "kiểm định"
+    },
+    "run": {
+      "symbols": "Cặp giao dịch",
+      "symbolsPlaceholder": "BTCUSDT,ETHUSDT",
+      "timeframes": "Khung thời gian",
+      "timeframesPlaceholder": "15m,1h",
+      "button": "Chạy nhánh",
+      "running": "Đang chạy…"
+    },
+    "gates": {
+      "title": "Cổng chấp nhận",
+      "allPass": "mọi cổng đều đạt",
+      "someFail": "có cổng không đạt",
+      "empty": "Chưa có báo cáo chấp nhận"
+    },
+    "gateKeys": {
+      "hasArms": "Đã ghi nhánh cơ sở & ứng viên",
+      "beatBaseline": "Vượt cơ sở",
+      "beatRandom": "Vượt nhánh ngẫu nhiên",
+      "sampleSize": "Cỡ mẫu",
+      "holdout": "Kiểm định vẫn giữ",
+      "noDegeneracy": "Không suy biến",
+      "riskPreserved": "Giữ nguyên rủi ro",
+      "reproducible": "Mã băm có thể tái lập"
+    },
+    "status": {
+      "all": "Tất cả",
+      "proposed": "Đề xuất",
+      "approved": "Đã duyệt",
+      "running": "Đang chạy",
+      "backtested": "Đã backtest",
+      "holdout": "Kiểm định",
+      "paper_validation": "Kiểm chứng giấy",
+      "accepted": "Chấp nhận",
+      "rejected": "Từ chối"
+    },
+    "create": {
+      "action": "Thí nghiệm mới",
+      "title": "Tạo thí nghiệm từ đề xuất",
+      "desc": "Dán JSON đề xuất §27.3. Thao tác này chỉ ghi một thí nghiệm nháp đề xuất — không thay đổi chiến lược đang chạy.",
+      "placeholder": "Dán một đối tượng đề xuất §27.3 (proposalId, hypothesis, changes, evidence)",
+      "notObject": "Đề xuất phải là một đối tượng JSON",
+      "success": "Đã tạo thí nghiệm",
+      "confirm": "Tạo"
+    },
+    "columns": {
+      "experiment": "Thí nghiệm",
+      "status": "Trạng thái",
+      "hypothesis": "Giả thuyết",
+      "changes": "Thay đổi",
+      "created": "Tạo lúc"
+    }
+  },
   "nav": {
     "overview": "Tổng quan",
     "apps": "Quản lý Ứng dụng",

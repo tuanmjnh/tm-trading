@@ -27,6 +27,8 @@ const EXPECTED_VISIBLE_LEAF_PATHS = [
   '/data-research/data/recordings',
   '/data-research/data/quality',
   '/data-research/data/lineage',
+  '/data-research/research',
+  '/data-research/research/experiments',
   '/data-research/journal',
   '/alerts/history',
   '/alerts/inbox',

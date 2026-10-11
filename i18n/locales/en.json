@@ -806,6 +806,147 @@
     "no_history": "No history available",
     "clear_history_desc": "Are you sure you want to clear the history?"
   },
+  "research": {
+    "analyzeTitle": "AI Research",
+    "analyzeDesc": "Read the versioned evidence the AI worked from and approve proposals into experiments",
+    "experimentsTitle": "Experiments",
+    "experimentsDesc": "Review AI candidates through the experiment lifecycle to acceptance",
+    "viewResearch": "Research",
+    "viewExperiments": "Experiments",
+    "backToList": "All experiments",
+    "strategyId": "Strategy id",
+    "strategyPlaceholder": "Strategy profile id…",
+    "load": "Load",
+    "knownStrategies": "Known:",
+    "guardrail": "Proposals are data only. Accepting an experiment never changes the live strategy version — that stays a separate, auditable step.",
+    "mongoDown": "Storage is unreachable — showing nothing rather than stale data.",
+    "mongoDownShort": "store down",
+    "evidenceTitle": "Evidence set",
+    "profileLabel": "Profile",
+    "activeVersionLabel": "Active version",
+    "versionsLabel": "Versions",
+    "sampleTitle": "Evidence samples",
+    "totalSamples": "Σ samples",
+    "minSample": "Smallest sample",
+    "sufficient": "Sample size is sufficient to consider these proposals.",
+    "insufficientSample": "Insufficient sample size — treat these proposals as hypotheses, not conclusions.",
+    "none": "None",
+    "targetVersion": "Target version",
+    "proposalsTitle": "AI proposals",
+    "proposalsEmpty": "No proposals recorded",
+    "proposalsEmptyDesc": "The AI layer writes structured proposals here once it has analysed an evidence set.",
+    "createExperiment": "Create experiment",
+    "changes": "Changes",
+    "evidence": "Evidence",
+    "evidenceNone": "No evidence recorded",
+    "risks": "Risks",
+    "recommendedTest": "Recommended test",
+    "noTestPlan": "No test plan specified",
+    "open": "Open",
+    "experimentsEmpty": "No experiments",
+    "experimentsEmptyHint": "Create one from a proposal or wait for the AI layer to record one.",
+    "detail": {
+      "title": "Experiment",
+      "noExperiment": "Experiment not found",
+      "proposalLabel": "Proposal",
+      "strategyVersionLabel": "Version",
+      "createdLabel": "Created"
+    },
+    "actions": {
+      "title": "Lifecycle",
+      "advanceTo": "Advance to",
+      "accept": "Accept",
+      "reject": "Reject",
+      "terminal": "This experiment is final — no further transitions."
+    },
+    "history": { "title": "History" },
+    "comparison": {
+      "title": "Candidate vs baseline",
+      "complete": "complete",
+      "incomplete": "incomplete",
+      "metric": "Metric",
+      "baseline": "Baseline",
+      "candidate": "Candidate",
+      "delta": "Δ",
+      "empty": "No comparable arms yet"
+    },
+    "metrics": {
+      "winRate": "Win rate",
+      "profitFactor": "Profit factor",
+      "expectancyR": "Expectancy (R)",
+      "medianR": "Median R",
+      "netPct": "Net %",
+      "maxDrawdownPct": "Max drawdown %"
+    },
+    "arms": {
+      "title": "Arms",
+      "role": "Arm",
+      "trades": "Trades",
+      "winRate": "Win",
+      "profitFactor": "PF",
+      "expectancy": "Exp.",
+      "net": "Net %",
+      "maxDD": "Max DD",
+      "notRun": "not run"
+    },
+    "roles": {
+      "baseline": "baseline",
+      "candidate": "candidate",
+      "random": "random",
+      "holdout": "holdout"
+    },
+    "run": {
+      "symbols": "Symbols",
+      "symbolsPlaceholder": "BTCUSDT,ETHUSDT",
+      "timeframes": "Timeframes",
+      "timeframesPlaceholder": "15m,1h",
+      "button": "Run arm",
+      "running": "Running…"
+    },
+    "gates": {
+      "title": "Acceptance gates",
+      "allPass": "all gates pass",
+      "someFail": "gates failing",
+      "empty": "No acceptance report yet"
+    },
+    "gateKeys": {
+      "hasArms": "Baseline & candidate recorded",
+      "beatBaseline": "Beats baseline",
+      "beatRandom": "Beats random baseline",
+      "sampleSize": "Sample size",
+      "holdout": "Holdout holds up",
+      "noDegeneracy": "No degeneracy",
+      "riskPreserved": "Risk preserved",
+      "reproducible": "Reproducible run hash"
+    },
+    "status": {
+      "all": "All",
+      "proposed": "Proposed",
+      "approved": "Approved",
+      "running": "Running",
+      "backtested": "Backtested",
+      "holdout": "Holdout",
+      "paper_validation": "Paper validation",
+      "accepted": "Accepted",
+      "rejected": "Rejected"
+    },
+    "create": {
+      "action": "New experiment",
+      "title": "Create experiment from proposal",
+      "desc": "Paste a §27.3 proposal JSON. This writes a proposed experiment draft only — it never changes the live strategy.",
+      "placeholder": "Paste a §27.3 proposal object (proposalId, hypothesis, changes, evidence)",
+      "notObject": "The proposal must be a JSON object",
+      "success": "Experiment created",
+      "confirm": "Create"
+    },
+    "columns": {
+      "experiment": "Experiment",
+      "status": "Status",
+      "hypothesis": "Hypothesis",
+      "changes": "Changes",
+      "created": "Created"
+    }
+  },
   "nav": {
     "overview": "Overview",
     "apps": "Applications",

@@ -3,9 +3,12 @@ import assert from 'node:assert/strict'
 import {
   ResearchError,
   createExperiment,
+  decideExperiment,
   getExperimentResearch,
   getStrategyResearch,
+  listExperiments,
   listProposals,
+  moveExperimentResearch,
   researchHttpError,
   runExperimentArm
 } from '../server/utils/research'
@@ -256,6 +259,142 @@ describe('runExperimentArm', () => {
     await assert.rejects(runExperimentArm('exp:1', { role: 'baseline' }, { service: service as never }), (e: unknown) => {
       const r = e as ResearchError
       return r instanceof ResearchError && r.statusCode === 503 && r.statusMessage === 'mongo_down'
+    })
+  })
+})
+
+describe('listExperiments', () => {
+  it('Mongo down -> empty + down', async () => {
+    const r = await listExperiments({ limit: 10 }, { model: nullLoader })
+    assert.equal(r.mongo, 'down')
+    assert.deepEqual(r.rows, [])
+  })
+
+  it('filters by status when given and returns rows', async () => {
+    const filters: unknown[] = []
+    const r = await listExperiments({ status: 'proposed', limit: 25 }, {
+      model: asLoader({ find: findStub([{ _id: 'exp:1' }], filters) })
+    })
+    assert.equal(r.mongo, 'up')
+    assert.equal(r.rows.length, 1)
+    assert.deepEqual(filters[0], { status: 'proposed' })
+  })
+
+  it('no status -> empty filter object', async () => {
+    const filters: unknown[] = []
+    await listExperiments({ limit: 5 }, { model: asLoader({ find: findStub([], filters) }) })
+    assert.deepEqual(filters[0], {})
+  })
+})
+
+describe('moveExperimentResearch', () => {
+  it('empty id -> 400 invalid_id', async () => {
+    await assert.rejects(moveExperimentResearch('  ', 'approved'), (e: unknown) => {
+      const r = e as ResearchError
+      return r instanceof ResearchError && r.statusCode === 400 && r.statusMessage === 'invalid_id'
+    })
+  })
+
+  it('empty target state -> 400 invalid_state', async () => {
+    await assert.rejects(moveExperimentResearch('exp:1', '  '), (e: unknown) => {
+      const r = e as ResearchError
+      return r instanceof ResearchError && r.statusCode === 400 && r.statusMessage === 'invalid_state'
+    })
+  })
+
+  it('advances the lifecycle through the service and returns the doc', async () => {
+    let called: Record<string, unknown> | null = null
+    const service = {
+      moveExperiment: async (id: string, to: string) => {
+        called = { id, to }
+        return { ok: true, code: 'OK', exp: { _id: id, status: to } }
+      }
+    }
+    const doc = await moveExperimentResearch('exp:1', 'running', { service: service as never })
+    assert.equal(doc.status, 'running')
+    assert.deepEqual(called, { id: 'exp:1', to: 'running' })
+  })
+
+  it('EXP_NOT_FOUND -> 404 experiment_not_found', async () => {
+    const service = { moveExperiment: async () => ({ ok: false, code: 'EXP_NOT_FOUND' }) }
+    await assert.rejects(moveExperimentResearch('exp:x', 'approved', { service: service as never }), (e: unknown) => {
+      const r = e as ResearchError
+      return r instanceof ResearchError && r.statusCode === 404 && r.statusMessage === 'experiment_not_found'
+    })
+  })
+
+  it('an illegal jump -> 409 illegal_transition', async () => {
+    const service = { moveExperiment: async () => ({ ok: false, code: 'EXP_ILLEGAL:proposed->accepted' }) }
+    await assert.rejects(moveExperimentResearch('exp:1', 'accepted', { service: service as never }), (e: unknown) => {
+      const r = e as ResearchError
+      return r instanceof ResearchError && r.statusCode === 409 && r.statusMessage === 'illegal_transition'
+    })
+  })
+
+  it('replaying the same state -> 409 illegal_transition', async () => {
+    const service = { moveExperiment: async () => ({ ok: false, code: 'EXP_ALREADY' }) }
+    await assert.rejects(moveExperimentResearch('exp:1', 'approved', { service: service as never }), (e: unknown) => {
+      const r = e as ResearchError
+      return r instanceof ResearchError && r.statusCode === 409 && r.statusMessage === 'illegal_transition'
+    })
+  })
+
+  it('MONGO_DOWN -> 503 mongo_down', async () => {
+    const service = { moveExperiment: async () => ({ ok: false, code: 'MONGO_DOWN' }) }
+    await assert.rejects(moveExperimentResearch('exp:1', 'approved', { service: service as never }), (e: unknown) => {
+      const r = e as ResearchError
+      return r instanceof ResearchError && r.statusCode === 503 && r.statusMessage === 'mongo_down'
+    })
+  })
+})
+
+describe('decideExperiment', () => {
+  it('empty id -> 400 invalid_id', async () => {
+    await assert.rejects(decideExperiment('', true), (e: unknown) => {
+      const r = e as ResearchError
+      return r instanceof ResearchError && r.statusCode === 400 && r.statusMessage === 'invalid_id'
+    })
+  })
+
+  it('accept -> passes accept + opts to the service and returns the doc', async () => {
+    let called: Record<string, unknown> | null = null
+    const service = {
+      decide: async (o: Record<string, unknown>) => {
+        called = o
+        return { ok: true, code: 'OK', exp: { _id: 'exp:1', status: 'accepted' } }
+      }
+    }
+    const doc = await decideExperiment('exp:1', true, { minTrades: 30 }, { service: service as never })
+    assert.equal(doc.status, 'accepted')
+    assert.deepEqual(called, { experimentId: 'exp:1', accept: true, opts: { minTrades: 30 } })
+  })
+
+  it('a failing gate -> 409 acceptance_gate_failed', async () => {
+    const service = { decide: async () => ({ ok: false, code: 'EXP_GATE_FAILED' }) }
+    await assert.rejects(decideExperiment('exp:1', true, {}, { service: service as never }), (e: unknown) => {
+      const r = e as ResearchError
+      return r instanceof ResearchError && r.statusCode === 409 && r.statusMessage === 'acceptance_gate_failed'
+    })
+  })
+
+  it('reject -> service called with accept:false', async () => {
+    let called: Record<string, unknown> | null = null
+    const service = {
+      decide: async (o: Record<string, unknown>) => {
+        called = o
+        return { ok: true, code: 'OK', exp: { _id: 'exp:1', status: 'rejected' } }
+      }
+    }
+    const doc = await decideExperiment('exp:1', false, {}, { service: service as never })
+    assert.equal(doc.status, 'rejected')
+    assert.equal((called as unknown as Row).accept, false)
+  })
+
+  it('unknown experiment -> 404 experiment_not_found', async () => {
+    const service = { decide: async () => ({ ok: false, code: 'EXP_NOT_FOUND' }) }
+    await assert.rejects(decideExperiment('exp:x', true, {}, { service: service as never }), (e: unknown) => {
+      const r = e as ResearchError
+      return r instanceof ResearchError && r.statusCode === 404
     })
   })
 })
