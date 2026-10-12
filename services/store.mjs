@@ -54,6 +54,17 @@ export async function getNotificationLog() {
   return notificationLogMemo
 }
 
+/** Model `alert_rules` (Alert Rules §58.5) — null = Mongo down. */
+let alertRuleMemo = null
+export async function getAlertRule() {
+  if (alertRuleMemo) return alertRuleMemo
+  const mg = await connectMongo()
+  if (!mg) return null
+  const mod = await import('../engine/models/alertRule.mjs')
+  alertRuleMemo = mod.AlertRule
+  return alertRuleMemo
+}
+
 /** Model `experiments` (Experiment Engine §28.1) — null = Mongo down. */
 let experimentMemo = null
 export async function getExperiment() {

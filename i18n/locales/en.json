@@ -1247,6 +1247,93 @@
     "emptyHint": "Headlines appear once the news service has run (`npm run services:once`).",
     "emptyMongo": "Mongo is offline — the news service cannot read or write headlines."
   },
+  "alertRules": {
+    "title": "Alert Rules",
+    "desc": "Rule definitions over the intel event stream (news / alerts). A rule describes the condition; the alertRules service evaluates it and routes matches through the shared notify pipeline.",
+    "create": "New rule",
+    "edit": "Edit",
+    "delete": "Delete",
+    "createTitle": "Create alert rule",
+    "editTitle": "Edit alert rule",
+    "save": "Save",
+    "name": "Name",
+    "namePlaceholder": "e.g. BTC breaking news",
+    "kindLabel": "Source",
+    "kind": {
+      "news": "News",
+      "alert": "Signal alert"
+    },
+    "levelLabel": "Minimum level",
+    "level": {
+      "high": "High",
+      "med": "Medium",
+      "low": "Low"
+    },
+    "dirs": "Direction",
+    "dir": {
+      "pos": "Bullish",
+      "neg": "Bearish",
+      "flat": "Neutral"
+    },
+    "dirsHint": "Leave empty to match any direction.",
+    "priorityLabel": "Priority",
+    "priority": {
+      "critical": "Critical",
+      "important": "Important",
+      "normal": "Normal",
+      "info": "Info"
+    },
+    "symbols": "Symbols",
+    "symbolsHint": "BTCUSDT, ETHUSDT (empty = any)",
+    "sources": "Sources",
+    "sourcesHint": "coindesk, theblock (empty = any)",
+    "tags": "Tags",
+    "tagsHint": "etf, halving (empty = any)",
+    "minScore": "Minimum score",
+    "minScoreHint": "empty = no floor",
+    "lookback": "Lookback (hours)",
+    "lookbackHint": "How far back the service scans the event stream. Default 168h (7 days).",
+    "enabled": "Enabled",
+    "filter_enabled": "Enabled",
+    "filter_disabled": "Disabled",
+    "historyLink": "Delivery history",
+    "columns": {
+      "name": "Rule",
+      "conditions": "Conditions",
+      "priority": "Priority",
+      "status": "Enabled",
+      "stats": "Activity"
+    },
+    "facet": {
+      "kind": "Source",
+      "level": "Level",
+      "dir": "Direction",
+      "symbol": "Symbol",
+      "source": "Source",
+      "tag": "Tag",
+      "score": "Score",
+      "priority": "Priority"
+    },
+    "stats": "{m} matches · {n} sent",
+    "ruleCount": "{n} rules",
+    "mongoDown": "Mongo offline",
+    "empty": "No alert rules",
+    "emptyHint": "Create a rule to route matching news/alerts through your notification channels.",
+    "emptyMongo": "Mongo is offline — alert rules cannot be read or written.",
+    "created": "Alert rule created",
+    "updated": "Alert rule saved",
+    "deleted": "Alert rule deleted",
+    "toggledOn": "Alert rule enabled",
+    "toggledOff": "Alert rule disabled",
+    "deleteConfirmTitle": "Delete alert rule",
+    "deleteConfirm": "Delete this rule? Its definition is removed; past deliveries stay in the notification log.",
+    "error": {
+      "nameRequired": "Name is required",
+      "nameTooLong": "Name must be 80 characters or fewer",
+      "scoreInvalid": "Minimum score must be a number",
+      "lookbackInvalid": "Lookback must be zero or more hours"
+    }
+  },
   "notifications": {
     "title": "Notifications",
     "system": "System",

@@ -1247,6 +1247,93 @@
     "emptyHint": "Tin tức xuất hiện sau khi dịch vụ news chạy (`npm run services:once`).",
     "emptyMongo": "Mongo ngoại tuyến — dịch vụ news không đọc/ghi được tin tức."
   },
+  "alertRules": {
+    "title": "Quy tắc cảnh báo",
+    "desc": "Định nghĩa quy tắc trên luồng sự kiện intel (tin tức / cảnh báo). Quy tắc mô tả điều kiện; dịch vụ alertRules đánh giá và định tuyến kết quả khớp qua pipeline thông báo dùng chung.",
+    "create": "Quy tắc mới",
+    "edit": "Sửa",
+    "delete": "Xóa",
+    "createTitle": "Tạo quy tắc cảnh báo",
+    "editTitle": "Sửa quy tắc cảnh báo",
+    "save": "Lưu",
+    "name": "Tên",
+    "namePlaceholder": "vd: Tin nóng BTC",
+    "kindLabel": "Nguồn",
+    "kind": {
+      "news": "Tin tức",
+      "alert": "Cảnh báo tín hiệu"
+    },
+    "levelLabel": "Mức tối thiểu",
+    "level": {
+      "high": "Cao",
+      "med": "Trung bình",
+      "low": "Thấp"
+    },
+    "dirs": "Hướng",
+    "dir": {
+      "pos": "Tăng",
+      "neg": "Giảm",
+      "flat": "Trung tính"
+    },
+    "dirsHint": "Để trống để khớp mọi hướng.",
+    "priorityLabel": "Ưu tiên",
+    "priority": {
+      "critical": "Nghiêm trọng",
+      "important": "Quan trọng",
+      "normal": "Bình thường",
+      "info": "Thông tin"
+    },
+    "symbols": "Mã",
+    "symbolsHint": "BTCUSDT, ETHUSDT (trống = mọi mã)",
+    "sources": "Nguồn tin",
+    "sourcesHint": "coindesk, theblock (trống = mọi nguồn)",
+    "tags": "Thẻ",
+    "tagsHint": "etf, halving (trống = mọi thẻ)",
+    "minScore": "Điểm tối thiểu",
+    "minScoreHint": "trống = không giới hạn",
+    "lookback": "Khoảng tra cứu (giờ)",
+    "lookbackHint": "Dịch vụ quét luồng sự kiện về trước bao xa. Mặc định 168h (7 ngày).",
+    "enabled": "Bật",
+    "filter_enabled": "Đang bật",
+    "filter_disabled": "Đang tắt",
+    "historyLink": "Lịch sử gửi",
+    "columns": {
+      "name": "Quy tắc",
+      "conditions": "Điều kiện",
+      "priority": "Ưu tiên",
+      "status": "Bật",
+      "stats": "Hoạt động"
+    },
+    "facet": {
+      "kind": "Nguồn",
+      "level": "Mức",
+      "dir": "Hướng",
+      "symbol": "Mã",
+      "source": "Nguồn tin",
+      "tag": "Thẻ",
+      "score": "Điểm",
+      "priority": "Ưu tiên"
+    },
+    "stats": "{m} khớp · {n} đã gửi",
+    "ruleCount": "{n} quy tắc",
+    "mongoDown": "Mongo ngoại tuyến",
+    "empty": "Chưa có quy tắc cảnh báo",
+    "emptyHint": "Tạo quy tắc để định tuyến tin tức/cảnh báo khớp qua các kênh thông báo của bạn.",
+    "emptyMongo": "Mongo ngoại tuyến — không đọc/ghi được quy tắc cảnh báo.",
+    "created": "Đã tạo quy tắc cảnh báo",
+    "updated": "Đã lưu quy tắc cảnh báo",
+    "deleted": "Đã xóa quy tắc cảnh báo",
+    "toggledOn": "Đã bật quy tắc cảnh báo",
+    "toggledOff": "Đã tắt quy tắc cảnh báo",
+    "deleteConfirmTitle": "Xóa quy tắc cảnh báo",
+    "deleteConfirm": "Xóa quy tắc này? Định nghĩa sẽ bị gỡ; các lần gửi trước đó vẫn lưu trong nhật ký thông báo.",
+    "error": {
+      "nameRequired": "Tên là bắt buộc",
+      "nameTooLong": "Tên tối đa 80 ký tự",
+      "scoreInvalid": "Điểm tối thiểu phải là số",
+      "lookbackInvalid": "Khoảng tra cứu phải từ 0 giờ trở lên"
+    }
+  },
   "notifications": {
     "title": "Thông báo",
     "system": "Hệ thống",

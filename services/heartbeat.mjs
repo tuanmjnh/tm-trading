@@ -30,6 +30,7 @@ export const DEFAULT_INTERVALS = Object.freeze({
   retention: Number(process.env.RETENTION_INTERVAL || 21600), // §23.4 — prune every 6h
   reconcile: Number(process.env.RECONCILE_INTERVAL || 21600), // §24.2 — venue compare every 6h
   crossScan: Number(process.env.CROSS_SCAN_INTERVAL || 14400), // §36 — cross-venue scan every 4h
+  alertRules: Number(process.env.ALERT_RULES_INTERVAL || 300), // §58.5 — evaluate alert rules every 5m
 })
 
 /** Nhắc lại Telegram sau khi overdue: 6h (đổi qua HEARTBEAT_REMIND_H). */

@@ -26,6 +26,7 @@ import { runBrief } from '../ai/daily-brief.mjs'
 import { runRetentionService } from '../exec/retention.mjs'
 import { runReconcileService } from './reconcile.mjs'
 import { runCrossScan } from './crossScan.mjs'
+import { runAlertRules } from './alertRules.mjs'
 import { notify } from '../notify/service.mjs'
 
 loadEnv()
@@ -48,6 +49,9 @@ const SERVICES = [
   { name: 'reconcile', run: runReconcileService, intervalSec: Number(process.env.RECONCILE_INTERVAL || DEFAULT_INTERVALS.reconcile), tag: '[reconcile]' },
   // §36 — cross-venue spread/funding/OI scanner (fail-soft, REST only).
   { name: 'crossScan', run: runCrossScan, intervalSec: Number(process.env.CROSS_SCAN_INTERVAL || DEFAULT_INTERVALS.crossScan), tag: '[cross-scan]' },
+  // §58.5 — evaluate user alert rules against the intel event stream, route
+  // matches through the notify/ router (dedupe via notification_logs, D4).
+  { name: 'alertRules', run: runAlertRules, intervalSec: Number(process.env.ALERT_RULES_INTERVAL || DEFAULT_INTERVALS.alertRules), tag: '[alert-rules]' },
 ]
 
 const log = (tag, msg) => console.log(`${new Date().toISOString()} ${tag} ${msg}`)
