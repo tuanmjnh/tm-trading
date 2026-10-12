@@ -4,7 +4,8 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { validateProposal, PROPOSAL_SCHEMA_VERSION } from '../ai/proposal.mjs'
 import { mergeScannerCandidates } from '../app/utils/scanner'
-import type { IntelAccum, IntelFlow, IntelMover } from '../types/intel'
+import { filterNews, groupNewsByDay } from '../app/utils/calendar'
+import type { IntelAccum, IntelFlow, IntelMover, IntelNewsItem } from '../types/intel'
 
 // =============================================================================
 //  §58.10 acceptance lock — the criteria the migration must keep true.
@@ -188,6 +189,18 @@ describe('§57.4/§58.5 — API-backed leaves are real pages, not stubs', () => 
     assert.match(composable, /useIntel/)
     assert.match(composable, /useMarketCatalog/)
   })
+
+  test('markets/calendar consumes the intel news stream (no second ingest)', () => {
+    const src = read('app/pages/markets/calendar.vue')
+    assert.doesNotMatch(src, /comingSoon/, 'calendar must not be a "coming soon" stub')
+    assert.match(src, /useMarketCalendar/)
+    assert.match(src, /groupNewsByDay/)
+    const composable = read('app/composables/useMarketCalendar.ts')
+    assert.match(composable, /\/api\/v1\/news/)
+    assert.match(composable, /useIntel/, 'unlocks come from the same intel snapshot (§58.6)')
+    const route = read('server/api/v1/news/index.get.ts')
+    assert.match(route, /listNews/)
+  })
 })
 
 describe('§58.5 — scanner candidate merge is a pure projection (D1)', () => {
@@ -229,5 +242,41 @@ describe('§58.5 — scanner candidate merge is a pure projection (D1)', () => {
 
   test('fails soft to [] on a null payload', () => {
     assert.deepEqual(mergeScannerCandidates(null, []), [])
+  })
+})
+
+describe('§58.5 — news calendar grouping is a pure projection (D1)', () => {
+  const item = (ts: string, extra: Partial<IntelNewsItem> = {}): IntelNewsItem =>
+    ({ title: 't', link: '', source: 'coindesk', level: 'med', dir: 'flat', tags: [], score: 0.5, ts, excerpt: '', ...extra })
+
+  test('groups by UTC day, newest day first, newest headline first within a day', () => {
+    const out = groupNewsByDay([
+      item('2026-10-08T09:00:00Z'),
+      item('2026-10-08T11:00:00Z'),
+      item('2026-10-07T23:00:00Z')
+    ])
+    assert.equal(out.length, 2)
+    assert.equal(out[0]!.day, '2026-10-08')
+    assert.deepEqual(out[0]!.items.map(i => i.ts), ['2026-10-08T11:00:00Z', '2026-10-08T09:00:00Z'])
+    assert.equal(out[1]!.day, '2026-10-07')
+  })
+
+  test('drops headlines without a usable timestamp and fails soft on empty input', () => {
+    const out = groupNewsByDay([item(''), item('not-a-date'), item('2026-10-08T00:00:00Z')])
+    assert.equal(out.length, 1)
+    assert.equal(out[0]!.items.length, 1)
+    assert.deepEqual(groupNewsByDay([]), [])
+  })
+
+  test('filters by level + free-text over title/excerpt/source/tags', () => {
+    const items = [
+      item('2026-10-08T00:00:00Z', { level: 'high', title: 'Fed holds rates', tags: ['macro'] }),
+      item('2026-10-08T01:00:00Z', { level: 'med', title: 'ETF inflows', source: 'cointelegraph' })
+    ]
+    assert.equal(filterNews(items, { level: 'high' }).length, 1)
+    assert.equal(filterNews(items, { query: 'etf' }).length, 1)
+    assert.equal(filterNews(items, { query: 'cointelegraph' }).length, 1)
+    assert.equal(filterNews(items, { query: 'macro' }).length, 1)
+    assert.equal(filterNews(items, {}).length, 2)
   })
 })
