@@ -5,7 +5,9 @@ import { join } from 'node:path'
 import { validateProposal, PROPOSAL_SCHEMA_VERSION } from '../ai/proposal.mjs'
 import { mergeScannerCandidates } from '../app/utils/scanner'
 import { filterNews, groupNewsByDay } from '../app/utils/calendar'
+import { emptyRuleForm, ruleToForm, formToInput, validateRuleForm, ruleFacets, parseList } from '../app/utils/alertRules'
 import type { IntelAccum, IntelFlow, IntelMover, IntelNewsItem } from '../types/intel'
+import type { AlertRule } from '../types/alertRules'
 
 // =============================================================================
 //  §58.10 acceptance lock — the criteria the migration must keep true.
@@ -278,5 +280,89 @@ describe('§58.5 — news calendar grouping is a pure projection (D1)', () => {
     assert.equal(filterNews(items, { query: 'cointelegraph' }).length, 1)
     assert.equal(filterNews(items, { query: 'macro' }).length, 1)
     assert.equal(filterNews(items, {}).length, 2)
+  })
+})
+
+describe('§58.5 — alert rules are conditions over intel, delivered via the shared pipeline (§58.6)', () => {
+  test('alerts page is a real, API-backed rule list (not a stub)', () => {
+    const src = read('app/pages/alerts/index.vue')
+    assert.doesNotMatch(src, /comingSoon/, 'alerts must not be a "coming soon" stub')
+    assert.match(src, /useAlertRules/)
+    const api = read('app/composables/useAlertRules.ts')
+    assert.match(api, /\/api\/v1\/alert-rules/)
+  })
+
+  test('the engine owns the rule contract; the service reuses the notify router (no second pipeline)', () => {
+    const engine = read('engine/alertRules.mjs')
+    assert.match(engine, /ALERT_RULE_VERSION/)
+    assert.match(engine, /ruleKeyFor/)
+    assert.match(engine, /ruleEventDedupeKey/)
+    const service = read('services/alertRules.mjs')
+    assert.match(service, /notify/, 'delivery must go through the shared notify router')
+    assert.match(service, /notifyHash/, 'dedupe reuses the notification ledger identity')
+    assert.match(service, /_id:/, 'the notification ledger _id is the idempotency anchor (D4)')
+  })
+
+  test('the rule CRUD routes exist and the service is registered on the run loop', () => {
+    for (const f of ['index.get', 'index.post', '[id].get', '[id].patch', '[id].delete']) {
+      const p = `server/api/v1/alert-rules/${f}.ts`
+      assert.equal(existsSync(join(ROOT, p)), true, `${p} must exist`)
+    }
+    assert.match(read('services/run.mjs'), /alertRules/)
+    assert.match(read('services/heartbeat.mjs'), /alertRules/)
+  })
+
+  test('the rule model is a distinct collection from the notification ledger', () => {
+    const model = read('engine/models/alertRule.mjs')
+    assert.match(model, /collection: 'alert_rules'/)
+    assert.doesNotMatch(model, /collection: 'notification_logs'/, 'rules must not share the notify ledger collection')
+    assert.match(model, /unique: true/, 'ruleKey stays the idempotent definition identity (D4)')
+  })
+
+  const base = (over: Partial<AlertRule> = {}): AlertRule => ({
+    _id: 'r1', ruleKey: 'r1_abc', name: 'BTC news', enabled: true, kind: 'news', minLevel: 'med',
+    dirs: ['pos'], symbols: ['BTCUSDT'], sources: ['coindesk'], tags: ['etf'], minScore: null,
+    priority: 'normal', lookbackSec: 7 * 24 * 3600,
+    stats: { matches: 0, notified: 0, lastMatchAt: null, lastRunAt: null },
+    createdAt: '', updatedAt: '', ...over
+  })
+
+  test('validateRuleForm mirrors the server rules (name required/bounded, numeric score)', () => {
+    assert.deepEqual(validateRuleForm(emptyRuleForm()), { ok: false, error: 'nameRequired' })
+    assert.equal(validateRuleForm({ ...emptyRuleForm(), name: 'x'.repeat(81) }).error, 'nameTooLong')
+    assert.equal(validateRuleForm({ ...emptyRuleForm(), name: 'ok', minScore: 'abc' }).error, 'scoreInvalid')
+    assert.equal(validateRuleForm({ ...emptyRuleForm(), name: 'ok', minScore: '2.5' }).ok, true)
+  })
+
+  test('parseList splits on comma/space and de-dupes case-insensitively', () => {
+    assert.deepEqual(parseList('btc, eth  btc\nSOL'), ['btc', 'eth', 'SOL'])
+    assert.deepEqual(parseList('   '), [])
+  })
+
+  test('formToInput collects a validated form into the API payload', () => {
+    const input = formToInput({ ...emptyRuleForm(), name: '  BTC  ', symbols: 'btc, eth', minScore: '' })
+    assert.equal(input.name, 'BTC', 'name is trimmed')
+    assert.deepEqual(input.symbols, ['btc', 'eth'])
+    assert.equal(input.minScore, null, 'empty score -> no floor')
+    assert.equal(input.lookbackSec, 7 * 24 * 3600, 'default lookback is 7 days')
+  })
+
+  test('ruleToForm ↔ formToInput round-trips a rule without losing facets', () => {
+    const rule = base({ minScore: 3 })
+    const round = formToInput(ruleToForm(rule))
+    assert.deepEqual(round.symbols, rule.symbols)
+    assert.deepEqual(round.sources, rule.sources)
+    assert.deepEqual(round.tags, rule.tags)
+    assert.deepEqual(round.dirs, rule.dirs)
+    assert.equal(round.minScore, 3)
+  })
+
+  test('ruleFacets shows only the facets a rule actually constrains, kind/priority first+last', () => {
+    const faces = ruleFacets(base())
+    assert.equal(faces[0]!.facet, 'kind')
+    assert.equal(faces.at(-1)!.facet, 'priority')
+    assert.ok(faces.some(f => f.facet === 'symbol' && f.value === 'BTCUSDT'))
+    const lean = ruleFacets(base({ dirs: [], symbols: [], sources: [], tags: [], minScore: null }))
+    assert.deepEqual(lean.map(f => f.facet), ['kind', 'level', 'priority'])
   })
 })

@@ -35,6 +35,7 @@ const SUITES = [
   ['mt5', 'exec/mt5/test.mjs', []],
   ['db', 'engine/test-db.mjs', []],
   ['services', 'services/test.mjs', []],
+  ['alert-rules', 'engine/test-alert-rules.mjs', []],
   ['ai', 'ai/test.mjs', []],
   ['ai-review', 'ai/test-review.mjs', []],
 ]
