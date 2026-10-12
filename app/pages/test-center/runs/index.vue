@@ -157,9 +157,9 @@ useHead({ title })
       />
     </template>
 
-    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-4">
+    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-3">
       <!-- Bang tong hop Symbol x TF -->
-      <UCard v-if="matrix" class="shrink-0" :ui="{ body: 'p-3 sm:p-4' }">
+      <UCard v-if="matrix" class="shrink-0" :ui="{ body: 'p-3 sm:p-3' }">
         <template #header>
           <div class="flex items-center justify-between gap-2 flex-wrap">
             <div class="flex items-center gap-2">

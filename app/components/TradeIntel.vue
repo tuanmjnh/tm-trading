@@ -50,7 +50,7 @@ const accumCount = computed(() => props.accum?.reasons?.length ?? 0)
 </script>
 
 <template>
-  <div class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-default ring ring-default px-3 py-2">
+  <div class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded bg-default ring ring-default px-3 py-2">
     <span class="text-xs font-medium tracking-wide text-muted uppercase">
       {{ t('trade.intelRegime') }} · <span class="font-mono normal-case">{{ symbol }}</span>
     </span>

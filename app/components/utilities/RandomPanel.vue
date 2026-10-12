@@ -13,13 +13,13 @@
       />
     </div>
 
-    <div v-if="randomType === 'password'" class="space-y-3 rounded-xl border border-default p-4">
+    <div v-if="randomType === 'password'" class="space-y-3 rounded border border-default p-3">
       <div class="flex items-center gap-3">
         <label class="w-24 text-sm text-muted">{{ t('utilities.random.length') }}</label>
         <USlider v-model="pwOptions.length" :min="4" :max="64" class="flex-1" />
         <span class="w-8 text-right font-mono text-sm">{{ pwOptions.length }}</span>
       </div>
-      <div class="flex flex-wrap gap-4">
+      <div class="flex flex-wrap gap-3">
         <UCheckbox v-model="pwOptions.upper" :label="t('utilities.random.upper')" />
         <UCheckbox v-model="pwOptions.lower" :label="t('utilities.random.lower')" />
         <UCheckbox v-model="pwOptions.digits" :label="t('utilities.random.digits')" />
@@ -32,7 +32,7 @@
       </div>
     </div>
 
-    <div v-if="randomType === 'username'" class="space-y-3 rounded-xl border border-default p-4">
+    <div v-if="randomType === 'username'" class="space-y-3 rounded border border-default p-3">
       <div class="flex flex-wrap gap-2">
         <UButton
           v-for="style in usernameStyles"
@@ -73,7 +73,7 @@
       <div
         v-for="(item, idx) in genResults"
         :key="idx"
-        class="flex items-center gap-2 rounded-lg bg-default/50 px-3 py-2"
+        class="flex items-center gap-2 rounded bg-default/50 px-3 py-2"
       >
         <code class="flex-1 font-mono text-sm break-all">{{ item }}</code>
         <UButton

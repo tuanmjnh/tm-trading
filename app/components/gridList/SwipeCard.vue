@@ -123,7 +123,7 @@ const handleContentClick = () => {
     class="relative overflow-hidden touch-pan-y select-none group transition-colors duration-200"
     :class="flat
       ? 'border-b border-default last:border-b-0 rounded-none bg-transparent shadow-none hover:bg-elevated/40'
-      : 'rounded-lg border border-default bg-elevated/40 backdrop-blur-sm shadow-xs hover:bg-elevated/70 hover:shadow-md hover:border-primary/50'">
+      : 'rounded border border-default bg-elevated/40 backdrop-blur-sm hover:bg-elevated/70 hover:border-primary/50'">
     <!--  -->
     <!-- Action Layer (Background) -->
     <div v-show="(mobileMode === 'swipe' || mobileMode === undefined) && (Math.abs(offset) > 1 || isSwiping)"
@@ -150,7 +150,7 @@ const handleContentClick = () => {
         <!-- Center & Right (Swipe Target) -->
         <div ref="swipeTarget"
           class="active-scale flex-1 min-w-0 h-full flex items-center transition-all duration-200 active:bg-elevated"
-          :class="flat ? '' : 'rounded-lg'"
+          :class="flat ? '' : 'rounded'"
           @click="handleContentClick">
           <!-- Center (Default) Slot -->
           <div class="flex-1 min-w-0 h-full flex items-center">

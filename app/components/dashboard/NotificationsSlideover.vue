@@ -81,7 +81,7 @@ const onMarkAll = async () => {
     <template #header>
       <div class="flex items-center justify-between gap-3 w-full pr-1">
         <div class="flex items-center gap-2 min-w-0">
-          <div class="p-1.5 rounded-lg bg-primary/10 text-primary shrink-0">
+          <div class="p-1.5 rounded bg-primary/10 text-primary shrink-0">
             <UIcon name="i-lucide-bell" class="size-4 flex" />
           </div>
           <div class="min-w-0">

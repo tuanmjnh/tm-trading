@@ -15,7 +15,7 @@
       </template>
     </div>
 
-    <div class="grid gap-4 lg:grid-cols-2">
+    <div class="grid gap-3 lg:grid-cols-2">
       <UtilitiesTextPane
         v-model="input"
         :label="t('utilities.text.inputLabel')"

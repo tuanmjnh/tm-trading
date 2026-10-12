@@ -4,7 +4,7 @@
 dashboard Nuxt, **risk gate** và execution (paper → MT5/exchange).
 
 Bộ chỉ báo TradingView (Pine Script **v6**) là **công cụ hỗ trợ** — nguồn tín hiệu và
-đối chiếu tay — **không phải sản phẩm chính**. Định hướng đầy đủ: `docs/tm-trading-roadmap-v2.md`.
+đối chiếu tay — **không phải sản phẩm chính**. Định hướng đầy đủ: `docs/web-app/tm-trading-roadmap-v2.md`.
 
 ```
 tm-trading/
@@ -212,7 +212,7 @@ Server lưu mọi alert vào `logs/alerts.ndjson`, chống gửi trùng **bằng
 `alerts.alertKey`** (bền vững qua restart — không còn bộ đếm trong RAM) và
 từ chối payload sai logic (SL sai phía so với giá vào lệnh).
 `/health` báo `dedupe: "mongo"` (hoặc `"ram"` khi Mongo không kết nối được).
-Chi tiết payload: [`docs/alert-schema.md`](docs/alert-schema.md).
+Chi tiết payload: [`docs/engine/alert-schema.md`](docs/engine/alert-schema.md).
 
 ## 6. Thêm module tín hiệu mới
 

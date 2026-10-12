@@ -23,7 +23,7 @@ const shortcuts = computed(() => [
             {{ t('help.keyboardShortcuts') }}
           </h4>
           <div
-            class="divide-y divide-default border border-default rounded-lg"
+            class="divide-y divide-default border border-default rounded"
           >
             <div v-for="s in shortcuts" :key="s.key" class="flex justify-between items-center p-3 text-xs">
               <span class="text-toned">{{ s.desc }}</span>

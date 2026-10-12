@@ -72,7 +72,7 @@ useHead({ title })
       />
 
       <div v-if="isLoading && !sources.length" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <USkeleton v-for="n in sources.length || 3" :key="n" class="h-28 rounded-lg" />
+        <USkeleton v-for="n in sources.length || 3" :key="n" class="h-28 rounded" />
       </div>
 
       <AdminEmptyState
@@ -83,7 +83,7 @@ useHead({ title })
       />
 
       <div v-else class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <UCard v-for="s in sources" :key="s.venue" :ui="{ body: 'p-4' }">
+        <UCard v-for="s in sources" :key="s.venue" :ui="{ body: 'p-3' }">
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
               <div class="font-semibold text-highlighted capitalize truncate">{{ s.venue }}</div>

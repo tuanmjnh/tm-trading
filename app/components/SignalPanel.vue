@@ -68,7 +68,7 @@ const time = (iso: string): string => fmtUtcTime(iso)
 </script>
 
 <template>
-  <div class="flex flex-col gap-2 rounded-lg bg-default ring ring-default p-3">
+  <div class="flex flex-col gap-2 rounded bg-default ring ring-default p-3">
     <div class="flex items-baseline justify-between">
       <h3 class="text-sm font-semibold">{{ t('trade.signals') }}</h3>
       <div class="flex items-center gap-1.5">

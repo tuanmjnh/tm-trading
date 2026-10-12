@@ -569,7 +569,7 @@ onMounted(() => load(true))
 
           <!-- Data Type Selection -->
           <UFormField :label="t('configs.type')">
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5 p-1 bg-default/40 rounded-lg border border-default">
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5 p-1 bg-default/40 rounded border border-default">
               <UButton v-for="opt in typeOptions" :key="opt.value" :label="opt.label" :icon="opt.icon" size="xs"
                 :variant="formState.type === opt.value ? 'solid' : 'ghost'"
                 :color="formState.type === opt.value ? 'primary' : 'neutral'" class="justify-center"
@@ -590,7 +590,7 @@ onMounted(() => load(true))
             <!-- 3. JSON Editor (Supports visual tree editor & raw code mode) -->
             <div v-else-if="formState.type === 'json'" class="space-y-2 w-full">
               <div class="flex items-center justify-between flex-wrap gap-2">
-                <div class="flex items-center gap-1 bg-default/40 p-0.5 rounded-lg border border-default">
+                <div class="flex items-center gap-1 bg-default/40 p-0.5 rounded border border-default">
                   <UButton label="Visual Tree" icon="i-lucide-network" size="xs"
                     :variant="jsonEditMode === 'tree' ? 'solid' : 'ghost'"
                     :color="jsonEditMode === 'tree' ? 'primary' : 'neutral'" @click="switchJsonEditMode('tree')" />
@@ -612,7 +612,7 @@ onMounted(() => load(true))
               </div>
 
               <!-- Visual Json Editor via component inputs/JsonEditor.vue -->
-              <div v-if="jsonEditMode === 'tree'" class="h-64 rounded-lg overflow-hidden border border-default">
+              <div v-if="jsonEditMode === 'tree'" class="h-64 rounded overflow-hidden border border-default">
                 <LazyInputsJsonEditor v-model="jsonModelValue" />
               </div>
 

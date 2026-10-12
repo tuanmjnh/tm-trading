@@ -102,10 +102,10 @@ function formatDate(dateStr: string | null) {
             <USkeleton class="h-3 w-1/3" />
           </div>
         </div>
-        <USkeleton class="h-32 w-full rounded-lg" />
+        <USkeleton class="h-32 w-full rounded" />
       </div>
 
-      <article v-for="(msg, idx) in thread" :key="msg.id" class="border-b border-default p-4 sm:p-6"
+      <article v-for="(msg, idx) in thread" :key="msg.id" class="border-b border-default p-3 sm:p-6"
         :class="[idx > 0 && 'bg-elevated/10']">
         <!-- Message Header -->
         <header class="flex items-start justify-between gap-3 mb-4">
@@ -158,7 +158,7 @@ function formatDate(dateStr: string | null) {
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             <div v-for="att in msg.attachments" :key="att.filename + (att.id || '')"
-              class="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-default bg-elevated/40 hover:bg-elevated transition-colors text-xs">
+              class="flex items-center justify-between gap-2 p-2.5 rounded border border-default bg-elevated/40 hover:bg-elevated transition-colors text-xs">
               <div class="flex items-center gap-2 min-w-0">
                 <UIcon :name="getAttachmentIcon(att.mimeType, att.filename).icon"
                   :class="['size-5 shrink-0', getAttachmentIcon(att.mimeType, att.filename).color]" />
@@ -186,9 +186,9 @@ function formatDate(dateStr: string | null) {
     </div>
 
     <!-- Reply Box -->
-    <div class="p-3 sm:p-4 border-t border-default shrink-0 bg-elevated/30">
+    <div class="p-3 sm:p-3 border-t border-default shrink-0 bg-elevated/30">
       <div
-        class="rounded-lg border border-default bg-default p-3 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+        class="rounded border border-default bg-default p-3 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
         <div class="flex items-center gap-1.5 text-xs text-muted mb-2">
           <UIcon name="i-lucide-reply" class="size-3.5 text-primary" />
           <span class="truncate">

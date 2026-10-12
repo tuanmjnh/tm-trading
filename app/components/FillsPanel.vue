@@ -8,6 +8,7 @@
 // =============================================================================
 import type { FillsListResponse, PaperFillItem } from '~~/types/fills'
 import { formatPrice } from '../utils/marketFeed'
+import { getErrorMessage, isAuthError } from '../shared/utils/errors'
 
 defineProps<{
   reload?: number
@@ -20,7 +21,25 @@ const meta = ref<FillsListResponse['meta'] | null>(null)
 const mongo = ref<'up' | 'down'>('up')
 const error = ref('')
 
+/** Session lost (401) — polling is suspended until re-authentication. */
+const halted = ref(false)
+
+let timer: ReturnType<typeof setInterval> | null = null
+
+const stopPolling = (): void => {
+  if (timer) clearInterval(timer)
+  timer = null
+}
+
+const startPolling = (): void => {
+  if (timer) return
+  timer = setInterval(() => void fetchFills(), 5000)
+}
+
 const fetchFills = async (): Promise<void> => {
+  // After an auth failure nothing can succeed until the user signs in again,
+  // so skip the call rather than emit a 401 every 5s.
+  if (halted.value) return
   try {
     const res = await $fetch<FillsListResponse>('/api/v1/fills', {
       params: { limit: 12 }
@@ -29,23 +48,36 @@ const fetchFills = async (): Promise<void> => {
     meta.value = res.meta
     mongo.value = res.mongo
     error.value = ''
+    halted.value = false
   } catch (err) {
-    error.value = (err as { data?: { message?: string } })?.data?.message ?? String(err)
+    error.value = getErrorMessage(err, key => t(key))
+    if (isAuthError(err)) {
+      halted.value = true
+      stopPolling()
+      error.value = t('trade.sessionExpired')
+    }
   }
 }
 
-let timer: ReturnType<typeof setInterval> | null = null
+// Resume polling once the user re-authenticates.
+const { isAuthenticated } = useAuth()
+watch(isAuthenticated, (authed) => {
+  if (authed) {
+    halted.value = false
+    void fetchFills()
+    startPolling()
+  }
+})
+
 onMounted(() => {
   void fetchFills()
-  timer = setInterval(() => void fetchFills(), 5000)
+  startPolling()
 })
-onUnmounted(() => {
-  if (timer) clearInterval(timer)
-})
+onUnmounted(stopPolling)
 </script>
 
 <template>
-  <div class="flex flex-col gap-3 rounded-lg bg-default ring ring-default p-3">
+  <div class="flex flex-col gap-3 rounded bg-default ring ring-default p-3">
     <div class="flex items-baseline justify-between gap-2">
       <h3 class="text-sm font-semibold">{{ t('trade.fills') }}</h3>
       <div v-if="mongo === 'down'" class="text-[10px] text-muted">

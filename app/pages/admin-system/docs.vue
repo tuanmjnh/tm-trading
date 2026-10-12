@@ -93,10 +93,10 @@ mobileBar.registerInfo(computed(() => ({
 
     <div class="flex flex-col gap-6 w-full pb-24 lg:pb-6">
       <!-- 1. Core Architecture Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
         <UCard class="hover:border-primary/40 transition-colors">
           <div class="flex items-center gap-3">
-            <div class="p-2.5 rounded-lg bg-primary/10 text-primary shrink-0">
+            <div class="p-2.5 rounded bg-primary/10 text-primary shrink-0">
               <UIcon name="i-lucide-shield-check" class="flex w-5 h-5" />
             </div>
             <div class="space-y-1 min-w-0">
@@ -110,7 +110,7 @@ mobileBar.registerInfo(computed(() => ({
 
         <UCard class="hover:border-success/40 transition-colors">
           <div class="flex items-center gap-3">
-            <div class="p-2.5 rounded-lg bg-success/10 text-success shrink-0">
+            <div class="p-2.5 rounded bg-success/10 text-success shrink-0">
               <UIcon name="i-lucide-sliders" class="flex w-5 h-5" />
             </div>
             <div class="space-y-1 min-w-0">
@@ -124,7 +124,7 @@ mobileBar.registerInfo(computed(() => ({
 
         <UCard class="hover:border-warning/40 transition-colors">
           <div class="flex items-center gap-3">
-            <div class="p-2.5 rounded-lg bg-warning/10 text-warning shrink-0">
+            <div class="p-2.5 rounded bg-warning/10 text-warning shrink-0">
               <UIcon name="i-lucide-cloud-upload" class="flex w-5 h-5" />
             </div>
             <div class="space-y-1 min-w-0">
@@ -138,7 +138,7 @@ mobileBar.registerInfo(computed(() => ({
 
         <UCard class="hover:border-error/40 transition-colors">
           <div class="flex items-center gap-3">
-            <div class="p-2.5 rounded-lg bg-error/10 text-error shrink-0">
+            <div class="p-2.5 rounded bg-error/10 text-error shrink-0">
               <UIcon name="i-lucide-bell-ring" class="flex w-5 h-5" />
             </div>
             <div class="space-y-1 min-w-0">
@@ -164,7 +164,7 @@ mobileBar.registerInfo(computed(() => ({
           <p class="text-xs text-toned">
             {{ t('docs.sdk.description', { app: 'tm-tools' }) }}
           </p>
-          <pre class="bg-muted text-highlighted p-4 rounded-lg text-xs overflow-x-auto font-mono">
+          <pre class="bg-muted text-highlighted p-3 rounded text-xs overflow-x-auto font-mono">
         <code>
           import { createHubClient } from 'tm-hub-client'
 

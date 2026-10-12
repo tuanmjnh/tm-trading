@@ -51,7 +51,7 @@ function selectFolder(f: FolderItem) {
       </div>
 
       <button v-for="folder in folders" :key="folder.id" type="button"
-        class="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all group"
+        class="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded text-xs sm:text-sm font-medium transition-all group"
         :class="[
           activeFolder === folder.id
             ? 'bg-primary/10 text-primary font-semibold'

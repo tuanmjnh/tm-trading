@@ -55,19 +55,19 @@ const openConfirm = (type: 'local' | 'session' | 'cookies' | 'pwa' | 'all' | 'si
     <template #body>
       <div class="grid grid-cols-1 gap-2">
         <UButton icon="i-lucide-database" variant="outline" color="neutral" block
-          class="justify-start text-xs rounded-xl py-5" :label="$t('settings.storage.clear_local_storage')"
+          class="justify-start text-xs rounded py-5" :label="$t('settings.storage.clear_local_storage')"
           @click="openConfirm('local')" />
         <UButton icon="i-lucide-clock" variant="outline" color="neutral" block
-          class="justify-start text-xs rounded-xl py-5" :label="$t('settings.storage.clear_session_storage')"
+          class="justify-start text-xs rounded py-5" :label="$t('settings.storage.clear_session_storage')"
           @click="openConfirm('session')" />
         <UButton icon="i-lucide-cookie" variant="outline" color="neutral" block
-          class="justify-start text-xs rounded-xl py-5" :label="$t('settings.storage.clear_cookies')"
+          class="justify-start text-xs rounded py-5" :label="$t('settings.storage.clear_cookies')"
           @click="openConfirm('cookies')" />
         <UButton icon="i-lucide-refresh-cw" variant="outline" color="neutral" block
-          class="justify-start text-xs rounded-xl py-5" :label="$t('settings.storage.clear_pwa_data')"
+          class="justify-start text-xs rounded py-5" :label="$t('settings.storage.clear_pwa_data')"
           @click="openConfirm('pwa')" />
         <UButton icon="i-lucide-layers" variant="outline" color="neutral" block
-          class="justify-start text-xs rounded-xl py-5" :label="$t('settings.storage.clear_site_data')"
+          class="justify-start text-xs rounded py-5" :label="$t('settings.storage.clear_site_data')"
           @click="openConfirm('site')" />
       </div>
 
@@ -77,7 +77,7 @@ const openConfirm = (type: 'local' | 'session' | 'cookies' | 'pwa' | 'all' | 'si
         :loading="confirmModal.loading" @confirm="confirmModal.onConfirm" />
     </template>
     <template #footer>
-      <UButton icon="i-lucide-trash-2" color="error" variant="soft" block class="justify-center text-xs rounded-xl py-2"
+      <UButton icon="i-lucide-trash-2" color="error" variant="soft" block class="justify-center text-xs rounded py-2"
         :label="$t('settings.storage.clear_all')" @click="openConfirm('all')" />
     </template>
   </BaseResponsiveModal>

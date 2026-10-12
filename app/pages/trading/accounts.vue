@@ -105,12 +105,12 @@ useHead({ title })
       </div>
     </template>
 
-    <div class="flex flex-col w-full gap-4 pb-24 lg:pb-6">
+    <div class="flex flex-col w-full gap-3 pb-24 lg:pb-6">
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
         <div
           v-for="c in statCards"
           :key="c.key"
-          class="rounded-lg bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0"
+          class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0"
         >
           <span class="text-[10px] text-muted uppercase tracking-wider truncate">{{ c.label }}</span>
           <span
@@ -127,7 +127,7 @@ useHead({ title })
         <article
           v-for="a in items"
           :key="a.account"
-          class="rounded-lg bg-default ring ring-default p-4 flex flex-col gap-3"
+          class="rounded bg-default ring ring-default p-3 flex flex-col gap-3"
         >
           <div class="flex items-center justify-between gap-2">
             <span class="text-sm font-semibold text-highlighted truncate">{{ a.account }}</span>
@@ -144,15 +144,15 @@ useHead({ title })
           </div>
 
           <div class="grid grid-cols-3 gap-2">
-            <div class="rounded-lg bg-elevated/50 px-2 py-1.5">
+            <div class="rounded bg-elevated/50 px-2 py-1.5">
               <p class="text-[10px] text-muted uppercase tracking-wide">{{ t('accounts.labelOpen') }}</p>
               <p class="text-sm font-bold font-mono" :class="a.open > 0 ? 'text-success' : 'text-highlighted'">{{ a.open }}</p>
             </div>
-            <div class="rounded-lg bg-elevated/50 px-2 py-1.5">
+            <div class="rounded bg-elevated/50 px-2 py-1.5">
               <p class="text-[10px] text-muted uppercase tracking-wide">{{ t('accounts.labelClosed') }}</p>
               <p class="text-sm font-bold font-mono text-highlighted">{{ a.closed }}</p>
             </div>
-            <div class="rounded-lg bg-elevated/50 px-2 py-1.5">
+            <div class="rounded bg-elevated/50 px-2 py-1.5">
               <p class="text-[10px] text-muted uppercase tracking-wide">{{ t('accounts.labelCancelled') }}</p>
               <p class="text-sm font-bold font-mono text-dimmed">{{ a.cancelled }}</p>
             </div>

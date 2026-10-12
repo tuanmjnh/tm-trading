@@ -254,7 +254,7 @@ useHead({ title })
     <template #toolbar>
       <UDashboardToolbar>
         <template #left>
-          <div class="flex items-center gap-1 rounded-lg bg-default ring ring-default p-1">
+          <div class="flex items-center gap-1 rounded bg-default ring ring-default p-1">
             <UButton
               v-for="tab in tabs"
               :key="tab.key"
@@ -270,7 +270,7 @@ useHead({ title })
       </UDashboardToolbar>
     </template>
 
-    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-4">
+    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-3">
       <UAlert
         v-if="!enabled && !loading"
         color="warning"
@@ -285,7 +285,7 @@ useHead({ title })
           <div
             v-for="card in statCards"
             :key="card.key"
-            class="rounded-lg bg-default ring ring-default p-3 flex flex-col gap-1"
+            class="rounded bg-default ring ring-default p-3 flex flex-col gap-1"
           >
             <div class="flex items-center gap-1.5 text-muted">
               <UIcon :name="card.icon" class="size-3.5" />
@@ -295,7 +295,7 @@ useHead({ title })
           </div>
         </div>
 
-        <div class="rounded-lg bg-default ring ring-default overflow-x-auto">
+        <div class="rounded bg-default ring ring-default overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
               <tr class="border-b border-default text-left">

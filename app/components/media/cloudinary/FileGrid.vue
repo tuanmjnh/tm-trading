@@ -60,7 +60,7 @@ const onPreview = (file: Cloudinary.IFileAttach) => {
         <div
           v-for="i in 32"
           :key="i"
-          class="w-[calc(50%-10px)] sm:w-[220px] aspect-square rounded-xl overflow-hidden bg-elevated shrink-0"
+          class="w-[calc(50%-10px)] sm:w-[220px] aspect-square rounded overflow-hidden bg-elevated shrink-0"
         >
           <USkeleton class="w-full h-full" />
         </div>

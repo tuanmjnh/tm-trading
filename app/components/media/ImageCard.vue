@@ -194,7 +194,7 @@ const availableActions = computed(() => {
 
   return [items]
 })
-const DEFAULT_CARD_CLASSES = 'relative rounded-xl overflow-hidden group transition-transform duration-200 bg-default'
+const DEFAULT_CARD_CLASSES = 'relative rounded overflow-hidden group transition-transform duration-200 bg-default'
 watch(() => getImage(props.file, ['secure_url', 'thumbnail_url', 'url']), (newVal, oldVal) => {
   if (newVal !== oldVal) {
     imageError.value = false
@@ -208,9 +208,9 @@ watch(() => getImage(props.file, ['secure_url', 'thumbnail_url', 'url']), (newVa
     v-bind="$attrs"
     :class="[
       DEFAULT_CARD_CLASSES,
-      !isNoFile ? 'cursor-pointer hover:shadow-lg' : 'cursor-default',
+      !isNoFile ? 'cursor-pointer' : 'cursor-default',
       isSelected
-        ? 'border border-primary ring-2 ring-primary/20 shadow-md'
+        ? 'border border-primary ring-2 ring-primary/20'
         : 'border border-default'
     ]"
     :style="{ width: cardSize.width, height: cardSize.height }"

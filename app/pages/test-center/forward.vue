@@ -145,7 +145,7 @@ useHead({ title })
       />
     </div>
 
-    <div v-else class="flex flex-col w-full h-full min-h-0 gap-4 overflow-y-auto pb-24 lg:pb-6">
+    <div v-else class="flex flex-col w-full h-full min-h-0 gap-3 overflow-y-auto pb-24 lg:pb-6">
       <!-- Account selector -->
       <div v-if="accounts.length > 1" class="flex items-center gap-1.5 flex-wrap shrink-0">
         <UButton
@@ -160,7 +160,7 @@ useHead({ title })
       </div>
 
       <!-- Account portrait -->
-      <UCard v-if="detail" :ui="{ body: 'p-3 sm:p-4' }">
+      <UCard v-if="detail" :ui="{ body: 'p-3 sm:p-3' }">
         <template #header>
           <div class="flex items-center justify-between gap-2 flex-wrap">
             <div class="flex items-center gap-2">

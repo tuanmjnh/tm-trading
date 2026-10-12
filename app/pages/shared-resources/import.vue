@@ -261,12 +261,12 @@ function clearAll() {
       </div>
     </template>
 
-    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-4 max-w-5xl">
+    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-3 max-w-5xl">
       <p class="text-sm text-muted">
         {{ $t('import.description') }}
       </p>
 
-      <section class="rounded-xl border border-primary/30 p-4 space-y-3">
+      <section class="rounded border border-primary/30 p-3 space-y-3">
         <div class="flex items-center justify-between gap-2 flex-wrap">
           <h2 class="font-semibold text-highlighted flex items-center gap-2">
             <UIcon name="i-lucide-database" class="size-4 text-muted" />
@@ -355,7 +355,7 @@ function clearAll() {
         </div>
       </section>
 
-      <section class="rounded-xl border border-primary/30 p-4 space-y-3">
+      <section class="rounded border border-primary/30 p-3 space-y-3">
         <div class="flex items-center justify-between gap-2 flex-wrap">
           <h2 class="font-semibold text-highlighted flex items-center gap-2">
             <UIcon name="i-lucide-crosshair" class="size-4 text-muted" />
@@ -397,7 +397,7 @@ function clearAll() {
         </div>
       </section>
 
-      <section class="rounded-xl border border-primary/30 p-4 space-y-3">
+      <section class="rounded border border-primary/30 p-3 space-y-3">
         <div class="flex items-center justify-between gap-2 flex-wrap">
           <h2 class="font-semibold text-highlighted flex items-center gap-2">
             <UIcon name="i-lucide-eye" class="size-4 text-muted" />
@@ -475,7 +475,7 @@ function clearAll() {
             <p class="py-2">
               {{ t('import.rowLimit') }} — {{ rows.length }} {{ t('import.rows').toLowerCase() }}
             </p>
-            <div class="max-h-64 overflow-y-auto rounded-lg border border-default divide-y divide-default/50">
+            <div class="max-h-64 overflow-y-auto rounded border border-default divide-y divide-default/50">
               <div v-for="(row, i) in rows.slice(0, 50)" :key="i" class="px-3 py-2 font-mono text-[11px] truncate">
                 {{ JSON.stringify(row) }}
               </div>
@@ -488,7 +488,7 @@ function clearAll() {
 
         <div
           v-if="runResult"
-          class="rounded-lg border p-3 text-sm space-y-2"
+          class="rounded border p-3 text-sm space-y-2"
           :class="runResult.failed ? 'border-error/40 bg-error/5' : 'border-success/40 bg-success/5'"
         >
           <p class="font-medium text-highlighted">

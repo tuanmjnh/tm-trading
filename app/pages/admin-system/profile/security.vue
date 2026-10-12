@@ -332,7 +332,7 @@ useHead({ title: computed(() => t('profile.security')) })
         <div v-if="totpSetupStep === 'scan'" class="space-y-4">
           <p class="text-sm text-muted">{{ t('profile.totpScanDesc') }}</p>
           <div class="flex justify-center">
-            <img v-if="totpSetupQr" :src="totpSetupQr" :alt="t('profile.totpQrAlt')" class="size-48 rounded-lg border border-default" />
+            <img v-if="totpSetupQr" :src="totpSetupQr" :alt="t('profile.totpQrAlt')" class="size-48 rounded border border-default" />
           </div>
           <UFormField :label="t('profile.totpCodeLabel')" required>
             <UInput v-model="totpSetupCode" inputmode="numeric" maxlength="6"
@@ -341,7 +341,7 @@ useHead({ title: computed(() => t('profile.security')) })
         </div>
         <div v-else class="space-y-4">
           <p class="text-sm text-muted">{{ t('profile.recoveryDesc') }}</p>
-          <ul class="grid grid-cols-2 gap-2 rounded-lg bg-default p-3 font-mono text-sm">
+          <ul class="grid grid-cols-2 gap-2 rounded bg-default p-3 font-mono text-sm">
             <li v-for="code in recoveryCodes" :key="code">{{ code }}</li>
           </ul>
           <UButton icon="i-lucide-copy" color="neutral" variant="soft" size="sm" :label="t('profile.recoveryCopy')"

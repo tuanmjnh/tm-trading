@@ -136,7 +136,7 @@ Trạng thái: `[x]` xong · `[ ]` chưa · 🔒 = **có điều kiện chặn, 
       4. gõ sai tên tham số (`rp` thay vì `rP`) → **phải ném lỗi**, không được lặng lẽ sinh hash rồi
          để run đó nằm chung bảng.
       `PARAM_SCHEMA` suy trực tiếp từ `DEFAULTS` nên không thể lệch với engine thực tế.
-- [x] **`docs/data-model.md`** ✅ (2026-10-01) — schema từng collection + index + ví dụ document
+- [x] **`docs/engine/data-model.md`** ✅ (2026-10-01) — schema từng collection + index + ví dụ document
       (`runs`, `trades`, `alerts`, `signals`, `positions`, `risk_state`, `equity`).
       Cài trong `engine/models/*.mjs` và **kiểm chứng trên MongoDB thật**: `npm run test:db` → **49/0**.
       Index quan trọng nhất: **`alerts.alertKey` UNIQUE** — chính là D4.
@@ -151,21 +151,21 @@ Trạng thái: `[x]` xong · `[ ]` chưa · 🔒 = **có điều kiện chặn, 
       `ts/action/side/price` y hệt → alert thứ hai bị coi là retry và **mất**. Đã thêm `level`
       + `mode` vào canon, khoá bằng test (section 10) — chưa cần migration vì chưa có alert nào
       trong DB.
-- [x] **D2 — quy tắc thời gian** ✅ (2026-10-02) — hợp đồng trong `docs/time-rules.md`:
+- [x] **D2 — quy tắc thời gian** ✅ (2026-10-02) — hợp đồng trong `docs/engine/time-rules.md`:
       lưu **UTC ms**, ngày nghiệp vụ = chuỗi `YYYY-MM-DD` **UTC**, session quy đổi tz tường minh.
       Test trong `engine/test-db.mjs` §8 (alert.ts là Date UTC đúng, `utcDay` 23:59 vs 00:01
       rơi 2 ngày, NDJSON `createdAt` ISO `Z`).
-- [x] **Hợp đồng alert** ✅ (2026-10-02) — `docs/alert-schema.md`: **luật bump `v`**
+- [x] **Hợp đồng alert** ✅ (2026-10-02) — `docs/engine/alert-schema.md`: **luật bump `v`**
       (thêm optional → không bump; thêm bắt buộc/đổi kiểu/đổi nghĩa → bump + sửa 3 nơi),
       trường **`source`** optional (mặc định `tradingview`, validate `[A-Za-z0-9_-]{1,32}`,
       **có tham gia `alertKey`** để scanner/AI không chặn nhầm TV), và mô tả chính xác khóa
       khử trùng gồm `level`/`mode`.
-- [x] **Hợp đồng IPC cho MT5** ✅ (2026-10-02) — `docs/mt5-ipc.md`: endpoint, schema
+- [x] **Hợp đồng IPC cho MT5** ✅ (2026-10-02) — `docs/engine/mt5-ipc.md`: endpoint, schema
       `POST /order` + `Idempotency-Key`, timeout (2 s đọc / 10 s lệnh), luật retry +
       trạng thái `unknown` (**tra soát trước, không retry mù**), sync `positions`, bind
       loopback + token fail-closed. Chốt sớm để Phase 12 không tự nghĩ giữa chừng.
 
-**Acceptance:** `docs/data-model.md` tồn tại; `engine/store.mjs` ghi kèm version stamp; có test
+**Acceptance:** `docs/engine/data-model.md` tồn tại; `engine/store.mjs` ghi kèm version stamp; có test
 khẳng định **2 run khác `paramsHash` không bị trộn** trong báo cáo/tổng hợp.
 → **đạt**: `engine/store.mjs` (`withStamp`/`saveRun`) ghi stamp, `summarizeRuns()` **ném lỗi**
 khi trộn 2 thế hệ, `groupByGeneration()` là cách duy nhất được phép gộp — test `engine/test.mjs`
@@ -311,7 +311,7 @@ backtest; drift vượt ngưỡng thì hệ **tự dừng mở lệnh mới**; k
       (BasePage + `useCursorPagination` + `LazyGridList` 10 cột: Time · Symbol · TF · Side ·
       Price · SL · TP · Conf · Status · Action), empty state, badge `mongo:'down'`,
       i18n `nav.signals` + `signals.*` (en+vi), nav seed hub (xem
-      `docs/app-inheritance.md` §3c): Overview · Backtest · **Signals** · Logs · System
+      `docs/web-app/app-inheritance.md` §3c): Overview · Backtest · **Signals** · Logs · System
 - [x] **Equity curve + Bảng Symbol × TF** ✅ (2026-10-03): SVG equity trên `/runs/[id]`
       (điểm cuối === `netPct`, dam === `maxDrawdownPct` — test `tests/equity.test.ts`),
       matrix Symbol × TF trên `/runs` (tính từ list đã load, không gọi API mới)
@@ -431,7 +431,7 @@ funding/OI/liquidation zone (est ±% + L/S ratio); bảng filter alt-lướt ch�
   mỗi bar → setup sống sót cuối chuỗi = vào đúng đỉnh, WR 0% → 98.3% trên fixture).
   VSA giữ nguyên `replaceActive:true` (D5). `deltaTh 0.55 → 0.3` (max |dR| majors 1h ≈ 0.34).
 - [x] **Method league table** — cùng data, so WR/PF/DD từng method × symbol × TF
-* ✅ (2026-10-04): `engine/league.mjs` + `npm run engine:league` → `docs/method-league.md`
+* ✅ (2026-10-04): `engine/league.mjs` + `npm run engine:league` → `docs/engine/method-league.md`
   (per-combo `summaryRow` + pooled `summarizeRuns` per method; group bằng
   `hashOf({method,params})` — **không** dùng `paramsHash` vì schema VSA-centric sẽ throw
   method lạ; `--no-write`/`--refresh`/`--symbols`/`--tfs`). Baseline chưa optimize:
@@ -497,7 +497,7 @@ mọi lệnh AI đều qua risk gate và có audit trail.
       (cần data XAU — song song tìm nguồn: exchange XAU pair hoặc data API)
 - [ ] Position sync: lệnh MT5 ↔ collection `positions` → dashboard
 
-* ✅ (2026-10-04) checkpoint §7 của `docs/mt5-ipc.md`: `exec/mt5/client.mjs` (586 dòng, transport
+* ✅ (2026-10-04) checkpoint §7 của `docs/engine/mt5-ipc.md`: `exec/mt5/client.mjs` (586 dòng, transport
   Node — **đã kiểm chứng**), `exec/mt5/server.py` (822 dòng — **CHƯA KIỂM CHỨNG**), `exec/mt5/test.mjs`
   (538 dòng, **92 assertion**). `server/webhook.mjs` +44 dòng (`mt5HealthComponent()` vào `/health`
   tổng, D9) + 2 check trong `tools/smoke.mjs`. `test:mt5` đã nối vào `npm test`.
@@ -513,7 +513,7 @@ mọi lệnh AI đều qua risk gate và có audit trail.
   spawn tiến trình; chỉ `py_compile` (cú pháp) đạt. (b) **Nguồn dữ liệu XAU chưa có.** (c) Chưa
   round-trip MT5 thật → chưa biết quirk `filling-mode`/`retcode`. ⇒ **Acceptance của phase CHƯA đạt**,
   cần máy bạn có MT5.
-* 📌 **Mâu thuẫn trong hợp đồng đã phát hiện, cần chốt lại `docs/mt5-ipc.md` (→ ✅ đã chốt bên
+* 📌 **Mâu thuẫn trong hợp đồng đã phát hiện, cần chốt lại `docs/engine/mt5-ipc.md` (→ ✅ đã chốt bên
   dưới, 2026-10-05):** §3 (`GET` không
   retry trong 1 request) **mâu thuẫn** §4 (GET idempotent retry tối đa 2 lần) → tạm giải:
   `/health`+`/account` gọi 1 lần, `/positions`+`/history` có retry. §4.4 nói tra theo "ticket"
@@ -522,7 +522,7 @@ mọi lệnh AI đều qua risk gate và có audit trail.
   §6 yêu cầu `account_type` trong `/health` nhưng ví dụ §2.2 không có, và MT5 chỉ cho `trade_mode` số.
   §2.1 đặt `Idempotency-Key` ở **body** trong khi yêu cầu là **header**. Không rõ `/health` có cần
   token không.
-  ✅ **ĐÃ CHỐT (2026-10-05) trong `docs/mt5-ipc.md`** — cả 6 điểm, kèm mục *Trạng thái kiểm chứng*:
+  ✅ **ĐÃ CHỐT (2026-10-05) trong `docs/engine/mt5-ipc.md`** — cả 6 điểm, kèm mục *Trạng thái kiểm chứng*:
   (1) so payload = **canonical hash** (bỏ `Idempotency-Key`/`clientOrderId`), `409` là **terminal**
   → permablock, operator xử lý tay; (2) `Idempotency-Key` là **header** (body chỉ để tương thích,
   header thắng); (3) `account_type` **bắt buộc** trong `/health`, bridge map `trade_mode`
@@ -531,7 +531,7 @@ mọi lệnh AI đều qua risk gate và có audit trail.
   (chủ ý); (5) retry hai lớp: `/health`+`/account` **single-attempt**, `/positions`+`/history`
   **≤2 retry** (200 ms→1 s, chỉ lỗi kết nối, không `4xx`/`5xx`); (6) §4.4 tra theo
   **`clientOrderId` + `comment`** trước, `ticket` chỉ khi bridge đã echo. **Code nào lệch hợp đồng
-  thì sửa code — danh sách lệch đã biết nằm ở mục *Trạng thái kiểm chứng* của `docs/mt5-ipc.md`.**
+  thì sửa code — danh sách lệch đã biết nằm ở mục *Trạng thái kiểm chứng* của `docs/engine/mt5-ipc.md`.**
 
 **Acceptance:** pipeline demo: signal XAU → risk gate → lệnh demo MT5 → đồng bộ dashboard;
 chỉ mở real khi paper/demo đạt mục tiêu phase.
@@ -736,9 +736,9 @@ db **58/0** = **672 assertions**; `npm run typecheck` 4/4; `npm run test:app` **
 - **Phase 1 — xong** (`engine:run` đã bù trong Phase 4).
 - **Phase 2 — xong**: `engine/ta.mjs`, `engine/signals.mjs`, `engine/test.mjs`,
   đã vào `npm test`. Fixtures còn nằm trong `test.mjs` (xem ghi chú ở Phase 2).
-- **Phase 3 — xong**: `engine/version.mjs` (**D1**), `docs/data-model.md`, `engine/keys.mjs`
-  (**D3/D4**), `engine/store.mjs`, `docs/time-rules.md` (**D2**), `docs/alert-schema.md`
-  (**hợp đồng alert**), `docs/mt5-ipc.md` (**hợp đồng MT5**) — Chi tiết bên dưới.
+- **Phase 3 — xong**: `engine/version.mjs` (**D1**), `docs/engine/data-model.md`, `engine/keys.mjs`
+  (**D3/D4**), `engine/store.mjs`, `docs/engine/time-rules.md` (**D2**), `docs/engine/alert-schema.md`
+  (**hợp đồng alert**), `docs/engine/mt5-ipc.md` (**hợp đồng MT5**) — Chi tiết bên dưới.
 - **Phase 4 — xong** (2026-10-02): `engine/methods/` (plugin 🔒 + registry + `all.mjs`),
   `engine/backtest.mjs` (**D5** mặc định đúng Pine, **D6** sub-bar 1m, phí + slippage),
   `engine/data.mjs` (fapi/spot + phân trang + cache + resample 4m/10m, **D11**),
@@ -798,7 +798,7 @@ db **58/0** = **672 assertions**; `npm run typecheck` 4/4; `npm run test:app` **
   E2E chuỗi: webhook → signals → checkOrder (allowed → halted → resumed) → paper open/close
   → drift breach → halt → resume; card Risk Gate trên `/` sáng data thật.
 - **Phase 7 (P4 Dashboard) — xong** (2026-10-03 → 2026-10-04): tm-trading là **satellite** của tm-hub
-  (xem `docs/app-inheritance.md` §3): app id `tm-trading_pco4rn`, secret JWT thẳng hàng hub,
+  (xem `docs/web-app/app-inheritance.md` §3): app id `tm-trading_pco4rn`, secret JWT thẳng hàng hub,
   `useHub`/`useAuth` tái dùng từ tm-tools; **D10** — `server/middleware/auth.ts` chốt mọi
   `/api/**` (Bearer/cookie + ép `X-App-Id` khớp app). Nav menu seed qua
   `POST /api/v1/apps/{id}/routes`: Overview · Backtest · Logs · group `#system`
@@ -835,7 +835,7 @@ db **58/0** = **672 assertions**; `npm run typecheck` 4/4; `npm run test:app` **
   E2e trình duyệt: Home card (day 2026-10-04, mongo up, open 0) · `/runs/compare` chọn
   2 series → bảng + paramsDiff + overlay khớp số `/` · preselect từ detail · signals
   regression · **0 console error**. `test:app` **75/75** (+21: compare + risk).
-  **Rà module hub giữ/catchet buộc trước khi làm tiếp** (xem `docs/app-inheritance.md` §3d):
+  **Rà module hub giữ/catchet buộc trước khi làm tiếp** (xem `docs/web-app/app-inheritance.md` §3d):
   chứng minh `adminFetch` ≡ `hubFetch` → ~170/176 route local là dead code, chốt 4 batch cắt
   (mail → apps → auth provider → trang/i18n);6 route local cần giữ: `runs`(2) · `signals` ·
   `health` · `icons` · `configs/public`.
@@ -843,7 +843,7 @@ db **58/0** = **672 assertions**; `npm run typecheck` 4/4; `npm run test:app` **
   `npm test` 672/0 · `test:app` 72/72 · `verify` 0 · browser login duyệt trang, console 0/0):
   ~330 file server-side chết, 75 file trang/component, **−31 deps** (77→46), **−1608 i18n keys**
   (2416→808 en+vi), nav filter theo router local (không còn link 404). Chi tiết + số liệu
-  từng batch: `docs/app-inheritance.md` §3d bảng "CẮT theo batch".
+  từng batch: `docs/web-app/app-inheritance.md` §3d bảng "CẮT theo batch".
 - **Pine (công cụ hỗ trợ) — có thêm bản twin backtest**: `TM VSA Backtest` (264 dòng) dùng **chung
   nguồn `parts-vsa`** với `TM VSA Wyckoff`, chỉ khác khai báo `strategy(...)`; `60_viz` bị cắt bằng
   marker `@part skip:vsa-strategy`, cầu nối lệnh ở `pine/parts-vsa/50_strategy.pine`

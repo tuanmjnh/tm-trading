@@ -37,7 +37,7 @@ npm run services:once  # run all services once
 npm run services:status# service + heartbeat status
 
 npm run engine:run     # backtest CLI (--symbols --tfs --market --preset)
-npm run engine:league  # method league table -> docs/method-league.md
+npm run engine:league  # method league table -> docs/engine/method-league.md
 npm run notify         # TradingView webhook receiver
 
 npm run ai:gateway     # smoke the AI provider gateway
@@ -88,7 +88,7 @@ tests/            run-tests.mjs (app-level suite)
 ## Architecture rules that must not be broken
 
 ### 1. Pine ↔ engine parity is risk #1
-`docs/vsa-wyckoff-method.md` is the **spec**; golden fixtures in `engine/test.mjs` guarantee the
+`docs/indicator/vsa-wyckoff/vsa-wyckoff-method.md` is the **spec**; golden fixtures in `engine/test.mjs` guarantee the
 engine matches Pine. Any change to `pine/parts-vsa/` (or `engine/methods/vsa.mjs`) requires
 re-running the fixtures. `tools/build.mjs` lints Pine against `tools/pine-ref.json`, which is
 **generated** (`npm run pine:ref`) — never hardcode Pine knowledge from memory.
@@ -108,12 +108,12 @@ re-running the fixtures. `tools/build.mjs` lints Pine against `tools/pine-ref.js
 place an order.
 
 ### 5. Time is UTC everywhere (D2)
-See `docs/time-rules.md`. Business days are `YYYY-MM-DD` strings, never local time.
+See `docs/engine/time-rules.md`. Business days are `YYYY-MM-DD` strings, never local time.
 
 ### 6. Measurement honesty (D12)
 Phase 5 (preset optimizer) was **deliberately skipped**: the random-entry baseline showed VSA is
 not distinguishable from random entries, so tuning parameters would only produce confident
-overfitting. Read `docs/vsa-optimization.md` before proposing any parameter optimisation.
+overfitting. Read `docs/indicator/vsa-wyckoff/vsa-optimization.md` before proposing any parameter optimisation.
 
 ## Platform Integration — Satellite of TM Hub
 

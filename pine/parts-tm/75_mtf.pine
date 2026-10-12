@@ -1,0 +1,26 @@
+// =============================================================================
+//  L7 - MTF CONTEXT (P0 Correctness Patch)
+//  Context TF (H4/D/W/M) + Setup TF (H1/M15); entry = chart TF
+//
+//  P0 Fix:
+//    - request.security() lay dong thoi ca [close[1], ema[1]] cua cung timeframe.
+//    - So sanh HTF close voi HTF EMA de xac dinh xu huong HTF chinh xac.
+//    - Kiem tra tinh hop le cua thu tu khung thoi gian (Chart <= Setup <= Context).
+//    - Chinh sach nen dong [1] + lookahead_on dam bao khong repaint tren lich su.
+// =============================================================================
+
+int tm_secChart = timeframe.in_seconds(timeframe.period)
+int tm_secSetup = timeframe.in_seconds(tm_setupTf)
+int tm_secCtx   = timeframe.in_seconds(tm_ctxTf)
+bool tm_tfHierarchyOk = tm_secChart <= tm_secSetup and tm_secSetup <= tm_secCtx
+
+// Context TF
+[tm_ctxClose, tm_ctxEma] = request.security(syminfo.tickerid, tm_ctxTf, [close[1], ta.ema(close, tm_ctxLen)[1]], lookahead = barmerge.lookahead_on)
+int tm_ctxDir = tm_tfHierarchyOk and not na(tm_ctxClose) and not na(tm_ctxEma) ? (tm_ctxClose > tm_ctxEma ? 1 : tm_ctxClose < tm_ctxEma ? -1 : 0) : 0
+
+// Setup TF
+[tm_setupClose, tm_setupEma] = request.security(syminfo.tickerid, tm_setupTf, [close[1], ta.ema(close, tm_setupLen)[1]], lookahead = barmerge.lookahead_on)
+int tm_setupDir = tm_tfHierarchyOk and not na(tm_setupClose) and not na(tm_setupEma) ? (tm_setupClose > tm_setupEma ? 1 : tm_setupClose < tm_setupEma ? -1 : 0) : 0
+
+// MTF alignment bias: binh quan 2 huong khi hierarchy hop le
+float tm_gMtfBias = tm_tfHierarchyOk ? (float(tm_ctxDir) + float(tm_setupDir)) / 2.0 : 0.0

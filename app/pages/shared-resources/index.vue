@@ -58,15 +58,15 @@ const toFile = (link: string) => ({
           <template #local>
             <!-- Loading skeleton -->
             <div v-if="loading" class="h-full px-4 sm:px-6 py-4 overflow-y-auto">
-              <div class="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
-                <USkeleton v-for="i in 16" :key="i" class="aspect-square w-full rounded-lg" />
+              <div class="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3">
+                <USkeleton v-for="i in 16" :key="i" class="aspect-square w-full rounded" />
               </div>
             </div>
 
             <!-- Empty state -->
             <div
               v-else-if="mediaStore.linkHistory.value.length === 0"
-              class="h-full px-4 sm:px-6 py-4 flex items-center justify-center border-2 border-dashed border-default rounded-lg bg-muted"
+              class="h-full px-4 sm:px-6 py-4 flex items-center justify-center border-2 border-dashed border-default rounded bg-muted"
             >
               <div class="text-center">
                 <UIcon name="i-lucide-computer" class="w-12 h-12 text-dimmed mx-auto mb-4" />
@@ -82,7 +82,7 @@ const toFile = (link: string) => ({
             <!-- History list -->
             <div v-else class="flex flex-col h-full w-full relative">
               <div class="flex-1 overflow-y-auto px-4 sm:px-6 py-4 pb-24 custom-scrollbar">
-                <div class="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
+                <div class="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3">
                   <LazyMediaImageCard
                     v-for="link in mediaStore.linkHistory.value"
                     :key="link"

@@ -204,8 +204,9 @@ build('vsa-strategy')
 build('sweep')
 build('xau')
 build('xau2')
+build('tm')
 
-for (const f of ['TM Signals.pine', 'TM Backtest.pine', 'TM VSA Wyckoff.pine', 'TM VSA Backtest.pine', 'TM Liquidity Sweep.pine', 'TM XAU Signals.pine', 'TM XAU Signals 2.pine']) {
+for (const f of ['TM Signals.pine', 'TM Backtest.pine', 'TM VSA Wyckoff.pine', 'TM VSA Backtest.pine', 'TM Liquidity Sweep.pine', 'TM XAU Signals.pine', 'TM XAU Signals 2.pine', 'TM Indicator.pine']) {
   const p = join(ROOT, 'pine', 'dist', f)
   check(`${f} ton tai`, existsSync(p))
   if (!existsSync(p)) continue

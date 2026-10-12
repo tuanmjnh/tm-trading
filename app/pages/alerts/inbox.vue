@@ -464,7 +464,7 @@ useHead({ title })
           <div v-else
             class="hidden lg:flex flex-col h-full items-center justify-center p-8 text-center bg-elevated/10 space-y-3 select-none">
             <div
-              class="size-16 rounded-2xl bg-elevated/80 border border-default flex items-center justify-center text-muted shadow-xs">
+              class="size-16 rounded bg-elevated/80 border border-default flex items-center justify-center text-muted shadow-xs">
               <UIcon name="i-lucide-mail" class="size-8 text-dimmed" />
             </div>
             <div>

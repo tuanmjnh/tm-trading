@@ -4877,7 +4877,7 @@ Suggested logical entities (names may follow existing model naming conventions):
 - `trade_context_snapshots` or immutable snapshot references on existing signal/order/position/trade models;
 - `experiments`, `experiment_runs`, `research_proposals`, `research_reports`.
 
-Do not create all collections blindly. First audit current Mongo models and `docs/data-model.md`; document the decision for reuse vs new schema. Every entity needs stable IDs, UTC millisecond timestamps, clear status enums, indexes for common filters, and explicit relationship references.
+Do not create all collections blindly. First audit current Mongo models and `docs/engine/data-model.md`; document the decision for reuse vs new schema. Every entity needs stable IDs, UTC millisecond timestamps, clear status enums, indexes for common filters, and explicit relationship references.
 
 ## 57.6 Suggested API surface
 
@@ -5035,7 +5035,7 @@ Do not show a single “best strategy” badge solely based on return or win rat
 
 The implementation agent must execute these steps in order:
 
-1. **Audit first:** inspect `app/pages`, existing layouts/navigation components, TM Hub route seeding/inheritance, i18n dictionaries, API endpoints, current models, `docs/data-model.md` and V3 phase status. Produce a route inventory with `implemented`, `partial`, `planned`, `missing` status.
+1. **Audit first:** inspect `app/pages`, existing layouts/navigation components, TM Hub route seeding/inheritance, i18n dictionaries, API endpoints, current models, `docs/engine/data-model.md` and V3 phase status. Produce a route inventory with `implemented`, `partial`, `planned`, `missing` status.
 2. **Do not rebuild the sidebar from scratch:** extend the existing TM Hub/local navigation contract. Reuse existing menu IDs/routes and preserve auth metadata.
 3. **Add navigation metadata:** for each route define stable ID, route path, label translation key, icon, group/order, required feature availability and optional badge source. Avoid putting status logic in display labels.
 4. **Implement in slices:** first Strategy Lab navigation/pages (Indicator Library, Strategy Library, Bot Profiles/Instances); next Test Center (Test Builder and run detail enhancements); next Data Center/lineage; then AI Research integration. `/trade` and current routes must remain usable throughout.
@@ -5357,9 +5357,9 @@ Migration policy:
 - Use the existing Hub route mechanism. Do not add a second local navigation database or route registry.
 - Add regression tests proving every existing leaf route still resolves and every visible menu item maps to a real route or supported group.
 
-## 58.8 `docs/navigation-audit.md` — required first deliverable
+## 58.8 `docs/web-app/navigation-audit.md` — required first deliverable
 
-Before implementing menu refactors, produce `docs/navigation-audit.md` with:
+Before implementing menu refactors, produce `docs/web-app/navigation-audit.md` with:
 
 - the exact current route inventory from `createTradingRoutes`;
 - target V3.3 group and leaf route for each current route;
@@ -5376,7 +5376,7 @@ Do not mark an item `implemented` merely because a route seed record exists. Use
 
 ### Slice 1 — Audit and clean navigation
 
-- Create `docs/navigation-audit.md`.
+- Create `docs/web-app/navigation-audit.md`.
 - Keep all current pages and APIs working.
 - Map current routes into the V3.3 hierarchy.
 - Reorganize only menu presentation and i18n first; do not mix with market-engine refactoring.

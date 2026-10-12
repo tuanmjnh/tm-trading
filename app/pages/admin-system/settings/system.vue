@@ -89,7 +89,7 @@ useHead({ title: computed(() => t('nav.system')) })
               <div
                 v-for="stat in stats"
                 :key="stat.label"
-                class="rounded-xl border border-default bg-elevated/40 p-4"
+                class="rounded border border-default bg-elevated/40 p-3"
               >
                 <p class="text-xs font-medium text-muted">{{ stat.label }}</p>
                 <p class="mt-1 truncate text-sm font-semibold text-highlighted font-mono">

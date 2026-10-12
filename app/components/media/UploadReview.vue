@@ -163,7 +163,7 @@ const handleUpload = async () => {
       <div class="p-3">
         <div class="space-y-2 max-h-[80vh] sm:max-h-[60vh] overflow-y-auto pr-2">
           <div v-for="(file, index) in fileList" :key="index"
-            class="flex items-center gap-4 p-3 border border-default rounded-lg bg-muted">
+            class="flex items-center gap-3 p-3 border border-default rounded bg-muted">
             <!-- File Icon/Preview -->
             <div class="shrink-0 w-12 h-12 rounded overflow-hidden bg-elevated flex items-center justify-center">
               <template v-if="previews[file.name]">

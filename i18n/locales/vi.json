@@ -2217,6 +2217,7 @@
     "fillsMongoDown": "không kết nối được CSDL",
     "fillsLatency": "độ trễ (tuổi giá + mô phỏng)",
     "fillsError": "Khớp lệnh",
+    "sessionExpired": "Phiên đã hết hạn — đăng nhập để tiếp tục dữ liệu trực tiếp",
     "orderStatus": {
       "created": "khởi tạo",
       "riskChecked": "đã kiểm tra",

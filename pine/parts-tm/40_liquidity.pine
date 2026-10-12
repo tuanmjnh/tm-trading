@@ -1,0 +1,173 @@
+// =============================================================================
+//  L3 - LIQUIDITY & MARKET LOCATION
+//  PDH/PDL, PWH/PWL, Session Hi/Lo, Equal Hi/Lo, Sweep, Trendline 2 diem
+// =============================================================================
+
+// --- Daily / Weekly / Session levels -------------------------------------------
+tm_pdh = request.security(syminfo.tickerid, "D", high[1], lookahead = barmerge.lookahead_on)
+tm_pdl = request.security(syminfo.tickerid, "D", low[1],  lookahead = barmerge.lookahead_on)
+tm_pwh = request.security(syminfo.tickerid, "W", high[1], lookahead = barmerge.lookahead_on)
+tm_pwl = request.security(syminfo.tickerid, "W", low[1],  lookahead = barmerge.lookahead_on)
+
+// Session Hi/Lo
+tm_isAsia   = tm_sessAsia and not tm_sessOverlap
+tm_isLondon = tm_sessLondon and not tm_sessNy
+tm_isNy     = tm_sessNy and not tm_sessOverlap
+string tm_sessName = f_sessName(tm_sessAsia, tm_sessLondon, tm_sessNy)
+
+var float tm_sessHi = na
+var float tm_sessLo = na
+var string tm_sessPrev = ""
+bool tm_sessChanged = tm_sessName != tm_sessPrev
+if tm_sessChanged and tm_sessName != "-"
+    tm_sessHi := high
+    tm_sessLo := low
+else if tm_sessName != "-"
+    tm_sessHi := math.max(nz(tm_sessHi, high), high)
+    tm_sessLo := math.min(nz(tm_sessLo, low),  low)
+if tm_sessName != "-"
+    tm_sessPrev := tm_sessName
+
+// --- Equal Highs / Lows ---------------------------------------------------------
+float tm_eqThresh = tm_atr * tm_liq_eqTol
+tm_eqHi = not na(tm_pivH) and not na(tm_prevHigh) and math.abs(high[tm_ms_swLen] - tm_prevHigh) <= tm_eqThresh
+tm_eqLo = not na(tm_pivL) and not na(tm_prevLow)  and math.abs(low[tm_ms_swLen]  - tm_prevLow)  <= tm_eqThresh
+
+// --- Sweep ---------------------------------------------------------------------
+tm_sweepBull = (tm_liq_pdOn and low < tm_pdl and close > tm_pdl) or (tm_liq_pwOn and low < tm_pwl and close > tm_pwl) or (tm_liq_sessOn and not na(tm_sessLo) and low < tm_sessLo and close > tm_sessLo) or (tm_eqLo and low[tm_ms_swLen] < tm_prevLow and close > tm_prevLow)
+tm_sweepBear = (tm_liq_pdOn and high > tm_pdh and close < tm_pdh) or (tm_liq_pwOn and high > tm_pwh and close < tm_pwh) or (tm_liq_sessOn and not na(tm_sessHi) and high > tm_sessHi and close < tm_sessHi) or (tm_eqHi and high[tm_ms_swLen] > tm_prevHigh and close < tm_prevHigh)
+
+if tm_okConfirmed and tm_sweepBull
+    f_pushEvent("SWEEP", "bull", bar_index, time, barstate.isconfirmed, math.max(tm_pdl, nz(tm_sessLo, tm_pdl)))
+if tm_okConfirmed and tm_sweepBear
+    f_pushEvent("SWEEP", "bear", bar_index, time, barstate.isconfirmed, math.min(tm_pdh, nz(tm_sessHi, tm_pdh)))
+
+// --- Level lines (PD / PW / Session) --------------------------------------------
+var line tm_lPDH = na
+var line tm_lPDL = na
+var line tm_lPWH = na
+var line tm_lPWL = na
+var line tm_lSHi = na
+var line tm_lSLo = na
+bool tm_newDay = f_isNewDay()
+
+// PDH / PDL
+bool tm_pdVis = tm_showViz and tm_showPd and tm_liq_pdOn
+if tm_pdVis and (tm_newDay or na(tm_lPDH))
+    if not na(tm_lPDH)
+        line.delete(tm_lPDH)
+        line.delete(tm_lPDL)
+    tm_lPDH := line.new(bar_index, tm_pdh, bar_index + 1, tm_pdh, color = color.new(color.orange, 40), style = line.style_dashed, width = 1, force_overlay = true)
+    tm_lPDL := line.new(bar_index, tm_pdl, bar_index + 1, tm_pdl, color = color.new(color.orange, 40), style = line.style_dashed, width = 1, force_overlay = true)
+if tm_pdVis and not na(tm_lPDH)
+    line.set_x2(tm_lPDH, bar_index + 1)
+    line.set_x2(tm_lPDL, bar_index + 1)
+if not tm_pdVis and not na(tm_lPDH)
+    line.delete(tm_lPDH)
+    line.delete(tm_lPDL)
+    tm_lPDH := na
+    tm_lPDL := na
+
+// PWH / PWL
+bool tm_pwVis = tm_showViz and tm_showPw and tm_liq_pwOn
+if tm_pwVis and (ta.change(time("W")) != 0 or na(tm_lPWH))
+    if not na(tm_lPWH)
+        line.delete(tm_lPWH)
+        line.delete(tm_lPWL)
+    tm_lPWH := line.new(bar_index, tm_pwh, bar_index + 1, tm_pwh, color = color.new(color.blue, 50), style = line.style_dotted, width = 1, force_overlay = true)
+    tm_lPWL := line.new(bar_index, tm_pwl, bar_index + 1, tm_pwl, color = color.new(color.blue, 50), style = line.style_dotted, width = 1, force_overlay = true)
+if tm_pwVis and not na(tm_lPWH)
+    line.set_x2(tm_lPWH, bar_index + 1)
+    line.set_x2(tm_lPWL, bar_index + 1)
+if not tm_pwVis and not na(tm_lPWH)
+    line.delete(tm_lPWH)
+    line.delete(tm_lPWL)
+    tm_lPWH := na
+    tm_lPWL := na
+
+// Session High / Low
+bool tm_sdVis = tm_showViz and tm_showSess and tm_liq_sessOn
+if tm_sdVis and (tm_sessChanged or na(tm_lSHi)) and tm_sessName != "-" and not na(tm_sessHi)
+    if not na(tm_lSHi)
+        line.delete(tm_lSHi)
+        line.delete(tm_lSLo)
+    tm_lSHi := line.new(bar_index, tm_sessHi, bar_index + 1, tm_sessHi, color = color.new(color.gray, 30), style = line.style_dashed, width = 1, force_overlay = true)
+    tm_lSLo := line.new(bar_index, tm_sessLo, bar_index + 1, tm_sessLo, color = color.new(color.gray, 30), style = line.style_dashed, width = 1, force_overlay = true)
+if tm_sdVis and not na(tm_lSHi)
+    line.set_xy1(tm_lSHi, bar_index, tm_sessHi)
+    line.set_xy2(tm_lSHi, bar_index + 1, tm_sessHi)
+    line.set_xy1(tm_lSLo, bar_index, tm_sessLo)
+    line.set_xy2(tm_lSLo, bar_index + 1, tm_sessLo)
+if not tm_sdVis and not na(tm_lSHi)
+    line.delete(tm_lSHi)
+    line.delete(tm_lSLo)
+    tm_lSHi := na
+    tm_lSLo := na
+
+// Sweep labels
+if tm_showViz and tm_liq_sweepOn and tm_sweepBull
+    label.new(bar_index, low,  "Sweep+", style = label.style_label_up,   color = color.new(tm_cBull, 10), textcolor = color.white, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_liq_sweepOn and tm_sweepBear
+    label.new(bar_index, high, "Sweep-", style = label.style_label_down, color = color.new(tm_cBear, 10), textcolor = color.white, size = size.tiny, force_overlay = true)
+
+// --- Trendline 2 diem ----------------------------------------------------------
+var float tm_tl1Lo  = na
+var int   tm_tl1LoB = na
+var float tm_tl2Lo  = na
+var int   tm_tl2LoB = na
+var float tm_tl1Hi  = na
+var int   tm_tl1HiB = na
+var float tm_tl2Hi  = na
+var int   tm_tl2HiB = na
+var int   tm_tlLoTouch = 0
+var int   tm_tlHiTouch = 0
+var line  tm_lnTlUp = na
+var line  tm_lnTlDn = na
+
+if not na(tm_pivL)
+    tm_tl1Lo  := tm_tl2Lo
+    tm_tl1LoB := tm_tl2LoB
+    tm_tl2Lo  := low[tm_ms_swLen]
+    tm_tl2LoB := bar_index - tm_ms_swLen
+    tm_tlLoTouch := 0
+if not na(tm_pivH)
+    tm_tl1Hi  := tm_tl2Hi
+    tm_tl1HiB := tm_tl2HiB
+    tm_tl2Hi  := high[tm_ms_swLen]
+    tm_tl2HiB := bar_index - tm_ms_swLen
+    tm_tlHiTouch := 0
+
+bool tm_tlUpOk = not na(tm_tl1Lo) and not na(tm_tl2Lo) and not na(tm_tl1LoB) and not na(tm_tl2LoB) and tm_tl2LoB > tm_tl1LoB
+bool tm_tlDnOk = not na(tm_tl1Hi) and not na(tm_tl2Hi) and not na(tm_tl1HiB) and not na(tm_tl2HiB) and tm_tl2HiB > tm_tl1HiB
+float tm_tlUpSlope = tm_tlUpOk ? (tm_tl2Lo - tm_tl1Lo) / float(tm_tl2LoB - tm_tl1LoB) : 0.0
+float tm_tlDnSlope = tm_tlDnOk ? (tm_tl2Hi - tm_tl1Hi) / float(tm_tl2HiB - tm_tl1HiB) : 0.0
+float tm_tlUpAt = tm_tlUpOk ? tm_tl1Lo + tm_tlUpSlope * float(bar_index - tm_tl1LoB) : na
+float tm_tlDnAt = tm_tlDnOk ? tm_tl1Hi + tm_tlDnSlope * float(bar_index - tm_tl1HiB) : na
+
+if tm_tlUpOk and not na(tm_tlUpAt) and math.abs(low - tm_tlUpAt) <= tm_liq_tlTol * tm_atr
+    tm_tlLoTouch += 1
+if tm_tlDnOk and not na(tm_tlDnAt) and math.abs(high - tm_tlDnAt) <= tm_liq_tlTol * tm_atr
+    tm_tlHiTouch += 1
+
+bool tm_tlVis = tm_showViz and tm_showTl and tm_liq_tlOn
+bool tm_tlUpDraw = tm_tlVis and tm_tlUpOk and not na(tm_tlUpAt) and math.abs(tm_tlUpAt - close) <= tm_liq_tlMaxDev * tm_atr
+if tm_tlUpDraw
+    if not na(tm_lnTlUp)
+        line.set_xy1(tm_lnTlUp, tm_tl1LoB, tm_tl1Lo)
+        line.set_xy2(tm_lnTlUp, bar_index, tm_tlUpAt)
+    else
+        tm_lnTlUp := line.new(tm_tl1LoB, tm_tl1Lo, bar_index, tm_tlUpAt, color = color.new(tm_cBull, 30), width = 1, force_overlay = true)
+else if not na(tm_lnTlUp)
+    line.delete(tm_lnTlUp)
+    tm_lnTlUp := na
+
+bool tm_tlDnDraw = tm_tlVis and tm_tlDnOk and not na(tm_tlDnAt) and math.abs(tm_tlDnAt - close) <= tm_liq_tlMaxDev * tm_atr
+if tm_tlDnDraw
+    if not na(tm_lnTlDn)
+        line.set_xy1(tm_lnTlDn, tm_tl1HiB, tm_tl1Hi)
+        line.set_xy2(tm_lnTlDn, bar_index, tm_tlDnAt)
+    else
+        tm_lnTlDn := line.new(tm_tl1HiB, tm_tl1Hi, bar_index, tm_tlDnAt, color = color.new(tm_cBear, 30), width = 1, force_overlay = true)
+else if not na(tm_lnTlDn)
+    line.delete(tm_lnTlDn)
+    tm_lnTlDn := na

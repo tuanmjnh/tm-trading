@@ -39,7 +39,7 @@
       </div>
     </div>
 
-    <div class="flex flex-wrap items-center gap-4 text-xs text-muted">
+    <div class="flex flex-wrap items-center gap-3 text-xs text-muted">
       <div class="flex items-center gap-2">
         <span>{{ t('utilities.icons.size') }}</span>
         <USlider v-model="previewSize" :min="16" :max="48" class="w-28" />
@@ -59,14 +59,14 @@
 
     <div
       ref="scrollParent"
-      class="max-h-[60vh] overflow-y-auto rounded-xl border border-default p-3"
+      class="max-h-[60vh] overflow-y-auto rounded border border-default p-3"
     >
       <div class="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
         <button
           v-for="icon in displayedIcons"
           :key="icon"
           type="button"
-          class="group relative flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border-2 border-transparent p-2 transition-all hover:border-primary/40 hover:bg-elevated"
+          class="group relative flex aspect-square flex-col items-center justify-center gap-1 rounded border-2 border-transparent p-2 transition-all hover:border-primary/40 hover:bg-elevated"
           :class="{ 'border-primary bg-primary/10': selected === icon }"
           :title="icon"
           @click="selected = icon"
@@ -109,7 +109,7 @@
     </div>
 
     <!-- Detail / snippets -->
-    <div v-if="selected" class="space-y-3 rounded-xl border border-default p-4">
+    <div v-if="selected" class="space-y-3 rounded border border-default p-3">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <div class="flex items-center gap-3">
           <UIcon :name="selected" :style="{ width: '32px', height: '32px', color: previewColor }" />
@@ -142,7 +142,7 @@
                 @click="copyText(snip.code, t('utilities.icons.copiedNotification', { name: selected }))"
               />
             </div>
-            <pre class="overflow-auto rounded-lg bg-default/50 p-2 font-mono text-[11px]">{{ snip.code }}</pre>
+            <pre class="overflow-auto rounded bg-default/50 p-2 font-mono text-[11px]">{{ snip.code }}</pre>
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 <template>
   <div class="p-6">
-    <div class="flex items-center justify-between gap-4 mb-4">
+    <div class="flex items-center justify-between gap-3 mb-4">
       <h2 class="text-xl font-bold">{{ t('utilities.editor.title') }}</h2>
 
       <!-- Editor Type Switcher -->

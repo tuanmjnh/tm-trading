@@ -254,9 +254,9 @@ useHead({ title })
       <SharedListFooter :count="flat.length" :has-more="false" :loading="routesAdmin.loading.value" />
     </template>
 
-    <div class="flex flex-col gap-4 w-full h-full min-h-0 pb-24 lg:pb-6">
+    <div class="flex flex-col gap-3 w-full h-full min-h-0 pb-24 lg:pb-6">
       <div v-if="routesAdmin.initialLoading.value" class="space-y-2 pr-1">
-        <USkeleton v-for="i in 6" :key="i" class="h-16 w-full rounded-lg" />
+        <USkeleton v-for="i in 6" :key="i" class="h-16 w-full rounded" />
       </div>
 
       <template v-else>

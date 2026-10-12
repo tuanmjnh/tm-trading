@@ -60,7 +60,7 @@ const leagueRows = computed(() => props.league?.methods ?? [])
 </script>
 
 <template>
-  <div class="flex flex-col gap-3 rounded-lg bg-default ring ring-default p-3">
+  <div class="flex flex-col gap-3 rounded bg-default ring ring-default p-3">
     <div class="flex items-baseline justify-between gap-2">
       <h3 class="text-sm font-semibold">{{ t('trade.methodEvents') }}</h3>
       <span class="text-xs text-muted">{{ symbol ? symbol : '' }}</span>

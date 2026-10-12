@@ -82,7 +82,7 @@ useHead({ title })
 
     <div class="w-full pb-24 lg:pb-6 space-y-4">
       <div v-if="isLoading && !data" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <USkeleton v-for="n in 6" :key="n" class="h-16 rounded-lg" />
+        <USkeleton v-for="n in 6" :key="n" class="h-16 rounded" />
       </div>
 
       <AdminEmptyState
@@ -97,7 +97,7 @@ useHead({ title })
           <UCard
             v-for="o in overview"
             :key="o.key"
-            :ui="{ body: 'p-4' }"
+            :ui="{ body: 'p-3' }"
           >
             <div class="text-[11px] text-dimmed uppercase tracking-wide">{{ o.label }}</div>
             <div class="mt-1 flex items-center gap-2">

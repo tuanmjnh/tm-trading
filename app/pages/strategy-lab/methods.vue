@@ -56,9 +56,9 @@ useHead({ title })
       />
     </template>
 
-    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-4 overflow-y-auto">
+    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-3 overflow-y-auto">
       <!-- Registry -->
-      <UCard :ui="{ body: 'p-3 sm:p-4' }">
+      <UCard :ui="{ body: 'p-3 sm:p-3' }">
         <template #header>
           <div class="flex items-center gap-2">
             <UIcon name="i-lucide-git-merge" class="w-4 h-4 text-primary" />
@@ -71,7 +71,7 @@ useHead({ title })
           <div
             v-for="m in methods"
             :key="m.id"
-            class="rounded-lg border border-default p-3 flex flex-col gap-1"
+            class="rounded border border-default p-3 flex flex-col gap-1"
           >
             <div class="flex items-center justify-between gap-2">
               <span class="font-semibold text-xs text-highlighted truncate">{{ m.name || m.id }}</span>
@@ -92,7 +92,7 @@ useHead({ title })
       </UCard>
 
       <!-- League -->
-      <UCard :ui="{ body: 'p-3 sm:p-4' }">
+      <UCard :ui="{ body: 'p-3 sm:p-3' }">
         <template #header>
           <div class="flex items-center justify-between gap-2 flex-wrap">
             <div class="flex items-center gap-2">

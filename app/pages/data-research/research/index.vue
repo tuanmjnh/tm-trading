@@ -171,7 +171,7 @@ useHead({ title })
           </div>
         </template>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div class="min-w-0">
             <div class="text-[11px] font-medium text-muted uppercase tracking-wider">{{ t('research.profileLabel') }}</div>
             <div class="text-sm font-semibold text-highlighted truncate mt-1">{{ profileName }}</div>
@@ -209,7 +209,7 @@ useHead({ title })
         <UBadge :label="`${shownProposals.length}`" variant="subtle" size="xs" />
       </div>
 
-      <div v-if="shownProposals.length" class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div v-if="shownProposals.length" class="grid grid-cols-1 xl:grid-cols-2 gap-3">
         <UCard v-for="p in shownProposals" :key="p.proposalId">
           <template #header>
             <div class="flex items-start justify-between gap-2">

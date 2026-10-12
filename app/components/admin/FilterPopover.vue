@@ -19,7 +19,7 @@ const { t } = useI18n()
       :aria-label="t('common.filter')"
     />
     <template #content>
-      <div class="p-4 min-w-[280px] max-w-[min(90vw,360px)] space-y-3 flex flex-col">
+      <div class="p-3 min-w-[280px] max-w-[min(90vw,360px)] space-y-3 flex flex-col">
         <slot />
       </div>
     </template>

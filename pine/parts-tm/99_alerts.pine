@@ -1,0 +1,45 @@
+// =============================================================================
+//  L12 - ALERTS (webhook JSON with Signal Deduplication ID)
+// =============================================================================
+
+// f_ts / f_sym - shared (pine/shared/common.pine)
+
+f_jsonTM(string sigId, int dir, float entry, float sl, float t1, float t2, float t3, float posSize, float notional, float effLev, float liq, float netRR) =>
+    string tps = "[" + f_fmtPx(t1) + "," + f_fmtPx(t2) + "," + f_fmtPx(t3) + "]"
+    string liqStr = na(liq) ? "null" : f_fmtPx(liq)
+    '{\"sig_id\":\"' + sigId + '\",\"side\":\"' + (dir == 1 ? "LONG" : "SHORT") + '\",\"profile\":\"' + tm_activeProfile + '\",\"price\":' + f_fmtPx(entry) + ',\"sl\":' + f_fmtPx(sl) + ',\"tps\":' + tps + ',\"score\":' + str.tostring(tm_score100) + ',\"quality\":\"' + tm_quality + '\",\"atr\":' + f_fmtPx(tm_atr) + ',\"pos_size\":' + str.tostring(posSize, "#.####") + ',\"notional\":' + str.tostring(notional, "#.##") + ',\"eff_lev\":' + str.tostring(effLev, "#.#") + ',\"liq\":' + liqStr + ',\"net_rr\":' + str.tostring(netRR, "#.##") + '}'
+
+f_jsonEventTM(TMEvent e) =>
+    '{\"kind\":\"' + e.kind + '\",\"dir\":\"' + e.dir + '\",\"ts\":' + str.tostring(e.srcTime) + ',\"bar\":' + str.tostring(e.srcBar) + ',\"tf\":\"' + e.tf + '\",\"confirmed\":' + (e.confirmed ? "true" : "false") + ',\"level\":' + f_fmtPx(e.level) + '}'
+
+tm_head = '{\"project\":\"TM Indicator\",\"v\":1,\"ts\":\"' + f_ts() + '\",\"exchange\":\"' + syminfo.prefix + '\",\"symbol\":\"' + f_sym() + '\",\"tf\":\"' + timeframe.period + '\"'
+bool tm_doSend = tm_payloadMode != "Off"
+
+// @part skip:tm-strategy
+alertcondition(tm_evEntry and tm_posDir == 1,  "TM LONG",        "TM LONG  {{ticker}} {{interval}}")
+alertcondition(tm_evEntry and tm_posDir == -1, "TM SHORT",       "TM SHORT {{ticker}} {{interval}}")
+alertcondition(tm_evTp > 0,                    "TM TAKE PROFIT", "TM TP    {{ticker}}")
+alertcondition(tm_evSl,                        "TM STOP LOSS",   "TM SL    {{ticker}}")
+alertcondition(tm_evTimeout,                   "TM TIMEOUT",     "TM TO    {{ticker}}")
+// @part skip:none
+
+if tm_okBar and tm_doSend and tm_evEntry
+    alert(tm_head + ',\"action\":\"ENTRY\",' + f_jsonTM(tm_posSigId, tm_posDir, tm_posEntry, tm_posSl, tm_posTp1, tm_posTp2, tm_posTp3, tm_plan.posSize, tm_plan.notional, tm_plan.effLev, tm_plan.liqPrice, tm_plan.netRR) + "}", alert.freq_once_per_bar)
+
+if tm_okBar and tm_doSend and tm_posDir != 0 and tm_evTp > 0
+    alert(tm_head + ',\"action\":\"TAKE_PROFIT\",\"sig_id\":\"' + tm_posSigId + '\",\"level\":' + str.tostring(tm_evTp) + "}", alert.freq_once_per_bar)
+
+if tm_okBar and tm_doSend and tm_posDir != 0 and tm_evSl
+    alert(tm_head + ',\"action\":\"STOP_LOSS\",\"sig_id\":\"' + tm_posSigId + '\"}', alert.freq_once_per_bar)
+
+if tm_okBar and tm_doSend and tm_posDir != 0 and tm_evTimeout
+    alert(tm_head + ',\"action\":\"TIMEOUT\",\"sig_id\":\"' + tm_posSigId + '\"}', alert.freq_once_per_bar)
+
+// Market-structure events (BOS/CHoCH/MSS/RETEST/FAILBRK/SWEEP/CONT/PULL)
+bool tm_evtNow = tm_okBar and tm_doSend and array.size(tm_evtBuf) > 0 and barstate.isconfirmed
+var int tm_lastEvtBar = -1
+if tm_evtNow and array.size(tm_evtBuf) > 0
+    TMEvent eTM = array.get(tm_evtBuf, array.size(tm_evtBuf) - 1)
+    if eTM.srcBar != tm_lastEvtBar
+        tm_lastEvtBar := eTM.srcBar
+        alert(tm_head + ',\"action\":\"EVENT\",' + f_jsonEventTM(eTM) + "}", alert.freq_once_per_bar)

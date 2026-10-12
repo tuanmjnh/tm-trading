@@ -153,29 +153,29 @@ useHead({ title })
       <SharedListFooter :count="items.length" :loading="isLoading" />
     </template>
 
-    <div class="flex flex-col w-full h-full min-h-0 gap-4 pb-24 lg:pb-6">
+    <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
       <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
-        <div class="rounded-lg bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0">
+        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0">
           <span class="text-[10px] text-muted uppercase tracking-wider truncate">{{ t('paperOrders.metaLive') }}</span>
           <span class="text-sm font-bold font-mono text-info">{{ meta?.live ?? 0 }}</span>
         </div>
-        <div class="rounded-lg bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0">
+        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0">
           <span class="text-[10px] text-muted uppercase tracking-wider truncate">{{ t('paperOrders.metaFilled') }}</span>
           <span class="text-sm font-bold font-mono text-success">{{ meta?.filled ?? 0 }}</span>
         </div>
-        <div class="rounded-lg bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0">
+        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0">
           <span class="text-[10px] text-muted uppercase tracking-wider truncate">{{ t('paperOrders.metaCancelled') }}</span>
           <span class="text-sm font-bold font-mono text-muted">{{ meta?.cancelled ?? 0 }}</span>
         </div>
-        <div class="rounded-lg bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0">
+        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0">
           <span class="text-[10px] text-muted uppercase tracking-wider truncate">{{ t('paperOrders.metaRejected') }}</span>
           <span class="text-sm font-bold font-mono text-error">{{ meta?.rejected ?? 0 }}</span>
         </div>
-        <div class="rounded-lg bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0">
+        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0">
           <span class="text-[10px] text-muted uppercase tracking-wider truncate">{{ t('paperOrders.metaExpired') }}</span>
           <span class="text-sm font-bold font-mono text-dimmed">{{ meta?.expired ?? 0 }}</span>
         </div>
-        <div class="rounded-lg bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0">
+        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0">
           <span class="text-[10px] text-muted uppercase tracking-wider truncate">{{ t('paperOrders.metaTotal') }}</span>
           <span class="text-sm font-bold font-mono text-highlighted">{{ meta?.total ?? 0 }}</span>
         </div>
@@ -282,7 +282,7 @@ useHead({ title })
       <!-- Inline cancel confirm (executor-guarded server-side, D14) -->
       <div
         v-if="cancelTarget"
-        class="rounded-lg bg-default ring ring-warning/50 p-4 flex flex-col gap-3"
+        class="rounded bg-default ring ring-warning/50 p-3 flex flex-col gap-3"
       >
         <UAlert
           color="warning"

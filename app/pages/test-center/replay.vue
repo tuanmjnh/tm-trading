@@ -214,9 +214,9 @@ function fmtPrice(v: number): string {
 
 <template>
   <BasePage id="replay" :title="title" :description="description">
-    <div class="flex flex-col w-full gap-4 pb-24 lg:pb-6">
+    <div class="flex flex-col w-full gap-3 pb-24 lg:pb-6">
       <!-- Session builder -->
-      <div class="rounded-lg bg-default ring ring-default p-4 flex flex-col gap-3" data-testid="replay-create-card">
+      <div class="rounded bg-default ring ring-default p-3 flex flex-col gap-3" data-testid="replay-create-card">
         <div class="text-sm font-medium">{{ t('replay.sessionCard') }}</div>
         <div class="flex flex-wrap items-end gap-3">
           <label class="flex flex-col gap-1 text-xs text-muted">
@@ -283,7 +283,7 @@ function fmtPrice(v: number): string {
       <!-- Controls (only with a live session) -->
       <div
         v-if="session"
-        class="rounded-lg bg-default ring ring-default p-4 flex flex-col gap-3"
+        class="rounded bg-default ring ring-default p-3 flex flex-col gap-3"
         data-testid="replay-controls-card"
       >
         <div class="flex flex-wrap items-center gap-2 text-sm text-muted">
@@ -320,7 +320,7 @@ function fmtPrice(v: number): string {
       <!-- Challenge mode (roadmap §22.5, optional training; NOT financial advice) -->
       <div
         v-if="session && challenge"
-        class="rounded-lg bg-default ring ring-default p-4 flex flex-col gap-3"
+        class="rounded bg-default ring ring-default p-3 flex flex-col gap-3"
         data-testid="replay-challenge-card"
       >
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
@@ -411,7 +411,7 @@ function fmtPrice(v: number): string {
       <!-- Played candles -->
       <div
         v-if="session"
-        class="rounded-lg bg-default ring ring-default p-4 flex flex-col gap-3"
+        class="rounded bg-default ring ring-default p-3 flex flex-col gap-3"
         data-testid="replay-events-card"
       >
         <div class="text-sm font-medium">{{ t('replay.played') }}</div>
@@ -446,7 +446,7 @@ function fmtPrice(v: number): string {
       </div>
 
       <!-- Empty state (no session yet) -->
-      <div v-else class="rounded-lg bg-default ring ring-default p-6">
+      <div v-else class="rounded bg-default ring ring-default p-6">
         <AdminEmptyState
           :title="t('replay.empty')"
           :description="t('replay.emptyHint')"

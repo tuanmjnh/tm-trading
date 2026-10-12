@@ -1,7 +1,7 @@
 # TM Liquidity Sweep — Quét thanh khoản + râu từ chối + volume VSA
 
 Chỉ báo **`TM Liquidity Sweep`** (Pine v6, `overlay = false`) kết hợp ý tưởng level của
-**`Liquidity Swings [LuxAlgo]`** (`docs/Liquidity Swings [LuxAlgo].pine`) với phân loại
+**`Liquidity Swings [LuxAlgo]`** (`docs/indicator/liquidity/Liquidity Swings [LuxAlgo].pine`) với phân loại
 volume của **`VSA Volume.pine`** (`docs/VSA Volume.pine`).
 
 Giống **`TM VSA Wyckoff`**: indicator có **pane riêng** hiển thị **histogram volume 6 màu**

@@ -276,7 +276,7 @@ const actionsClass = computed(() => {
   <div class="flex flex-col h-full min-h-0 bg-transparent">
     <!-- Table Header (Visible only on Desktop List Mode) -->
     <div v-if="viewMode === 'list' && !hideHeader"
-      class="hidden lg:flex items-center pl-0.75 pr-3.25 py-2.5 mb-1 text-[11px] font-semibold uppercase tracking-wider text-dimmed border-b border-default bg-muted/50">
+      class="hidden lg:flex items-center pl-0.75 pr-3.25 py-2.5 mb-1 text-[11px] font-semibold uppercase tracking-wider text-dimmed border-b border-default bg-muted">
       <!-- Drag Handle Placeholder (Aligned with SwipeCard pl-2 + w-6 = 32px) -->
       <div v-if="isDraggable" class="w-8 shrink-0" />
 
@@ -316,7 +316,7 @@ const actionsClass = computed(() => {
         :class="currentViewMode === 'list' ? 'space-y-2 pr-3 pl-0.5' : `grid ${gridCols} gap-4 pb-4 pr-3 pl-0.5`"
         class="w-full">
         <USkeleton v-for="i in skeletonCount" :key="i"
-          :class="[currentViewMode === 'list' ? 'h-16' : 'h-44', 'w-full rounded-lg bg-elevated']" />
+          :class="[currentViewMode === 'list' ? 'h-16' : 'h-44', 'w-full rounded bg-elevated']" />
       </div>
 
       <!-- Empty State -->

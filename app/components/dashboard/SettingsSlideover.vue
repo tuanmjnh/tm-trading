@@ -84,7 +84,7 @@ const isStorageModalOpen = ref(false)
             {{ t('settings.storage.storage_management') }}
           </label>
           <UButton icon="i-lucide-database" variant="outline" color="neutral" block
-            class="justify-start text-xs rounded-xl" @click="isStorageModalOpen = true">
+            class="justify-start text-xs rounded" @click="isStorageModalOpen = true">
             {{ t('settings.storage.storage_management') }}
           </UButton>
         </div>

@@ -1,0 +1,172 @@
+// =============================================================================
+//  L11 - VISUALIZATION & DASHBOARD
+// =============================================================================
+
+// Entry markers
+plotshape(tm_showViz and tm_showSig and tm_evEntry and tm_posDir == 1,  title = "LONG",  style = shape.triangleup,   location = location.belowbar, color = tm_cBull, size = size.small, text = "L", textcolor = tm_cBull, force_overlay = true)
+plotshape(tm_showViz and tm_showSig and tm_evEntry and tm_posDir == -1, title = "SHORT", style = shape.triangledown, location = location.abovebar, color = tm_cBear, size = size.small, text = "S", textcolor = tm_cBear, force_overlay = true)
+
+// TP/SL hit labels
+if tm_showViz and tm_showHit and tm_evTp == 1
+    label.new(bar_index, tm_posTp1, "TP1+", style = label.style_label_left, color = color.new(tm_cBull, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_showHit and tm_evTp == 2
+    label.new(bar_index, tm_posTp2, "TP2+", style = label.style_label_left, color = color.new(tm_cBull, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_showHit and tm_evTp == 3
+    label.new(bar_index, tm_posTp3, "TP3+", style = label.style_label_left, color = color.new(tm_cBull, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_showHit and tm_evSl
+    label.new(bar_index, tm_posSl,  "SL-",  style = label.style_label_left, color = color.new(tm_cBear, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_showHit and tm_evTimeout
+    label.new(bar_index, close, "TO",   style = label.style_label_left, color = color.new(color.gray, 20),  textcolor = color.white, size = size.tiny, force_overlay = true)
+
+// Active position zone boxes
+var box  tm_bxSl    = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(color.gray, 60), bgcolor = color.new(color.gray, 88), force_overlay = true)
+var box  tm_bxTp1   = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(tm_cBull, 50),  bgcolor = color.new(tm_cBull, 90),  force_overlay = true)
+var box  tm_bxTp2   = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(tm_cBull, 60),  bgcolor = color.new(tm_cBull, 93),  force_overlay = true)
+var box  tm_bxTp3   = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(tm_cBull, 70),  bgcolor = color.new(tm_cBull, 95),  force_overlay = true)
+var line tm_lnEntry = line.new(bar_index, 0.0, bar_index + 1, 0.0, color = color.new(color.silver, 30), style = line.style_dashed, force_overlay = true)
+var label tm_lbInfo = label.new(bar_index, 0.0, "", style = label.style_label_left, color = color.new(color.gray, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+
+int   tm_right = tm_posDir != 0 and not na(tm_posBar) ? tm_posBar + tm_zoneLen : bar_index + 1
+color tm_base  = tm_posDir == 1 ? tm_cBull : tm_cBear
+
+if tm_showViz and tm_showZone and tm_posDir != 0 and not na(tm_posBar)
+    box.set_lefttop(tm_bxSl,  tm_posBar, math.max(tm_posEntry, tm_posSl))
+    box.set_rightbottom(tm_bxSl, tm_right, math.min(tm_posEntry, tm_posSl))
+    box.set_lefttop(tm_bxTp1, tm_posBar, math.max(tm_posEntry, tm_posTp1))
+    box.set_rightbottom(tm_bxTp1, tm_right, math.min(tm_posEntry, tm_posTp1))
+    box.set_lefttop(tm_bxTp2, tm_posBar, math.max(tm_posEntry, tm_posTp2))
+    box.set_rightbottom(tm_bxTp2, tm_right, math.min(tm_posEntry, tm_posTp2))
+    box.set_lefttop(tm_bxTp3, tm_posBar, math.max(tm_posEntry, tm_posTp3))
+    box.set_rightbottom(tm_bxTp3, tm_right, math.min(tm_posEntry, tm_posTp3))
+    line.set_xy1(tm_lnEntry, tm_posBar, tm_posEntry)
+    line.set_xy2(tm_lnEntry, tm_right,  tm_posEntry)
+    label.set_xy(tm_lbInfo, tm_right, tm_posTp3)
+    string posLabel = (tm_posDir == 1 ? "LONG" : "SHORT") + "\nE " + f_fmtPx(tm_posEntry) + "\nSL " + f_fmtPx(tm_posSl) + "\nTP3 " + f_fmtPx(tm_posTp3)
+    label.set_text(tm_lbInfo, posLabel)
+    label.set_color(tm_lbInfo, color.new(tm_base, 10))
+else
+    box.set_lefttop(tm_bxSl,  bar_index, na)
+    box.set_rightbottom(tm_bxSl,  bar_index, na)
+    box.set_lefttop(tm_bxTp1, bar_index, na)
+    box.set_rightbottom(tm_bxTp1, bar_index, na)
+    box.set_lefttop(tm_bxTp2, bar_index, na)
+    box.set_rightbottom(tm_bxTp2, bar_index, na)
+    box.set_lefttop(tm_bxTp3, bar_index, na)
+    box.set_rightbottom(tm_bxTp3, bar_index, na)
+    line.set_xy1(tm_lnEntry, bar_index, na)
+    line.set_xy2(tm_lnEntry, bar_index + 1, na)
+    label.set_xy(tm_lbInfo, bar_index, na)
+    label.set_text(tm_lbInfo, "")
+
+// EMA 20/50/200 (overlay)
+plot(tm_showViz and tm_showEma ? tm_emaF : na, "EMA fast", color = color.new(color.teal, 0),   linewidth = 1, force_overlay = true)
+plot(tm_showViz and tm_showEma ? tm_emaM : na, "EMA mid",  color = color.new(color.orange, 0), linewidth = 1, force_overlay = true)
+plot(tm_showViz and tm_showEma ? tm_emaS : na, "EMA slow", color = color.new(color.red, 20),   linewidth = 1, force_overlay = true)
+
+// VWAP (overlay)
+plot(tm_showViz and tm_showVwap and tm_vwapOk ? tm_vwap : na, "VWAP", color = color.new(#b388ff, 0), linewidth = 1, style = plot.style_linebr, force_overlay = true)
+
+// Volume pane - VSA 6 bucket + MA
+tm_volCol = f_vsaColor(tm_vol, tm_volMA, tm_vol_spikeR, tm_vol_rVH, tm_vol_rH, tm_vol_rN, tm_vol_rL)
+plot(tm_showViz and tm_showVol ? tm_vol : na,   "Volume",    color = tm_volCol, style = plot.style_columns, format = format.volume)
+plot(tm_showViz and tm_vol_showMA ? tm_volMA : na, "Volume MA", color = color.new(color.green, 0), linewidth = 1, format = format.volume)
+
+// =============================================================================
+//  DASHBOARD (2 x 24)
+// =============================================================================
+
+var table tm_tbl = na
+if tm_showViz and tm_showDash and na(tm_tbl)
+    tm_tbl := table.new(position.top_right, 2, 24, border_width = 1, border_color = color.new(color.gray, 70), force_overlay = true)
+
+tm_font = tm_dashSize == "Tiny" ? size.tiny : tm_dashSize == "Small" ? size.small : size.normal
+
+if not na(tm_tbl) and barstate.islast
+    color kC = color.new(color.gray, 10)
+    color vC = color.silver
+    color bg = color.new(color.black, 100)
+    table.clear(tm_tbl, 0, 0, 1, 23)
+
+    table.cell(tm_tbl, 0,  0, "TM [" + tm_activeProfile + "] " + syminfo.ticker, text_color = color.orange, text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(tm_tbl, 1,  0, timeframe.period + "m",   text_color = vC,           text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    color sCol = tm_score100 <= tm_scr_noTrade ? color.gray : tm_dir == 1 ? tm_cBull : tm_cBear
+    table.cell(tm_tbl, 0,  1, "Score",                      text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(tm_tbl, 1,  1, str.tostring(tm_score100) + " / " + tm_quality, text_color = sCol, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    string dirTxt = (tm_dir == 1 ? "LONG" : tm_dir == -1 ? "SHORT" : "-") + (tm_signal ? " [SIG]" : tm_noTradeReason != "OK" ? " [" + tm_noTradeReason + "]" : "")
+    table.cell(tm_tbl, 0,  2, "Signal / Status", text_color = kC, text_size = tm_font, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1,  2, dirTxt, text_color = tm_signal ? (tm_dir == 1 ? tm_cBull : tm_cBear) : color.gray, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(tm_tbl, 0,  3, "Structure",                  text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(tm_tbl, 1,  3, tm_trend == 1 ? "Bullish" : tm_trend == -1 ? "Bearish" : "Ranging", text_color = tm_trend == 1 ? tm_cBull : tm_trend == -1 ? tm_cBear : color.gray, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    string structEvt = tm_bosUp or tm_bosDown ? "BOS" : tm_chochUp or tm_chochDown ? "CHoCH" : tm_mssUp or tm_mssDown ? "MSS" : "-"
+    table.cell(tm_tbl, 0,  4, "BOS / CHoCH / MSS",          text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(tm_tbl, 1,  4, structEvt, text_color = (tm_bosUp or tm_chochUp or tm_mssUp) ? tm_cBull : (tm_bosDown or tm_chochDown or tm_mssDown) ? tm_cBear : color.gray, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(tm_tbl, 0,  5, "Retest / Fail",              text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(tm_tbl, 1,  5, tm_retestBull or tm_retestBear ? "RETEST" : tm_failBull or tm_failBear ? "FAILBRK" : "-", text_color = tm_retestBull or tm_failBear ? tm_cBull : tm_retestBear or tm_failBull ? tm_cBear : color.gray, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(tm_tbl, 0,  6, "Event moi nhat",             text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    string tm_evtTxt = "-"
+    color tm_evtCol = color.gray
+    if array.size(tm_evtBuf) > 0
+        TMEvent tm_lastEvt = array.get(tm_evtBuf, array.size(tm_evtBuf) - 1)
+        tm_evtTxt := tm_lastEvt.kind + " " + (tm_lastEvt.dir == "bull" ? "+" : "-") + (tm_lastEvt.confirmed ? "" : "?")
+        tm_evtCol := tm_lastEvt.dir == "bull" ? tm_cBull : tm_cBear
+    table.cell(tm_tbl, 1,  6, tm_evtTxt, text_color = tm_evtCol, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(tm_tbl, 0,  7, "Context TF (" + tm_ctxTf + ")", text_color = kC, text_size = tm_font, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1,  7, not tm_tfHierarchyOk ? "TF_WARN" : tm_htfVeto ? "VETO" : tm_ctxDir == 1 ? "Bull" : tm_ctxDir == -1 ? "Bear" : "-", text_color = not tm_tfHierarchyOk ? color.yellow : tm_htfVeto ? color.red : tm_ctxDir == 1 ? tm_cBull : tm_ctxDir == -1 ? tm_cBear : color.gray, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(tm_tbl, 0,  8, "Setup TF (" + tm_setupTf + ")", text_color = kC, text_size = tm_font, text_halign = text.align_left, bgcolor = bg)
+    table.cell(tm_tbl, 1,  8, not tm_tfHierarchyOk ? "TF_WARN" : tm_setupDir == 1 ? "Bull" : tm_setupDir == -1 ? "Bear" : "-", text_color = not tm_tfHierarchyOk ? color.yellow : tm_setupDir == 1 ? tm_cBull : tm_setupDir == -1 ? tm_cBear : color.gray, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(tm_tbl, 0,  9, "Liquidity",                  text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(tm_tbl, 1,  9, tm_sweepBull ? "Sweep+" : tm_sweepBear ? "Sweep-" : "-", text_color = tm_sweepBull ? tm_cBull : tm_sweepBear ? tm_cBear : color.gray, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(tm_tbl, 0, 10, "PDH / PDL",                  text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(tm_tbl, 1, 10, f_fmtPx(tm_pdh) + " / " + f_fmtPx(tm_pdl), text_color = vC, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(tm_tbl, 0, 11, "PWH / PWL",                  text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(tm_tbl, 1, 11, f_fmtPx(tm_pwh) + " / " + f_fmtPx(tm_pwl), text_color = vC, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(tm_tbl, 0, 12, "Sess Hi / Lo",               text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(tm_tbl, 1, 12, (na(tm_sessHi) ? "-" : f_fmtPx(tm_sessHi)) + " / " + (na(tm_sessLo) ? "-" : f_fmtPx(tm_sessLo)), text_color = vC, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(tm_tbl, 0, 13, "Trendline touch",            text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(tm_tbl, 1, 13, str.tostring(tm_tlLoTouch) + " up / " + str.tostring(tm_tlHiTouch) + " dn", text_color = vC, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    string cpLabel = tm_dispBullV ? "Displacement+" : tm_dispBearV ? "Displacement-" : tm_bullEng ? "Engulf+" : tm_bearEng ? "Engulf-" : tm_bullPin ? "Pin+" : tm_bearPin ? "Pin-" : tm_bullRej ? "Rej+" : tm_bearRej ? "Rej-" : "-"
+    table.cell(tm_tbl, 0, 14, "Candle",                     text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(tm_tbl, 1, 14, cpLabel, text_color = tm_cpScore > 0 ? tm_cBull : tm_cpScore < 0 ? tm_cBear : color.gray, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(tm_tbl, 0, 15, "Volume / Bucket",            text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(tm_tbl, 1, 15, str.tostring(tm_volRatio, "#.##") + "x / " + tm_volBucket, text_color = tm_isTim ? color.purple : vC, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(tm_tbl, 0, 16, "RelVol / OBV",               text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(tm_tbl, 1, 16, str.tostring(tm_relVol, "#.##") + "x / " + (tm_obvSlope > 0 ? "+" : tm_obvSlope < 0 ? "-" : "0"), text_color = tm_obvScore > 0 ? tm_cBull : tm_obvScore < 0 ? tm_cBear : vC, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(tm_tbl, 0, 17, "RSI / MACD",                 text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(tm_tbl, 1, 17, str.tostring(tm_rsi, "#.#") + " / " + str.tostring(tm_macdHist, format.mintick), text_color = tm_rsi < tm_rsiOs ? tm_cBull : tm_rsi > tm_rsiOb ? tm_cBear : vC, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(tm_tbl, 0, 18, "ADX / DMI",                  text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(tm_tbl, 1, 18, str.tostring(tm_adx, "#.#") + " / " + (tm_diPlus > tm_diMinus ? "+" : "-"), text_color = tm_adx >= tm_adxMin ? color.purple : vC, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(tm_tbl, 0, 19, "ATR% / BBW",                 text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(tm_tbl, 1, 19, str.tostring(tm_atrPct, "#.##") + "% / " + str.tostring(tm_bbWidth, "#.##") + (tm_bbExpand ? " Exp" : " Ctr"), text_color = vC, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(tm_tbl, 0, 20, "VWAP / Vi tri ngay",         text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(tm_tbl, 1, 20, (tm_vwapOk ? f_fmtPx(tm_vwap) : "-") + " / " + str.tostring(f_clamp(tm_dayRange, -1.0, 1.0), "+#.##;-#.##"), text_color = tm_vwapScore > 0 ? tm_cBull : tm_vwapScore < 0 ? tm_cBear : vC, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(tm_tbl, 0, 21, "Session",                    text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(tm_tbl, 1, 21, tm_sessName, text_color = tm_sessOverlap ? color.orange : tm_sessNy ? color.yellow : vC, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(tm_tbl, 0, 22, "Vi the / Lenh / W-L-TO",     text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    string posTxt = (tm_posDir == 1 ? "LONG" : tm_posDir == -1 ? "SHORT" : "-") + " / " + str.tostring(tm_dayCount) + "/" + str.tostring(tm_maxDay) + " / " + str.tostring(tm_statWins) + "-" + str.tostring(tm_statLosses) + "-" + str.tostring(tm_statTimeouts)
+    table.cell(tm_tbl, 1, 22, posTxt, text_color = tm_posDir == 1 ? tm_cBull : tm_posDir == -1 ? tm_cBear : vC, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(tm_tbl, 0, 23, "Lev / Liq / Net RR",         text_color = kC,   text_size = tm_font, text_halign = text.align_left,  bgcolor = bg)
+    string riskInfoTxt = str.tostring(tm_plan.effLev, "#.#") + "x / " + (na(tm_plan.liqPrice) ? "-" : f_fmtPx(tm_plan.liqPrice)) + " / " + str.tostring(tm_plan.netRR, "#.##") + "R"
+    table.cell(tm_tbl, 1, 23, riskInfoTxt, text_color = tm_plan.valid ? vC : color.yellow, text_size = tm_font, text_halign = text.align_right, bgcolor = bg)

@@ -3,7 +3,7 @@
 Status: **canonical** — the single source of truth for the dashboard's visual tokens.
 
 Visual authority for `app/` (the Nuxt 4 dashboard). Functional authority stays with the
-roadmap (`docs/tm-trading-roadmap-v3.3.md` §57/§58); this document only defines how the
+roadmap (`docs/web-app/tm-trading-roadmap-v3.3.md` §57/§58); this document only defines how the
 already-built screens *look*, never what they *do*.
 
 Source: the Stitch template `private/stitch_tm_trading_ui_template/` ("Obsidian Apex").
@@ -103,9 +103,21 @@ Dual-engine protocol. Loaded automatically by `@nuxt/fonts` (bundled with `@nuxt
 - **Algo chip**: bg `rgba(99,102,241,.12)`, border `rgba(139,92,246,.3)`, text `algo`,
   mono 11px.
 - **Live pip**: 4px dot `brand` with `box-shadow: 0 0 6px #2b7fff` + uppercase `label-micro`.
+  Implemented as `app/components/LivePip.vue` (props `active`, `label`); inactive falls
+  back to a muted `bg-default` dot with `text-dimmed` caption and no glow. Used on the
+  `/trading` market-stream status block and recent-trades tape header.
 - **Left dock rail**: expanded 240px / collapsed 56px, `150ms cubic-bezier(.4,0,.2,1)`.
   Background `panel`, right border `border`. Active item: bg `card`, left border
   `2px solid brand`, `text-primary`. Inactive: `text-secondary`, hover bg `card`.
+  Implemented via the `ui` prop on `UNavigationMenu` in `app/layouts/default.vue`
+  (`data-[active]:` / `data-[state=open]:` on `link` + `childLink`, `!`-suffixed so it
+  outranks Nuxt UI's `color:"primary"` pill compound variant). Note the token-name
+  collision: Nuxt UI's `text-primary` means brand blue, whereas the doc's
+  `text-primary` means near-white — the rail uses `text-highlighted` (#f8fafc) to
+  match the doc's intent. Accordion group triggers only expose `data-state=open`
+  when manually expanded, so a collapsed group never reads as the active section;
+  highlighting the trigger itself would need route-membership logic in
+  `useNavMenu.ts` (out of scope for this pass).
 - **Numeric input**: bg `elevated`, border `border`, `text-primary`, mono. Focus border
   `focus` (1px, no halo). Suffix unit label `text-dim`, mono.
 - **Table header**: bg `panel`, `text-dim`, uppercase, Inter 600, 11px,

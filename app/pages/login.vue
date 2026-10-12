@@ -92,7 +92,7 @@ useHead({ title: computed(() => t('auth.signIn')) })
       <template #header>
         <div class="text-center">
           <div
-            class="inline-flex items-center justify-center size-12 rounded-xl bg-primary/10 text-primary mb-3 mx-auto">
+            class="inline-flex items-center justify-center size-12 rounded bg-primary/10 text-primary mb-3 mx-auto">
             <UIcon v-if="totpChallenge" name="i-lucide-shield-check" class="size-6" />
             <MediaVisual v-else src="/logo.svg" size="size-7" />
           </div>

@@ -51,7 +51,7 @@ const lastClass = (row: WatchRow): string =>
 </script>
 
 <template>
-  <div class="flex flex-col rounded-lg bg-default ring ring-default p-3 gap-2">
+  <div class="flex flex-col rounded bg-default ring ring-default p-3 gap-2">
     <div class="flex items-baseline justify-between">
       <h3 class="text-sm font-semibold">{{ t('trade.watchlist') }}</h3>
       <span class="font-mono text-[10px] text-muted">{{ rows.length }}</span>

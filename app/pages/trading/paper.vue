@@ -98,11 +98,11 @@ useHead({ title })
       </div>
     </template>
 
-    <div class="flex flex-col w-full gap-4 pb-24 lg:pb-6">
+    <div class="flex flex-col w-full gap-3 pb-24 lg:pb-6">
       <!-- Equity summary -->
       <div
         v-if="account"
-        class="rounded-lg bg-default ring ring-default p-4 flex flex-col gap-3"
+        class="rounded bg-default ring ring-default p-3 flex flex-col gap-3"
       >
         <div class="flex items-center justify-between gap-2">
           <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.equity') }}</span>
@@ -127,52 +127,52 @@ useHead({ title })
         v-if="account"
         class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2"
       >
-        <div class="rounded-lg bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
+        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
           <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.balance') }}</span>
           <span class="text-sm font-bold font-mono text-highlighted">{{ fmtNum(account.balance) }}</span>
         </div>
-        <div class="rounded-lg bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
+        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
           <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.realized') }}</span>
           <span class="text-sm font-bold font-mono" :class="moneyClass(account.realizedPnl)">{{ fmtMoney(account.realizedPnl) }}</span>
         </div>
-        <div class="rounded-lg bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
+        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
           <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.dailyPnl') }}</span>
           <span class="text-sm font-bold font-mono" :class="moneyClass(account.dailyPnl)">{{ fmtMoney(account.dailyPnl) }}</span>
         </div>
-        <div class="rounded-lg bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
+        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
           <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.unrealized') }}</span>
           <span class="text-sm font-bold font-mono" :class="moneyClass(account.unrealized)">{{ fmtMoney(account.unrealized) }}</span>
         </div>
-        <div class="rounded-lg bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
+        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
           <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.openPositions') }}</span>
           <span class="text-sm font-bold font-mono" :class="account.openPositions > 0 ? 'text-success' : 'text-highlighted'">{{ account.openPositions }}</span>
         </div>
-        <div class="rounded-lg bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
+        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
           <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.notional') }}</span>
           <span class="text-sm font-bold font-mono text-highlighted">{{ fmtNum(account.notional) }}</span>
         </div>
-        <div class="rounded-lg bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
+        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
           <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.freeMargin') }}</span>
           <span class="text-sm font-bold font-mono text-highlighted">{{ fmtNum(account.freeMargin) }}</span>
         </div>
-        <div class="rounded-lg bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
+        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
           <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.utilization') }}</span>
           <span class="text-sm font-bold font-mono" :class="utilizationClass(account.utilizationPct)">{{ fmtPct(account.utilizationPct) }}</span>
         </div>
-        <div class="rounded-lg bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
+        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
           <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.maxDrawdown') }}</span>
           <span class="text-sm font-bold font-mono" :class="account.maxDrawdownPct != null ? 'text-error' : 'text-dimmed'">
             {{ fmtNum(account.maxDrawdown) }}{{ account.maxDrawdownPct != null ? ` (${fmtPct(account.maxDrawdownPct)})` : '' }}
           </span>
         </div>
-        <div class="rounded-lg bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
+        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
           <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.maintenance') }}</span>
           <span class="text-sm font-bold font-mono text-highlighted">{{ fmtNum(account.maintenance) }}</span>
         </div>
       </div>
 
       <!-- Risk gate status (D7 kill-switch) -->
-      <section class="rounded-lg bg-default ring ring-default p-4 flex flex-col gap-2">
+      <section class="rounded bg-default ring ring-default p-3 flex flex-col gap-2">
         <div class="flex items-center justify-between gap-2">
           <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.riskGate') }}</span>
           <span v-if="riskDay" class="text-[10px] text-dimmed font-mono">{{ riskDay }} UTC</span>
@@ -182,7 +182,7 @@ useHead({ title })
           <div
             v-for="a in risk"
             :key="a.account"
-            class="flex items-center justify-between gap-2 rounded-lg bg-elevated/50 px-3 py-2"
+            class="flex items-center justify-between gap-2 rounded bg-elevated/50 px-3 py-2"
           >
             <div class="flex items-center gap-2 min-w-0">
               <span class="text-xs font-semibold text-highlighted truncate">{{ a.account }}</span>

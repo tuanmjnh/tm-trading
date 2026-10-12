@@ -125,7 +125,7 @@ useHead({ title })
       <SharedListFooter :count="shownCount" :loading="isLoading" />
     </template>
 
-    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-4">
+    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-3">
       <UAlert
         v-if="mongo === 'down'"
         color="warning"
@@ -169,7 +169,7 @@ useHead({ title })
           :href="n.link || undefined"
           :target="n.link ? '_blank' : undefined"
           rel="noopener noreferrer"
-          class="block rounded-lg border border-default p-3 transition-colors hover:bg-elevated/40"
+          class="block rounded border border-default p-3 transition-colors hover:bg-elevated/40"
         >
           <div class="flex items-start justify-between gap-3">
             <div class="flex flex-col gap-1 min-w-0">

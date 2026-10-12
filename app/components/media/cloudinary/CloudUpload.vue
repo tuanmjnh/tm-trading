@@ -164,9 +164,9 @@ const formatFileSize = (bytes: number) => {
 
 <template>
   <UCard
-    :ui="{ root: 'border-0 ring-0', body: 'p-0 sm:p-0 border-0 mb-3', header: 'p-4 sm:p-6', footer: 'p-0 sm:p-0' }">
+    :ui="{ root: 'border-0 ring-0', body: 'p-0 sm:p-0 border-0 mb-3', header: 'p-3 sm:p-6', footer: 'p-0 sm:p-0' }">
     <!-- Drop Zone -->
-    <div class="border-2 border-dashed rounded-lg p-8 text-center transition-colors duration-200" :class="[
+    <div class="border-2 border-dashed rounded p-8 text-center transition-colors duration-200" :class="[
       dragOver ? 'border-primary bg-primary/10' : 'border-default hover:border-accented'
     ]" @dragover.prevent="dragOver = true" @dragleave.prevent="dragOver = false" @drop.prevent="handleDrop">
       <UIcon name="i-lucide-cloud-upload" class="w-16 h-16 mx-auto mb-4 text-dimmed" />
@@ -186,7 +186,7 @@ const formatFileSize = (bytes: number) => {
     <!-- File List -->
     <div v-if="files.length > 0" class="mt-6 space-y-2 max-h-[50vh] sm:max-h-[39vh] overflow-y-auto pr-2">
       <div v-for="(file, index) in files" :key="index"
-        class="flex items-center gap-4 p-3 border border-default rounded-lg bg-muted">
+        class="flex items-center gap-3 p-3 border border-default rounded bg-muted">
         <!-- File Icon/Preview -->
         <div class="shrink-0 w-12 h-12 rounded overflow-hidden bg-elevated flex items-center justify-center">
           <NuxtImg v-if="previews[file.name]" :src="previews[file.name]" class="w-full h-full object-cover"

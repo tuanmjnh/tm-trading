@@ -60,12 +60,12 @@ useHead({ title })
       />
     </template>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 sm:p-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 sm:p-6">
       <NuxtLink
         v-for="card in cards"
         :key="card.to"
         :to="card.to"
-        class="group rounded-lg border border-default bg-elevated/50 hover:bg-elevated transition-colors p-4 flex flex-col gap-2"
+        class="group rounded border border-default bg-elevated/50 hover:bg-elevated transition-colors p-3 flex flex-col gap-2"
       >
         <div class="flex items-center gap-2">
           <UIcon :name="card.icon" class="size-5 text-primary shrink-0" />

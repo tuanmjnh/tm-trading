@@ -5,7 +5,7 @@ defineProps<{ items: NavigationMenuItem[] }>()
 </script>
 
 <template>
-  <div class="flex flex-col md:flex-row gap-4 md:gap-0 w-full">
+  <div class="flex flex-col md:flex-row gap-3 md:gap-0 w-full">
     <nav
       class="w-full md:w-52 shrink-0 border-b md:border-b-0 md:border-e border-default md:pe-5 pb-3 md:pb-0 overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden"
       :aria-label="$t('common.navigation')">

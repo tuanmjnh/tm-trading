@@ -39,7 +39,7 @@ const fillSide = (v: number): string => (v >= 0 ? 'left-1/2 bg-success' : 'right
 </script>
 
 <template>
-  <div class="flex flex-col gap-2 rounded-lg bg-default ring ring-default p-3">
+  <div class="flex flex-col gap-2 rounded bg-default ring ring-default p-3">
     <div class="flex items-center justify-between gap-2">
       <h3 class="text-sm font-semibold">{{ t('trade.confluence') }}</h3>
       <span class="text-xs text-muted">{{ symbol }}</span>

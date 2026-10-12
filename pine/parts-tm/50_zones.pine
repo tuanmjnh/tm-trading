@@ -1,0 +1,113 @@
+// =============================================================================
+//  L4 - ZONES: S/R zones + FVG + Order Block
+// =============================================================================
+
+// --- S/R zones (pivot-based, ATR width, merge, max limit) -----------------------
+// sr_zones + f_addZone / f_nearSupport / f_nearResistance - shared (pine/shared/zones.pine)
+if not na(ta.pivothigh(high, tm_sr_left, tm_sr_right))
+    f_addZone(sr_zones, high[tm_sr_right], -1, tm_atr, tm_sr_width, tm_sr_maxZone)
+if not na(ta.pivotlow(low, tm_sr_left, tm_sr_right))
+    f_addZone(sr_zones, low[tm_sr_right],  1, tm_atr, tm_sr_width, tm_sr_maxZone)
+
+// --- FVG (Fair Value Gap) -----------------------------------------------------
+type TMFvg
+    float top
+    float bot
+    int   srcBar
+    int   dir     // 1=bull, -1=bear
+    bool  dead
+
+var array<TMFvg> tm_fvgs = array.new<TMFvg>()
+
+bool tm_fvgBull = low > high[2] and (low - high[2]) >= tm_fvg_minAtr * tm_atr
+bool tm_fvgBear = high < low[2] and (low[2] - high) >= tm_fvg_minAtr * tm_atr
+if tm_fvgBull
+    array.push(tm_fvgs, TMFvg.new(low, high[2], bar_index, 1, false))
+if tm_fvgBear
+    array.push(tm_fvgs, TMFvg.new(low[2], high, bar_index, -1, false))
+if array.size(tm_fvgs) > tm_fvg_max
+    array.shift(tm_fvgs)
+for g in tm_fvgs
+    if bar_index - g.srcBar > tm_fvg_life
+        g.dead := true
+    if g.dir == 1 and close < g.bot
+        g.dead := true
+    if g.dir == -1 and close > g.top
+        g.dead := true
+
+// --- Order Block --------------------------------------------------------------
+type TMOb
+    float top
+    float bot
+    int   srcBar
+    int   dir     // 1=bullish OB, -1=bearish OB
+    bool  dead
+
+var array<TMOb> tm_obs = array.new<TMOb>()
+
+bool tm_obBull = tm_dispBull and close[1] < open[1]
+bool tm_obBear = tm_dispBear and close[1] > open[1]
+if tm_obBull
+    array.push(tm_obs, TMOb.new(open[1] > close[1] ? open[1] : close[1], open[1] < close[1] ? open[1] : close[1], bar_index - 1, 1, false))
+if tm_obBear
+    array.push(tm_obs, TMOb.new(open[1] > close[1] ? open[1] : close[1], open[1] < close[1] ? open[1] : close[1], bar_index - 1, -1, false))
+if array.size(tm_obs) > tm_ob_max
+    array.shift(tm_obs)
+for o in tm_obs
+    if bar_index - o.srcBar > tm_ob_life
+        o.dead := true
+    if o.dir == 1 and close < o.bot
+        o.dead := true
+    if o.dir == -1 and close > o.top
+        o.dead := true
+
+// --- Box visualization on last bar --------------------------------------------
+var array<box> tm_zoneBoxes = array.new<box>()
+
+if barstate.islast and tm_showViz and tm_showPriceZones
+    for bx in tm_zoneBoxes
+        box.delete(bx)
+    array.clear(tm_zoneBoxes)
+    if tm_sr_showOn
+        for z in sr_zones
+            if z.side == 1 and close < z.bot
+                z.broken := true
+            if z.side == -1 and close > z.top
+                z.broken := true
+            if not z.broken
+                color zC  = z.side == 1 ? color.new(tm_cBull, 82) : color.new(tm_cBear, 82)
+                color zBC = z.side == 1 ? color.new(tm_cBull, 40) : color.new(tm_cBear, 40)
+                int zLeft = math.max(bar_index - 50, 0)
+                array.push(tm_zoneBoxes, box.new(zLeft, z.top, bar_index + tm_zoneLen, z.bot, border_color = zBC, bgcolor = zC, force_overlay = true))
+    if tm_fvg_showOn
+        for g in tm_fvgs
+            if not g.dead and (bar_index - g.srcBar <= 300)
+                color gC = g.dir == 1 ? color.new(tm_cBull, 88) : color.new(tm_cBear, 88)
+                color gB = g.dir == 1 ? color.new(tm_cBull, 55) : color.new(tm_cBear, 55)
+                int gLeft = math.max(g.srcBar, bar_index - 300)
+                array.push(tm_zoneBoxes, box.new(gLeft, g.top, g.srcBar + tm_fvg_life, g.bot, border_color = gB, bgcolor = gC, force_overlay = true))
+    if tm_ob_showOn
+        for o in tm_obs
+            if not o.dead and (bar_index - o.srcBar <= 300)
+                color oC = o.dir == 1 ? color.new(#f5c542, 85) : color.new(#ff8b3d, 85)
+                color oB = o.dir == 1 ? color.new(#f5c542, 50) : color.new(#ff8b3d, 50)
+                int oLeft = math.max(o.srcBar, bar_index - 300)
+                array.push(tm_zoneBoxes, box.new(oLeft, o.top, o.srcBar + tm_zoneLen, o.bot, border_color = oB, bgcolor = oC, force_overlay = true))
+else if array.size(tm_zoneBoxes) > 0
+    for bx in tm_zoneBoxes
+        box.delete(bx)
+    array.clear(tm_zoneBoxes)
+
+// Gan vung FVG/OB gan nhat
+bool tm_nearFvgBull = false
+bool tm_nearFvgBear = false
+for g in tm_fvgs
+    if not g.dead and low >= g.bot - tm_atr * 0.3 and low <= g.top + tm_atr * 0.3
+        tm_nearFvgBull := true
+    if not g.dead and high >= g.bot - tm_atr * 0.3 and high <= g.top + tm_atr * 0.3
+        tm_nearFvgBear := true
+for o in tm_obs
+    if not o.dead and o.dir == 1 and low >= o.bot - tm_atr * 0.3 and low <= o.top + tm_atr * 0.3
+        tm_nearFvgBull := true
+    if not o.dead and o.dir == -1 and high >= o.bot - tm_atr * 0.3 and high <= o.top + tm_atr * 0.3
+        tm_nearFvgBear := true

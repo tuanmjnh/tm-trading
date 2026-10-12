@@ -134,7 +134,7 @@ const setupTime = (bar: number): string => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-3 rounded-lg bg-default ring ring-default p-3">
+  <div class="flex flex-col gap-3 rounded bg-default ring ring-default p-3">
     <div class="flex items-baseline justify-between gap-2">
       <h3 class="text-sm font-semibold">{{ t('trade.replay') }}</h3>
       <div v-if="session" class="flex items-center gap-1.5">

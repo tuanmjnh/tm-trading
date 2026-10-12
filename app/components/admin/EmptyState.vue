@@ -24,7 +24,7 @@ withDefaults(defineProps<{
     {{ title }}
   </div>
   <div v-else
-    class="flex flex-col items-center justify-center p-8 sm:p-12 border border-dashed border-default rounded-xl bg-elevated/20 text-center space-y-4">
+    class="flex flex-col items-center justify-center p-8 sm:p-12 border border-dashed border-default rounded bg-elevated/20 text-center space-y-4">
     <div class="p-3.5 rounded-full bg-primary/10 text-primary">
       <UIcon :name="icon || 'i-lucide-inbox'" class="w-8 h-8" />
     </div>

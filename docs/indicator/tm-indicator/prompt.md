@@ -1,0 +1,1 @@
+Hãy đọc toàn bộ file TM_Indicator_Roadmap.md và source TM XAU Signals 2.pine và cấu trúc build của D:\Applications\tm-trading\pine trước khi sửa. Thực hiện đúng roadmap theo từng phase, bắt đầu bằng audit code và bảo toàn source gốc. Không bỏ qua kiểm tra RR, MTF, state machine; không tuyên bố compile, backtest, độ chính xác hay lợi nhuận nếu chưa có bằng chứng thực tế.

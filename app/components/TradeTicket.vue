@@ -208,7 +208,7 @@ const submit = async (): Promise<void> => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-3 rounded-lg bg-default ring ring-default p-3">
+  <div class="flex flex-col gap-3 rounded bg-default ring ring-default p-3">
     <div class="flex items-baseline justify-between">
       <h3 class="text-sm font-semibold">{{ t('trade.ticket') }}</h3>
       <span class="text-[10px] text-muted">{{ symbol }} · {{ tf }}</span>
@@ -359,7 +359,7 @@ const submit = async (): Promise<void> => {
     <UButton
       block
       size="sm"
-      color="primary"
+      :color="side === 'BUY' ? 'success' : 'error'"
       :loading="busy"
       :disabled="submitDisabled"
       @click="submit"
@@ -368,7 +368,7 @@ const submit = async (): Promise<void> => {
     </UButton>
 
     <!-- Preview (roadmap §16.2) — same fill model, priced off the live quote -->
-    <div v-if="est" class="flex flex-col gap-1.5 rounded-lg bg-default ring ring-default/50 p-2">
+    <div v-if="est" class="flex flex-col gap-1.5 rounded bg-default ring ring-default/50 p-2">
       <div class="flex items-center justify-between">
         <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('trade.preview') }}</span>
         <span v-if="!est.sized" class="text-[10px] text-muted italic">{{ t('trade.previewGateSized') }}</span>

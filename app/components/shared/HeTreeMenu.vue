@@ -351,7 +351,7 @@ defineExpose({
       >
         <template #default="{ node, stat }">
           <div
-            class="group flex flex-col mb-2 py-2 px-3 rounded-lg border border-default bg-elevated/40 backdrop-blur-sm shadow-xs transition-all hover:bg-elevated/70 hover:shadow-md hover:border-primary/50"
+            class="group flex flex-col mb-2 py-2 px-3 rounded border border-default bg-elevated/40 backdrop-blur-sm transition-all hover:bg-elevated/70 hover:border-primary/50"
             :class="[classNode, { 'bg-primary/10! border-primary/40!': isSelected(node) }]"
             @contextmenu.prevent="(e: any) => handleContextMenu(node, e)"
           >

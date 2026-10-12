@@ -1,0 +1,62 @@
+// @part skip:tm
+// =============================================================================
+//  STRATEGY LAB BRIDGE (chi co o ban tm-strategy)
+//  Marker "@part skip:tm" => ban indicator TM Indicator KHONG chua file nay.
+//  Doc truc tiep tin hieu va risk plan tu 80_scoring_risk va 90_state.
+// =============================================================================
+
+tm_strat_on        = input.bool(true, "Bat giao dich tu dong (Strategy Lab)", group = "TM · Strategy Lab", display = display.data_window)
+tm_strat_dir       = input.string("Long + Short", "Chieu giao dich", options = ["Long + Short", "Long Only", "Short Only"], group = "TM · Strategy Lab", display = display.data_window)
+tm_strat_exitMode  = input.string("TP2 (Balanced)", "Kieu chot loi", options = ["TP1 (Conservative)", "TP2 (Balanced)", "TP3 (Runner)", "Full Ladder (1/3 each)"], group = "TM · Strategy Lab", display = display.data_window)
+tm_strat_useSizing = input.bool(true, "Su dung Risk-Based Position Sizing", group = "TM · Strategy Lab", display = display.data_window)
+
+bool tm_stratAllowLong  = tm_strat_dir == "Long + Short" or tm_strat_dir == "Long Only"
+bool tm_stratAllowShort = tm_strat_dir == "Long + Short" or tm_strat_dir == "Short Only"
+
+// Tinh toan khoi luong vao lenh (Contracts)
+float tm_calcQty = tm_strat_useSizing ? math.max(tm_plan.posSize, syminfo.mincontract) : (strategy.equity * 0.1 / close)
+
+bool tm_stratLongEntry  = tm_strat_on and tm_signal and tm_dir == 1 and tm_stratAllowLong and strategy.position_size == 0
+bool tm_stratShortEntry = tm_strat_on and tm_signal and tm_dir == -1 and tm_stratAllowShort and strategy.position_size == 0
+
+if tm_stratLongEntry
+    if tm_strat_exitMode == "Full Ladder (1/3 each)"
+        float q1 = tm_calcQty * 0.33
+        float q2 = tm_calcQty * 0.33
+        float q3 = tm_calcQty - q1 - q2
+        strategy.entry("Long1", strategy.long, qty = q1, comment = "TM L1")
+        strategy.entry("Long2", strategy.long, qty = q2, comment = "TM L2")
+        strategy.entry("Long3", strategy.long, qty = q3, comment = "TM L3")
+        strategy.exit("Exit L1", from_entry = "Long1", stop = tm_plan.sl, limit = tm_plan.tp1, comment_profit = "TP1", comment_loss = "SL")
+        strategy.exit("Exit L2", from_entry = "Long2", stop = tm_plan.sl, limit = tm_plan.tp2, comment_profit = "TP2", comment_loss = "SL")
+        strategy.exit("Exit L3", from_entry = "Long3", stop = tm_plan.sl, limit = tm_plan.tp3, comment_profit = "TP3", comment_loss = "SL")
+    else
+        float targetTp = tm_strat_exitMode == "TP1 (Conservative)" ? tm_plan.tp1 : tm_strat_exitMode == "TP3 (Runner)" ? tm_plan.tp3 : tm_plan.tp2
+        strategy.entry("Long", strategy.long, qty = tm_calcQty, comment = "TM LONG")
+        strategy.exit("Exit Long", from_entry = "Long", stop = tm_plan.sl, limit = targetTp, comment_profit = "TP", comment_loss = "SL")
+
+if tm_stratShortEntry
+    if tm_strat_exitMode == "Full Ladder (1/3 each)"
+        float q1 = tm_calcQty * 0.33
+        float q2 = tm_calcQty * 0.33
+        float q3 = tm_calcQty - q1 - q2
+        strategy.entry("Short1", strategy.short, qty = q1, comment = "TM S1")
+        strategy.entry("Short2", strategy.short, qty = q2, comment = "TM S2")
+        strategy.entry("Short3", strategy.short, qty = q3, comment = "TM S3")
+        strategy.exit("Exit S1", from_entry = "Short1", stop = tm_plan.sl, limit = tm_plan.tp1, comment_profit = "TP1", comment_loss = "SL")
+        strategy.exit("Exit S2", from_entry = "Short2", stop = tm_plan.sl, limit = tm_plan.tp2, comment_profit = "TP2", comment_loss = "SL")
+        strategy.exit("Exit S3", from_entry = "Short3", stop = tm_plan.sl, limit = tm_plan.tp3, comment_profit = "TP3", comment_loss = "SL")
+    else
+        float targetTp = tm_strat_exitMode == "TP1 (Conservative)" ? tm_plan.tp1 : tm_strat_exitMode == "TP3 (Runner)" ? tm_plan.tp3 : tm_plan.tp2
+        strategy.entry("Short", strategy.short, qty = tm_calcQty, comment = "TM SHORT")
+        strategy.exit("Exit Short", from_entry = "Short", stop = tm_plan.sl, limit = targetTp, comment_profit = "TP", comment_loss = "SL")
+
+// Timeout Exit logic (Close position if held beyond maxHoldBars)
+var int tm_stratHoldBars = 0
+if strategy.position_size != 0
+    tm_stratHoldBars += 1
+    if tm_stratHoldBars >= tm_maxHoldBars
+        strategy.close_all(comment = "TIMEOUT")
+        tm_stratHoldBars := 0
+else
+    tm_stratHoldBars := 0

@@ -130,9 +130,9 @@ useHead({ title })
       </div>
     </template>
 
-    <div class="flex flex-col w-full gap-4 pb-24 lg:pb-6">
+    <div class="flex flex-col w-full gap-3 pb-24 lg:pb-6">
       <!-- Services heartbeat (D9) -->
-      <section class="rounded-lg bg-default ring ring-default p-4 flex flex-col gap-2">
+      <section class="rounded bg-default ring ring-default p-3 flex flex-col gap-2">
         <div class="flex items-center justify-between gap-2">
           <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('intel.services') }}</span>
           <UBadge
@@ -157,7 +157,7 @@ useHead({ title })
       </section>
 
       <!-- Regime (Phase 9) -->
-      <section v-if="intel?.regime" class="rounded-lg bg-default ring ring-default p-4 flex flex-col gap-3">
+      <section v-if="intel?.regime" class="rounded bg-default ring ring-default p-3 flex flex-col gap-3">
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2">
             <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('regime.title') }}</span>
@@ -167,12 +167,12 @@ useHead({ title })
         </div>
 
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div class="rounded-lg bg-elevated/50 p-3">
+          <div class="rounded bg-elevated/50 p-3">
             <p class="text-[10px] text-muted uppercase tracking-wide">ASI 90d</p>
             <p class="text-lg font-bold font-mono text-highlighted">{{ intel.regime.asi?.d90 ?? '—' }}</p>
             <p class="text-[10px] text-dimmed font-mono">30 {{ intel.regime.asi?.d30 ?? '—' }} · 365 {{ intel.regime.asi?.d365 ?? '—' }}</p>
           </div>
-          <div class="rounded-lg bg-elevated/50 p-3">
+          <div class="rounded bg-elevated/50 p-3">
             <p class="text-[10px] text-muted uppercase tracking-wide">Fear &amp; Greed</p>
             <p
               class="text-lg font-bold font-mono"
@@ -180,12 +180,12 @@ useHead({ title })
             >{{ intel.regime.fng?.value ?? '—' }}</p>
             <p class="text-[10px] text-dimmed truncate">{{ intel.regime.fng?.classification || '—' }}</p>
           </div>
-          <div class="rounded-lg bg-elevated/50 p-3">
+          <div class="rounded bg-elevated/50 p-3">
             <p class="text-[10px] text-muted uppercase tracking-wide">{{ t('regime.btcDom') }}</p>
             <p class="text-lg font-bold font-mono text-highlighted">{{ fmtPct(intel.regime.btcDom, 1) }}</p>
             <p class="text-[10px] text-dimmed font-mono truncate">ETH {{ fmtPct(intel.regime.ethDom, 1) }}</p>
           </div>
-          <div class="rounded-lg bg-elevated/50 p-3">
+          <div class="rounded bg-elevated/50 p-3">
             <p class="text-[10px] text-muted uppercase tracking-wide">{{ t('regime.mcap') }}</p>
             <p class="text-lg font-bold font-mono" :class="netColor(intel.regime.mcapChg24h ?? 0)">{{ fmtPct(intel.regime.mcapChg24h, 2) }}</p>
             <p class="text-[10px] text-dimmed truncate">{{ t('regime.flags') }} · {{ intel.regime.flags.length }}</p>
@@ -206,7 +206,7 @@ useHead({ title })
           </div>
         </div>
 
-        <div v-if="intel.regime.sweep.length" class="rounded-lg bg-elevated/50 overflow-x-auto">
+        <div v-if="intel.regime.sweep.length" class="rounded bg-elevated/50 overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
               <tr class="border-b border-default text-[10px] uppercase tracking-wider text-muted">
@@ -231,7 +231,7 @@ useHead({ title })
       </section>
 
       <!-- Movers -->
-      <section class="rounded-lg bg-default ring ring-default p-4 flex flex-col gap-2">
+      <section class="rounded bg-default ring ring-default p-3 flex flex-col gap-2">
         <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('intel.movers') }}</span>
         <p v-if="!intel?.movers?.length" class="text-[11px] text-dimmed">{{ t('intel.empty') }}</p>
         <div v-else class="overflow-x-auto">
@@ -263,7 +263,7 @@ useHead({ title })
       </section>
 
       <!-- Money flow -->
-      <section class="rounded-lg bg-default ring ring-default p-4 flex flex-col gap-2">
+      <section class="rounded bg-default ring ring-default p-3 flex flex-col gap-2">
         <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('intel.flows') }}</span>
         <p v-if="!intel?.flows?.length" class="text-[11px] text-dimmed">{{ t('intel.empty') }}</p>
         <div v-else class="overflow-x-auto">
@@ -295,7 +295,7 @@ useHead({ title })
       </section>
 
       <!-- Accumulation -->
-      <section class="rounded-lg bg-default ring ring-default p-4 flex flex-col gap-2">
+      <section class="rounded bg-default ring ring-default p-3 flex flex-col gap-2">
         <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('intel.accums') }}</span>
         <p v-if="!intel?.accums?.length" class="text-[11px] text-dimmed">{{ t('intel.empty') }}</p>
         <div v-else class="overflow-x-auto">
@@ -327,7 +327,7 @@ useHead({ title })
       </section>
 
       <!-- Funding -->
-      <section class="rounded-lg bg-default ring ring-default p-4 flex flex-col gap-2">
+      <section class="rounded bg-default ring ring-default p-3 flex flex-col gap-2">
         <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('intel.funding') }}</span>
         <p v-if="!intel?.funding?.length" class="text-[11px] text-dimmed">{{ t('intel.empty') }}</p>
         <div v-else class="overflow-x-auto">
@@ -355,10 +355,10 @@ useHead({ title })
       </section>
 
       <!-- Liquidation zones -->
-      <section v-if="intel?.zones?.length" class="rounded-lg bg-default ring ring-default p-4 flex flex-col gap-3">
+      <section v-if="intel?.zones?.length" class="rounded bg-default ring ring-default p-3 flex flex-col gap-3">
         <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('regime.zones') }}</span>
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          <div v-for="z in intel.zones" :key="z.symbol" class="rounded-lg bg-elevated/50 p-3 flex flex-col gap-2">
+          <div v-for="z in intel.zones" :key="z.symbol" class="rounded bg-elevated/50 p-3 flex flex-col gap-2">
             <div class="flex items-center justify-between gap-2">
               <span class="text-xs font-semibold text-highlighted">{{ z.symbol }}</span>
               <span class="text-[11px] font-mono text-muted">mark {{ fmtPx(z.markPx) }}</span>
@@ -399,7 +399,7 @@ useHead({ title })
       </section>
 
       <!-- Confluence (Phase 10) -->
-      <section v-if="intel?.confluence?.length" class="rounded-lg bg-default ring ring-default p-4 flex flex-col gap-2">
+      <section v-if="intel?.confluence?.length" class="rounded bg-default ring ring-default p-3 flex flex-col gap-2">
         <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('confluence.title') }}</span>
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
@@ -435,7 +435,7 @@ useHead({ title })
       </section>
 
       <!-- News -->
-      <section v-if="intel?.news?.length" class="rounded-lg bg-default ring ring-default p-4 flex flex-col gap-2">
+      <section v-if="intel?.news?.length" class="rounded bg-default ring ring-default p-3 flex flex-col gap-2">
         <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('intel.news') }}</span>
         <ul class="flex flex-col divide-y divide-default/50">
           <li v-for="(n, i) in intel.news" :key="i" class="py-2 flex flex-col gap-1">

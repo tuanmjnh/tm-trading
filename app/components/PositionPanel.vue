@@ -11,7 +11,7 @@
 // =============================================================================
 import type { PositionItem, PositionsListResponse } from '../../types/positions'
 import type { PositionModifyPatch } from '../composables/usePositions'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage, isAuthError } from '~/shared/utils/errors'
 import { dirTone, fmtPct, fmtQty, fmtSigned, fmtUtcTime, mongoTone, pnlTone } from '../utils/terminal'
 
 const props = defineProps<{ method: string }>()
@@ -26,6 +26,8 @@ const items = ref<PositionItem[]>([])
 const meta = ref<PositionsListResponse['meta'] | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
+/** Session lost (401) — polling is suspended until re-authentication. */
+const halted = ref(false)
 
 const errorMessage = (err: unknown): string => {
   if (err && typeof err === 'object') {
@@ -36,6 +38,9 @@ const errorMessage = (err: unknown): string => {
 }
 
 async function load(): Promise<void> {
+  // After an auth failure nothing can succeed until the user signs in again,
+  // so skip the call rather than emit a 401 every 15s.
+  if (halted.value) return
   loading.value = true
   error.value = null
   try {
@@ -44,8 +49,14 @@ async function load(): Promise<void> {
     const res = await $fetch<PositionsListResponse>('/api/v1/positions', { params })
     items.value = res.data
     meta.value = res.meta
+    halted.value = false
   } catch (err) {
     error.value = errorMessage(err)
+    if (isAuthError(err)) {
+      halted.value = true
+      pause()
+      error.value = t('trade.sessionExpired')
+    }
   } finally {
     loading.value = false
   }
@@ -55,7 +66,17 @@ watch(status, () => { void load() })
 onMounted(() => { void load() })
 // immediate: false would leave the timer paused (VueUse only resumes when
 // immediate is true) — the load() above covers the first paint instead.
-useIntervalFn(() => { void load() }, 15_000)
+const { pause, resume } = useIntervalFn(() => { void load() }, 15_000)
+
+// Resume polling once the user re-authenticates.
+const { isAuthenticated } = useAuth()
+watch(isAuthenticated, (authed) => {
+  if (authed) {
+    halted.value = false
+    resume()
+    void load()
+  }
+})
 
 /** Client-side filter by the shared method selection (display only). */
 const visible = computed<PositionItem[]>(() =>
@@ -188,7 +209,7 @@ async function saveClose(p: PositionItem): Promise<void> {
 </script>
 
 <template>
-  <div class="flex flex-col gap-2 rounded-lg bg-default ring ring-default p-3">
+  <div class="flex flex-col gap-2 rounded bg-default ring ring-default p-3">
     <div class="flex items-baseline justify-between">
       <h3 class="text-sm font-semibold">{{ t('trade.positions') }}</h3>
       <div class="flex items-center gap-1.5">

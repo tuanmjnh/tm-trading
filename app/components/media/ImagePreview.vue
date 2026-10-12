@@ -146,7 +146,7 @@ const getAlt = computed(() => {
               <!-- Error Overlay -->
               <div
                 v-if="imageError[getItemKey(item)]"
-                class="absolute inset-0 bg-error/10 flex flex-col gap-2 items-center justify-center p-4 z-10"
+                class="absolute inset-0 bg-error/10 flex flex-col gap-2 items-center justify-center p-3 z-10"
               >
                 <UIcon name="i-lucide-alert-circle" class="w-10 h-10 text-error" />
                 <p class="text-sm text-error font-semibold text-center">

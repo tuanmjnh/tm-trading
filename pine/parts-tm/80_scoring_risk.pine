@@ -1,0 +1,142 @@
+// =============================================================================
+//  L8 - SCORING ENGINE (0-100) + L9 RISK ENGINE (P0 Correctness Patch)
+// =============================================================================
+
+// Nhom Score rieng (truoc khi nhan trong so) - moi nhom [-1, +1]
+float tm_gTrend  = tm_trendScore
+float tm_gStruct = (tm_bosUp or tm_chochUp or tm_mssUp) ? 1.0 : (tm_bosDown or tm_chochDown or tm_mssDown) ? -1.0 : float(tm_trend) * 0.5
+float tm_gLiq    = tm_sweepBull ? 1.0 : tm_sweepBear ? -1.0 : tm_retestBull ? 0.7 : tm_retestBear ? -0.7 : 0.0
+float tm_gLoc    = tm_locationScore
+float tm_gSr     = f_nearSupport(sr_zones, tm_atr) ? 1.0 : f_nearResistance(sr_zones, tm_atr) ? -1.0 : tm_nearFvgBull and not tm_nearFvgBear ? 1.0 : tm_nearFvgBear and not tm_nearFvgBull ? -1.0 : 0.0
+float tm_gCandle = tm_cpScore
+float tm_gVolume = tm_volumeScore
+float tm_gVol    = tm_atrRegime * (close >= open ? 1.0 : -1.0) * 0.5 + tm_volScore * 0.5
+float tm_gMom    = tm_momScore
+float tm_gSess   = tm_sessScore * (close >= open ? 1.0 : -1.0)
+float tm_gMtf    = tm_gMtfBias
+
+float tm_wTotal = tm_w_trend + tm_w_struct + tm_w_liq + tm_w_loc + tm_w_sr + tm_w_candle + tm_w_vol + tm_w_atr + tm_w_mom + tm_w_sess + tm_w_mtf
+
+float tm_wSum = tm_w_trend * tm_gTrend + tm_w_struct * tm_gStruct + tm_w_liq * tm_gLiq + tm_w_loc * tm_gLoc + tm_w_sr * tm_gSr + tm_w_candle * tm_gCandle + tm_w_vol * tm_gVolume + tm_w_atr * tm_gVol + tm_w_mom * tm_gMom + tm_w_sess * tm_gSess + tm_w_mtf * tm_gMtf
+
+float tm_rawScore = tm_wTotal > 0.0 ? f_clamp(tm_wSum / tm_wTotal, -1.0, 1.0) : 0.0
+float tm_score100 = math.round(50 + tm_rawScore * 50)
+int   tm_dir      = tm_rawScore > 0.0 ? 1 : tm_rawScore < 0.0 ? -1 : 0
+
+string tm_quality = tm_score100 <= tm_scr_noTrade ? "NO TRADE" : tm_score100 <= tm_scr_weak ? "WEAK" : tm_score100 <= tm_scr_setup ? "SETUP" : tm_score100 <= tm_scr_strong ? "STRONG" : "A+"
+
+// --- MTF gates ----------------------------------------------------------------
+bool tm_okSetup = not tm_htfFilter or not tm_tfHierarchyOk or tm_setupDir == 0 or tm_setupDir == tm_dir
+bool tm_htfVeto = tm_htfVetoOn and tm_tfHierarchyOk and tm_ctxDir != 0 and tm_dir != 0 and tm_ctxDir != tm_dir
+bool tm_okMtf   = tm_okSetup and not tm_htfVeto
+
+// =============================================================================
+//  L9 - RISK ENGINE (Futures Risk & Margin Model)
+// =============================================================================
+
+type TMPlan
+    bool   valid
+    int    dir
+    float  entry
+    float  sl
+    float  tp1
+    float  tp2
+    float  tp3
+    float  risk
+    float  evalRR
+    float  posSize
+    float  notional
+    float  effLev
+    float  marginReq
+    float  liqPrice
+    float  netRR
+    string reason
+
+f_buildTMPlan(int dir) =>
+    float a     = tm_atr
+    float entry = close
+    bool  atrOk = not na(a) and a > 0.0
+    bool  dirOk = dir == 1 or dir == -1
+
+    float pad   = a * tm_sl_padAtr
+    float swing = dir == 1 ? nz(tm_swingLo, low) : nz(tm_swingHi, high)
+    float sDist = dir == 1 ? (entry - swing) + pad : (swing - entry) + pad
+    float aDist = a * tm_sl_atrMul
+    float base  = (aDist + sDist) * 0.5
+    float dist  = f_clamp(nz(base, aDist), a * tm_sl_minAtr, math.max(a * tm_sl_maxAtr, a * tm_sl_minAtr))
+
+    float sl    = entry - dir * dist
+    float risk  = dist
+
+    float r2    = math.max(tm_rr2, tm_rr1)
+    float r3    = math.max(tm_rr3, r2)
+    float tp1   = entry + dir * tm_rr1 * risk
+    float tp2   = entry + dir * r2     * risk
+    float tp3   = entry + dir * r3     * risk
+
+    // P0 Fix: Kiem tra RR theo Target duoc chi dinh (mac dinh TP2)
+    float evalRR = tm_rrTarget == "TP1" ? tm_rr1 : tm_rrTarget == "TP3" ? r3 : r2
+    bool  rrOk   = tm_rrMin <= 0.0 or evalRR >= tm_rrMin
+
+    bool  slOk   = dist > 0.0 and not na(sl) and (dir == 1 ? sl < entry : sl > entry)
+    bool  tpOk   = not na(tp1) and not na(tp2) and not na(tp3) and (dir == 1 ? (entry < tp1 and tp1 < tp2 and tp2 < tp3) : (entry > tp1 and tp1 > tp2 and tp2 > tp3))
+
+    // Futures Risk Model: Position Sizing, Margin & Liquidation Buffer
+    float riskUsd   = tm_risk_equity * (tm_risk_pct / 100.0)
+    float posSize   = dist > 0.0 ? riskUsd / dist : 0.0
+    float notional  = posSize * entry
+    float effLev    = tm_risk_equity > 0.0 ? notional / tm_risk_equity : 0.0
+    float marginReq = tm_risk_maxLev > 0.0 ? notional / tm_risk_maxLev : notional
+
+    // Estimated Liquidation Price (Linear USDT Perpetual)
+    float levForLiq = math.max(effLev, 1.0)
+    float liqLong   = entry * math.max(0.0, 1.0 - (1.0 / levForLiq) + tm_risk_mmr)
+    float liqShort  = entry * (1.0 + (1.0 / levForLiq) - tm_risk_mmr)
+    float liqPrice  = dir == 1 ? liqLong : dir == -1 ? liqShort : na
+
+    // Safety checks: SL must trigger before liquidation
+    bool  liqOk     = not tm_risk_checkLiq or (dir == 1 ? sl > liqPrice : dir == -1 ? sl < liqPrice : false)
+    bool  levOk     = tm_risk_maxLev <= 0.0 or effLev <= (tm_risk_maxLev * 1.05)
+
+    // Friction & Net RR factoring fee and slippage
+    float feeSlipUsd = notional * (tm_risk_feeSlipPct / 100.0)
+    float netProfit  = (evalRR * riskUsd) - feeSlipUsd
+    float netRisk    = riskUsd + feeSlipUsd
+    float netRR      = netRisk > 0.0 ? netProfit / netRisk : evalRR
+    bool  netRrOk    = tm_rrMin <= 0.0 or netRR >= (tm_rrMin * 0.75)
+
+    string rsn   = not atrOk ? "NO_ATR" : not dirOk ? "NO_DIR" : not slOk ? "BAD_SL" : not tpOk ? "BAD_TP" : not rrOk ? "LOW_RR" : not levOk ? "MAX_LEV_EXCEEDED" : not liqOk ? "SL_PAST_LIQ" : not netRrOk ? "LOW_NET_RR" : "VALID"
+    bool  valid  = atrOk and dirOk and slOk and tpOk and rrOk and levOk and liqOk and netRrOk
+
+    TMPlan.new(valid, dir, entry, sl, tp1, tp2, tp3, risk, evalRR, posSize, notional, effLev, marginReq, liqPrice, netRR, rsn)
+
+tm_plan = f_buildTMPlan(tm_dir)
+
+var int tm_dayCount     = 0
+var int tm_barsSince    = 999999
+var int tm_consecLosses = 0
+tm_barsSince += 1
+
+if f_isNewDay()
+    tm_dayCount     := 0
+    tm_consecLosses := 0
+
+// Quality Level evaluation
+int tm_qualityLevel = tm_score100 <= tm_scr_noTrade ? 0 : tm_score100 <= tm_scr_weak ? 1 : tm_score100 <= tm_scr_setup ? 2 : tm_score100 <= tm_scr_strong ? 3 : 4
+int tm_minReqLevel  = tm_minQuality == "WEAK" ? 1 : tm_minQuality == "SETUP" ? 2 : tm_minQuality == "STRONG" ? 3 : 4
+bool tm_okQuality   = tm_qualityLevel >= tm_minReqLevel
+
+bool tm_okBar      = tm_confirmOnly ? barstate.isconfirmed : true
+bool tm_okCool     = tm_barsSince >= tm_coolBars
+bool tm_okDay      = tm_dayCount < tm_maxDay
+bool tm_okDir      = tm_dir != 0
+bool tm_okAssetVol = not tm_minVolCheck or tm_activeProfile != "High-Risk Altcoin" or (not na(tm_vol) and tm_vol > 0.0 and not na(tm_volMA) and tm_volMA > 0.0)
+bool tm_okCircuit  = tm_risk_maxLosses <= 0 or tm_consecLosses < tm_risk_maxLosses
+
+// 3-Layer Eligibility (Phase 3: Separation of Signal, Trade & Risk)
+bool tm_tradeEligible = tm_okDir and tm_okQuality and tm_okMtf and tm_okCool and tm_okDay and tm_okAssetVol and tm_okCircuit
+bool tm_riskEligible  = tm_plan.valid
+
+string tm_noTradeReason = not tm_okDir ? "NO_DIRECTION" : not tm_okQuality ? "QUALITY_BELOW_MIN" : not tm_okMtf ? (tm_htfVeto ? "HTF_VETO" : not tm_tfHierarchyOk ? "MTF_HIERARCHY" : "SETUP_TF_FILTER") : not tm_okCool ? "COOLDOWN_ACTIVE" : not tm_okDay ? "MAX_DAY_LIMIT" : not tm_okAssetVol ? "LOW_LIQUIDITY" : not tm_okCircuit ? "CIRCUIT_BREAKER" : not tm_riskEligible ? tm_plan.reason : "OK"
+
+bool tm_signal = tm_okBar and tm_tradeEligible and tm_riskEligible

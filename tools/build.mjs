@@ -75,6 +75,20 @@ const TARGETS = {
     shared: ['common.pine', 'zones.pine'],
     decl: `indicator("TM XAU Signals 2", shorttitle = "TM·XAU2", overlay = false, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)`,
   },
+  // TM Indicator - Multi-Asset Futures Analysis System (TM_Indicator_Roadmap.md)
+  tm: {
+    file: 'TM Indicator.pine',
+    dir: 'parts-tm',
+    shared: ['common.pine', 'zones.pine'],
+    decl: `indicator("TM Indicator", shorttitle = "TM·IND", overlay = false, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 1000)`,
+  },
+  // TM Indicator Strategy Lab - Dedicated Backtest Engine (TM_Indicator_Roadmap.md Phase 5)
+  'tm-strategy': {
+    file: 'TM Indicator Strategy Lab.pine',
+    dir: 'parts-tm',
+    shared: ['common.pine', 'zones.pine'],
+    decl: `strategy("TM Indicator Strategy Lab", shorttitle = "TM·LAB", overlay = false, pyramiding = 0, calc_on_order_fills = true, process_orders_on_close = false, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 1000, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, commission_value = 0.06, slippage = 1)`,
+  },
 }
 
 // --- doc part theo thu tu ten file (00_, 10_, 20_ ...) trong dir cua target ---
@@ -375,18 +389,40 @@ export function lint(src, name = 'test') {
     }
 
     // tham so yeu cau int nhung truyen vao float chac chan -> CE10123
-    const needInt = INT_PARAMS.get(fn)
-    if (needInt) {
-      for (const idx of needInt) {
-        const a = args[idx]?.trim()
+    const spec = REF_FUNCS[fn]
+    if (spec) {
+      const sigs = signatures(spec)
+      let posIdx = 0
+      for (const aRaw of args) {
+        const a = aRaw?.trim()
         if (!a) continue
-        // truyen bang ten (`length = x`) thi van kiem tra phia sau dau =
-        const named = a.match(/^\s*[A-Za-z_]\w*\s*=(?![=<>])\s*(.+)$/)
-        const v = (named ? named[1] : a).trim()
-        if (!v) continue
-        const isFloat = FLOAT_LITERAL.test(v) || [...v.matchAll(/\b(\w+)\b/g)].some((x) => floats.has(x[1]))
-        if (isFloat) {
-          warnings.push(`${name}:${line} ${fn}() tham so ${idx + 1} "${v}" phai la simple int (so chu ky) nhung la FLOAT (CE10123)`)
+        const named = a.match(/^\s*([A-Za-z_]\w*)\s*=(?![=<>])\s*(.+)$/)
+        let paramLabel = ''
+        let v = ''
+        let isNeedInt = false
+
+        if (named) {
+          const pName = named[1]
+          paramLabel = `"${pName}"`
+          v = named[2].trim()
+          const pIndices = sigs.map((s) => s.params.indexOf(pName)).filter((pi) => pi !== -1)
+          if (pIndices.length > 0 && pIndices.every((pi, sIdx) => PURE_INT.test(sigs[sIdx]?.types[pi] || ''))) {
+            isNeedInt = true
+          }
+        } else {
+          v = a
+          const curPos = posIdx++
+          paramLabel = `${curPos + 1}`
+          if (sigs.every((s) => curPos < s.params.length && PURE_INT.test(s.types[curPos] || ''))) {
+            isNeedInt = true
+          }
+        }
+
+        if (isNeedInt && v) {
+          const isFloat = FLOAT_LITERAL.test(v) || [...v.matchAll(/\b(\w+)\b/g)].some((x) => floats.has(x[1]))
+          if (isFloat) {
+            warnings.push(`${name}:${line} ${fn}() tham so ${paramLabel} "${v}" phai la simple int (so chu ky) nhung la FLOAT (CE10123)`)
+          }
         }
       }
     }

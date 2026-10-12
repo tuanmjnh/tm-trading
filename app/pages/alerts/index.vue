@@ -364,7 +364,7 @@ useHead({ title })
             />
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div class="space-y-1">
               <label class="text-xs font-medium text-highlighted">{{ t('alertRules.kindLabel') }}</label>
               <div class="flex flex-wrap gap-1">
@@ -427,7 +427,7 @@ useHead({ title })
             <p class="text-[11px] text-dimmed">{{ t('alertRules.dirsHint') }}</p>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div class="space-y-1">
               <label class="text-xs font-medium text-highlighted">{{ t('alertRules.symbols') }}</label>
               <UInput v-model="form.symbols" :placeholder="t('alertRules.symbolsHint')" class="w-full" :aria-label="t('alertRules.symbols')" />
@@ -446,7 +446,7 @@ useHead({ title })
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div class="space-y-1">
               <label class="text-xs font-medium text-highlighted">{{ t('alertRules.lookback') }}</label>
               <UInput v-model="lookbackHours" type="number" min="0" class="w-full" :aria-label="t('alertRules.lookback')" />

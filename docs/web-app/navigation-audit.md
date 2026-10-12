@@ -1,7 +1,7 @@
 # Navigation Audit — TM Trading V3.3 (§58.8)
 
 > First deliverable required by roadmap §58.8 before any menu refactor.
-> Authority: `docs/tm-trading-roadmap-v3.3.md` §57 (IA) and §58 (migration rules).
+> Authority: `docs/web-app/tm-trading-roadmap-v3.3.md` §57 (IA) and §58 (migration rules).
 > Status legend: **implemented** = page + working API/service; **partial** = API/service exists but no
 > page (or page without API); **planned** = no page and no API endpoint yet; **missing** = expected, nothing exists.
 

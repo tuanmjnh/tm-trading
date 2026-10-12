@@ -60,10 +60,10 @@ useHead({ title: computed(() => t('notifications.pushTitle')) })
   <BasePage id="profile" :title="t('notifications.pushTitle')" :description="t('notifications.pushDesc')">
     <BaseSectionNav :items="navItems">
       <UCard>
-          <div class="flex items-center justify-between gap-4 rounded-xl border border-default bg-elevated/50 p-4">
+          <div class="flex items-center justify-between gap-3 rounded border border-default bg-elevated/50 p-3">
             <div class="flex items-center gap-3 min-w-0">
               <span
-                class="inline-flex shrink-0 items-center justify-center rounded-lg p-2.5"
+                class="inline-flex shrink-0 items-center justify-center rounded p-2.5"
                 :class="pushSubscribed ? 'bg-success/10 text-success' : 'bg-muted text-muted'"
               >
                 <UIcon

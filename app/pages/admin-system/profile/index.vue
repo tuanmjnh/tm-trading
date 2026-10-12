@@ -89,8 +89,8 @@ useHead({ title: computed(() => t('profile.title')) })
     <BaseSectionNav :items="navItems">
       <UCard>
         <template #header>
-          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div class="flex items-center gap-4 min-w-0">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-center gap-3 min-w-0">
               <button type="button" class="relative group/avatar shrink-0 cursor-pointer rounded-full"
                 :aria-label="t('settings.avatar')" @click="openAvatarPicker">
                 <UAvatar :src="profileForm.avatarUrl || undefined" :alt="profileForm.name" size="xl" />

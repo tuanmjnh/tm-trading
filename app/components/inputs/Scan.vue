@@ -65,7 +65,7 @@ onUnmounted(stop)
       </div>
     </template>
     <template #body>
-      <div class="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-elevated">
+      <div class="relative aspect-[4/3] w-full overflow-hidden rounded bg-elevated">
         <video ref="videoEl" class="absolute inset-0 h-full w-full object-cover" muted playsinline autoplay
           @canplay="loading = false" />
 

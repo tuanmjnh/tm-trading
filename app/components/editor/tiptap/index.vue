@@ -792,7 +792,7 @@ const getBubbleItems = (editor: Editor) => {
         <LazyUEditorMentionMenu :editor="editor" :items="mentionItems" />
         <LazyUEditorEmojiMenu :editor="editor" :items="emojiItems" :append-to="appendToBody" />
       </LazyUEditor>
-      <!-- <div v-else class="p-20 flex flex-col items-center gap-4 text-gray-500">
+      <!-- <div v-else class="p-20 flex flex-col items-center gap-3 text-gray-500">
         <UIcon name="i-lucide:loader-2" class="animate-spin w-8 h-8" />
         <p>Initializing editor...</p>
       </div> -->

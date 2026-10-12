@@ -230,7 +230,7 @@ useHead({ title: computed(() => t('dashboard.title')) })
       />
 
       <!-- KPI -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
         <UCard v-for="card in cards" :key="card.key" class="hover:border-primary/50 transition-colors">
           <div class="flex items-center justify-between gap-2">
             <div class="min-w-0">
@@ -240,7 +240,7 @@ useHead({ title: computed(() => t('dashboard.title')) })
               </div>
               <p class="text-[11px] text-muted mt-1 truncate">{{ card.hint }}</p>
             </div>
-            <div class="p-3 rounded-xl shrink-0" :class="card.iconClass">
+            <div class="p-3 rounded shrink-0" :class="card.iconClass">
               <UIcon :name="card.icon" class="flex w-5 h-5" />
             </div>
           </div>
@@ -320,7 +320,7 @@ useHead({ title: computed(() => t('dashboard.title')) })
             <div
               v-for="a in risk?.accounts ?? []"
               :key="`stats-${a.account}`"
-              class="rounded-lg border border-default/50 p-3"
+              class="rounded border border-default/50 p-3"
             >
               <p v-if="a.halted && a.haltReason" class="text-[11px] text-error mb-2">
                 {{ t('risk.haltReason') }}: {{ a.haltReason }}
@@ -594,14 +594,14 @@ useHead({ title: computed(() => t('dashboard.title')) })
         <template v-else>
           <!-- So lieu vua: ASI / F&G / BTC.D / MCap -->
           <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <div class="rounded-lg bg-default/50 border border-default/50 p-3 space-y-1 min-w-0">
+            <div class="rounded bg-default/50 border border-default/50 p-3 space-y-1 min-w-0">
               <p class="text-[10px] text-muted uppercase tracking-wider">{{ t('regime.asi') }}</p>
               <p class="text-lg font-bold font-mono text-highlighted">{{ intel.regime.asi?.d90 ?? '—' }}</p>
               <p class="text-[10px] text-dimmed font-mono truncate">
                 30 {{ intel.regime.asi?.d30 ?? '—' }} · 365 {{ intel.regime.asi?.d365 ?? '—' }}
               </p>
             </div>
-            <div class="rounded-lg bg-default/50 border border-default/50 p-3 space-y-1 min-w-0">
+            <div class="rounded bg-default/50 border border-default/50 p-3 space-y-1 min-w-0">
               <p class="text-[10px] text-muted uppercase tracking-wider">{{ t('regime.fng') }}</p>
               <p
                 class="text-lg font-bold font-mono"
@@ -609,12 +609,12 @@ useHead({ title: computed(() => t('dashboard.title')) })
               >{{ intel.regime.fng?.value ?? '—' }}</p>
               <p class="text-[10px] text-dimmed truncate">{{ intel.regime.fng?.classification || '—' }}</p>
             </div>
-            <div class="rounded-lg bg-default/50 border border-default/50 p-3 space-y-1 min-w-0">
+            <div class="rounded bg-default/50 border border-default/50 p-3 space-y-1 min-w-0">
               <p class="text-[10px] text-muted uppercase tracking-wider">{{ t('regime.btcDom') }}</p>
               <p class="text-lg font-bold font-mono text-highlighted">{{ fmtPct(intel.regime.btcDom, 1) }}</p>
               <p class="text-[10px] text-dimmed font-mono truncate">ETH {{ fmtPct(intel.regime.ethDom, 1) }}</p>
             </div>
-            <div class="rounded-lg bg-default/50 border border-default/50 p-3 space-y-1 min-w-0">
+            <div class="rounded bg-default/50 border border-default/50 p-3 space-y-1 min-w-0">
               <p class="text-[10px] text-muted uppercase tracking-wider">{{ t('regime.mcap') }}</p>
               <p class="text-lg font-bold font-mono" :class="netColor(intel.regime.mcapChg24h ?? 0)">{{ fmtPct(intel.regime.mcapChg24h, 2) }}</p>
               <p class="text-[10px] text-dimmed truncate">{{ t('regime.flags') }} · {{ intel.regime.flags.length }}</p>
@@ -764,7 +764,7 @@ useHead({ title: computed(() => t('dashboard.title')) })
             <div
               v-for="c in intel.confluence"
               :key="c.symbol"
-              class="flex items-center justify-between gap-3 text-xs rounded-lg bg-default/50 border border-default/50 px-3 py-2 min-w-0"
+              class="flex items-center justify-between gap-3 text-xs rounded bg-default/50 border border-default/50 px-3 py-2 min-w-0"
             >
               <span class="flex items-center gap-2 min-w-0">
                 <UBadge

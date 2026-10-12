@@ -87,7 +87,7 @@ const clearModule = (moduleKey: string, actions: string[]) => {
 </script>
 
 <template>
-  <div class="w-full border border-default rounded-lg overflow-hidden">
+  <div class="w-full border border-default rounded overflow-hidden">
     <div class="flex items-center gap-2 p-2 border-b border-default bg-default/40">
       <UInput v-model="search" icon="i-lucide-search" size="sm" class="flex-1 min-w-0" :placeholder="t('common.search')"
         :disabled="disabled" />

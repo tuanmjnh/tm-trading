@@ -189,7 +189,7 @@ useHead({ title })
         <div
           v-for="c in statCards"
           :key="c.key"
-          class="rounded-lg bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0"
+          class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0"
         >
           <span class="text-[10px] text-muted uppercase tracking-wider truncate">{{ c.label }}</span>
           <span

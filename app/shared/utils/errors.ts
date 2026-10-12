@@ -34,6 +34,18 @@ export function isHubConnectionError(err: unknown): boolean {
   return false
 }
 
+/**
+ * True when the request failed because the session is gone (401: missing, invalid
+ * or expired access token). Pollers use this to halt their interval instead of
+ * retrying a request that cannot succeed until the user signs in again.
+ *
+ * Distinct from `getApiErrorStatus(err) === 401` alone: callers still want to
+ * retry a transient 401 caused by a mid-flight refresh, so this is opt-in.
+ */
+export function isAuthError(err: unknown): boolean {
+  return getApiErrorStatus(err) === 401
+}
+
 export function getErrorKey(err: unknown): string {
   const e = err as ApiErrorPayload
   const status = getApiErrorStatus(err)

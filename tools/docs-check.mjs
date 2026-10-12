@@ -30,9 +30,20 @@ function check(name, cond, detail = '') {
 
 // Docs that describe the repo (CLAUDE.md points at AGENTS.md, still scanned).
 const docFiles = ['README.md', 'AGENTS.md', 'CLAUDE.md', '.agents/AGENTS.md']
-for (const f of readdirSync(join(ROOT, 'docs'))) {
-  if (f.endsWith('.md')) docFiles.push(`docs/${f}`)
+function findMdFiles(dir, prefix = '') {
+  const entries = readdirSync(dir, { withFileTypes: true })
+  const res = []
+  for (const entry of entries) {
+    const rel = prefix ? `${prefix}/${entry.name}` : entry.name
+    if (entry.isDirectory()) {
+      res.push(...findMdFiles(join(dir, entry.name), rel))
+    } else if (entry.name.endsWith('.md')) {
+      res.push(rel)
+    }
+  }
+  return res
 }
+docFiles.push(...findMdFiles(join(ROOT, 'docs'), 'docs'))
 const read = (rel) => {
   try { return readFileSync(join(ROOT, rel), 'utf8') } catch { return null }
 }

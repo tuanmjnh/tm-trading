@@ -141,7 +141,8 @@ describe('§58.10 #10 — the nav/route migration is idempotent & duplicate-safe
 
 describe('§58.10 #12 — status is recorded only with evidence', () => {
   test('the navigation audit carries the §58 closure evidence', () => {
-    const src = read('docs/navigation-audit.md')
+    // rehomed by the docs/ restructure (nav audit lives under docs/web-app now)
+    const src = read('docs/web-app/navigation-audit.md')
     assert.match(src, /58\.10/)
   })
 })

@@ -4,8 +4,8 @@
 > `npm run test:db` → **58 pass, 0 fail** (chạy trên DB riêng `tm-trading-test`, tự xoá sau khi xong).
 > Tài liệu này là **nguồn chân lý duy nhất** về schema/index; sửa code thì sửa ở đây trước.
 >
-> Liên quan: `docs/time-rules.md` (luật thời gian D2), `docs/alert-schema.md` (hợp đồng payload
-> + luật bump `v`), `docs/mt5-ipc.md` (hợp đồng IPC MT5).
+> Liên quan: `docs/engine/time-rules.md` (luật thời gian D2), `docs/engine/alert-schema.md` (hợp đồng payload
+> + luật bump `v`), `docs/engine/mt5-ipc.md` (hợp đồng IPC MT5).
 
 Stack: **Mongoose 9 · MongoDB 8.2 local · engine Node ESM**.
 
@@ -16,7 +16,7 @@ Stack: **Mongoose 9 · MongoDB 8.2 local · engine Node ESM**.
 | # | Quy tắc | Vì sao |
 |---|---|---|
 | **D1** | Mọi `run` mang **version stamp** (`engineVersion`, `paramsHash`, `params`, `dataHash`, `universeSnapshot`, `gitRev`) | Sửa 1 ngưỡng là mọi kết quả cũ thành vô nghĩa. Không có stamp thì kết quả nhiều thế hệ engine nằm chung bảng và "tối ưu preset" chạy trên dữ liệu rác |
-| **D2** | Mọi thời gian lưu **UTC**; ngày nghiệp vụ là **chuỗi `YYYY-MM-DD`** | Khoá ngày phải rõ ràng, không phụ thuộc múi giờ của máy chạy — hợp đồng đầy đủ: `docs/time-rules.md` |
+| **D2** | Mọi thời gian lưu **UTC**; ngày nghiệp vụ là **chuỗi `YYYY-MM-DD`** | Khoá ngày phải rõ ràng, không phụ thuộc múi giờ của máy chạy — hợp đồng đầy đủ: `docs/engine/time-rules.md` |
 | **D3/D4** | `alertKey` (tầng alert) và `clientOrderId` (tầng lệnh) là **hai tầng riêng** | Alert đến 2 lần là chuyện nhỏ; **lệnh** đặt 2 lần là chuyện lớn. Không được để tầng lệnh phụ thuộc vào việc tầng alert khử trùng đúng |
 
 ---
@@ -208,11 +208,11 @@ vẫn là `tm-trading-test` sau khi import.
 
 - [x] `engine/store.mjs` — ghi NDJSON **luôn**, ghi Mongo khi có URI (theo D1/D2) ✅ 2026-10-02
 - [x] Nối `server/webhook.mjs` ghi `alerts` + dùng `alertKey` (bỏ `Map` trong RAM) ✅ 2026-10-02
-- [x] Luật bump `v` của `docs/alert-schema.md` + thêm `source` khi có nguồn thứ hai ✅ 2026-10-02
-- [x] Hợp đồng IPC cho MT5 (endpoint/schema/timeout/retry) → `docs/mt5-ipc.md` ✅ 2026-10-02
-- [x] Luật thời gian D2 → `docs/time-rules.md` ✅ 2026-10-02
+- [x] Luật bump `v` của `docs/engine/alert-schema.md` + thêm `source` khi có nguồn thứ hai ✅ 2026-10-02
+- [x] Hợp đồng IPC cho MT5 (endpoint/schema/timeout/retry) → `docs/engine/mt5-ipc.md` ✅ 2026-10-02
+- [x] Luật thời gian D2 → `docs/engine/time-rules.md` ✅ 2026-10-02
 
-**Acceptance Phase 3** (roadmap §3): `docs/data-model.md` tồn tại ✅ · `engine/store.mjs` ghi
+**Acceptance Phase 3** (roadmap §3): `docs/engine/data-model.md` tồn tại ✅ · `engine/store.mjs` ghi
 kèm version stamp ✅ · test khẳng định 2 run khác `paramsHash` không bị trộn ✅
 (`engine/test.mjs` §9 — `summarizeRuns()` ném lỗi, `groupByGeneration()` gộp có kiểm).
 

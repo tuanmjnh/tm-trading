@@ -28,7 +28,7 @@
         </div>
       </template>
 
-      <div class="grid gap-4 lg:grid-cols-2">
+      <div class="grid gap-3 lg:grid-cols-2">
         <UtilitiesTextPane
           v-model="encodeInput"
           :label="t('utilities.crypto.input')"
@@ -100,7 +100,7 @@
               @click="copyText(hashResult)"
             />
           </div>
-          <div class="rounded-lg bg-default/50 p-3 font-mono text-xs break-all">
+          <div class="rounded bg-default/50 p-3 font-mono text-xs break-all">
             {{ hashResult }}
           </div>
         </div>
@@ -202,7 +202,7 @@
               @click="copyText(jwtEncoded)"
             />
           </div>
-          <div class="rounded-lg bg-default/50 p-3 font-mono text-xs break-all">
+          <div class="rounded bg-default/50 p-3 font-mono text-xs break-all">
             {{ jwtEncoded }}
           </div>
         </div>
@@ -238,7 +238,7 @@
           :title="t('utilities.crypto.jwt.invalid')"
         />
 
-        <div v-if="jwtResult?.header" class="rounded-lg border border-default bg-default/30 p-3">
+        <div v-if="jwtResult?.header" class="rounded border border-default bg-default/30 p-3">
           <div class="mb-1 flex items-center justify-between">
             <span class="text-xs font-semibold text-muted">Header</span>
             <UButton
@@ -252,7 +252,7 @@
           <pre class="overflow-auto font-mono text-xs">{{ JSON.stringify(jwtResult.header, null, 2) }}</pre>
         </div>
 
-        <div v-if="jwtResult?.payload" class="rounded-lg border border-default bg-default/30 p-3">
+        <div v-if="jwtResult?.payload" class="rounded border border-default bg-default/30 p-3">
           <div class="mb-1 flex items-center justify-between">
             <span class="text-xs font-semibold text-muted">Payload</span>
             <UButton

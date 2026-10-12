@@ -165,7 +165,7 @@ const onPreview = (file: Cloudinary.IFileAttach) => {
 
         <!-- Preview Section -->
         <div
-          class="h-[39vh] md:h-[32vh] mb-6 border-2 border-dashed border-default rounded-xl p-4 bg-muted/30 gap-4 overflow-y-auto grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] w-full justify-items-center transition-all shadow-inner"
+          class="h-[39vh] md:h-[32vh] mb-6 border-2 border-dashed border-default rounded p-3 bg-muted/30 gap-3 overflow-y-auto grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] w-full justify-items-center transition-all shadow-inner"
         >
           <LazyMediaImageCard
             v-for="(file, index) in previewFiles"
@@ -199,7 +199,7 @@ const onPreview = (file: Cloudinary.IFileAttach) => {
           </div>
           <div
             ref="historyContainer"
-            class="h-[26vh] md:h-[22vh] overflow-y-auto grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2 border border-default rounded-lg p-2 bg-elevated/50"
+            class="h-[26vh] md:h-[22vh] overflow-y-auto grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2 border border-default rounded p-2 bg-elevated/50"
           >
             <LazyMediaImageCard
               v-for="link in displayedHistory"

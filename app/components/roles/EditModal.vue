@@ -114,7 +114,7 @@ async function onSubmit() {
       </div>
       <p class="text-xs text-dimmed">{{ t('admin.actionsHelp') }}</p>
       <p v-if="permsLocked && !isFullAccess" class="text-xs text-warning">{{ lockReason }}</p>
-      <div v-if="isFullAccess" class="border border-success/30 bg-success/5 rounded-lg p-3 text-sm text-highlighted">
+      <div v-if="isFullAccess" class="border border-success/30 bg-success/5 rounded p-3 text-sm text-highlighted">
         {{ t('admin.fullAccess') }} — {{ t('admin.allRoutes') }}
       </div>
       <RolesPermissionSelector v-else v-model="flatPerms" :disabled="permsLocked" />

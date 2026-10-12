@@ -86,7 +86,11 @@ const groups = computed<CommandPaletteGroup[]>(() => [
           class="bg-transparent ring-default" />
 
         <UNavigationMenu v-if="links[0]?.length" :collapsed="collapsed" :items="links[0]" orientation="vertical" tooltip
-          popover />
+          popover
+          :ui="{
+            link: 'data-[active]:bg-elevated data-[active]:text-highlighted! data-[active]:border-l-2 data-[active]:border-l-primary! data-[state=open]:bg-elevated data-[state=open]:text-highlighted! data-[state=open]:border-l-2 data-[state=open]:border-l-primary!',
+            childLink: 'data-[active]:bg-elevated data-[active]:text-highlighted! data-[active]:border-l-2 data-[active]:border-l-primary!'
+          }" />
       </template>
 
       <template #footer="{ collapsed }">

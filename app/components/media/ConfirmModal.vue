@@ -75,7 +75,7 @@ const onCancel = () => {
       </div>
     </template>
     <template #body>
-      <div v-if="file" class="flex items-center gap-4 p-4 border rounded-lg bg-muted">
+      <div v-if="file" class="flex items-center gap-3 p-3 border rounded bg-muted">
         <div
           v-if="file.thumbnail_url || file.url"
           class="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border border-default flex items-center justify-center p-1"

@@ -37,8 +37,10 @@ import type {
   ReplaySummary
 } from '~~/types/replay'
 import type { ConfluenceDetail, MethodEvent } from '~~/types/methods'
+import { isAuthError } from '../../shared/utils/errors'
 
 const { t } = useI18n()
+const auth = useAuth()
 const { title, description } = useAdminPageChrome({
   titleKey: 'trade.title',
   descKey: 'trade.desc'
@@ -277,10 +279,7 @@ const replayDetach = (): void => {
 
 onUnmounted(() => {
   stopReplayPoll()
-  if (intelTimer) {
-    clearInterval(intelTimer)
-    intelTimer = null
-  }
+  stopIntelPoll()
 })
 
 /**
@@ -332,20 +331,47 @@ const providerState = computed(() =>
 const intelApi = useIntel()
 const intel = ref<IntelData | null>(null)
 let intelTimer: ReturnType<typeof setInterval> | null = null
+// Session lost (401): polling is suspended until re-authentication. Retrying
+// a lapsed token every 60s only produces console noise, and the chart already
+// keeps rendering the last known snapshot (D1).
+let intelHalted = false
 
 const loadIntel = async (): Promise<void> => {
+  if (intelHalted) return
   try {
     intel.value = await intelApi.get()
-  } catch {
+    intelHalted = false
+  } catch (err) {
     // keep the previous snapshot — never blank the overlays on a transient miss
+    if (isAuthError(err)) {
+      intelHalted = true
+      stopIntelPoll()
+      return // don't chain the confluence fetch onto a known-dead session
+    }
   }
   void loadConfluence()
+}
+
+const stopIntelPoll = (): void => {
+  if (intelTimer) {
+    clearInterval(intelTimer)
+    intelTimer = null
+  }
 }
 
 const startIntelPoll = (): void => {
   if (intelTimer) return
   intelTimer = setInterval(() => { void loadIntel() }, 60_000)
 }
+
+// Resume the intel + confluence poll once the user re-authenticates.
+watch(() => auth.isAuthenticated.value, (authed) => {
+  if (authed && intelHalted) {
+    intelHalted = false
+    startIntelPoll()
+    void loadIntel()
+  }
+})
 
 const intelFunding = computed<IntelFunding | null>(() =>
   intel.value?.funding.find((f) => f.symbol === symbol.value) ?? null
@@ -396,6 +422,7 @@ const confluenceDetail = ref<ConfluenceDetail | null>(null)
 const confluenceLoading = ref(false)
 
 const loadConfluence = async (): Promise<void> => {
+  if (intelHalted) return // session known dead — don't re-probe
   confluenceLoading.value = true
   try {
     const res = await $fetch<{ success: boolean; data: ConfluenceDetail | null }>(
@@ -437,9 +464,9 @@ const sideClass = (side?: string): string =>
       </div>
     </template>
 
-    <div class="flex flex-col w-full gap-4 pb-24 lg:pb-6">
+    <div class="flex flex-col w-full gap-3 pb-24 lg:pb-6">
       <!-- Controls: symbol, timeframe, live quote header -->
-      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-default ring ring-default p-3">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 rounded bg-default ring ring-default p-3">
         <USelect
           v-model="symbol"
           :items="symbols"
@@ -482,7 +509,7 @@ const sideClass = (side?: string): string =>
 
       <!-- Indicator toggles -->
       <div
-        class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-default ring ring-default p-3"
+        class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded bg-default ring ring-default p-3"
         role="group"
         :aria-label="t('trade.indicators')"
       >
@@ -514,7 +541,7 @@ const sideClass = (side?: string): string =>
       />
 
       <!-- Phase 10: method event inspector + confluence explanation (hidden in replay) -->
-      <div v-if="!inReplay" class="grid grid-cols-1 gap-4 xl:grid-cols-4">
+      <div v-if="!inReplay" class="grid grid-cols-1 gap-3 xl:grid-cols-4">
         <MethodEventsPanel
           class="xl:col-span-2"
           :symbol="symbol"
@@ -553,12 +580,12 @@ const sideClass = (side?: string): string =>
         @detach="replayDetach"
       />
 
-      <div class="grid grid-cols-1 gap-4 xl:grid-cols-4">
+      <div class="grid grid-cols-1 gap-3 xl:grid-cols-4">
         <!-- Watchlist -->
         <Watchlist :symbol="symbol" @select="symbol = $event" />
 
         <!-- Chart -->
-        <div class="p-3 rounded-lg bg-default ring ring-default xl:col-span-2">
+        <div class="p-3 rounded bg-default ring ring-default xl:col-span-2">
           <TradeChart
             :symbol="symbol"
             :timeframe="timeframe"
@@ -574,12 +601,15 @@ const sideClass = (side?: string): string =>
         </div>
 
         <!-- Right column: orderbook + stream status + trade tape -->
-        <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-3">
           <OrderBook :symbol="symbol" />
 
           <!-- Stream / provider status -->
-          <div class="rounded-lg bg-default ring ring-default p-4 flex flex-col gap-3">
-            <h3 class="text-sm font-semibold">{{ t('trade.stream') }}</h3>
+          <div class="rounded bg-default ring ring-default p-3 flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold">{{ t('trade.stream') }}</h3>
+              <LivePip :active="feed.state.connection === 'open'" />
+            </div>
             <div class="flex items-center justify-between text-sm">
               <span class="text-muted">{{ t('trade.provider') }}</span>
               <UBadge :color="connectionBadge.color" variant="subtle" size="sm">
@@ -592,10 +622,13 @@ const sideClass = (side?: string): string =>
           </div>
 
           <!-- Recent trades tape -->
-          <div class="rounded-lg bg-default ring ring-default p-4 flex flex-col gap-2 flex-1 min-h-48">
+          <div class="rounded bg-default ring ring-default p-3 flex flex-col gap-2 flex-1 min-h-48">
             <div class="flex items-baseline justify-between">
               <h3 class="text-sm font-semibold">{{ t('trade.tape') }}</h3>
-              <span class="text-xs text-muted">{{ symbol }}</span>
+              <div class="flex items-center gap-2">
+                <LivePip :active="feed.state.connection === 'open'" />
+                <span class="text-xs text-muted">{{ symbol }}</span>
+              </div>
             </div>
 
             <div v-if="tape.length" class="flex flex-col text-sm">
@@ -624,7 +657,7 @@ const sideClass = (side?: string): string =>
       </div>
 
       <!-- Terminal bottom row (roadmap §10): ticket, methods, signals, risk, positions -->
-      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-5">
+      <div class="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-5">
         <TradeTicket
           :symbol="symbol"
           :tf="timeframe"

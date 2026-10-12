@@ -30,6 +30,11 @@ export default defineAppConfig({
       light: 'i-lucide-sun',
       dark: 'i-lucide-moon'
     },
+    input: {
+      slots: {
+        base: 'font-mono tabular-nums'
+      }
+    },
     dashboardToolbar: {
       slots: {
         root: 'shrink-0 flex flex-wrap sm:flex-nowrap items-center justify-between border-b border-default px-3 sm:px-6 gap-x-2 gap-y-1.5 py-2 sm:py-0 min-h-[49px] overflow-x-auto',

@@ -1,0 +1,37 @@
+//@version=6
+{{DECL}}
+{{SHARED}}
+
+// =============================================================================
+//  TM INDICATOR  -  v1.0.0 (Phase 1 Correctness Patch)
+//  Multi-Asset Futures Analysis System
+//  Upgraded from TM XAU Signals 2 baseline under TM_Indicator_Roadmap.md
+//
+//  Layer structure:
+//    L0  CONFIG       - inputs, toggles, weights, filters (independent testing)
+//    L1  CORE         - ATR/ATR%, Volume VSA (Wilder RMA), RelVol, OBV, EMA stack,
+//                       displacement, pivots, session detection
+//    L2  MARKET STR   - Swing, HH/HL/LH/LL, BOS, CHoCH, MSS, Retest,
+//                       Failed Breakout, Continuation, Pullback -> UDT TMEvent
+//    L3  LIQUIDITY    - PDH/PDL, PWH/PWL, Session Hi/Lo, Equal Hi/Lo, Sweep,
+//                       Trendline 2-point (slope/touch/break)
+//    L4  ZONES        - S/R zones + FVG + Order Block (independent toggles)
+//    L5  CANDLE       - Pin, Engulfing, Displacement, Rejection -> score [-1, +1]
+//    L6  INDICATORS   - Grouped by function: Trend / Momentum(RSI+MACD+DMI) /
+//                       Volatility(ATR%+BBW) / Volume(RelVol+OBV+VSA) / Location(VWAP+DayRange)
+//    L7  MTF CONTEXT  - Context TF + Setup TF; entry = chart TF
+//                       Tuple request.security [1] + lookahead_on (no-repaint)
+//                       HTF Close vs HTF EMA consistency; MTF hierarchy check
+//    L8  SCORING      - 0-100, 11 groups (total weight 100, no correlated double-counting)
+//    L9  RISK         - Entry/SL/TP plan + gate (P0 RR fix with target RR selection)
+//    L10 STATE        - Position lifecycle: open -> manage -> close -> deferred reset
+//                       (P0 state machine fix: proper timeout exit & realized R calculation)
+//    L11 VIZ          - Visuals master switch, clean table dashboard, force_overlay on price
+//    L12 ALERTS       - Webhook JSON: ENTRY, TAKE_PROFIT, STOP_LOSS, TIMEOUT, EVENT
+//
+//  Correctness Principles:
+//    - Preserved frozen baseline in pine/parts-xau2/
+//    - Verified RR calculation for LONG & SHORT
+//    - Non-repainting closed-bar MTF policy
+//    - Deterministic state machine (each trade closed exactly once)
+// =============================================================================

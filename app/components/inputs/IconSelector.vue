@@ -122,12 +122,12 @@ onMounted(() => {
         icon="i-lucide:search" class="w-full" />
     </div>
 
-    <div class="border rounded-lg bg-muted border-default">
+    <div class="border rounded bg-muted border-default">
       <div ref="scrollParent" class="grid grid-cols-6 sm:grid-cols-8 gap-2 p-3 max-h-64 overflow-y-auto scrollbar-thin">
         <UTooltip v-for="icon in icons" :key="icon" :text="icon" :popper="{ strategy: 'fixed' }">
           <button type="button"
             class="flex items-center justify-center p-2 rounded-md hover:bg-primary/10 transition-all aspect-square border-2 border-transparent"
-            :class="{ 'border-primary bg-elevated shadow-sm': modelValue === icon }"
+            :class="{ 'border-primary bg-elevated': modelValue === icon }"
             @click="selectIcon(icon)">
             <UIcon :name="icon" class="w-6 h-6" />
           </button>

@@ -9,6 +9,7 @@
 // =============================================================================
 import type { OrdersListResponse, PaperOrderItem } from '~~/types/orders'
 import { formatPrice } from '../utils/marketFeed'
+import { getErrorMessage, isAuthError } from '../shared/utils/errors'
 
 const props = defineProps<{
   /** bump to force one refresh immediately (e.g. after a ticket submit). */
@@ -37,6 +38,9 @@ const statusColor = (s: PaperOrderItem['status']): 'success' | 'warning' | 'neut
   : 'success'
 
 const fetchOrders = async (): Promise<void> => {
+  // After an auth failure nothing can succeed until the user signs in again,
+  // so skip the call rather than emit a 401 every 5s.
+  if (halted.value) return
   try {
     const res = await $fetch<OrdersListResponse>('/api/v1/orders', {
       params: { limit: 24 }
@@ -45,19 +49,47 @@ const fetchOrders = async (): Promise<void> => {
     meta.value = res.meta
     mongo.value = res.mongo
     error.value = ''
+    halted.value = false
   } catch (err) {
-    error.value = (err as { data?: { message?: string } })?.data?.message ?? String(err)
+    error.value = getErrorMessage(err, key => t(key))
+    if (isAuthError(err)) {
+      halted.value = true
+      stopPolling()
+      error.value = t('trade.sessionExpired')
+    }
   }
 }
 
+/** Session lost (401) — polling is suspended until re-authentication. */
+const halted = ref(false)
+
 let timer: ReturnType<typeof setInterval> | null = null
+
+const stopPolling = (): void => {
+  if (timer) clearInterval(timer)
+  timer = null
+}
+
+const startPolling = (): void => {
+  if (timer) return
+  timer = setInterval(() => void fetchOrders(), 5000)
+}
+
+// Resume polling once the user re-authenticates.
+const { isAuthenticated } = useAuth()
+watch(isAuthenticated, (authed) => {
+  if (authed) {
+    halted.value = false
+    void fetchOrders()
+    startPolling()
+  }
+})
+
 onMounted(() => {
   void fetchOrders()
-  timer = setInterval(() => void fetchOrders(), 5000)
+  startPolling()
 })
-onUnmounted(() => {
-  if (timer) clearInterval(timer)
-})
+onUnmounted(stopPolling)
 
 watch(reloadOn, () => void fetchOrders())
 
@@ -92,7 +124,7 @@ const qtyText = (o: PaperOrderItem): string =>
 </script>
 
 <template>
-  <div class="flex flex-col gap-3 rounded-lg bg-default ring ring-default p-3">
+  <div class="flex flex-col gap-3 rounded bg-default ring ring-default p-3">
     <div class="flex items-baseline justify-between gap-2">
       <h3 class="text-sm font-semibold">{{ t('trade.orders') }}</h3>
       <div v-if="mongo === 'down'" class="text-[10px] text-muted">

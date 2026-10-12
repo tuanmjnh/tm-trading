@@ -2217,6 +2217,7 @@
     "fillsMongoDown": "database unavailable",
     "fillsLatency": "latency (quote age + simulated)",
     "fillsError": "Fills",
+    "sessionExpired": "Session expired — sign in to resume live updates",
     "orderStatus": {
       "created": "created",
       "riskChecked": "checked",

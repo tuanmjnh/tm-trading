@@ -115,7 +115,7 @@ Pine không đọc được chart timezone; setting đó chỉ đổi hiển th�
 
 **Ranh giới ngày (`f_isNewDay` = `ta.change(time("D"))`) dùng EXCHANGE timezone** (mặc định của
 `time("D")`), không phải chart hay input — nên bộ đếm “Lệnh hôm nay” reset theo ngày sàn.
-Lưu ý: `docs/time-rules.md` (T2: ngày UTC) áp cho **engine server-side**, không áp cho Pine
+Lưu ý: `docs/engine/time-rules.md` (T2: ngày UTC) áp cho **engine server-side**, không áp cho Pine
 indicator chạy trên chart.
 
 **Strategy twin (VSA).** `vsa` và `vsa-strategy` dùng **chung** `parts-vsa`, nên logic sự kiện
@@ -303,7 +303,7 @@ nên người dùng không bị hiểu nhầm là giá đã chốt.
 | `tm_TP` | Giá chạm bất kỳ TP nào của vị thế đang mở |
 | `tm_SL` | Giá chạm SL |
 
-`alert()` với payload JSON cho webhook — xem `docs/alert-schema.md`.
+`alert()` với payload JSON cho webhook — xem `docs/engine/alert-schema.md`.
 
 ## 9. Quy trình phát triển
 
@@ -315,7 +315,7 @@ node tools/build.mjs vsa      # chỉ build một target (indicator | strategy |
 
 Sau đó dán nội dung `pine/dist/TM Signals BTC.pine` vào Pine Editor → Add to chart.
 `TM Backtest BTC.pine` dùng cho Strategy Tester, tách phần `60_viz.pine` bằng `// @part skip:strategy`.
-`TM VSA Wyckoff.pine` là indicator volume (overlay = false), dán độc lập — xem `docs/vsa-wyckoff-method.md`.
+`TM VSA Wyckoff.pine` là indicator volume (overlay = false), dán độc lập — xem `docs/indicator/vsa-wyckoff/vsa-wyckoff-method.md`.
 
 Quy trình chuẩn khi đổi logic:
 

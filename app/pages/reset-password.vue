@@ -61,7 +61,7 @@ async function onSubmit() {
     <UCard class="w-full max-w-sm sm:max-w-md">
       <template #header>
         <div class="text-center">
-          <div class="inline-flex items-center justify-center size-12 rounded-xl bg-primary/10 text-primary mb-3">
+          <div class="inline-flex items-center justify-center size-12 rounded bg-primary/10 text-primary mb-3">
             <UIcon name="i-lucide-key" class="size-6" />
           </div>
           <h1 class="text-2xl font-bold text-highlighted">{{ t('auth.resetPassword') }}</h1>

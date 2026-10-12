@@ -196,7 +196,7 @@ useHead({ title })
       />
     </template>
 
-    <div class="flex flex-col w-full h-full min-h-0 gap-4 overflow-y-auto pb-24 lg:pb-6">
+    <div class="flex flex-col w-full h-full min-h-0 gap-3 overflow-y-auto pb-24 lg:pb-6">
       <!-- Mode switch -->
       <div class="flex items-center gap-2 flex-wrap shrink-0">
         <UButton
@@ -226,7 +226,7 @@ useHead({ title })
       </div>
 
       <!-- BACKTEST -->
-      <UCard v-if="mode === 'backtest'" :ui="{ body: 'p-3 sm:p-4' }">
+      <UCard v-if="mode === 'backtest'" :ui="{ body: 'p-3 sm:p-3' }">
         <template #header>
           <div class="flex items-center gap-2">
             <UIcon name="i-lucide-flask-conical" class="w-4 h-4 text-primary" />
@@ -295,7 +295,7 @@ useHead({ title })
       </UCard>
 
       <!-- REPLAY -->
-      <UCard v-else-if="mode === 'replay'" :ui="{ body: 'p-3 sm:p-4' }">
+      <UCard v-else-if="mode === 'replay'" :ui="{ body: 'p-3 sm:p-3' }">
         <template #header>
           <div class="flex items-center gap-2">
             <UIcon name="i-lucide-history" class="w-4 h-4 text-primary" />
@@ -348,7 +348,7 @@ useHead({ title })
       </UCard>
 
       <!-- LIVE PAPER -->
-      <UCard v-else :ui="{ body: 'p-3 sm:p-4' }">
+      <UCard v-else :ui="{ body: 'p-3 sm:p-3' }">
         <template #header>
           <div class="flex items-center gap-2">
             <UIcon name="i-lucide-fast-forward" class="w-4 h-4 text-primary" />
@@ -416,7 +416,7 @@ useHead({ title })
       </UCard>
 
       <!-- RESULT: backtest -->
-      <UCard v-if="runResult" :ui="{ body: 'p-3 sm:p-4' }">
+      <UCard v-if="runResult" :ui="{ body: 'p-3 sm:p-3' }">
         <template #header>
           <div class="flex items-center justify-between gap-2 flex-wrap">
             <div class="flex items-center gap-2">
@@ -469,7 +469,7 @@ useHead({ title })
       </UCard>
 
       <!-- RESULT: replay -->
-      <UCard v-else-if="replayResult" :ui="{ body: 'p-3 sm:p-4' }">
+      <UCard v-else-if="replayResult" :ui="{ body: 'p-3 sm:p-3' }">
         <template #header>
           <div class="flex items-center justify-between gap-2 flex-wrap">
             <div class="flex items-center gap-2">
@@ -505,7 +505,7 @@ useHead({ title })
       </UCard>
 
       <!-- RESULT: paper -->
-      <UCard v-else-if="paperResult" :ui="{ body: 'p-3 sm:p-4' }">
+      <UCard v-else-if="paperResult" :ui="{ body: 'p-3 sm:p-3' }">
         <template #header>
           <div class="flex items-center justify-between gap-2 flex-wrap">
             <div class="flex items-center gap-2">

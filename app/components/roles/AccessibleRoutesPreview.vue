@@ -110,7 +110,7 @@ const displayNodes = computed(() => {
       <div class="space-y-3">
         <UInput v-model="search" icon="i-lucide-search" size="sm" class="w-full" :placeholder="t('common.search')" />
 
-        <div class="border border-default rounded-lg divide-y divide-default max-h-[60vh] overflow-y-auto">
+        <div class="border border-default rounded divide-y divide-default max-h-[60vh] overflow-y-auto">
           <div v-if="displayNodes.length === 0" class="py-6 text-center text-sm text-muted">
             {{ t('common.no_results') }}
           </div>
@@ -131,7 +131,7 @@ const displayNodes = computed(() => {
 
         <div class="space-y-1.5">
           <span class="text-[11px] font-medium text-muted">{{ t('admin.effectiveAccess') }}</span>
-          <div class="border border-default rounded-lg p-3 space-y-3 bg-default/25">
+          <div class="border border-default rounded p-3 space-y-3 bg-default/25">
             <div class="space-y-1.5">
               <span class="text-[11px] font-medium text-muted">{{ t('admin.apiCapabilities') }}</span>
               <div class="flex flex-wrap gap-1">

@@ -36,7 +36,7 @@ const actionColor = (action: string): 'primary' | 'success' | 'error' | 'warning
 </script>
 
 <template>
-  <div class="rounded-lg border border-default overflow-hidden bg-elevated/20">
+  <div class="rounded border border-default overflow-hidden bg-elevated/20">
     <button
       type="button"
       class="w-full flex items-center gap-3 p-3 text-left hover:bg-elevated/40 transition-colors"

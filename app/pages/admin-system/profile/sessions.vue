@@ -136,7 +136,7 @@ useHead({ title: computed(() => t('profile.sessions')) })
     <BaseSectionNav :items="navItems">
       <UCard class="mb-24 lg:mb-0">
         <div v-if="sessionsLoading && sessions.length === 0" class="space-y-3">
-          <USkeleton v-for="i in 3" :key="i" class="h-14 w-full rounded-lg" />
+          <USkeleton v-for="i in 3" :key="i" class="h-14 w-full rounded" />
         </div>
 
         <UEmpty v-else-if="sessions.length === 0" icon="i-lucide-monitor-x" size="sm"
@@ -144,7 +144,7 @@ useHead({ title: computed(() => t('profile.sessions')) })
 
         <ul v-else class="divide-y divide-default">
           <li v-for="session in sessions" :key="session.id" class="flex items-center gap-3 py-3.5 first:pt-0 last:pb-0">
-            <span class="inline-flex shrink-0 items-center justify-center rounded-lg p-2"
+            <span class="inline-flex shrink-0 items-center justify-center rounded p-2"
               :class="session.isCurrent ? 'bg-primary/10 text-primary' : 'bg-elevated text-muted'">
               <UIcon :name="session.platform === 'mobile' ? 'i-lucide-smartphone' : 'i-lucide-monitor'"
                 class="size-5" />

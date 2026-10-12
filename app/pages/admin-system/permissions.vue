@@ -155,8 +155,8 @@ useHead({ title })
       </UDashboardToolbar>
     </template>
 
-    <div class="space-y-6 p-4 sm:p-6">
-      <div class="flex items-start gap-2 rounded-lg bg-default border border-default p-3 text-sm text-muted">
+    <div class="space-y-6 p-3 sm:p-6">
+      <div class="flex items-start gap-2 rounded bg-default border border-default p-3 text-sm text-muted">
         <UIcon name="i-lucide-lock" class="size-4 mt-0.5 shrink-0" />
         <p>{{ t('admin.permissionsReadOnly') }}</p>
       </div>
@@ -172,7 +172,7 @@ useHead({ title })
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
           <div v-for="p in rows" :key="p.code"
-            class="flex items-start justify-between gap-2 rounded-lg border border-default bg-default p-3">
+            class="flex items-start justify-between gap-2 rounded border border-default bg-default p-3">
             <div class="min-w-0">
               <div class="flex items-center gap-2">
                 <code class="text-xs font-mono text-highlighted truncate">{{ p.code }}</code>

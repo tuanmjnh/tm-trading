@@ -34,7 +34,7 @@ const onDrop = (e: DragEvent) => {
 
 <template>
   <div
-    class="w-full h-full border border-dashed rounded-xl overflow-hidden transition flex flex-col items-center justify-center gap-2 bg-muted p-6"
+    class="w-full h-full border border-dashed rounded overflow-hidden transition flex flex-col items-center justify-center gap-2 bg-muted p-6"
     :class="[isDragOver ? 'border-primary bg-primary/10' : 'border-default hover:border-primary']"
     @dragover="onDragOver"
     @dragleave="onDragLeave"

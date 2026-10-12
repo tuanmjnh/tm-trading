@@ -174,9 +174,9 @@ useHead({ title })
       </div>
     </template>
 
-    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-4">
+    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-3">
       <!-- Chon series -->
-      <UCard class="shrink-0" :ui="{ body: 'p-3 sm:p-4' }">
+      <UCard class="shrink-0" :ui="{ body: 'p-3 sm:p-3' }">
         <template #header>
           <div class="flex items-center justify-between gap-2 flex-wrap">
             <div class="flex items-center gap-2">
@@ -196,7 +196,7 @@ useHead({ title })
             v-for="s in allSeries"
             :key="s.id"
             type="button"
-            class="flex flex-col items-start gap-0.5 px-2.5 py-1.5 rounded-lg border-2 text-left transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            class="flex flex-col items-start gap-0.5 px-2.5 py-1.5 rounded border-2 text-left transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             :class="isSelected(s.id)
               ? BORDER_CLASSES[colorIndex(s.id)]
               : 'border-default hover:bg-elevated/60'"
@@ -246,7 +246,7 @@ useHead({ title })
 
       <template v-else>
         <!-- Bang so sanh chi so -->
-        <UCard v-if="selectedDetails.length" class="shrink-0" :ui="{ body: 'p-3 sm:p-4' }">
+        <UCard v-if="selectedDetails.length" class="shrink-0" :ui="{ body: 'p-3 sm:p-3' }">
           <template #header>
             <div class="flex items-center justify-between gap-2 flex-wrap">
               <div class="flex items-center gap-2">
@@ -299,7 +299,7 @@ useHead({ title })
         </UCard>
 
         <!-- Khac biet tham so (cau hoi cua 'so sanh preset') -->
-        <UCard v-if="selectedDetails.length" class="shrink-0" :ui="{ body: 'p-3 sm:p-4' }">
+        <UCard v-if="selectedDetails.length" class="shrink-0" :ui="{ body: 'p-3 sm:p-3' }">
           <template #header>
             <div class="flex items-center justify-between gap-2 flex-wrap">
               <div class="flex items-center gap-2">
@@ -369,7 +369,7 @@ useHead({ title })
         </UCard>
 
         <!-- Equity overlay -->
-        <UCard v-if="overlay" class="shrink-0" :ui="{ body: 'p-3 sm:p-4' }">
+        <UCard v-if="overlay" class="shrink-0" :ui="{ body: 'p-3 sm:p-3' }">
           <template #header>
             <div class="flex items-center justify-between gap-2 flex-wrap">
               <div class="flex items-center gap-2">

@@ -161,7 +161,7 @@ useHead({ title })
       />
 
       <!-- KPI -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <UCard v-for="card in statCards" :key="card.key" class="hover:border-primary/40 transition-colors">
           <div class="flex items-center justify-between gap-2">
             <div class="min-w-0">
@@ -259,18 +259,18 @@ useHead({ title })
           </template>
 
           <dl class="space-y-3 text-xs">
-            <div class="flex items-start justify-between gap-4">
+            <div class="flex items-start justify-between gap-3">
               <dt class="text-muted shrink-0">{{ t('runs.engineVersion') }}</dt>
               <dd class="font-mono text-highlighted">{{ data?.engineVersion }}</dd>
             </div>
-            <div class="flex items-start justify-between gap-4">
+            <div class="flex items-start justify-between gap-3">
               <dt class="text-muted shrink-0">{{ t('runs.paramsHash') }}</dt>
               <dd class="flex items-center gap-1.5 min-w-0">
                 <code class="text-[11px] text-primary bg-primary/10 px-1.5 py-0.5 rounded font-mono break-all">{{ data?.paramsHash }}</code>
                 <UButton icon="i-lucide-copy" variant="ghost" color="neutral" size="xs" @click="copyText(data?.paramsHash || '')" />
               </dd>
             </div>
-            <div class="flex items-start justify-between gap-4">
+            <div class="flex items-start justify-between gap-3">
               <dt class="text-muted shrink-0">{{ t('runs.dataHash') }}</dt>
               <dd class="flex flex-col items-end gap-1 min-w-0">
                 <code
@@ -280,15 +280,15 @@ useHead({ title })
                 >{{ h }}</code>
               </dd>
             </div>
-            <div class="flex items-start justify-between gap-4">
+            <div class="flex items-start justify-between gap-3">
               <dt class="text-muted shrink-0">{{ t('runs.gitRev') }}</dt>
               <dd class="font-mono text-muted break-all">{{ data?.gitRev || '—' }}</dd>
             </div>
-            <div class="flex items-start justify-between gap-4">
+            <div class="flex items-start justify-between gap-3">
               <dt class="text-muted shrink-0">{{ t('runs.market') }}</dt>
               <dd class="text-highlighted">{{ data?.market || '—' }}</dd>
             </div>
-            <div class="flex items-start justify-between gap-4">
+            <div class="flex items-start justify-between gap-3">
               <dt class="text-muted shrink-0">{{ t('runs.lastRun') }}</dt>
               <dd class="text-right">
                 <time v-if="data" :datetime="data.lastRunAt" class="text-highlighted">
