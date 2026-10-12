@@ -132,7 +132,7 @@ Inspected, not assumed:
 | `/data`, `/data/{datasets,recordings,quality,lineage}` | Data & Research | implemented | `app/pages/data-research/data/*`; APIs `/data/{datasets,recordings,quality,lineage}` (Slice 4) |
 | `/research` | Data & Research | implemented | `app/pages/data-research/research/index.vue`; APIs `/research/proposals`, `/research/trades` (Slice 5) |
 | `/research/experiments` | Data & Research | implemented | `app/pages/data-research/research/experiments*.vue`; API `/research/experiments/**` (Slice 5) |
-| `/alerts` | Alerts & Notifications | planned | no alert-rule service/API; visible leaf shows Coming Soon until the rule service lands |
+| `/alerts` | Alerts & Notifications | implemented | `app/pages/alerts/index.vue` (rule CRUD: create/edit/toggle/delete); APIs `/alert-rules/**`; engine `engine/alertRules.mjs` + service `services/alertRules.mjs` (2026-10-12) |
 | `/system/data-sources` | Administration & System | implemented | `app/pages/admin-system/data-sources.vue` (per-venue provider probes); API `/market-sources/health` |
 | `/health` | Administration & System | implemented | `app/pages/admin-system/health.vue` (DB + D9 service heartbeats); API `/health.get.ts` |
 | `/administration/apps` | Administration & System | planned | no local page (Hub-owned) |
@@ -145,7 +145,7 @@ Inspected, not assumed:
 - **`/resources/queues` vs bots/test runs**: queues page is shared Hub job infra; keep distinct (§58.3).
 - **`/runs` naming**: route id `research_runs`, name `runs`; label was "Backtest". Relabel to "Historical Runs" for the Test Center; path unchanged (compatibility).
 - **`/resources/import` vs administration import**: two import surfaces exist (`administration/import.vue` orphan + `/resources/import`). Only `/resources/import` is in the registry and target; leave the orphan as a deep link.
-- **Missing pages for partial APIs**: none remain — `/markets` (explorer), `/scanner`, `/calendar`, `/orders`, `/paper`, `/strategies`, `/indicators`, `/methods`, `/research`, `/research/experiments` all have real pages now (Slices 2–5 + the 2026-10-11 leaves below). Still Coming Soon by design (no working service/API, §58.5): `/alerts` (rule service), `/admin-system/apps` (Hub-owned).
+- **Missing pages for partial APIs**: none remain — `/markets` (explorer), `/scanner`, `/calendar`, `/orders`, `/paper`, `/strategies`, `/indicators`, `/methods`, `/research`, `/research/experiments`, `/alerts` all have real pages now (Slices 2–5 + the 2026-10-11/10-12 leaves below). Still Coming Soon by design (no working service/API, §58.5): `/admin-system/apps` (Hub-owned).
 - **Hidden enforcement gap**: Hub returns `is_visible:false` routes unfiltered; the sidebar only filtered top-level `isVisible`. Milestone 1 makes `isVisible` filtering recursive (leaf + group).
 
 ## 6. i18n
@@ -261,7 +261,7 @@ Folder → URL prefix mapping (`app/pages/<folder>` ↔ menu group):
 | `research_ai` | `/research` | `/data-research/research` |
 | `research_experiments` | `/research/experiments` | `/data-research/research/experiments` |
 | `research_journal` | `/journal` | `/data-research/journal` |
-| `alert_rules` | `/alerts` | `/alerts` (unchanged) |
+| `alert_rules` | `/alerts` | `/alerts` (unchanged; now a real rule list — `/alert-rules/**`) |
 | `resources_notifications` | `/resources/notifications` | `/alerts/history` |
 | `resources_inbox` | `/resources/inbox` | `/alerts/inbox` |
 | `resources_media` | `/resources/media` | `/shared-resources` |
