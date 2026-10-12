@@ -76,7 +76,20 @@
     "strategy:list": "node engine/strategyService.mjs list",
     "strategy:promote": "node engine/strategyService.mjs promote",
     "strategy:plan": "node engine/strategyService.mjs plan",
-    "strategy:activate": "node engine/strategyService.mjs activate"
+    "strategy:activate": "node engine/strategyService.mjs activate",
+    "market:once": "node --import tsx tools/dev.mjs market:once",
+    "market:watch": "node --import tsx tools/dev.mjs market:watch",
+    "market:status": "node --import tsx tools/dev.mjs market:status",
+    "market:catalog": "node --import tsx tools/dev.mjs market:catalog",
+    "indicator:test": "node --import tsx tools/dev.mjs indicator:test",
+    "indicator:parity": "node --import tsx tools/dev.mjs indicator:parity",
+    "terminal:dev": "node --import tsx tools/dev.mjs terminal:dev",
+    "paper:watch": "node --import tsx tools/dev.mjs paper:watch",
+    "paper:status": "node --import tsx tools/dev.mjs paper:status",
+    "replay:create": "node --import tsx tools/dev.mjs replay:create",
+    "replay:run": "node --import tsx tools/dev.mjs replay:run",
+    "replay:test": "node --import tsx tools/dev.mjs replay:test",
+    "research:once": "node --import tsx tools/dev.mjs research:once"
   },
   "dependencies": {
     "@he-tree/vue": "^2.10.5",
