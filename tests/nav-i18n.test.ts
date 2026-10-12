@@ -47,7 +47,7 @@ const TARGET_IA_NAV_LABELS = [
   // 8. Shared Resources
   'media', 'import', 'connections', 'queues',
   // 9. Administration & System
-  'users', 'roles', 'permissions', 'applications', 'routes', 'configs',
+  'users', 'roles', 'permissions', 'routes', 'configs',
   'market_data_sources', 'health', 'logs', 'profile', 'docs', 'settings',
   // Secondary Tools
   'utilities_text', 'utilities_icons', 'utilities_encode', 'utilities_random', 'utilities_editor'

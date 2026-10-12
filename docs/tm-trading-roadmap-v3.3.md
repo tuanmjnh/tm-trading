@@ -3134,7 +3134,7 @@ Do not move working modules purely for visual symmetry. Refactor only where it i
 
 # 44. CLI / Developer Commands
 
-Recommended additions:
+Developer commands (implemented in `tools/dev.mjs`; run via `npm run`):
 
 ```bash
 npm run market:once
@@ -5198,8 +5198,7 @@ TM TRADING
    │  ├─ Users                                   /administration/users
    │  ├─ Roles                                   /administration/roles
    │  └─ Permissions                             /administration/permissions
-   ├─ Apps & Navigation
-   │  ├─ Applications                            /administration/apps
+   ├─ Navigation
    │  └─ Routes                                  /administration/routes
    ├─ Configuration                              /administration/configs
    ├─ Market Data Sources                        /system/data-sources          (new Trading-domain view)
@@ -5256,7 +5255,7 @@ Use the supplied `createTradingRoutes(context)` as the initial inventory, and co
 | `admin_routes` | `/administration/routes` | Administration & System → Apps & Navigation | Keep; use Hub route registry |
 | `admin_configs` | `/administration/configs` | Administration & System → Configuration | Keep; inspect remote-config ownership |
 | `admin_logs` | `/administration/logs` | Administration & System → Logs | Keep; one canonical log-viewing source |
-| `admin_apps` | `/administration/apps` | Administration & System → Apps & Navigation | Keep; preserve registered app identity |
+| `admin_apps` | `/administration/apps` | Administration & System → Apps & Navigation | Remove from tm-trading — Applications registry is administered in TM Hub only (no trading route/page) |
 | `system_profile` | `/system/profile` | Administration & System → Profile | Keep |
 | `system_docs` | `/system/docs` | Administration & System → Documentation | Keep |
 | `system_settings` | `/system/settings` | Administration & System → Settings | Keep; distinguish local preferences from Hub remote config |

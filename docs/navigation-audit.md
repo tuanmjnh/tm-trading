@@ -135,7 +135,7 @@ Inspected, not assumed:
 | `/alerts` | Alerts & Notifications | implemented | `app/pages/alerts/index.vue` (rule CRUD: create/edit/toggle/delete); APIs `/alert-rules/**`; engine `engine/alertRules.mjs` + service `services/alertRules.mjs` (2026-10-12) |
 | `/system/data-sources` | Administration & System | implemented | `app/pages/admin-system/data-sources.vue` (per-venue provider probes); API `/market-sources/health` |
 | `/health` | Administration & System | implemented | `app/pages/admin-system/health.vue` (DB + D9 service heartbeats); API `/health.get.ts` |
-| `/administration/apps` | Administration & System | planned | no local page (Hub-owned) |
+| `/admin-system/apps` | — | dropped | **Hub-only** — the Applications registry is administered in TM Hub (`/administration/apps`, `nav.apps`); tm-trading has no such route or page (removed 2026-10-12, §58.5) |
 
 ## 5. Conflicts, duplicates, missing pages, misleading labels
 
@@ -145,7 +145,7 @@ Inspected, not assumed:
 - **`/resources/queues` vs bots/test runs**: queues page is shared Hub job infra; keep distinct (§58.3).
 - **`/runs` naming**: route id `research_runs`, name `runs`; label was "Backtest". Relabel to "Historical Runs" for the Test Center; path unchanged (compatibility).
 - **`/resources/import` vs administration import**: two import surfaces exist (`administration/import.vue` orphan + `/resources/import`). Only `/resources/import` is in the registry and target; leave the orphan as a deep link.
-- **Missing pages for partial APIs**: none remain — `/markets` (explorer), `/scanner`, `/calendar`, `/orders`, `/paper`, `/strategies`, `/indicators`, `/methods`, `/research`, `/research/experiments`, `/alerts` all have real pages now (Slices 2–5 + the 2026-10-11/10-12 leaves below). Still Coming Soon by design (no working service/API, §58.5): `/admin-system/apps` (Hub-owned).
+- **Missing pages for partial APIs**: none remain — `/markets` (explorer), `/scanner`, `/calendar`, `/orders`, `/paper`, `/strategies`, `/indicators`, `/methods`, `/research`, `/research/experiments`, `/alerts` all have real pages now (Slices 2–5 + the 2026-10-11/10-12 leaves below). No Coming Soon leaves remain: `/admin-system/apps` is **Hub-only** (the Applications registry lives in TM Hub) and was removed from the trading IA/seed on 2026-10-12 (§58.5).
 - **Hidden enforcement gap**: Hub returns `is_visible:false` routes unfiltered; the sidebar only filtered top-level `isVisible`. Milestone 1 makes `isVisible` filtering recursive (leaf + group).
 
 ## 6. i18n
@@ -187,7 +187,7 @@ Idempotency / safety:
 - **Slice 1 (this deliverable)** — audit doc + §58.2 menu presentation + i18n + hidden-route enforcement. Implemented routes only are visible; new trading-domain pages remain hidden with `is_visible:false`.
 - Slices 2–5 (Strategy Lab, Test Center, Data Center, AI Research) build the hidden routes into real pages and flip `is_visible` to `true` once their tests pass.
 - **Slice 6 — shared-core placement and polish**:
-  - **Placement** lives in the Hub seed (`../tm-hub/scripts/seed/data.ts`, `createTradingRoutes`): Media/Inbox/Notifications/Connections/Import/Queues are under **Shared Resources** + **Alerts & Notifications**; users/roles/permissions/apps/routes/configs/data-sources/health/logs/profile/docs/settings under **Administration & System**; utilities under the secondary **Tools** group (last). Leaf ids are stable; only `parent_id`/`sort`/`path` moved (§10).
+  - **Placement** lives in the Hub seed (`../tm-hub/scripts/seed/data.ts`, `createTradingRoutes`): Media/Inbox/Notifications/Connections/Import/Queues are under **Shared Resources** + **Alerts & Notifications**; users/roles/permissions/routes/configs/data-sources/health/logs/profile/docs/settings under **Administration & System** (**applications** stays Hub-only); utilities under the secondary **Tools** group (last). Leaf ids are stable; only `parent_id`/`sort`/`path` moved (§10).
   - **Validation performed in this repo**: every route seeded visible resolves to a page (`tests/nav-contracts.test.ts`, full target-IA leaf set) and every §58.2 group/leaf label resolves in both locales (`tests/nav-i18n.test.ts`).
   - **Admin visibility** is not local presentation logic: the Hub `GET /api/v1/auth/routes` prunes by `required_permission`/`allowed_routes`, and the sidebar additionally drops `is_visible:false` subtrees and any route without a local page (`app/utils/navTree.ts`), so an unimplemented or unauthorized item never surfaces as a link.
   - **Mobile**: the sidebar collapses under `lg`; the bottom action/info bar (`app/components/nav/BottomNav.vue`) is presentation-only and menu-agnostic, so it needs no per-route change.
@@ -271,7 +271,7 @@ Folder → URL prefix mapping (`app/pages/<folder>` ↔ menu group):
 | `admin_users` | `/administration/users` | `/admin-system` |
 | `admin_roles` | `/administration/roles` | `/admin-system/roles` |
 | `admin_permissions` | `/administration/permissions` | `/admin-system/permissions` |
-| `admin_apps` | `/administration/apps` | `/admin-system/apps` |
+| `admin_apps` | `/administration/apps` | **removed** — Hub-only (Applications registry is administered in TM Hub; no trading route/page) |
 | `admin_routes` | `/administration/routes` | `/admin-system/routes` |
 | `admin_configs` | `/administration/configs` | `/admin-system/configs` |
 | `admin_logs` | `/administration/logs` | `/admin-system/logs` |

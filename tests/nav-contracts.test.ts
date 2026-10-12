@@ -59,7 +59,6 @@ const EXPECTED_VISIBLE_LEAF_PATHS = [
   '/admin-system',
   '/admin-system/roles',
   '/admin-system/permissions',
-  '/admin-system/apps',
   '/admin-system/routes',
   '/admin-system/configs',
   '/admin-system/data-sources',
