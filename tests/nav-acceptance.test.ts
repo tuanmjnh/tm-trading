@@ -3,6 +3,8 @@ import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { validateProposal, PROPOSAL_SCHEMA_VERSION } from '../ai/proposal.mjs'
+import { mergeScannerCandidates } from '../app/utils/scanner'
+import type { IntelAccum, IntelFlow, IntelMover } from '../types/intel'
 
 // =============================================================================
 //  §58.10 acceptance lock — the criteria the migration must keep true.
@@ -174,5 +176,58 @@ describe('§57.4/§58.5 — API-backed leaves are real pages, not stubs', () => 
   test('the terminal accepts instrument deep-links from the explorer (§57.4 B)', () => {
     const src = read('app/pages/trading/index.vue')
     assert.match(src, /route\.query\.instrument/)
+  })
+
+  test('markets/scanner consumes scanner snapshots + the Instrument Catalog', () => {
+    const src = read('app/pages/markets/scanner.vue')
+    assert.doesNotMatch(src, /comingSoon/, 'scanner must not be a "coming soon" stub')
+    assert.match(src, /useMarketScanner/)
+    assert.match(src, /\/trading\?instrument=/, 'scanner must deep-link candidates into the terminal')
+    const composable = read('app/composables/useMarketScanner.ts')
+    assert.match(composable, /mergeScannerCandidates/, 'scanner must project, not recompute (D1)')
+    assert.match(composable, /useIntel/)
+    assert.match(composable, /useMarketCatalog/)
+  })
+})
+
+describe('§58.5 — scanner candidate merge is a pure projection (D1)', () => {
+  const mover = (symbol: string, pct24h: number, extra: Partial<IntelMover> = {}): IntelMover =>
+    ({ symbol, pct24h, chg4h: 1, quoteVolume: 1e8, lastPrice: 2, breakout: false, atrPct: 1.5, ...extra })
+  const flow = (symbol: string, dir: IntelFlow['dir'], score: number, reasons: string[]): IntelFlow =>
+    ({ symbol, dir, reasons, volRatio: 2.5, takerRatio: 0.7, cmf: 0.3, pct24h: 5, score })
+  const accum = (symbol: string, reasons: string[]): IntelAccum =>
+    ({ symbol, reasons, rangePct: 2, priceChg48: 0.5, obvNorm: 1, volRatio: 0.6, pct24h: 1 })
+
+  test('merges mover/flow/accum by symbol, de-dupes reasons, keeps richest metrics', () => {
+    const out = mergeScannerCandidates(
+      {
+        movers: [mover('AAAUSDT', 40, { breakout: true })],
+        flows: [flow('AAAUSDT', 'buy', 9, ['volSpike', 'cmfIn'])],
+        accums: [accum('BBBUSDT', ['range', 'flat'])]
+      },
+      []
+    )
+    assert.equal(out.length, 2)
+    const a = out.find(c => c.symbol === 'AAAUSDT')!
+    assert.deepEqual([...a.signals].sort(), ['flow', 'mover'])
+    assert.equal(a.flowDir, 'buy')
+    assert.equal(a.score, 9)
+    assert.equal(a.pct24h, 40, 'mover 24h change wins over flow')
+    assert.equal(a.breakout, true)
+    assert.deepEqual(a.reasons, ['volSpike', 'cmfIn'])
+    assert.equal(out[0]!.symbol, 'AAAUSDT', 'sorted by flow score desc')
+  })
+
+  test('joins the catalog by venue-native / engine symbol', () => {
+    const instrument = {
+      id: 'crypto:perp:BTC/USDT', symbol: 'BTC/USDT', type: 'perp' as const, base: 'BTC', quote: 'USDT',
+      venues: [{ venue: 'binance', native: 'BTCUSDT' }], status: 'active' as const, engineSymbol: 'BTCUSDT'
+    }
+    const out = mergeScannerCandidates({ movers: [mover('BTCUSDT', 3)], flows: [], accums: [] }, [instrument])
+    assert.equal(out[0]!.instrument?.id, 'crypto:perp:BTC/USDT')
+  })
+
+  test('fails soft to [] on a null payload', () => {
+    assert.deepEqual(mergeScannerCandidates(null, []), [])
   })
 })
