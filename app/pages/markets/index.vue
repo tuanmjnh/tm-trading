@@ -208,8 +208,8 @@ useHead({ title })
 
         <div v-if="intel.regime.sweep.length" class="rounded bg-elevated/50 overflow-x-auto">
           <table class="w-full text-sm">
-            <thead>
-              <tr class="border-b border-default text-[10px] uppercase tracking-wider text-muted">
+            <thead class="bg-muted/50">
+              <tr class="border-b border-default text-[10px] uppercase tracking-wider text-dimmed">
                 <th class="text-left px-3 py-2">{{ t('intel.colSymbol') }}</th>
                 <th class="text-left px-3 py-2">{{ t('intel.colRate') }}</th>
                 <th class="text-left px-3 py-2">{{ t('intel.colOi') }}</th>
@@ -219,11 +219,11 @@ useHead({ title })
             </thead>
             <tbody>
               <tr v-for="s in intel.regime.sweep" :key="s.symbol" class="border-b border-default/50 last:border-0">
-                <td class="px-3 py-1.5 text-xs font-semibold text-highlighted">{{ s.symbol }}</td>
-                <td class="px-3 py-1.5 text-xs" :class="s.ok ? 'text-success' : 'text-error'">{{ s.ok ? 'OK' : 'NO' }}</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-muted">{{ s.rate == null ? '—' : `${(s.rate * 100).toFixed(3)}%` }}</td>
-                <td class="px-3 py-1.5 text-[11px] text-dimmed">{{ s.reasons.join(' · ') || '—' }}</td>
-                <td class="px-3 py-1.5 text-[11px] text-error/80">{{ s.blockers.join(' · ') || '—' }}</td>
+                <td class="px-3 py-1 text-xs font-semibold text-highlighted">{{ s.symbol }}</td>
+                <td class="px-3 py-1 text-xs" :class="s.ok ? 'text-success' : 'text-error'">{{ s.ok ? 'OK' : 'NO' }}</td>
+                <td class="px-3 py-1 text-xs font-mono text-muted">{{ s.rate == null ? '—' : `${(s.rate * 100).toFixed(3)}%` }}</td>
+                <td class="px-3 py-1 text-[11px] text-dimmed">{{ s.reasons.join(' · ') || '—' }}</td>
+                <td class="px-3 py-1 text-[11px] text-error/80">{{ s.blockers.join(' · ') || '—' }}</td>
               </tr>
             </tbody>
           </table>
@@ -236,8 +236,8 @@ useHead({ title })
         <p v-if="!intel?.movers?.length" class="text-[11px] text-dimmed">{{ t('intel.empty') }}</p>
         <div v-else class="overflow-x-auto">
           <table class="w-full text-sm">
-            <thead>
-              <tr class="border-b border-default text-[10px] uppercase tracking-wider text-muted">
+            <thead class="bg-muted/50">
+              <tr class="border-b border-default text-[10px] uppercase tracking-wider text-dimmed">
                 <th class="text-left px-3 py-2">{{ t('intel.colSymbol') }}</th>
                 <th class="text-right px-3 py-2">{{ t('intel.colPct24h') }}</th>
                 <th class="text-right px-3 py-2">{{ t('intel.colChg4h') }}</th>
@@ -249,13 +249,13 @@ useHead({ title })
             </thead>
             <tbody>
               <tr v-for="m in intel.movers" :key="m.symbol" class="border-b border-default/50 last:border-0">
-                <td class="px-3 py-1.5 text-xs font-semibold text-highlighted">{{ m.symbol }}</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right" :class="netColor(m.pct24h)">{{ fmtPct(m.pct24h) }}</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right" :class="netColor(m.chg4h)">{{ fmtPct(m.chg4h) }}</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right text-muted">{{ kFmt(m.quoteVolume) }}</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right text-highlighted">{{ fmtPrice(m.lastPrice) }}</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right text-muted">{{ fmtPct(m.atrPct) }}</td>
-                <td class="px-3 py-1.5"><UBadge :label="m.breakout ? t('intel.yes') : t('intel.no')" :color="moverFlagColor(m.breakout)" variant="subtle" size="xs" /></td>
+                <td class="px-3 py-1 text-xs font-semibold text-highlighted">{{ m.symbol }}</td>
+                <td class="px-3 py-1 text-xs font-mono text-right" :class="netColor(m.pct24h)">{{ fmtPct(m.pct24h) }}</td>
+                <td class="px-3 py-1 text-xs font-mono text-right" :class="netColor(m.chg4h)">{{ fmtPct(m.chg4h) }}</td>
+                <td class="px-3 py-1 text-xs font-mono text-right text-muted">{{ kFmt(m.quoteVolume) }}</td>
+                <td class="px-3 py-1 text-xs font-mono text-right text-highlighted">{{ fmtPrice(m.lastPrice) }}</td>
+                <td class="px-3 py-1 text-xs font-mono text-right text-muted">{{ fmtPct(m.atrPct) }}</td>
+                <td class="px-3 py-1"><UBadge :label="m.breakout ? t('intel.yes') : t('intel.no')" :color="moverFlagColor(m.breakout)" variant="subtle" size="xs" /></td>
               </tr>
             </tbody>
           </table>
@@ -268,8 +268,8 @@ useHead({ title })
         <p v-if="!intel?.flows?.length" class="text-[11px] text-dimmed">{{ t('intel.empty') }}</p>
         <div v-else class="overflow-x-auto">
           <table class="w-full text-sm">
-            <thead>
-              <tr class="border-b border-default text-[10px] uppercase tracking-wider text-muted">
+            <thead class="bg-muted/50">
+              <tr class="border-b border-default text-[10px] uppercase tracking-wider text-dimmed">
                 <th class="text-left px-3 py-2">{{ t('intel.colSymbol') }}</th>
                 <th class="text-left px-3 py-2">{{ t('intel.colDir') }}</th>
                 <th class="text-left px-3 py-2">{{ t('intel.colReasons') }}</th>
@@ -281,13 +281,13 @@ useHead({ title })
             </thead>
             <tbody>
               <tr v-for="f in intel.flows" :key="f.symbol" class="border-b border-default/50 last:border-0">
-                <td class="px-3 py-1.5 text-xs font-semibold text-highlighted">{{ f.symbol }}</td>
-                <td class="px-3 py-1.5"><UBadge :label="t(`intel.dir_${f.dir}`)" :color="flowDirColor(f.dir)" variant="subtle" size="xs" /></td>
-                <td class="px-3 py-1.5 text-[11px] text-dimmed truncate max-w-56">{{ f.reasons.join(' · ') || '—' }}</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right text-muted">{{ f.volRatio.toFixed(2) }}x</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right text-muted">{{ fmtPct(f.takerRatio, 1) }}</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right" :class="netColor(f.cmf)">{{ f.cmf.toFixed(3) }}</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right" :class="confScoreClass(f.score)">{{ fmtScore(f.score) }}</td>
+                <td class="px-3 py-1 text-xs font-semibold text-highlighted">{{ f.symbol }}</td>
+                <td class="px-3 py-1"><UBadge :label="t(`intel.dir_${f.dir}`)" :color="flowDirColor(f.dir)" variant="subtle" size="xs" /></td>
+                <td class="px-3 py-1 text-[11px] text-dimmed truncate max-w-56">{{ f.reasons.join(' · ') || '—' }}</td>
+                <td class="px-3 py-1 text-xs font-mono text-right text-muted">{{ f.volRatio.toFixed(2) }}x</td>
+                <td class="px-3 py-1 text-xs font-mono text-right text-muted">{{ fmtPct(f.takerRatio, 1) }}</td>
+                <td class="px-3 py-1 text-xs font-mono text-right" :class="netColor(f.cmf)">{{ f.cmf.toFixed(3) }}</td>
+                <td class="px-3 py-1 text-xs font-mono text-right" :class="confScoreClass(f.score)">{{ fmtScore(f.score) }}</td>
               </tr>
             </tbody>
           </table>
@@ -300,8 +300,8 @@ useHead({ title })
         <p v-if="!intel?.accums?.length" class="text-[11px] text-dimmed">{{ t('intel.empty') }}</p>
         <div v-else class="overflow-x-auto">
           <table class="w-full text-sm">
-            <thead>
-              <tr class="border-b border-default text-[10px] uppercase tracking-wider text-muted">
+            <thead class="bg-muted/50">
+              <tr class="border-b border-default text-[10px] uppercase tracking-wider text-dimmed">
                 <th class="text-left px-3 py-2">{{ t('intel.colSymbol') }}</th>
                 <th class="text-left px-3 py-2">{{ t('intel.colReasons') }}</th>
                 <th class="text-right px-3 py-2">{{ t('intel.colRange') }}</th>
@@ -313,13 +313,13 @@ useHead({ title })
             </thead>
             <tbody>
               <tr v-for="a in intel.accums" :key="a.symbol" class="border-b border-default/50 last:border-0">
-                <td class="px-3 py-1.5 text-xs font-semibold text-highlighted">{{ a.symbol }}</td>
-                <td class="px-3 py-1.5 text-[11px] text-dimmed truncate max-w-56">{{ a.reasons.join(' · ') || '—' }}</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right text-muted">{{ fmtPct(a.rangePct) }}</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right" :class="netColor(a.priceChg48)">{{ fmtPct(a.priceChg48) }}</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right text-muted">{{ a.obvNorm.toFixed(2) }}</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right text-muted">{{ a.volRatio.toFixed(2) }}x</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right" :class="netColor(a.pct24h)">{{ fmtPct(a.pct24h) }}</td>
+                <td class="px-3 py-1 text-xs font-semibold text-highlighted">{{ a.symbol }}</td>
+                <td class="px-3 py-1 text-[11px] text-dimmed truncate max-w-56">{{ a.reasons.join(' · ') || '—' }}</td>
+                <td class="px-3 py-1 text-xs font-mono text-right text-muted">{{ fmtPct(a.rangePct) }}</td>
+                <td class="px-3 py-1 text-xs font-mono text-right" :class="netColor(a.priceChg48)">{{ fmtPct(a.priceChg48) }}</td>
+                <td class="px-3 py-1 text-xs font-mono text-right text-muted">{{ a.obvNorm.toFixed(2) }}</td>
+                <td class="px-3 py-1 text-xs font-mono text-right text-muted">{{ a.volRatio.toFixed(2) }}x</td>
+                <td class="px-3 py-1 text-xs font-mono text-right" :class="netColor(a.pct24h)">{{ fmtPct(a.pct24h) }}</td>
               </tr>
             </tbody>
           </table>
@@ -332,8 +332,8 @@ useHead({ title })
         <p v-if="!intel?.funding?.length" class="text-[11px] text-dimmed">{{ t('intel.empty') }}</p>
         <div v-else class="overflow-x-auto">
           <table class="w-full text-sm">
-            <thead>
-              <tr class="border-b border-default text-[10px] uppercase tracking-wider text-muted">
+            <thead class="bg-muted/50">
+              <tr class="border-b border-default text-[10px] uppercase tracking-wider text-dimmed">
                 <th class="text-left px-3 py-2">{{ t('intel.colSymbol') }}</th>
                 <th class="text-right px-3 py-2">{{ t('intel.colRate') }}</th>
                 <th class="text-right px-3 py-2">{{ t('intel.colPrice') }}</th>
@@ -343,11 +343,11 @@ useHead({ title })
             </thead>
             <tbody>
               <tr v-for="fd in intel.funding" :key="fd.symbol" class="border-b border-default/50 last:border-0">
-                <td class="px-3 py-1.5 text-xs font-semibold text-highlighted">{{ fd.symbol }}</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right" :class="netColor(fd.rate)">{{ (fd.rate * 100).toFixed(4) }}%</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right text-highlighted">{{ fmtPrice(fd.price) }}</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right text-muted">{{ fmtOi(fd.oiNotionalUsd) }}</td>
-                <td class="px-3 py-1.5 text-[11px] text-dimmed">{{ Number.isFinite(fd.nextFundingTime) && fd.nextFundingTime > 0 ? fmtUtc(new Date(fd.nextFundingTime).toISOString()) : '—' }}</td>
+                <td class="px-3 py-1 text-xs font-semibold text-highlighted">{{ fd.symbol }}</td>
+                <td class="px-3 py-1 text-xs font-mono text-right" :class="netColor(fd.rate)">{{ (fd.rate * 100).toFixed(4) }}%</td>
+                <td class="px-3 py-1 text-xs font-mono text-right text-highlighted">{{ fmtPrice(fd.price) }}</td>
+                <td class="px-3 py-1 text-xs font-mono text-right text-muted">{{ fmtOi(fd.oiNotionalUsd) }}</td>
+                <td class="px-3 py-1 text-[11px] text-dimmed">{{ Number.isFinite(fd.nextFundingTime) && fd.nextFundingTime > 0 ? fmtUtc(new Date(fd.nextFundingTime).toISOString()) : '—' }}</td>
               </tr>
             </tbody>
           </table>
@@ -403,8 +403,8 @@ useHead({ title })
         <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('confluence.title') }}</span>
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
-            <thead>
-              <tr class="border-b border-default text-[10px] uppercase tracking-wider text-muted">
+            <thead class="bg-muted/50">
+              <tr class="border-b border-default text-[10px] uppercase tracking-wider text-dimmed">
                 <th class="text-left px-3 py-2">#</th>
                 <th class="text-left px-3 py-2">{{ t('intel.colSymbol') }}</th>
                 <th class="text-right px-3 py-2">{{ t('intel.colScore') }}</th>
@@ -417,17 +417,17 @@ useHead({ title })
             </thead>
             <tbody>
               <tr v-for="c in intel.confluence" :key="c.symbol" class="border-b border-default/50 last:border-0">
-                <td class="px-3 py-1.5 text-xs text-dimmed">{{ c.rank }}</td>
-                <td class="px-3 py-1.5 text-xs font-semibold text-highlighted">
+                <td class="px-3 py-1 text-xs text-dimmed">{{ c.rank }}</td>
+                <td class="px-3 py-1 text-xs font-semibold text-highlighted">
                   {{ c.symbol }}
                   <span class="text-[10px] text-dimmed font-mono ml-1">{{ c.tf }}</span>
                 </td>
-                <td class="px-3 py-1.5 text-sm font-mono font-bold text-right" :class="confScoreClass(c.score)">{{ fmtScore(c.score) }}</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right" :class="confPartClass(c.parts.method)">{{ fmtScore(c.parts.method) }}</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right" :class="confPartClass(c.parts.regime)">{{ fmtScore(c.parts.regime) }}</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right" :class="confPartClass(c.parts.funding)">{{ fmtScore(c.parts.funding) }}</td>
-                <td class="px-3 py-1.5 text-xs font-mono text-right" :class="confPartClass(c.parts.zone)">{{ fmtScore(c.parts.zone) }}</td>
-                <td class="px-3 py-1.5 text-[11px] text-dimmed">{{ fmtUtc(c.ts) }}</td>
+                <td class="px-3 py-1 text-sm font-mono font-bold text-right" :class="confScoreClass(c.score)">{{ fmtScore(c.score) }}</td>
+                <td class="px-3 py-1 text-xs font-mono text-right" :class="confPartClass(c.parts.method)">{{ fmtScore(c.parts.method) }}</td>
+                <td class="px-3 py-1 text-xs font-mono text-right" :class="confPartClass(c.parts.regime)">{{ fmtScore(c.parts.regime) }}</td>
+                <td class="px-3 py-1 text-xs font-mono text-right" :class="confPartClass(c.parts.funding)">{{ fmtScore(c.parts.funding) }}</td>
+                <td class="px-3 py-1 text-xs font-mono text-right" :class="confPartClass(c.parts.zone)">{{ fmtScore(c.parts.zone) }}</td>
+                <td class="px-3 py-1 text-[11px] text-dimmed">{{ fmtUtc(c.ts) }}</td>
               </tr>
             </tbody>
           </table>
