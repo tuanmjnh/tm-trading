@@ -1203,6 +1203,37 @@
     "empty": "No paper orders",
     "emptyHint": "Orders appear when the terminal or the executor submits paper intents."
   },
+  "marketScanner": {
+    "title": "Scanner",
+    "desc": "Live scanner candidates — movers, money flow and accumulation detected by the scanner service, joined to the canonical instrument catalog.",
+    "allTypes": "All",
+    "search": "Search symbol",
+    "signalLabels": {
+      "mover": "Mover",
+      "flow": "Flow",
+      "accum": "Accum"
+    },
+    "breakout": "Breakout",
+    "mongoDown": "Mongo offline",
+    "serviceTip": "Scanner heartbeat — last OK {last}, every {every}s",
+    "sweepSummary": "{passed}/{total} passed regime filter",
+    "regimeDetail": "Market Intelligence",
+    "volTimes": "{n}× vol",
+    "notInCatalog": "Not in catalog",
+    "openTerminal": "Open in Terminal",
+    "columns": {
+      "symbol": "Symbol",
+      "signals": "Signals",
+      "flow": "Flow",
+      "pct24h": "24h",
+      "volume": "Volume",
+      "reasons": "Reasons",
+      "actions": "Actions"
+    },
+    "empty": "No scanner candidates",
+    "emptyHint": "Candidates appear once the scanner service has run (mover / flow / accum snapshots).",
+    "emptyMongo": "Mongo is offline — the scanner service cannot read or write snapshots."
+  },
   "notifications": {
     "title": "Notifications",
     "system": "System",

@@ -1203,6 +1203,37 @@
     "empty": "Chưa có lệnh paper",
     "emptyHint": "Lệnh xuất hiện khi terminal hoặc executor gửi ý định paper."
   },
+  "marketScanner": {
+    "title": "Scanner",
+    "desc": "Ứng viên scanner trực tiếp — biến động, dòng tiền và gom hàng do dịch vụ scanner phát hiện, gắn với danh mục instrument chuẩn.",
+    "allTypes": "Tất cả",
+    "search": "Tìm symbol",
+    "signalLabels": {
+      "mover": "Biến động",
+      "flow": "Dòng tiền",
+      "accum": "Gom hàng"
+    },
+    "breakout": "Bứt phá",
+    "mongoDown": "Mongo ngoại tuyến",
+    "serviceTip": "Nhịp scanner — lần OK gần nhất {last}, mỗi {every}s",
+    "sweepSummary": "{passed}/{total} đạt filter regime",
+    "regimeDetail": "Market Intelligence",
+    "volTimes": "{n}× KL",
+    "notInCatalog": "Không có trong danh mục",
+    "openTerminal": "Mở trong Terminal",
+    "columns": {
+      "symbol": "Symbol",
+      "signals": "Tín hiệu",
+      "flow": "Dòng tiền",
+      "pct24h": "24h",
+      "volume": "Khối lượng",
+      "reasons": "Lý do",
+      "actions": "Thao tác"
+    },
+    "empty": "Chưa có ứng viên scanner",
+    "emptyHint": "Ứng viên xuất hiện sau khi dịch vụ scanner chạy (snapshot mover / flow / accum).",
+    "emptyMongo": "Mongo ngoại tuyến — dịch vụ scanner không đọc/ghi được snapshot."
+  },
   "notifications": {
     "title": "Thông báo",
     "system": "Hệ thống",
