@@ -76,7 +76,7 @@ function formatDate(dateStr: string | null) {
         <UTooltip :text="firstMessage.starred ? t('inbox.unstar') : t('inbox.star')">
           <UButton :icon="firstMessage.starred ? 'i-lucide-star' : 'i-lucide-star'"
             :color="firstMessage.starred ? 'warning' : 'neutral'"
-            :class="firstMessage.starred ? 'text-amber-500 fill-amber-500' : ''" variant="ghost" size="xs"
+            :class="firstMessage.starred ? 'text-warning fill-warning' : ''" variant="ghost" size="xs"
             @click="emit('toggleStar', firstMessage)" />
         </UTooltip>
 
@@ -136,7 +136,7 @@ function formatDate(dateStr: string | null) {
             </time>
             <UTooltip :text="msg.starred ? t('inbox.unstar') : t('inbox.star')">
               <UButton icon="i-lucide-star" :color="msg.starred ? 'warning' : 'neutral'"
-                :class="msg.starred ? 'text-amber-500 fill-amber-500' : ''" variant="ghost" size="xs"
+                :class="msg.starred ? 'text-warning fill-warning' : ''" variant="ghost" size="xs"
                 @click="emit('toggleStar', msg)" />
             </UTooltip>
           </div>

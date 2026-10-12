@@ -97,7 +97,7 @@ useHead({ title: computed(() => t('profile.title')) })
                 <span
                   class="absolute inset-0 flex items-center justify-center bg-primary/60 rounded-full opacity-0 group-hover/avatar:opacity-100 transition-all duration-300 backdrop-blur-sm">
                   <UIcon name="i-lucide-camera"
-                    class="size-5 text-white scale-75 group-hover/avatar:scale-100 transition-transform duration-300" />
+                    class="size-5 text-inverted scale-75 group-hover/avatar:scale-100 transition-transform duration-300" />
                 </span>
               </button>
               <div class="min-w-0">

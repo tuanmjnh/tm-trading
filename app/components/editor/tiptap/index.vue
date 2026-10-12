@@ -740,7 +740,7 @@ const getBubbleItems = (editor: Editor) => {
 <template>
   <ClientOnly>
     <div class="custom-tiptap-editor flex justify-center p-0 rounded-b-md rounded-t-md"
-      :class="[{ 'fixed inset-0 z-50 h-screen! w-screen! bg-white dark:bg-gray-900': isFullscreen }]">
+      :class="[{ 'fixed inset-0 z-50 h-screen! w-screen! bg-default': isFullscreen }]">
       <LazyUEditor v-if="extensions.length" ref="editorRef" v-slot="{ editor, handlers }" v-model="value"
         :content-type="'html'" :extensions="extensions" :handlers="customHandlers"
         :starter-kit="{ link: { autolink: true } }"
@@ -798,7 +798,7 @@ const getBubbleItems = (editor: Editor) => {
       </div> -->
     </div>
     <template #fallback>
-      <div class="border rounded-md p-20 text-center text-gray-400 bg-gray-50">
+      <div class="border border-default rounded-md p-20 text-center text-dimmed bg-muted">
         <UIcon name="i-lucide:monitor" class="w-8 h-8 mx-auto mb-2" />
         {{ $t('common.loading_text') }}
       </div>

@@ -108,9 +108,9 @@ mobileBar.registerInfo(computed(() => ({
           </div>
         </UCard>
 
-        <UCard class="hover:border-emerald-500/40 transition-colors">
+        <UCard class="hover:border-success/40 transition-colors">
           <div class="flex items-center gap-3">
-            <div class="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-500 shrink-0">
+            <div class="p-2.5 rounded-lg bg-success/10 text-success shrink-0">
               <UIcon name="i-lucide-sliders" class="flex w-5 h-5" />
             </div>
             <div class="space-y-1 min-w-0">
@@ -122,9 +122,9 @@ mobileBar.registerInfo(computed(() => ({
           </div>
         </UCard>
 
-        <UCard class="hover:border-amber-500/40 transition-colors">
+        <UCard class="hover:border-warning/40 transition-colors">
           <div class="flex items-center gap-3">
-            <div class="p-2.5 rounded-lg bg-amber-500/10 text-amber-500 shrink-0">
+            <div class="p-2.5 rounded-lg bg-warning/10 text-warning shrink-0">
               <UIcon name="i-lucide-cloud-upload" class="flex w-5 h-5" />
             </div>
             <div class="space-y-1 min-w-0">
@@ -136,9 +136,9 @@ mobileBar.registerInfo(computed(() => ({
           </div>
         </UCard>
 
-        <UCard class="hover:border-rose-500/40 transition-colors">
+        <UCard class="hover:border-error/40 transition-colors">
           <div class="flex items-center gap-3">
-            <div class="p-2.5 rounded-lg bg-rose-500/10 text-rose-500 shrink-0">
+            <div class="p-2.5 rounded-lg bg-error/10 text-error shrink-0">
               <UIcon name="i-lucide-bell-ring" class="flex w-5 h-5" />
             </div>
             <div class="space-y-1 min-w-0">
@@ -161,10 +161,10 @@ mobileBar.registerInfo(computed(() => ({
         </template>
 
         <div class="space-y-3">
-          <p class="text-xs text-neutral-600 dark:text-neutral-300">
+          <p class="text-xs text-toned">
             {{ t('docs.sdk.description', { app: 'tm-tools' }) }}
           </p>
-          <pre class="bg-neutral-900 text-neutral-100 p-4 rounded-lg text-xs overflow-x-auto font-mono">
+          <pre class="bg-muted text-highlighted p-4 rounded-lg text-xs overflow-x-auto font-mono">
         <code>
           import { createHubClient } from 'tm-hub-client'
 
@@ -198,16 +198,16 @@ mobileBar.registerInfo(computed(() => ({
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs border-collapse">
             <thead>
-              <tr class="border-b border-neutral-200 dark:border-neutral-800 text-muted font-medium">
+              <tr class="border-b border-default text-muted font-medium">
                 <th class="py-2.5 px-3">{{ t('docs.api.module') }}</th>
                 <th class="py-2.5 px-3">{{ t('docs.api.method') }}</th>
                 <th class="py-2.5 px-3 font-mono">{{ t('docs.api.endpoint') }}</th>
                 <th class="py-2.5 px-3">{{ t('docs.api.description') }}</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800/60">
+            <tbody class="divide-y divide-default">
               <tr v-for="api in filteredApis" :key="api.path + api.method"
-                class="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/50 transition-colors">
+                class="hover:bg-accented/50 transition-colors">
                 <td class="py-2.5 px-3 font-medium whitespace-nowrap text-highlighted">{{ api.module }}</td>
                 <td class="py-2.5 px-3 whitespace-nowrap">
                   <UBadge :color="getMethodBadgeColor(api.method)" variant="subtle" size="xs">

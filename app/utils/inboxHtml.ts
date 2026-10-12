@@ -46,28 +46,28 @@ export function getAttachmentIcon(mimeType: string, filename: string): { icon: s
   const ext = (filename || '').split('.').pop()?.toLowerCase() || ''
 
   if (mime.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) {
-    return { icon: 'i-lucide-file-image', color: 'text-emerald-500' }
+    return { icon: 'i-lucide-file-image', color: 'text-success' }
   }
   if (mime === 'application/pdf' || ext === 'pdf') {
-    return { icon: 'i-lucide-file-text', color: 'text-rose-500' }
+    return { icon: 'i-lucide-file-text', color: 'text-error' }
   }
   if (mime.includes('zip') || mime.includes('compressed') || ['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) {
-    return { icon: 'i-lucide-file-archive', color: 'text-amber-500' }
+    return { icon: 'i-lucide-file-archive', color: 'text-warning' }
   }
   if (mime.includes('spreadsheet') || mime.includes('excel') || ['xls', 'xlsx', 'csv'].includes(ext)) {
-    return { icon: 'i-lucide-file-spreadsheet', color: 'text-green-600' }
+    return { icon: 'i-lucide-file-spreadsheet', color: 'text-success' }
   }
   if (mime.includes('word') || ['doc', 'docx'].includes(ext)) {
-    return { icon: 'i-lucide-file-text', color: 'text-blue-500' }
+    return { icon: 'i-lucide-file-text', color: 'text-info' }
   }
   if (mime.startsWith('video/') || ['mp4', 'mov', 'avi', 'mkv'].includes(ext)) {
-    return { icon: 'i-lucide-file-video', color: 'text-purple-500' }
+    return { icon: 'i-lucide-file-video', color: 'text-secondary' }
   }
   if (mime.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a'].includes(ext)) {
-    return { icon: 'i-lucide-file-audio', color: 'text-cyan-500' }
+    return { icon: 'i-lucide-file-audio', color: 'text-info' }
   }
   if (mime.includes('json') || mime.includes('javascript') || ['json', 'js', 'ts', 'html', 'css', 'py'].includes(ext)) {
-    return { icon: 'i-lucide-file-code', color: 'text-orange-500' }
+    return { icon: 'i-lucide-file-code', color: 'text-warning' }
   }
   return { icon: 'i-lucide-paperclip', color: 'text-muted' }
 }

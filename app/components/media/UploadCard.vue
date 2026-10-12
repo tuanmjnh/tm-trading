@@ -34,8 +34,8 @@ const onDrop = (e: DragEvent) => {
 
 <template>
   <div
-    class="w-full h-full border border-dashed rounded-xl overflow-hidden transition flex flex-col items-center justify-center gap-2 bg-gray-50 dark:bg-gray-800/50 p-6"
-    :class="[isDragOver ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/10' : 'border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-400']"
+    class="w-full h-full border border-dashed rounded-xl overflow-hidden transition flex flex-col items-center justify-center gap-2 bg-muted p-6"
+    :class="[isDragOver ? 'border-primary bg-primary/10' : 'border-default hover:border-primary']"
     @dragover="onDragOver"
     @dragleave="onDragLeave"
     @drop="onDrop"
@@ -45,10 +45,10 @@ const onDrop = (e: DragEvent) => {
         <UIcon name="i-lucide-upload" class="size-5" />
       </p>
       <div v-if="dropText !== 'hidden'">
-        <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <p class="text-sm font-medium text-highlighted">
           {{ dropText || $t('media.drop_text', 'Drop files here to upload') }}
         </p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">
+        <p class="text-xs text-muted mt-1 mb-2">
           {{ descriptionText || $t('media.upload_click_text', 'Click to choose upload method') }}
         </p>
       </div>

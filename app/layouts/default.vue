@@ -75,7 +75,7 @@ const groups = computed<CommandPaletteGroup[]>(() => [
 
 <template>
   <UDashboardGroup unit="rem" class="pb-14 lg:pb-0">
-    <UDashboardSidebar id="default" v-model:open="open" collapsible resizable class="bg-elevated/25"
+    <UDashboardSidebar id="default" v-model:open="open" collapsible resizable class="bg-muted"
       :ui="{ footer: 'lg:border-t lg:border-default' }">
       <template #header="{ collapsed }">
         <LazyDashboardTeamsMenu :collapsed="collapsed" />

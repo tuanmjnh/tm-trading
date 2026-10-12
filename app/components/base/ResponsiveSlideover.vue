@@ -60,12 +60,12 @@ const sideTransitions: Record<string, string> = {
 // - close: remove absolute top-4/end-4 to avoid overlapping header-right buttons,
 //   convert to in-flow, hidden on mobile (replaced by left back button)
 const defaultUi: Record<string, unknown> = {
-  header: 'flex items-center gap-2 justify-between w-full border-b border-gray-200 dark:border-gray-800 px-4 py-3',
+  header: 'flex items-center gap-2 justify-between w-full border-b border-default px-4 py-3',
   wrapper: 'min-w-0 flex-1',
   close: 'relative top-auto end-auto shrink-0 max-sm:hidden',
   body: 'flex-1 overflow-y-auto p-4 sm:p-6',
   content: 'w-screen max-w-xl flex flex-col',
-  footer: 'flex items-center justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50'
+  footer: 'flex items-center justify-end gap-2 px-4 py-3 border-t border-default bg-elevated'
 }
 
 const uiConfig = computed(() => {

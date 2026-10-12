@@ -242,7 +242,7 @@ defineShortcuts({
           <button type="button" class="pt-0.5 shrink-0 text-muted hover:text-warning transition-colors cursor-pointer"
             @click.stop="emit('toggleStar', mail)">
             <UIcon name="i-lucide-star" class="size-4 transition-transform hover:scale-110"
-              :class="[mail.starred ? 'text-amber-500 fill-amber-500' : 'text-muted']" />
+              :class="[mail.starred ? 'text-warning fill-warning' : 'text-muted']" />
           </button>
 
           <!-- Avatar / Initials -->

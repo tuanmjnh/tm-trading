@@ -24,11 +24,11 @@ const { t } = useI18n()
 
 const folders: FolderItem[] = [
   { id: 'inbox', labelKey: 'inbox.folderInbox', icon: 'i-lucide-inbox', query: 'in:inbox' },
-  { id: 'starred', labelKey: 'inbox.folderStarred', icon: 'i-lucide-star', query: 'is:starred', color: 'text-amber-500' },
+  { id: 'starred', labelKey: 'inbox.folderStarred', icon: 'i-lucide-star', query: 'is:starred', color: 'text-warning' },
   { id: 'sent', labelKey: 'inbox.folderSent', icon: 'i-lucide-send', query: 'in:sent' },
   { id: 'drafts', labelKey: 'inbox.folderDrafts', icon: 'i-lucide-file-text', query: 'in:draft' },
-  { id: 'spam', labelKey: 'inbox.folderSpam', icon: 'i-lucide-alert-circle', query: 'in:spam', color: 'text-orange-500' },
-  { id: 'trash', labelKey: 'inbox.folderTrash', icon: 'i-lucide-trash-2', query: 'in:trash', color: 'text-rose-500' }
+  { id: 'spam', labelKey: 'inbox.folderSpam', icon: 'i-lucide-alert-circle', query: 'in:spam', color: 'text-warning' },
+  { id: 'trash', labelKey: 'inbox.folderTrash', icon: 'i-lucide-trash-2', query: 'in:trash', color: 'text-error' }
 ]
 
 function selectFolder(f: FolderItem) {
@@ -60,7 +60,7 @@ function selectFolder(f: FolderItem) {
         <div class="flex items-center gap-2.5 min-w-0">
           <UIcon :name="folder.icon" class="size-4 shrink-0 transition-transform group-hover:scale-110" :class="[
             activeFolder === folder.id ? 'text-primary' : (folder.color || 'text-muted group-hover:text-highlighted'),
-            folder.id === 'starred' && activeFolder === 'starred' ? 'fill-amber-500' : ''
+            folder.id === 'starred' && activeFolder === 'starred' ? 'fill-warning' : ''
           ]" />
           <span class="truncate">{{ t(folder.labelKey) }}</span>
         </div>

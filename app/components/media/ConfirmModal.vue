@@ -59,13 +59,13 @@ const onCancel = () => {
           <UIcon
             :name="icon"
             class="w-5 h-5 shrink-0"
-            :class="[color === 'error' ? 'text-red-500 dark:text-red-400' : 'text-primary-500']"
+            :class="[color === 'error' ? 'text-error' : 'text-primary']"
           />
           <div class="flex flex-col">
-            <h2 class="text-base font-semibold leading-6 text-gray-900 dark:text-white">
+            <h2 class="text-base font-semibold leading-6 text-highlighted">
               {{ $t('confirm.delete_title', 'Confirm Delete') }}
             </h2>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            <p class="text-sm text-muted">
               {{ $t('confirm.delete_desc_name', [file?.display_name || file?.public_id], `Are you sure you want to
               permanently delete
               ${file?.display_name || file?.public_id}? This action cannot be undone.`) }}
@@ -75,10 +75,10 @@ const onCancel = () => {
       </div>
     </template>
     <template #body>
-      <div v-if="file" class="flex items-center gap-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
+      <div v-if="file" class="flex items-center gap-4 p-4 border rounded-lg bg-muted">
         <div
           v-if="file.thumbnail_url || file.url"
-          class="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border border-gray-200 dark:border-gray-700 flex items-center justify-center p-1"
+          class="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border border-default flex items-center justify-center p-1"
         >
           <div v-if="isRawSvg(file.url || '')" class="h-full w-full [&>svg]:w-full [&>svg]:h-full" v-html="sanitizeSvg(file.url || '')" />
           <img
@@ -98,14 +98,14 @@ const onCancel = () => {
             height="64"
           />
         </div>
-        <div v-else class="flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-gray-100 dark:bg-gray-700">
-          <UIcon name="i-lucide-file" class="h-8 w-8 text-gray-400" />
+        <div v-else class="flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-elevated">
+          <UIcon name="i-lucide-file" class="h-8 w-8 text-dimmed" />
         </div>
         <div class="min-w-0 flex-1">
-          <p class="truncate text-sm font-medium text-gray-900 dark:text-white">
+          <p class="truncate text-sm font-medium text-highlighted">
             {{ file.display_name || file.public_id || file.name || 'Unknown File' }}
           </p>
-          <p v-if="file.format" class="text-xs text-gray-500 dark:text-gray-400 uppercase">
+          <p v-if="file.format" class="text-xs text-muted uppercase">
             {{ file.format }}
           </p>
         </div>

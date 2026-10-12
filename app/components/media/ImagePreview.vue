@@ -96,7 +96,7 @@ const getAlt = computed(() => {
     v-model:open="isOpen"
     fullscreen
     :title="$t('common.slideshow') || 'Preview'"
-    :ui="{ body: 'sm:p-0 p-0 flex-1 flex flex-col bg-gray-50 dark:bg-gray-950/80 backdrop-blur-sm overflow-hidden' }"
+    :ui="{ body: 'sm:p-0 p-0 flex-1 flex flex-col bg-muted backdrop-blur-sm overflow-hidden' }"
   >
     <template #header-right>
       <UButton
@@ -113,17 +113,17 @@ const getAlt = computed(() => {
         <!-- Custom Navigation -->
         <button
           v-if="carouselItems.length > 1"
-          class="flex absolute left-4 top-1/2 -translate-y-1/2 z-50 p-2 rounded-full bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 shadow-lg backdrop-blur-sm transition-all cursor-pointer"
+          class="flex absolute left-4 top-1/2 -translate-y-1/2 z-50 p-2 rounded-full bg-elevated/80 hover:bg-elevated shadow-lg backdrop-blur-sm transition-all cursor-pointer"
           @click.stop="carouselRef?.emblaApi?.scrollPrev()"
         >
-          <UIcon name="i-lucide-chevron-left" class="w-6 h-6 text-gray-900 dark:text-gray-100" />
+          <UIcon name="i-lucide-chevron-left" class="w-6 h-6 text-highlighted" />
         </button>
         <button
           v-if="carouselItems.length > 1"
-          class="flex absolute right-4 top-1/2 -translate-y-1/2 z-50 p-2 rounded-full bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 shadow-lg backdrop-blur-sm transition-all cursor-pointer"
+          class="flex absolute right-4 top-1/2 -translate-y-1/2 z-50 p-2 rounded-full bg-elevated/80 hover:bg-elevated shadow-lg backdrop-blur-sm transition-all cursor-pointer"
           @click.stop="carouselRef?.emblaApi?.scrollNext()"
         >
-          <UIcon name="i-lucide-chevron-right" class="w-6 h-6 text-gray-900 dark:text-gray-100" />
+          <UIcon name="i-lucide-chevron-right" class="w-6 h-6 text-highlighted" />
         </button>
         <UCarousel
           ref="carouselRef"
@@ -139,17 +139,17 @@ const getAlt = computed(() => {
               <!-- Loading State -->
               <div
                 v-if="!imageLoaded[getItemKey(item)] && !isRawSvg(item.url || '') && !isIconify(item.url || '')"
-                class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm z-0"
+                class="absolute inset-0 flex items-center justify-center text-dimmed text-sm z-0"
               >
                 <UIcon name="i-lucide-loader-2" class="w-12 h-12 animate-spin" />
               </div>
               <!-- Error Overlay -->
               <div
                 v-if="imageError[getItemKey(item)]"
-                class="absolute inset-0 bg-red-100/90 dark:bg-red-900/50 flex flex-col gap-2 items-center justify-center p-4 z-10"
+                class="absolute inset-0 bg-error/10 flex flex-col gap-2 items-center justify-center p-4 z-10"
               >
-                <UIcon name="i-lucide-alert-circle" class="w-10 h-10 text-red-600/80 dark:text-red-400" />
-                <p class="text-sm text-red-700 dark:text-red-300 font-semibold text-center">
+                <UIcon name="i-lucide-alert-circle" class="w-10 h-10 text-error" />
+                <p class="text-sm text-error font-semibold text-center">
                   {{ $t('media.error_text', errorText) }}
                 </p>
               </div>
@@ -166,7 +166,7 @@ const getAlt = computed(() => {
                 <div v-else-if="isIconify(item.url || '')" class="flex items-center justify-center w-full h-full">
                   <UIcon
                     :name="item.url || ''"
-                    class="w-32 h-32 text-primary-500 transition-all duration-300 transform scale-110"
+                    class="w-32 h-32 text-primary transition-all duration-300 transform scale-110"
                   />
                 </div>
 
@@ -202,25 +202,25 @@ const getAlt = computed(() => {
     <template #footer>
       <div v-if="currentItem" class="w-full">
         <div
-          class="w-full max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-sm text-gray-700 dark:text-gray-300 justify-items-center text-center"
+          class="w-full max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-sm text-highlighted justify-items-center text-center"
         >
           <div class="w-full truncate" :title="currentItem.public_id || ''">
-            <strong class="block text-xs uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-0.5">Public
+            <strong class="block text-xs uppercase tracking-wider text-muted mb-0.5">Public
               ID</strong>
             {{ currentItem.public_id || naText }}
           </div>
           <div class="w-full truncate" :title="currentItem.display_name || ''">
-            <strong class="block text-xs uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-0.5">{{
+            <strong class="block text-xs uppercase tracking-wider text-muted mb-0.5">{{
               $t('media.name_label', nameLabel) }}</strong>
             {{ currentItem.display_name || naText }}
           </div>
           <div class="w-full">
-            <strong class="block text-xs uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-0.5">{{
+            <strong class="block text-xs uppercase tracking-wider text-muted mb-0.5">{{
               $t('media.format_label', formatLabel) }}</strong>
             <span class="uppercase badge">{{ currentItem.format || naText }}</span>
           </div>
           <div class="w-full">
-            <strong class="block text-xs uppercase tracking-wider text-gray-500 dark:text-gray-500 mb-0.5">{{
+            <strong class="block text-xs uppercase tracking-wider text-muted mb-0.5">{{
               $t('media.size_label', sizeLabel) }}</strong>
             {{ getFormattedSize(currentItem.bytes) }}
           </div>

@@ -163,39 +163,39 @@ const handleUpload = async () => {
       <div class="p-3">
         <div class="space-y-2 max-h-[80vh] sm:max-h-[60vh] overflow-y-auto pr-2">
           <div v-for="(file, index) in fileList" :key="index"
-            class="flex items-center gap-4 p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+            class="flex items-center gap-4 p-3 border border-default rounded-lg bg-muted">
             <!-- File Icon/Preview -->
-            <div class="shrink-0 w-12 h-12 rounded overflow-hidden bg-gray-100 flex items-center justify-center">
+            <div class="shrink-0 w-12 h-12 rounded overflow-hidden bg-elevated flex items-center justify-center">
               <template v-if="previews[file.name]">
                 <img v-if="isSpecialImage(file.name)" :src="previews[file.name]" class="w-full h-full object-cover"
                   alt="Preview">
                 <NuxtImg v-else :src="previews[file.name]" class="w-full h-full object-cover" alt="Preview" />
               </template>
-              <UIcon v-else name="i-lucide-file-image" class="w-8 h-8 text-gray-400" />
+              <UIcon v-else name="i-lucide-file-image" class="w-8 h-8 text-dimmed" />
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex justify-between items-center mb-1">
-                <p class="font-medium truncate text-gray-900 dark:text-white">
+                <p class="font-medium truncate text-highlighted">
                   {{ file.name }}
                 </p>
-                <p class="text-sm text-gray-500">
+                <p class="text-sm text-muted">
                   {{ formatFileSize(file.size) }}
                 </p>
               </div>
               <!-- Progress Bar -->
               <div v-if="uploading && uploadStatus[file.name] !== 'error' && uploadStatus[file.name] !== 'success'">
                 <UProgress :model-value="uploadProgress[file.name]" :max="100" size="xs" color="primary" />
-                <p class="text-xs text-gray-500 mt-1 text-right">
+                <p class="text-xs text-muted mt-1 text-right">
                   {{ Math.round(uploadProgress[file.name] || 0) }}%
                 </p>
               </div>
-              <div v-else-if="uploadStatus[file.name] === 'error'" class="text-red-500 text-xs">
+              <div v-else-if="uploadStatus[file.name] === 'error'" class="text-error text-xs">
                 {{ $t('media.upload_error') }}
               </div>
             </div>
             <UButton v-if="!uploading && uploadStatus[file.name] !== 'success'" color="error" variant="ghost"
               icon="i-lucide-trash-2" size="sm" @click="removeFile(index)" />
-            <div v-else-if="uploadStatus[file.name] === 'success'" class="text-green-500">
+            <div v-else-if="uploadStatus[file.name] === 'success'" class="text-success">
               <UIcon name="i-lucide-check-circle" class="w-5 h-5" />
             </div>
           </div>
@@ -204,7 +204,7 @@ const handleUpload = async () => {
     </template>
     <template #footer>
       <div class="flex items-center justify-between w-full">
-        <p class="text-sm text-gray-600 dark:text-gray-400 font-medium">
+        <p class="text-sm text-toned font-medium">
           {{ fileList.length }} {{ $t('media.selected_files_text', 'file(s) selected') }}
         </p>
         <div class="flex gap-2">

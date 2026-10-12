@@ -60,7 +60,7 @@ const onPreview = (file: Cloudinary.IFileAttach) => {
         <div
           v-for="i in 32"
           :key="i"
-          class="w-[calc(50%-10px)] sm:w-[220px] aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0"
+          class="w-[calc(50%-10px)] sm:w-[220px] aspect-square rounded-xl overflow-hidden bg-elevated shrink-0"
         >
           <USkeleton class="w-full h-full" />
         </div>
@@ -70,10 +70,10 @@ const onPreview = (file: Cloudinary.IFileAttach) => {
     <!-- Empty State -->
     <div
       v-else-if="files.length === 0"
-      class="flex-1 flex flex-col items-center justify-center text-center text-gray-500 py-10"
+      class="flex-1 flex flex-col items-center justify-center text-center text-muted py-10"
     >
       <svg
-        class="w-16 h-16 mx-auto mb-4 text-gray-400 opacity-20"
+        class="w-16 h-16 mx-auto mb-4 text-dimmed opacity-20"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"

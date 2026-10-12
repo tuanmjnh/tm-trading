@@ -165,7 +165,7 @@ const onPreview = (file: Cloudinary.IFileAttach) => {
 
         <!-- Preview Section -->
         <div
-          class="h-[39vh] md:h-[32vh] mb-6 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/30 dark:bg-gray-800/20 gap-4 overflow-y-auto grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] w-full justify-items-center transition-all shadow-inner"
+          class="h-[39vh] md:h-[32vh] mb-6 border-2 border-dashed border-default rounded-xl p-4 bg-muted/30 gap-4 overflow-y-auto grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] w-full justify-items-center transition-all shadow-inner"
         >
           <LazyMediaImageCard
             v-for="(file, index) in previewFiles"
@@ -182,7 +182,7 @@ const onPreview = (file: Cloudinary.IFileAttach) => {
 
         <!-- History Section -->
         <div v-if="mediaStore.linkHistory.value.length > 0">
-          <div class="text-sm font-semibold text-gray-500 mb-3 flex justify-between items-center px-1">
+          <div class="text-sm font-semibold text-muted mb-3 flex justify-between items-center px-1">
             <span class="flex items-center gap-2">
               <UIcon name="i-lucide-history" class="w-4 h-4" />
               {{ $t('media.history') }}
@@ -199,7 +199,7 @@ const onPreview = (file: Cloudinary.IFileAttach) => {
           </div>
           <div
             ref="historyContainer"
-            class="h-[26vh] md:h-[22vh] overflow-y-auto grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2 border border-gray-200 dark:border-gray-700 rounded-lg p-2 bg-white/50 dark:bg-gray-900/50"
+            class="h-[26vh] md:h-[22vh] overflow-y-auto grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2 border border-default rounded-lg p-2 bg-elevated/50"
           >
             <LazyMediaImageCard
               v-for="link in displayedHistory"
@@ -220,7 +220,7 @@ const onPreview = (file: Cloudinary.IFileAttach) => {
             />
             <div
               v-if="displayedHistory.length < mediaStore.linkHistory.value.length"
-              class="col-span-full text-xs text-center py-2 text-gray-400 font-medium"
+              class="col-span-full text-xs text-center py-2 text-dimmed font-medium"
             >
               {{ $t('common.scroll_load') }}
             </div>

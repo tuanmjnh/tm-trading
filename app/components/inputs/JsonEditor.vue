@@ -53,7 +53,7 @@ const handleBlur = () => {
         :on-blur="handleBlur" @update:model-value="onUpdate" />
       <template #fallback>
         <div
-          class="h-full w-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-md border border-gray-200 dark:border-gray-700">
+          class="h-full w-full flex items-center justify-center bg-elevated text-muted rounded-md border border-default">
           <UIcon name="i-lucide-loader-2" class="animate-spin mr-2" />
           {{ $t('common.loading') }}...
         </div>
@@ -78,13 +78,10 @@ const handleBlur = () => {
 
 /* Dark mode overrides if not automatically handled by the class */
 .jse-theme-dark {
-  --jse-theme-color: #3b82f6;
+  --jse-theme-color: var(--ui-primary);
   --jse-text-color-inverse: #ffffff;
-  --jse-background-color: #1f2937;
-  /* gray-800 */
-  --jse-panel-background: #374151;
-  /* gray-700 */
-  --jse-panel-border: #4b5563;
-  /* gray-600 */
+  --jse-background-color: var(--ui-bg-elevated);
+  --jse-panel-background: var(--ui-bg-accented);
+  --jse-panel-border: var(--ui-border);
 }
 </style>

@@ -351,15 +351,15 @@ defineExpose({
       >
         <template #default="{ node, stat }">
           <div
-            class="group flex flex-col mb-2 py-2 px-3 rounded-lg border border-gray-300/50 dark:border-gray-700/50 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm shadow-xs transition-all hover:bg-white/60 dark:hover:bg-gray-800/60 hover:shadow-md hover:border-primary-500/50"
-            :class="[classNode, { 'bg-blue-50/50! dark:bg-sky-300/20! border-sky-500/50 dark:border-sky-800/50': isSelected(node) }]"
+            class="group flex flex-col mb-2 py-2 px-3 rounded-lg border border-default bg-elevated/40 backdrop-blur-sm shadow-xs transition-all hover:bg-elevated/70 hover:shadow-md hover:border-primary/50"
+            :class="[classNode, { 'bg-primary/10! border-primary/40!': isSelected(node) }]"
             @contextmenu.prevent="(e: any) => handleContextMenu(node, e)"
           >
             <div class="flex items-center gap-2">
               <div
                 v-if="draggable"
                 :class="dragTriggerClass"
-                class="flex cursor-move p-1 text-gray-400 opacity-50 group-hover:opacity-100"
+                class="flex cursor-move p-1 text-dimmed opacity-50 group-hover:opacity-100"
               >
                 <UIcon name="i-lucide-grip-vertical" class="w-4 h-4" />
               </div>
@@ -377,14 +377,14 @@ defineExpose({
                 <UIcon
                   v-if="node.icon || defaultIcon"
                   :name="node.icon || defaultIcon"
-                  class="w-4 h-4 text-gray-500 dark:text-gray-400"
+                  class="w-4 h-4 text-dimmed"
                 />
               </slot>
 
               <div class="flex-1 min-w-0 cursor-pointer select-none" @click="onNodeClick(node)">
                 <div class="flex flex-col">
                   <slot name="title" :node="node" :stat="stat">
-                    <span class="text-sm font-medium text-gray-700 dark:text-gray-200 truncate block">
+                    <span class="text-sm font-medium text-highlighted truncate block">
                       {{ node[fieldNames.label] }}
                     </span>
                   </slot>
@@ -397,13 +397,13 @@ defineExpose({
 
                 <button
                   type="button"
-                  class="flex items-center justify-center w-5 h-5 mr-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors focus:outline-none"
+                  class="flex items-center justify-center w-5 h-5 mr-0.5 rounded hover:bg-accented transition-colors focus:outline-none"
                   :class="{ 'invisible pointer-events-none': !node[fieldNames.children]?.length }"
                   @click.stop="toggleNode(node, stat)"
                 >
                   <UIcon
                     name="i-lucide-chevron-right"
-                    class="text-gray-500 transition-transform duration-200"
+                    class="text-muted transition-transform duration-200"
                     :class="{ 'rotate-90': stat.open }"
                   />
                 </button>
@@ -415,7 +415,7 @@ defineExpose({
             <!-- Mobile Extra Slot (Visible only on mobile) -->
             <div
               v-if="$slots['mobile-extra']"
-              class="block lg:hidden px-3 pb-3 -mt-1 ml-10 sm:ml-12 border-t border-gray-100 dark:border-gray-800/10 pt-2"
+              class="block lg:hidden px-3 pb-3 -mt-1 ml-10 sm:ml-12 border-t border-muted pt-2"
             >
               <slot name="mobile-extra" :node="node" :stat="stat" />
             </div>
@@ -447,7 +447,7 @@ defineExpose({
 
 <style>
 .he-tree-drag-placeholder {
-  background: #3b82f6 !important;
+  background: var(--ui-primary) !important;
   height: 2px !important;
 }
 
@@ -456,18 +456,18 @@ defineExpose({
 }
 
 .tree-vline {
-  background-color: #e5e7eb;
+  background-color: var(--ui-border-muted);
 }
 
 .dark .tree-vline {
-  background-color: #374151;
+  background-color: var(--ui-border);
 }
 
 .tree-hline {
-  background-color: #e5e7eb;
+  background-color: var(--ui-border-muted);
 }
 
 .dark .tree-hline {
-  background-color: #374151;
+  background-color: var(--ui-border);
 }
 </style>

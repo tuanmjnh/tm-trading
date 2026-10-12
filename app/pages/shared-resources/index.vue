@@ -66,14 +66,14 @@ const toFile = (link: string) => ({
             <!-- Empty state -->
             <div
               v-else-if="mediaStore.linkHistory.value.length === 0"
-              class="h-full px-4 sm:px-6 py-4 flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50"
+              class="h-full px-4 sm:px-6 py-4 flex items-center justify-center border-2 border-dashed border-default rounded-lg bg-muted"
             >
               <div class="text-center">
-                <UIcon name="i-lucide-computer" class="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                <UIcon name="i-lucide-computer" class="w-12 h-12 text-dimmed mx-auto mb-4" />
+                <h3 class="text-lg font-medium text-highlighted mb-2">
                   {{ t('media.local_storage') }}
                 </h3>
-                <p class="text-gray-500 dark:text-gray-400">
+                <p class="text-muted">
                   {{ t('media.no_history') }}
                 </p>
               </div>
@@ -93,11 +93,11 @@ const toFile = (link: string) => ({
               </div>
               <!-- Manual Absolute Footer (Glassmorphism) -->
               <div
-                class="fixed sm:absolute bottom-0 left-0 right-0 z-50 py-4 sm:py-3 px-5 sm:px-6 bg-white/80 dark:bg-gray-900/80 sm:bg-white/10 sm:dark:bg-gray-900/10 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 flex items-center justify-between gap-3 shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.05)] sm:shadow-none"
+                class="fixed sm:absolute bottom-0 left-0 right-0 z-50 py-4 sm:py-3 px-5 sm:px-6 bg-elevated/80 sm:bg-elevated/10 backdrop-blur-md border-t border-default flex items-center justify-between gap-3 shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.05)] sm:shadow-none"
               >
                 <!-- Left: Totals -->
                 <div class="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
-                  <span class="text-xs uppercase tracking-wider opacity-50 font-bold text-gray-500 dark:text-gray-400">
+                  <span class="text-xs uppercase tracking-wider opacity-50 font-bold text-muted">
                     {{ t('common.total') }}
                   </span>
                   <span class="text-primary text-xs">

@@ -194,7 +194,7 @@ const availableActions = computed(() => {
 
   return [items]
 })
-const DEFAULT_CARD_CLASSES = 'relative rounded-xl overflow-hidden group transition-transform duration-200 bg-white dark:bg-gray-800'
+const DEFAULT_CARD_CLASSES = 'relative rounded-xl overflow-hidden group transition-transform duration-200 bg-default'
 watch(() => getImage(props.file, ['secure_url', 'thumbnail_url', 'url']), (newVal, oldVal) => {
   if (newVal !== oldVal) {
     imageError.value = false
@@ -210,14 +210,14 @@ watch(() => getImage(props.file, ['secure_url', 'thumbnail_url', 'url']), (newVa
       DEFAULT_CARD_CLASSES,
       !isNoFile ? 'cursor-pointer hover:shadow-lg' : 'cursor-default',
       isSelected
-        ? 'border border-primary-500 ring-2 ring-primary-500/20 shadow-md'
-        : 'border border-gray-200 dark:border-gray-700'
+        ? 'border border-primary ring-2 ring-primary/20 shadow-md'
+        : 'border border-default'
     ]"
     :style="{ width: cardSize.width, height: cardSize.height }"
   >
-    <!-- <div class="flex items-center justify-center bg-gray-200 dark:bg-gray-700 animate-pulse absolute inset-0 z-10"
+    <!-- <div class="flex items-center justify-center bg-accented animate-pulse absolute inset-0 z-10"
       :style="{ width: '100%', height: cardSize.height }">
-      <svg class="w-16 h-16 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+      <svg class="w-16 h-16 text-dimmed" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
         stroke-width="1.5" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round"
           d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
@@ -236,11 +236,11 @@ watch(() => getImage(props.file, ['secure_url', 'thumbnail_url', 'url']), (newVa
       <!-- IMAGE ERROR -->
       <div
         v-if="imageError"
-        class="flex flex-col items-center justify-center text-center bg-gray-100 dark:bg-gray-800 absolute inset-0 z-10"
+        class="flex flex-col items-center justify-center text-center bg-elevated absolute inset-0 z-10"
         :style="{ width: '100%', height: cardSize.height }"
       >
         <svg
-          class="w-8 h-8 text-red-500/80 dark:text-red-400/80 mb-1"
+          class="w-8 h-8 text-error/80 mb-1"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -253,7 +253,7 @@ watch(() => getImage(props.file, ['secure_url', 'thumbnail_url', 'url']), (newVa
           />
         </svg>
         <span
-          class="text-[10px] flex w-full text-gray-500 font-medium items-center justify-center px-2 text-center whitespace-normal"
+          class="text-[10px] flex w-full text-muted font-medium items-center justify-center px-2 text-center whitespace-normal"
         >
           {{ $t('media.error_text', errorText) }}
         </span>
@@ -261,16 +261,16 @@ watch(() => getImage(props.file, ['secure_url', 'thumbnail_url', 'url']), (newVa
       <!-- LOADING SKELETON -->
       <div
         v-if="!imageLoaded && !imageError"
-        class="flex items-center justify-center bg-gray-200 dark:bg-gray-700 animate-pulse absolute inset-0 z-10"
+        class="flex items-center justify-center bg-accented animate-pulse absolute inset-0 z-10"
         :style="{ width: '100%', height: cardSize.height }"
       >
-        <!-- <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <!-- <svg class="w-8 h-8 text-dimmed" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M4 16l4.586-4.586a2 2 0 012.828 0L14 14m0 0l-1.586-1.586a2 2 0 00-2.828 0L7 16m0 0l-1.586-1.586a2 2 0 00-2.828 0L2 14v4a2 2 0 002 2h16a2 2 0 002-2v-4a2 2 0 00-2-2h-3m-6 3h.01M16 11H8">
           </path>
         </svg> -->
         <svg
-          class="w-16 h-16 text-gray-400"
+          class="w-16 h-16 text-dimmed"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -289,7 +289,7 @@ watch(() => getImage(props.file, ['secure_url', 'thumbnail_url', 'url']), (newVa
         <img class="hidden" :src="'/favicon.ico'" @load="handleImageLoad">
         <div
           v-if="isRawSvg(file?.url || '')"
-          class="w-full h-full p-2 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full text-gray-700 dark:text-gray-200"
+          class="w-full h-full p-2 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full text-highlighted"
           :style="{ width: cardSize.width, height: cardSize.full ? 'auto' : cardSize.height }"
           v-html="sanitizeSvg(file?.url || '')"
         />
@@ -335,11 +335,11 @@ watch(() => getImage(props.file, ['secure_url', 'thumbnail_url', 'url']), (newVa
               :color="isSelected ? 'primary' : 'neutral'"
               variant="link"
               size="xs"
-              class="flex p-1.5 rounded-full backdrop-blur-md shadow-lg border transition-colors duration-100 text-white!"
+              class="flex p-1.5 rounded-full backdrop-blur-md shadow-lg border transition-colors duration-100 text-inverted!"
               :class="[
                 isSelected
-                  ? 'bg-primary-500/80 border-primary-400'
-                  : 'bg-gray-500/10 border-white/20 hover:bg-gray-500/20'
+                  ? 'bg-primary/80 border-primary'
+                  : 'bg-accented/10 border-inverted/20 hover:bg-accented/20'
               ]"
               @click.stop
             />
@@ -365,7 +365,7 @@ watch(() => getImage(props.file, ['secure_url', 'thumbnail_url', 'url']), (newVa
       <!-- NAME OVERLAY -->
       <div
         v-if="showName && !isNoFile"
-        class="absolute bottom-0 left-0 right-0 bg-black/20 text-white/90 text-[10px] p-1 truncate text-center backdrop-blur-[1px] transition-opacity duration-300"
+        class="absolute bottom-0 left-0 right-0 bg-default/20 text-inverted/90 text-[10px] p-1 truncate text-center backdrop-blur-[1px] transition-opacity duration-300"
       >
         {{ file?.[labelKey] || file?.public_id }}
       </div>

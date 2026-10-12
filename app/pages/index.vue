@@ -92,8 +92,8 @@ const cards = computed(() => [
     hint: t('dashboard.seriesHint'),
     icon: 'i-lucide-layers-3',
     // Class day du (khong dung template string) de Tailwind scan thay va sinh class.
-    valueClass: 'text-primary-500 dark:text-primary-400',
-    iconClass: 'bg-primary/10 text-primary-500'
+    valueClass: 'text-primary',
+    iconClass: 'bg-primary/10 text-primary'
   },
   {
     key: 'runs',
@@ -101,8 +101,8 @@ const cards = computed(() => [
     value: String(totalRuns.value),
     hint: t('dashboard.totalRunsHint'),
     icon: 'i-lucide-flask-conical',
-    valueClass: 'text-emerald-500 dark:text-emerald-400',
-    iconClass: 'bg-emerald-500/10 text-emerald-500'
+    valueClass: 'text-success',
+    iconClass: 'bg-success/10 text-success'
   },
   {
     key: 'trades',
@@ -110,8 +110,8 @@ const cards = computed(() => [
     value: String(totalTrades.value),
     hint: t('dashboard.totalTradesHint'),
     icon: 'i-lucide-list-ordered',
-    valueClass: 'text-indigo-500 dark:text-indigo-400',
-    iconClass: 'bg-indigo-500/10 text-indigo-500'
+    valueClass: 'text-secondary',
+    iconClass: 'bg-secondary/10 text-secondary'
   },
   {
     key: 'warnings',
@@ -120,11 +120,11 @@ const cards = computed(() => [
     hint: t('dashboard.dataWarningsHint'),
     icon: 'i-lucide-triangle-alert',
     valueClass: dataWarnings.value > 0
-      ? 'text-amber-500 dark:text-amber-400'
-      : 'text-cyan-500 dark:text-cyan-400',
+      ? 'text-warning'
+      : 'text-info',
     iconClass: dataWarnings.value > 0
-      ? 'bg-amber-500/10 text-amber-500'
-      : 'bg-cyan-500/10 text-cyan-500'
+      ? 'bg-warning/10 text-warning'
+      : 'bg-info/10 text-info'
   }
 ])
 

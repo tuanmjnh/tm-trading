@@ -3,7 +3,45 @@
 @import "./scroll-bar.css";
 
 @theme static {
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+
+  /* Obsidian Apex brand scale — see docs/ui-design-system.md */
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #2b7fff;
+  --color-brand-600: #1d64e0;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e40af;
+  --color-brand-900: #1e3a8a;
+  --color-brand-950: #172554;
+}
+
+/* Obsidian Apex runtime tokens — see docs/ui-design-system.md */
+:root {
+  --ui-radius: 0.25rem;
+}
+
+.dark {
+  --ui-primary: var(--ui-color-primary-500);
+
+  --ui-bg: #080c14;
+  --ui-bg-muted: #0b111e;
+  --ui-bg-elevated: #0e1726;
+  --ui-bg-accented: #131d31;
+
+  --ui-border: #1e2d4a;
+  --ui-border-muted: #152238;
+  --ui-border-accented: #223452;
+
+  --ui-text: #f1f5f9;
+  --ui-text-toned: #cbd5e1;
+  --ui-text-muted: #94a3b8;
+  --ui-text-dimmed: #64748b;
+  --ui-text-highlighted: #f8fafc;
 }
 
 @keyframes slide-in-right {

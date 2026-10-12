@@ -122,22 +122,22 @@ onMounted(() => {
         icon="i-lucide:search" class="w-full" />
     </div>
 
-    <div class="border rounded-lg bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+    <div class="border rounded-lg bg-muted border-default">
       <div ref="scrollParent" class="grid grid-cols-6 sm:grid-cols-8 gap-2 p-3 max-h-64 overflow-y-auto scrollbar-thin">
         <UTooltip v-for="icon in icons" :key="icon" :text="icon" :popper="{ strategy: 'fixed' }">
           <button type="button"
-            class="flex items-center justify-center p-2 rounded-md hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-all aspect-square border-2 border-transparent"
-            :class="{ 'border-primary-500 bg-white dark:bg-gray-800 shadow-sm': modelValue === icon }"
+            class="flex items-center justify-center p-2 rounded-md hover:bg-primary/10 transition-all aspect-square border-2 border-transparent"
+            :class="{ 'border-primary bg-elevated shadow-sm': modelValue === icon }"
             @click="selectIcon(icon)">
             <UIcon :name="icon" class="w-6 h-6" />
           </button>
         </UTooltip>
 
         <div v-if="isFetching" class="col-span-full py-6 flex justify-center">
-          <UIcon name="i-lucide:loader-2" class="w-6 h-6 animate-spin text-primary-500" />
+          <UIcon name="i-lucide:loader-2" class="w-6 h-6 animate-spin text-primary" />
         </div>
 
-        <div v-if="!isFetching && icons.length === 0" class="col-span-full py-10 text-center text-gray-400 text-sm">
+        <div v-if="!isFetching && icons.length === 0" class="col-span-full py-10 text-center text-dimmed text-sm">
           {{ $t('icon_selector.no_icons') }}
         </div>
       </div>
@@ -153,7 +153,7 @@ onMounted(() => {
           <NuxtImg v-else-if="isActuallyImage" :src="modelValue" class="w-full h-full object-contain" width="24"
             height="24" />
           <UIcon v-else :name="modelValue || defaultIcon"
-            class="w-full h-full cursor-pointer text-gray-600 hover:text-primary-500" />
+            class="w-full h-full cursor-pointer text-muted hover:text-primary" />
         </div>
         <UButton v-else-if="hideInput" color="neutral" variant="ghost" :icon="modelValue || defaultIcon" />
         <UInput v-else :model-value="modelValue" readonly class="cursor-pointer w-full"
@@ -161,11 +161,11 @@ onMounted(() => {
           <template #leading>
             <div class="w-5 h-5 flex items-center justify-center shrink-0">
               <div v-if="isActuallySvg"
-                class="w-full h-full flex items-center justify-center [&>svg]:w-full [&>svg]:h-full text-gray-500"
+                class="w-full h-full flex items-center justify-center [&>svg]:w-full [&>svg]:h-full text-dimmed"
                 v-html="sanitizeSvg(modelValue || '')" />
               <NuxtImg v-else-if="isActuallyImage" :src="modelValue" class="w-full h-full object-contain" width="20"
                 height="20" />
-              <UIcon v-else :name="modelValue || defaultIcon" class="w-full h-full text-gray-500" />
+              <UIcon v-else :name="modelValue || defaultIcon" class="w-full h-full text-dimmed" />
             </div>
           </template>
         </UInput>
@@ -183,10 +183,10 @@ onMounted(() => {
         </div>
         <UInput v-model="filters.search" icon="i-lucide:search" size="sm" autofocus />
         <div ref="scrollParent"
-          class="grid grid-cols-5 gap-2 max-h-60 overflow-y-auto p-1 border rounded bg-gray-50 dark:bg-gray-900/50">
+          class="grid grid-cols-5 gap-2 max-h-60 overflow-y-auto p-1 border rounded bg-muted">
           <button v-for="icon in icons" :key="icon"
-            class="p-2 rounded hover:bg-primary-100 dark:hover:bg-primary-900/50 flex items-center justify-center aspect-square transition-colors"
-            :class="{ 'bg-primary-100 ring-2 ring-primary-500': modelValue === icon }"
+            class="p-2 rounded hover:bg-primary/10 flex items-center justify-center aspect-square transition-colors"
+            :class="{ 'bg-primary/10 ring-2 ring-primary': modelValue === icon }"
             @click="selectIcon(icon); close()">
             <UIcon :name="icon" class="w-6 h-6" />
           </button>

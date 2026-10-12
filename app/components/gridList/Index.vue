@@ -248,6 +248,15 @@ const showActions = computed(() => {
 })
 
 const isActionCol = (key: string) => key === 'actions' || key === 'action'
+
+const isNumericValue = (value: unknown) => {
+  if (typeof value === 'number') return Number.isFinite(value)
+  if (typeof value !== 'string') return false
+  const trimmed = value.trim()
+  if (!trimmed) return false
+  return /^[-+]?[\d,]+(\.\d+)?%?$/.test(trimmed)
+}
+
 const actionsCol = computed(() => props.columns.find(c => isActionCol(c.key)))
 const displayColumns = computed(() => props.columns.filter(c => !isActionCol(c.key)))
 const hasActions = computed(() => showActions.value && (!!props.actionOptions || !!slots.actions || !!slots.action || !!actionsCol.value))
@@ -267,7 +276,7 @@ const actionsClass = computed(() => {
   <div class="flex flex-col h-full min-h-0 bg-transparent">
     <!-- Table Header (Visible only on Desktop List Mode) -->
     <div v-if="viewMode === 'list' && !hideHeader"
-      class="hidden lg:flex items-center pl-0.75 pr-3.25 py-2.5 mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 bg-transparent">
+      class="hidden lg:flex items-center pl-0.75 pr-3.25 py-2.5 mb-1 text-[11px] font-semibold uppercase tracking-wider text-dimmed border-b border-default bg-muted/50">
       <!-- Drag Handle Placeholder (Aligned with SwipeCard pl-2 + w-6 = 32px) -->
       <div v-if="isDraggable" class="w-8 shrink-0" />
 
@@ -283,12 +292,12 @@ const actionsClass = computed(() => {
         col.headerClass || ''
       ]">
         <div v-if="col.sortable"
-          class="cursor-pointer select-none flex items-center hover:text-primary-500 transition-colors"
+          class="cursor-pointer select-none flex items-center hover:text-primary transition-colors"
           @click="emit('sort', col)">
           {{ col.label }}
           <UIcon
             :name="(col.sort === 'asc' || col.sort === 1) ? 'i-lucide-arrow-up-narrow-wide' : (col.sort === 'desc' || col.sort === -1) ? 'i-lucide-arrow-down-wide-narrow' : 'i-lucide-arrow-up-down'"
-            class="w-4 h-4 ml-1" :class="col.sort ? 'text-primary-500' : 'text-gray-400'" />
+            class="w-4 h-4 ml-1" :class="col.sort ? 'text-primary' : 'text-dimmed'" />
         </div>
         <span v-else>{{ col.label }}</span>
       </div>
@@ -307,11 +316,11 @@ const actionsClass = computed(() => {
         :class="currentViewMode === 'list' ? 'space-y-2 pr-3 pl-0.5' : `grid ${gridCols} gap-4 pb-4 pr-3 pl-0.5`"
         class="w-full">
         <USkeleton v-for="i in skeletonCount" :key="i"
-          :class="[currentViewMode === 'list' ? 'h-16' : 'h-44', 'w-full rounded-lg bg-gray-100 dark:bg-gray-800/50']" />
+          :class="[currentViewMode === 'list' ? 'h-16' : 'h-44', 'w-full rounded-lg bg-elevated']" />
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="items.length === 0" class="flex flex-col items-center justify-center py-20 text-gray-500">
+      <div v-else-if="items.length === 0" class="flex flex-col items-center justify-center py-20 text-muted">
         <slot name="empty">
           <UEmpty size="xl" icon="i-lucide-package-open" :title="$t('common.no_data')"
             :description="$t('common.no_data_desc')"
@@ -328,7 +337,7 @@ const actionsClass = computed(() => {
         <div v-for="item in items" :key="item[itemKey || '_id']">
           <LazyGridListSwipeCard :id="item[itemKey || '_id']" :item="item" :open-id="openCardId" :disabled="false"
             :mobile-mode="mobileActionMode" :draggable="isDraggable" :flat="flat"
-            :class="['h-full transition-all duration-200', { 'bg-blue-50/50! dark:bg-sky-300/20! border-sky-500/50 dark:border-sky-800/50': isSelected(item) }]"
+            :class="['h-full transition-all duration-200', { 'bg-primary/10! border-primary/40!': isSelected(item) }]"
             @update:open-id="openCardId = $event" @click="emit('click', item)" @long-press="handleLongPress"
             @contextmenu.prevent="(e: any) => handleContextMenu(item, e)">
             <!-- Left Slot: Drag Handle Only -->
@@ -365,11 +374,11 @@ const actionsClass = computed(() => {
                     col.rowClass || ''
                   ]">
                     <slot v-if="col.slot || $slots[col.key]" :name="col.slot || col.key" :item="item">
-                      <div class="truncate text-xs text-gray-700 dark:text-gray-300">
+                      <div class="truncate text-xs text-toned" :class="{ 'font-mono tabular-nums': isNumericValue(item[col.key]) }">
                         {{ item[col.key] }}
                       </div>
                     </slot>
-                    <div v-else class="truncate text-xs text-gray-700 dark:text-gray-300">
+                    <div v-else class="truncate text-xs text-toned" :class="{ 'font-mono tabular-nums': isNumericValue(item[col.key]) }">
                       {{ item[col.key] }}
                     </div>
                   </div>

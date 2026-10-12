@@ -243,7 +243,7 @@ const headerActions = computed<HeaderAction[]>(() => [
       selectable :can-load-more="canLoadMore" :action-options="getActionOptions" @load-more="onLoadMore"
       @refresh="fetchUsers(true)">
       <template #createdAt="{ item }">
-        <span class="text-xs text-gray-500 dark:text-gray-400">
+        <span class="text-xs text-muted">
           {{ formatDateString(item.createdAt) }}
         </span>
       </template>
@@ -256,14 +256,14 @@ const headerActions = computed<HeaderAction[]>(() => [
               <UAvatar :src="item.avatar" :alt="item.name" size="lg" />
               <div class="flex flex-col min-w-0">
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="text-sm font-bold text-gray-900 dark:text-white truncate">
+                  <span class="text-sm font-bold text-highlighted truncate">
                     {{ item.name }}
                   </span>
                   <UBadge color="primary" variant="subtle" size="xs" class="capitalize">
                     {{ item.role }}
                   </UBadge>
                 </div>
-                <span class="text-[10px] text-gray-400">@{{ item.username || item.name.toLowerCase().replace(/\s+/g,
+                <span class="text-[10px] text-dimmed">@{{ item.username || item.name.toLowerCase().replace(/\s+/g,
                   '') }}</span>
               </div>
             </div>
@@ -276,11 +276,11 @@ const headerActions = computed<HeaderAction[]>(() => [
 
           <!-- Bottom Info: Contact & Dates -->
           <div class="flex flex-col gap-2">
-            <div class="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
-              <UIcon name="i-lucide-mail" class="w-3.5 h-3.5 shrink-0 text-primary-500" />
+            <div class="flex items-center gap-2 text-[11px] text-muted">
+              <UIcon name="i-lucide-mail" class="w-3.5 h-3.5 shrink-0 text-primary" />
               <span class="truncate">{{ item.email }}</span>
             </div>
-            <div class="flex justify-between items-center text-[10px] text-gray-400 mt-1">
+            <div class="flex justify-between items-center text-[10px] text-dimmed mt-1">
               <span class="flex items-center gap-1">
                 <UIcon name="i-lucide-calendar" class="w-3 h-3" />
                 {{ formatDateString(item.createdAt) }}

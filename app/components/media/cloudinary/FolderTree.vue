@@ -108,7 +108,7 @@ const isActive = (path: string) => props.currentFolder === path
         <div
           :class="[
             'flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition group/root',
-            currentFolder === 'root' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+            currentFolder === 'root' ? 'bg-primary/10 text-primary' : 'hover:bg-accented text-highlighted'
           ]"
           @click="selectFolder({ name: 'Root', path: 'root', external_id: null, children: [], hasChildren: true, childrenLoaded: true })"
         >
@@ -116,7 +116,7 @@ const isActive = (path: string) => props.currentFolder === path
           <UIcon
             name="i-lucide-home"
             class="w-4 h-4 shrink-0"
-            :class="currentFolder === 'root' ? 'text-primary-500 fill-primary-500/20' : 'text-gray-400'"
+            :class="currentFolder === 'root' ? 'text-primary fill-primary/20' : 'text-dimmed'"
           />
           <span class="text-[11px] flex flex-1 truncate font-bold uppercase tracking-wider">
             Root
@@ -140,14 +140,14 @@ const isActive = (path: string) => props.currentFolder === path
           <div
             :class="[
               'flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition',
-              isActive(folder.path) ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+              isActive(folder.path) ? 'bg-primary/10 text-primary' : 'hover:bg-accented text-highlighted'
             ]"
             @click="selectFolder(folder)"
           >
             <!-- Expand/Collapse Icon -->
             <button
               v-if="folder.hasChildren"
-              class="w-4 h-4 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition"
+              class="w-4 h-4 flex items-center justify-center text-dimmed hover:text-toned transition"
               @click.stop="toggleFolder(folder)"
             >
               <UIcon
@@ -162,7 +162,7 @@ const isActive = (path: string) => props.currentFolder === path
             <UIcon
               name="i-lucide-folder"
               class="w-4 h-4 shrink-0"
-              :class="isActive(folder.path) ? 'text-primary-500 fill-primary-500/20' : 'text-gray-400'"
+              :class="isActive(folder.path) ? 'text-primary fill-primary/20' : 'text-dimmed'"
             />
 
             <!-- Folder Name -->
@@ -184,21 +184,21 @@ const isActive = (path: string) => props.currentFolder === path
           <!-- Children -->
           <div
             v-if="isExpanded(folder.path) && folder.children"
-            class="ml-4 mt-1 space-y-1 border-l border-gray-100 dark:border-gray-800 pl-1"
+            class="ml-4 mt-1 space-y-1 border-l border-muted pl-1"
           >
             <div
               v-for="child in folder.children"
               :key="child.path"
               :class="[
                 'flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition',
-                isActive(child.path) ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+                isActive(child.path) ? 'bg-primary/10 text-primary' : 'hover:bg-accented text-highlighted'
               ]"
               @click="selectFolder(child)"
             >
               <UIcon
                 name="i-lucide-folder"
                 class="w-4 h-4 shrink-0"
-                :class="isActive(child.path) ? 'text-primary-500 fill-primary-500/20' : 'text-gray-400'"
+                :class="isActive(child.path) ? 'text-primary fill-primary/20' : 'text-dimmed'"
               />
               <span class="text-sm flex-1 truncate font-medium">{{ child.name }}</span>
             </div>

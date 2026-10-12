@@ -19,7 +19,7 @@ const isStorageModalOpen = ref(false)
       <div class="space-y-6">
         <!-- Ngôn ngữ -->
         <div class="space-y-2">
-          <label class="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+          <label class="text-xs font-semibold uppercase tracking-wider text-muted">
             {{ t('settings.language') }}
           </label>
           <div class="grid grid-cols-2 gap-2">
@@ -32,7 +32,7 @@ const isStorageModalOpen = ref(false)
 
         <!-- Chế độ sáng tối -->
         <div class="space-y-2">
-          <label class="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+          <label class="text-xs font-semibold uppercase tracking-wider text-muted">
             {{ t('settings.theme') }}
           </label>
           <div class="grid grid-cols-3 gap-2">
@@ -48,7 +48,7 @@ const isStorageModalOpen = ref(false)
 
         <!-- Màu sắc chủ đạo -->
         <div class="space-y-2">
-          <label class="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+          <label class="text-xs font-semibold uppercase tracking-wider text-muted">
             {{ t('settings.appearance') }}
           </label>
           <div class="flex flex-wrap gap-2">
@@ -56,14 +56,14 @@ const isStorageModalOpen = ref(false)
               class="w-7 h-7 rounded-full transition-transform flex items-center justify-center cursor-pointer hover:scale-110"
               :style="{ backgroundColor: `var(--color-${color}-500)` }" @click="appConfig.ui.colors.primary = color">
               <UIcon v-if="appConfig.ui.colors.primary === color" name="i-lucide-check"
-                class="w-4 h-4 text-white drop-shadow" />
+                class="w-4 h-4 text-inverted drop-shadow" />
             </button>
           </div>
         </div>
 
         <!-- Chọn trình soạn thảo -->
         <div class="space-y-2">
-          <label class="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+          <label class="text-xs font-semibold uppercase tracking-wider text-muted">
             {{ t('settings.editor') }}
           </label>
           <div class="grid grid-cols-2 gap-2">
@@ -80,7 +80,7 @@ const isStorageModalOpen = ref(false)
 
         <!-- Quản lý bộ nhớ -->
         <div class="space-y-2">
-          <label class="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+          <label class="text-xs font-semibold uppercase tracking-wider text-muted">
             {{ t('settings.storage.storage_management') }}
           </label>
           <UButton icon="i-lucide-database" variant="outline" color="neutral" block
@@ -90,16 +90,16 @@ const isStorageModalOpen = ref(false)
         </div>
 
         <!-- Thông tin hệ thống -->
-        <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-3 text-xs">
-          <div class="flex justify-between items-center text-neutral-500">
+        <div class="pt-4 border-t border-default space-y-3 text-xs">
+          <div class="flex justify-between items-center text-muted">
             <span>{{ t('settings.hubVersion') }}</span>
             <UBadge label="v1.0.0" variant="subtle" size="xs" />
           </div>
-          <div class="flex justify-between items-center text-neutral-500">
+          <div class="flex justify-between items-center text-muted">
             <span>{{ t('settings.primaryDatabase') }}</span>
-            <span class="font-medium text-neutral-700 dark:text-neutral-300">Supabase (PostgreSQL)</span>
+            <span class="font-medium text-toned">Supabase (PostgreSQL)</span>
           </div>
-          <div class="flex justify-between items-center text-neutral-500">
+          <div class="flex justify-between items-center text-muted">
             <span>{{ t('settings.defaultPort') }}</span>
             <span class="font-mono text-primary">Port 4000</span>
           </div>

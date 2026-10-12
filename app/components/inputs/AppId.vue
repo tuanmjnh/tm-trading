@@ -67,7 +67,7 @@ async function handleCopy() {
           <UIcon name="i-lucide-wand" class="w-3 h-3" />
           <span>{{ t('apps.fromName') }}</span>
         </button>
-        <span v-if="sourceName && sourceName.trim()" class="text-neutral-300 dark:text-neutral-700">•</span>
+        <span v-if="sourceName && sourceName.trim()" class="text-dimmed">•</span>
         <button type="button" class="text-primary hover:underline cursor-pointer flex items-center gap-1"
           @click="handleGenerateRandom">
           <UIcon name="i-lucide-wand-sparkles" class="w-3 h-3" />

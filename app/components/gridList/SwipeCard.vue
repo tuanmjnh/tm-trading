@@ -123,7 +123,7 @@ const handleContentClick = () => {
     class="relative overflow-hidden touch-pan-y select-none group transition-colors duration-200"
     :class="flat
       ? 'border-b border-default last:border-b-0 rounded-none bg-transparent shadow-none hover:bg-elevated/40'
-      : 'rounded-lg border border-gray-300/50 dark:border-gray-700/50 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm shadow-xs hover:bg-white/60 dark:hover:bg-gray-800/60 hover:shadow-md hover:border-primary-500/50'">
+      : 'rounded-lg border border-default bg-elevated/40 backdrop-blur-sm shadow-xs hover:bg-elevated/70 hover:shadow-md hover:border-primary/50'">
     <!--  -->
     <!-- Action Layer (Background) -->
     <div v-show="(mobileMode === 'swipe' || mobileMode === undefined) && (Math.abs(offset) > 1 || isSwiping)"
@@ -141,7 +141,7 @@ const handleContentClick = () => {
         <!-- Left Slot (Handle) - Outside Swipe Listener -->
         <div v-if="$slots.left || draggable" class="shrink-0 h-full flex items-center pl-2">
           <div v-if="draggable" @contextmenu.stop style="touch-action: none"
-            class="drag-handle w-6 flex cursor-move p-1 text-gray-400 opacity-50 group-hover:opacity-100 touch-none">
+            class="drag-handle w-6 flex cursor-move p-1 text-dimmed opacity-50 group-hover:opacity-100 touch-none">
             <UIcon name="i-lucide-grip-vertical" class="w-4 h-4" />
           </div>
           <slot name="left" :item="item" :is-opened="isOpened"></slot>
@@ -149,7 +149,7 @@ const handleContentClick = () => {
 
         <!-- Center & Right (Swipe Target) -->
         <div ref="swipeTarget"
-          class="active-scale flex-1 min-w-0 h-full flex items-center transition-all duration-200 active:bg-gray-50 dark:active:bg-gray-800/80"
+          class="active-scale flex-1 min-w-0 h-full flex items-center transition-all duration-200 active:bg-elevated"
           :class="flat ? '' : 'rounded-lg'"
           @click="handleContentClick">
           <!-- Center (Default) Slot -->

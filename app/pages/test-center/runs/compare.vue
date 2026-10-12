@@ -204,7 +204,7 @@ useHead({ title })
             @click="toggle(s.id)"
           >
             <span class="flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full shrink-0" :class="isSelected(s.id) ? DOT_CLASSES[colorIndex(s.id)] : 'bg-default-300 dark:bg-default-600'" />
+              <span class="w-2 h-2 rounded-full shrink-0" :class="isSelected(s.id) ? DOT_CLASSES[colorIndex(s.id)] : 'bg-accented'" />
               <span class="text-xs font-semibold text-highlighted">{{ s.symbol }}</span>
               <span class="text-[10px] text-muted">{{ s.tf }}m</span>
             </span>

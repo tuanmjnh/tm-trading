@@ -1,12 +1,12 @@
 export default defineAppConfig({
   ui: {
     colors: {
-      primary: 'blue',
-      secondary: 'indigo',
+      primary: 'brand',
+      secondary: 'sky',
       neutral: 'slate',
-      info: 'cyan',
-      success: 'teal',
-      warning: 'yellow',
+      info: 'sky',
+      success: 'emerald',
+      warning: 'amber',
       error: 'red',
       gray: 'gray',
       cyan: 'cyan',

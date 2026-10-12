@@ -19,11 +19,11 @@ withDefaults(defineProps<{
 const emit = defineEmits<{ click: [] }>()
 
 const pillColor: Record<string, string> = {
-  success: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  neutral: 'bg-neutral-500/10 text-neutral-400',
-  warning: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  info: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
-  error: 'bg-red-500/10 text-red-600 dark:text-red-400',
+  success: 'bg-success/10 text-success',
+  neutral: 'bg-elevated text-muted',
+  warning: 'bg-warning/10 text-warning',
+  info: 'bg-info/10 text-info',
+  error: 'bg-error/10 text-error',
   primary: 'bg-primary/10 text-primary',
   secondary: 'bg-secondary/10 text-secondary'
 }
