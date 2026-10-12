@@ -1234,6 +1234,19 @@
     "emptyHint": "Candidates appear once the scanner service has run (mover / flow / accum snapshots).",
     "emptyMongo": "Mongo is offline — the scanner service cannot read or write snapshots."
   },
+  "marketCalendar": {
+    "title": "News Calendar",
+    "desc": "Scored market headlines from the news service, grouped by UTC day — a news/events calendar over the existing intel `news` stream.",
+    "allLevels": "All",
+    "search": "Search headlines",
+    "mongoDown": "Mongo offline",
+    "eventsCount": "{n} headlines",
+    "intelDetail": "Market Intelligence",
+    "unlocksTitle": "Token unlocks — next 48h",
+    "empty": "No headlines",
+    "emptyHint": "Headlines appear once the news service has run (`npm run services:once`).",
+    "emptyMongo": "Mongo is offline — the news service cannot read or write headlines."
+  },
   "notifications": {
     "title": "Notifications",
     "system": "System",

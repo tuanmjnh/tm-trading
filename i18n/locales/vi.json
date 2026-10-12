@@ -1234,6 +1234,19 @@
     "emptyHint": "Ứng viên xuất hiện sau khi dịch vụ scanner chạy (snapshot mover / flow / accum).",
     "emptyMongo": "Mongo ngoại tuyến — dịch vụ scanner không đọc/ghi được snapshot."
   },
+  "marketCalendar": {
+    "title": "Lịch tin tức",
+    "desc": "Tin tức thị trường đã chấm điểm từ dịch vụ news, gom theo ngày UTC — lịch tin tức/sự kiện trên chính luồng `news` của intel.",
+    "allLevels": "Tất cả",
+    "search": "Tìm tin tức",
+    "mongoDown": "Mongo ngoại tuyến",
+    "eventsCount": "{n} tin",
+    "intelDetail": "Market Intelligence",
+    "unlocksTitle": "Mở khóa token — 48h tới",
+    "empty": "Chưa có tin tức",
+    "emptyHint": "Tin tức xuất hiện sau khi dịch vụ news chạy (`npm run services:once`).",
+    "emptyMongo": "Mongo ngoại tuyến — dịch vụ news không đọc/ghi được tin tức."
+  },
   "notifications": {
     "title": "Thông báo",
     "system": "Hệ thống",
