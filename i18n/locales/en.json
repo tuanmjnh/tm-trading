@@ -807,6 +807,17 @@
     "clear_history_desc": "Are you sure you want to clear the history?"
   },
   "research": {
+    "pips": {
+      "analyze": "Versioned evidence workspace",
+      "experiments": "AI candidate review queue",
+      "detail": "Lifecycle & acceptance gate"
+    },
+    "rollup": {
+      "total": "Total experiments",
+      "active": "In progress",
+      "accepted": "Accepted",
+      "rejected": "Rejected"
+    },
     "analyzeTitle": "AI Research",
     "analyzeDesc": "Read the versioned evidence the AI worked from and approve proposals into experiments",
     "experimentsTitle": "Experiments",
@@ -1061,6 +1072,13 @@
     "title": "Market Data Sources",
     "desc": "Live health probes for each market data provider. Distinct from generic connection records, which live under Shared Resources.",
     "distinctNote": "Provider health is probed per venue and is independent of the tm-hub connection catalogue.",
+    "pip": "Provider health probe",
+    "metrics": {
+      "venues": "Venues",
+      "up": "Up",
+      "down": "Down",
+      "unknown": "Unknown"
+    },
     "venue": "Venue",
     "status": "Status",
     "latency": "Latency",
@@ -1077,6 +1095,7 @@
   "systemHealth": {
     "title": "System Health",
     "desc": "Overall platform health: database, background services and runtime.",
+    "pip": "Runtime telemetry",
     "status": "Status",
     "database": "Database",
     "version": "Version",
@@ -1248,6 +1267,13 @@
   },
   "alertRules": {
     "title": "Alert Rules",
+    "pip": "Dispatch sentinel: armed",
+    "metrics": {
+      "total": "Rules",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "matches": "Matches"
+    },
     "desc": "Rule definitions over the intel event stream (news / alerts). A rule describes the condition; the alertRules service evaluates it and routes matches through the shared notify pipeline.",
     "create": "New rule",
     "edit": "Edit",
@@ -1351,6 +1377,12 @@
     "send": "Send",
     "fieldBody": "Body",
     "description": "View notifications and send Web Push to users.",
+    "pip": "Delivery ledger",
+    "metrics": {
+      "total": "Total",
+      "unread": "Unread",
+      "read": "Read"
+    },
     "sendTitle": "Send notification",
     "sendSuccess": "Notification sent",
     "sendSuccessDesc": "Delivered to {count} device(s)",
@@ -1995,6 +2027,9 @@
     "legendNote": "combined once a day from method + regime + funding + zone"
   },
   "journal": {
+    "pips": {
+      "journal": "Executed-trade ledger"
+    },
     "title": "Trade Journal",
     "desc": "Central journal of every executed trade (paper/MT5/exchange/manual) — read from engine/journal, nothing recalculated.",
     "empty": "No journal entries yet",
@@ -2959,6 +2994,13 @@
     "all": "All",
     "unread": "Unread",
     "description": "Read and reply to mail from the connected Google account",
+    "pip": "Unified mail client",
+    "compose": "Compose",
+    "newMail": "New message",
+    "folders": "Folders",
+    "threadsTotal": "{0} threads",
+    "noMessagesInFolder": "No messages in this folder",
+    "hasAttachment": "Has attachment",
     "searchPlaceholder": "Search mail (Gmail syntax)...",
     "filtered": "Filtered: {0}",
     "loadMore": "Load more",
@@ -3637,6 +3679,13 @@
     "title": "Background Queues"
   },
   "strategyLab": {
+    "pips": {
+      "strategies": "Immutable versions",
+      "indicators": "Read-only registry",
+      "methods": "Read-only registry",
+      "botProfiles": "Execution config",
+      "botInstances": "Live sessions"
+    },
     "strategies": {
       "title": "Strategy Library",
       "desc": "Reusable strategy profiles and their immutable versions",
@@ -3653,6 +3702,10 @@
         "active": "Active",
         "paused": "Paused",
         "retired": "Retired"
+      },
+      "metrics": {
+        "total": "Total strategies",
+        "versionedHint": "{n} version-pinned"
       }
     },
     "indicators": {
@@ -3672,6 +3725,9 @@
         "overlay": "Overlay",
         "pane": "Pane",
         "volume": "Volume"
+      },
+      "metrics": {
+        "total": "Total indicators"
       }
     },
     "methods": {
@@ -3691,7 +3747,13 @@
       "profitFactor": "Profit factor",
       "net": "Net",
       "expectancy": "Expectancy",
-      "generated": "Generated"
+      "generated": "Generated",
+      "metrics": {
+        "registered": "Registered methods",
+        "leagueRows": "League methods",
+        "engine": "Engine version",
+        "winRate": "Pooled win rate"
+      }
     },
     "bots": {
       "profilesTitle": "Bot Profiles",
@@ -3730,10 +3792,33 @@
         "completed": "Completed",
         "failed": "Failed",
         "halted": "Halted"
+      },
+      "metrics": {
+        "total": "Total profiles"
+      },
+      "instanceMetrics": {
+        "total": "Total instances"
       }
     }
   },
   "testCenter": {
+    "pips": {
+      "builder": "Deterministic launchpad",
+      "forward": "Realtime OOS stream",
+      "replay": "Deterministic core sim",
+      "runs": "Hash-verified ledger",
+      "compare": "Overfit validation"
+    },
+    "runs": {
+      "metrics": {
+        "series": "Loaded series",
+        "symbols": "Symbols",
+        "trades": "Trades",
+        "avgNet": "Avg net",
+        "loadedHint": "loaded page",
+        "allHint": "all series"
+      }
+    },
     "builder": {
       "title": "Test Builder",
       "desc": "Launch a backtest, replay or live-paper test with a full D1 manifest.",
@@ -3807,6 +3892,27 @@
     }
   },
   "dataCenter": {
+    "pips": {
+      "overview": "Recorder persistence hub",
+      "datasets": "Curated dataset repositories",
+      "recordings": "Live market stream recorder",
+      "quality": "Integrity & coverage verdicts",
+      "lineage": "Provenance graph"
+    },
+    "metrics": {
+      "datasets": "Datasets",
+      "symbols": "Symbols",
+      "timeframes": "Timeframes",
+      "rows": "Rows",
+      "groups": "Groups",
+      "series": "Series",
+      "multiHash": "Multi-hash",
+      "linked": "Linked datasets",
+      "healthy": "Healthy",
+      "flagged": "Flagged",
+      "coverage": "Avg coverage",
+      "loadedHint": "loaded page"
+    },
     "overviewTitle": "Data Center",
     "overviewDesc": "Datasets, recordings, quality and test-data lineage over the recorder's persistence.",
     "datasetsTitle": "Dataset Library",

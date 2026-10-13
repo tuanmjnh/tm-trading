@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { SystemHealth } from '~~/types/health'
+import type { MetricItem } from '~/components/MetricRibbon.vue'
 import { formatTimeAgo } from '@vueuse/core'
 
 // System Health (roadmap §58 acceptance #6). Aggregate platform health from the
@@ -31,8 +32,6 @@ onMounted(refresh)
 const statusColor = computed(() =>
   data.value?.status === 'healthy' ? 'success' : data.value?.status === 'degraded' ? 'warning' : 'neutral')
 
-const dbColor = (v: SystemHealth['db']) => v === 'ok' ? 'success' : v === 'error' ? 'error' : 'neutral'
-
 const uptimeLabel = computed(() => {
   const total = data.value?.uptimeSec ?? 0
   const h = Math.floor(total / 3600)
@@ -41,13 +40,23 @@ const uptimeLabel = computed(() => {
   return h ? `${h}h ${m}m` : m ? `${m}m ${s}s` : `${s}s`
 })
 
-const overview = computed(() => [
-  { key: 'status', label: t('systemHealth.status'), value: data.value ? t(`systemHealth.statusLabels.${data.value.status}`) : '—' },
-  { key: 'database', label: t('systemHealth.database'), value: data.value ? t(`systemHealth.dbLabels.${data.value.db}`) : '—' },
-  { key: 'version', label: t('systemHealth.version'), value: data.value?.version ?? '—' },
-  { key: 'uptime', label: t('systemHealth.uptime'), value: uptimeLabel.value },
-  { key: 'latency', label: t('systemHealth.latency'), value: data.value ? `${data.value.latencyMs} ms` : '—' },
-  { key: 'checkedAt', label: t('systemHealth.checkedAt'), value: data.value ? formatTimeAgo(new Date(data.value.time)) : '—' }
+const statusTone = computed<MetricItem['tone']>(() => {
+  const s = data.value?.status
+  return s === 'healthy' ? 'success' : s === 'degraded' ? 'warning' : s === 'error' ? 'error' : 'default'
+})
+
+const overview = computed<MetricItem[]>(() => [
+  { key: 'status', label: t('systemHealth.status'), value: data.value ? t(`systemHealth.statusLabels.${data.value.status}`) : '—', icon: 'i-lucide-heart-pulse', tone: statusTone.value },
+  { key: 'database', label: t('systemHealth.database'), value: data.value ? t(`systemHealth.dbLabels.${data.value.db}`) : '—', icon: 'i-lucide-database', tone: data.value?.db === 'ok' ? 'success' : data.value?.db === 'error' ? 'error' : 'default' },
+  { key: 'version', label: t('systemHealth.version'), value: data.value?.version ?? '—', icon: 'i-lucide-tag' },
+  { key: 'uptime', label: t('systemHealth.uptime'), value: uptimeLabel.value, icon: 'i-lucide-clock' },
+  { key: 'latency', label: t('systemHealth.latency'), value: data.value ? `${data.value.latencyMs} ms` : '—', icon: 'i-lucide-timer' },
+  { key: 'checkedAt', label: t('systemHealth.checkedAt'), value: data.value ? formatTimeAgo(new Date(data.value.time)) : '—', icon: 'i-lucide-history' }
+])
+
+const trail = computed(() => [
+  { label: t('nav.admin_system') },
+  { label: title.value }
 ])
 
 const mobileBar = useMobileBar()
@@ -60,6 +69,10 @@ useHead({ title })
 
 <template>
   <BasePage id="health" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('systemHealth.pip')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UBadge
@@ -93,32 +106,7 @@ useHead({ title })
       />
 
       <template v-else>
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <UCard
-            v-for="o in overview"
-            :key="o.key"
-            :ui="{ body: 'p-3' }"
-          >
-            <div class="text-[11px] text-dimmed uppercase tracking-wide">{{ o.label }}</div>
-            <div class="mt-1 flex items-center gap-2">
-              <UBadge
-                v-if="o.key === 'status' && data"
-                :label="o.value"
-                :color="statusColor"
-                variant="subtle"
-                size="sm"
-              />
-              <UBadge
-                v-else-if="o.key === 'database' && data"
-                :label="o.value"
-                :color="dbColor(data.db)"
-                variant="subtle"
-                size="sm"
-              />
-              <span v-else class="text-sm font-medium text-highlighted">{{ o.value }}</span>
-            </div>
-          </UCard>
-        </div>
+        <MetricRibbon :items="overview" cols="grid-cols-2 md:grid-cols-3 xl:grid-cols-6" />
 
         <UCard :ui="{ body: 'p-0' }">
           <template #header>

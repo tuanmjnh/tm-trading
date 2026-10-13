@@ -2,6 +2,11 @@
 import type { NavigationMenuItem } from '@nuxt/ui'
 
 const { t, locale, setLocale } = useI18n()
+
+const trail = computed(() => [
+  { label: t('nav.admin_system') },
+  { label: t('settings.appearance') }
+])
 const colorMode = useColorMode()
 const appConfig = useAppConfig()
 
@@ -33,6 +38,9 @@ useHead({ title: computed(() => t('settings.appearance')) })
 
 <template>
   <BasePage id="settings" :title="t('settings.appearance')" :description="t('settings.description')">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" />
+    </template>
     <BaseSectionNav :items="navItems">
       <div class="space-y-6">
         <UCard>

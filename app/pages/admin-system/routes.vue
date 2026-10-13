@@ -14,6 +14,11 @@ const { title, description } = useAdminPageChrome({
   titleKey: 'routes.title',
   descKey: 'routes.description'
 })
+
+const trail = computed(() => [
+  { label: t('nav.admin_system') },
+  { label: title.value }
+])
 const { buildRowActions } = useAdminRowActions()
 const { exporting: exportingRoutes, exportModule: exportRoutes } = useModuleExport()
 const { hubFetch, appId } = useHub()
@@ -226,6 +231,9 @@ useHead({ title })
 
 <template>
   <BasePage id="routes" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" />
+    </template>
     <template #right>
       <div class="flex items-center gap-2">
         <BaseHeaderActions :actions="headerActions" />

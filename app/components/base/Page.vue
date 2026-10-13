@@ -21,6 +21,7 @@ const panelUi = computed(() => ({
   <UDashboardPanel :id="id" :ui="panelUi">
     <template #header>
       <div class="shrink-0">
+        <slot name="eyebrow" />
         <UDashboardNavbar :title="title"
           :ui="{ title: description ? 'flex flex-col items-start justify-center gap-px h-full truncate' : undefined, ...navbarUi }">
           <template v-if="description" #title>

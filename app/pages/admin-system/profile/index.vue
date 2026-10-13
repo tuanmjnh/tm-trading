@@ -3,6 +3,11 @@ import type { NavigationMenuItem } from '@nuxt/ui'
 import { getErrorMessage } from '~/shared/utils/errors'
 
 const { t } = useI18n()
+
+const trail = computed(() => [
+  { label: t('nav.admin_system') },
+  { label: t('profile.title') }
+])
 const notify = useNotify()
 const auth = useAuth()
 const { hubFetch } = useHub()
@@ -81,6 +86,9 @@ useHead({ title: computed(() => t('profile.title')) })
 
 <template>
   <BasePage id="profile" :title="t('profile.title')" :description="t('profile.description')">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" />
+    </template>
     <template #right>
       <UButton icon="i-lucide-save" :label="t('settings.saveChanges')" color="primary" :loading="saving" variant="soft"
         :ui="{ label: 'hidden md:block' }" @click="saveProfile" />

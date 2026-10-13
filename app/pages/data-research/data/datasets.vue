@@ -24,15 +24,40 @@ async function refresh() {
   try {
     rows.value = await dc.datasets({
       limit: 500,
-      symbol: symbolFilter.value.trim(),
-      kind: kindFilter.value
+      symbol: symbolFilter.value.trim()
     })
   } finally {
     isLoading.value = false
   }
 }
 onMounted(refresh)
-watch(kindFilter, refresh)
+
+// Kind is filtered client-side over the loaded manifest so the chip counts
+// reflect the full set (never a server-narrowed subset).
+const filtered = computed(() =>
+  kindFilter.value ? rows.value.filter(r => r.kind === kindFilter.value) : rows.value)
+
+const kindChips = computed(() => [
+  { value: '', label: t('dataCenter.allKinds'), count: rows.value.length },
+  { value: 'candles', label: t('dataCenter.kindLabels.candles'), count: rows.value.filter(r => r.kind === 'candles').length }
+])
+
+const metrics = computed(() => {
+  const symbols = new Set(rows.value.map(r => r.symbol))
+  const tfs = new Set(rows.value.map(r => r.timeframe).filter(Boolean))
+  const totalRows = rows.value.reduce((a, r) => a + (r.count || 0), 0)
+  return [
+    { key: 'datasets', label: t('dataCenter.metrics.datasets'), value: String(rows.value.length), icon: 'i-lucide-database' },
+    { key: 'symbols', label: t('dataCenter.metrics.symbols'), value: String(symbols.size), icon: 'i-lucide-hash' },
+    { key: 'timeframes', label: t('dataCenter.metrics.timeframes'), value: String(tfs.size), icon: 'i-lucide-clock' },
+    { key: 'rows', label: t('dataCenter.metrics.rows'), value: totalRows.toLocaleString(), icon: 'i-lucide-rows-3', hint: rows.value.length >= 500 ? t('dataCenter.metrics.loadedHint') : undefined }
+  ]
+})
+
+const trail = computed(() => [
+  { label: t('nav.data_center'), to: '/data-research/data' },
+  { label: title.value }
+])
 
 const fmtDate = (ts: number | null) => (ts ? new Date(ts).toLocaleDateString() : '—')
 
@@ -59,6 +84,10 @@ useHead({ title })
 
 <template>
   <BasePage id="data-datasets" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('dataCenter.pips.datasets')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UButton
@@ -83,15 +112,7 @@ useHead({ title })
 
     <template #toolbar>
       <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
-        <UButton
-          v-for="k in [{ v: '', l: 'dataCenter.allKinds' }, { v: 'candles', l: 'dataCenter.kindLabels.candles' }]"
-          :key="k.v || 'all'"
-          :label="t(k.l)"
-          size="xs"
-          :color="kindFilter === k.v ? 'primary' : 'neutral'"
-          :variant="kindFilter === k.v ? 'soft' : 'ghost'"
-          @click="kindFilter = k.v"
-        />
+        <FilterChips v-model="kindFilter" :items="kindChips" />
         <UInput
           v-model="symbolFilter"
           :placeholder="t('dataCenter.searchSymbol')"
@@ -105,12 +126,13 @@ useHead({ title })
     </template>
 
     <template #footer>
-      <SharedListFooter :count="rows.length" :loading="isLoading" />
+      <SharedListFooter :count="filtered.length" :loading="isLoading" />
     </template>
 
-    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6">
+    <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
+      <MetricRibbon :items="metrics" />
       <LazyGridList
-        :items="rows"
+        :items="filtered"
         :columns="columns"
         :loading="isLoading"
         :can-load-more="false"

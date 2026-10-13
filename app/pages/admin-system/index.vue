@@ -19,6 +19,11 @@ const { hubFetch, appId } = useHub()
 const toast = useToast()
 const { t } = useI18n()
 
+const trail = computed(() => [
+  { label: t('nav.admin_system') },
+  { label: t('admin.usersTitle') }
+])
+
 // Use paginated users
 const { users, loading, canLoadMore, fetchUsers } = useUsers()
 
@@ -223,6 +228,9 @@ const headerActions = computed<HeaderAction[]>(() => [
 
 <template>
   <BasePage id="admin-users" :title="$t('admin.usersTitle')">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" />
+    </template>
     <template #right>
       <div class="flex items-center gap-2">
         <BaseHeaderActions :actions="headerActions" />

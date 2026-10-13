@@ -6,6 +6,11 @@ const { title, description } = useAdminPageChrome({
   descKey: 'docs.description'
 })
 
+const trail = computed(() => [
+  { label: t('nav.admin_system') },
+  { label: title.value }
+])
+
 useHead({ title })
 
 const apis = computed(() => [
@@ -63,6 +68,9 @@ mobileBar.registerInfo(computed(() => ({
 
 <template>
   <BasePage id="docs" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" />
+    </template>
     <template #right>
       <UButton icon="i-lucide-refresh-cw" variant="soft" size="sm" @click="reloadNuxtApp()" />
     </template>
@@ -197,8 +205,8 @@ mobileBar.registerInfo(computed(() => ({
 
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr class="border-b border-default text-muted font-medium">
+            <thead class="bg-muted/50">
+              <tr class="border-b border-default text-dimmed font-medium">
                 <th class="py-2.5 px-3">{{ t('docs.api.module') }}</th>
                 <th class="py-2.5 px-3">{{ t('docs.api.method') }}</th>
                 <th class="py-2.5 px-3 font-mono">{{ t('docs.api.endpoint') }}</th>

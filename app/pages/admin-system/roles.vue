@@ -25,6 +25,11 @@ const { title, description } = useAdminPageChrome({
   titleKey: 'admin.rolesTitle',
   descKey: 'admin.rolesDesc'
 })
+
+const trail = computed(() => [
+  { label: t('nav.admin_system') },
+  { label: title.value }
+])
 const { buildRowActions } = useAdminRowActions()
 const { exporting: exportingRoles, exportModule: exportRoles } = useModuleExport()
 
@@ -164,6 +169,9 @@ useHead({ title })
 
 <template>
   <BasePage id="roles" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" />
+    </template>
     <template #right>
       <div class="flex items-center gap-2">
         <BaseHeaderActions :actions="headerActions" />

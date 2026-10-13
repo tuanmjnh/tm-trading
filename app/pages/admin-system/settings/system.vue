@@ -3,6 +3,10 @@ import type { NavigationMenuItem } from '@nuxt/ui'
 
 const { t } = useI18n()
 
+const trail = computed(() => [
+  { label: t('nav.admin_system') },
+  { label: t('nav.system') }
+])
 const health = ref<{ status: string, version: string, db: string, uptimeSec: number } | null>(null)
 const healthLoading = ref(false)
 
@@ -60,6 +64,9 @@ useHead({ title: computed(() => t('nav.system')) })
 
 <template>
   <BasePage id="settings" :title="t('nav.system')" :description="t('settings.systemDesc')">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" />
+    </template>
     <template #right>
       <UButton
         icon="i-lucide-refresh-cw"

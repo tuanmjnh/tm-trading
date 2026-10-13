@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
+import type { MetricItem } from '~/components/MetricRibbon.vue'
 import type { RunSeries } from '~~/types/runs'
 import { formatTimeAgo } from '@vueuse/core'
 import { getErrorMessage } from '~/shared/utils/errors'
@@ -108,6 +109,36 @@ const fmtNum = (v: number | null | undefined, digits = 2) =>
 const fmtPf = (v: number | null) => (v === null ? '∞' : v.toFixed(2))
 const netColor = (v: number) => (v > 0 ? 'text-success' : v < 0 ? 'text-error' : 'text-muted')
 
+const trail = computed(() => [
+  { label: t('nav.test_center') },
+  { label: t('runs.title') }
+])
+
+// KPI ribbon — derived only from the series already loaded (honest: the list is
+// cursor-paginated, so the hint says so when more pages exist). Never faked.
+const metrics = computed<MetricItem[]>(() => {
+  const list = series.value
+  const symbols = new Set(list.map(s => s.symbol)).size
+  const trades = list.reduce((n, s) => n + (s.summary.trades ?? 0), 0)
+  const nets = list
+    .map(s => s.summary.netPct)
+    .filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+  const avgNet = nets.length ? nets.reduce((a, b) => a + b, 0) / nets.length : null
+  const hint = hasMore.value ? t('testCenter.runs.metrics.loadedHint') : t('testCenter.runs.metrics.allHint')
+  return [
+    { key: 'series', label: t('testCenter.runs.metrics.series'), value: String(list.length), icon: 'i-lucide-layers', tone: 'primary', hint },
+    { key: 'symbols', label: t('testCenter.runs.metrics.symbols'), value: String(symbols), icon: 'i-lucide-coins' },
+    { key: 'trades', label: t('testCenter.runs.metrics.trades'), value: String(trades), icon: 'i-lucide-hash' },
+    {
+      key: 'avgNet',
+      label: t('testCenter.runs.metrics.avgNet'),
+      value: avgNet === null ? '—' : fmtPct(avgNet),
+      icon: 'i-lucide-trending-up',
+      tone: avgNet === null ? 'default' : avgNet > 0 ? 'success' : avgNet < 0 ? 'error' : 'default'
+    }
+  ]
+})
+
 const mobileBar = useMobileBar()
 mobileBar.registerActions(computed(() => [
   {
@@ -127,6 +158,10 @@ useHead({ title })
 
 <template>
   <BasePage id="runs" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('testCenter.pips.runs')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UButton
@@ -158,6 +193,8 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-3">
+      <MetricRibbon :items="metrics" />
+
       <!-- Bang tong hop Symbol x TF -->
       <UCard v-if="matrix" class="shrink-0" :ui="{ body: 'p-3 sm:p-3' }">
         <template #header>
@@ -178,23 +215,23 @@ useHead({ title })
 
         <div class="overflow-x-auto">
           <table class="w-full text-xs border-collapse">
-            <thead>
+            <thead class="bg-muted/50">
               <tr>
-                <th class="text-left text-[11px] font-medium text-muted uppercase tracking-wider px-2 py-1.5">{{ t('runs.symbol') }}</th>
+                <th class="text-left text-[11px] font-medium text-dimmed uppercase tracking-wider px-2 py-1">{{ t('runs.symbol') }}</th>
                 <th
                   v-for="tf in matrix.tfs"
                   :key="tf"
-                  class="text-right text-[11px] font-medium text-muted uppercase tracking-wider px-2 py-1.5"
+                  class="text-right text-[11px] font-medium text-dimmed uppercase tracking-wider px-2 py-1"
                 >{{ tf }}m</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="symbol in matrix.symbols" :key="symbol" class="border-t border-default/50">
-                <td class="px-2 py-1.5 font-semibold text-highlighted whitespace-nowrap">{{ symbol }}</td>
+                <td class="px-2 py-1 font-semibold text-highlighted whitespace-nowrap">{{ symbol }}</td>
                 <td
                   v-for="tf in matrix.tfs"
                   :key="tf"
-                  class="px-2 py-1.5 text-right"
+                  class="px-2 py-1 text-right"
                 >
                   <button
                     v-if="matrixCell(symbol, tf)"

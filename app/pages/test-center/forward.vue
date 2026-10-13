@@ -96,6 +96,11 @@ const markOf = (p: PositionItem) => p.live?.mark ?? null
 const dirLabel = (p: PositionItem) => (p.dir === 1 ? t('testCenter.forward.long') : t('testCenter.forward.short'))
 const dirColor = (p: PositionItem) => (p.dir === 1 ? 'text-success' : 'text-error')
 
+const trail = computed(() => [
+  { label: t('nav.test_center') },
+  { label: t('testCenter.forward.title') }
+])
+
 const mobileBar = useMobileBar()
 mobileBar.registerActions(computed(() => [
   { icon: 'i-lucide-refresh-cw', label: t('common.refresh'), onSelect: load }
@@ -111,6 +116,10 @@ useHead({ title })
 
 <template>
   <BasePage id="forward-tests" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('testCenter.pips.forward')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UButton

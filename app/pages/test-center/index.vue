@@ -174,6 +174,11 @@ const fmtNum = (v: number | null | undefined, digits = 2) =>
 const fmtPf = (v: number | null | undefined) => (v === null || v === undefined ? '—' : Number.isFinite(v) ? v.toFixed(2) : '∞')
 const netColor = (v: number | undefined) => (typeof v === 'number' && v > 0 ? 'text-success' : typeof v === 'number' && v < 0 ? 'text-error' : 'text-muted')
 
+const trail = computed(() => [
+  { label: t('nav.test_center') },
+  { label: t('testCenter.builder.title') }
+])
+
 const mobileBar = useMobileBar()
 mobileBar.registerActions(computed(() => [
   { icon: 'i-lucide-play', label: t('testCenter.builder.run'), onSelect: submit }
@@ -184,6 +189,10 @@ useHead({ title })
 
 <template>
   <BasePage id="lab-new" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('testCenter.pips.builder')" />
+    </template>
+
     <template #right>
       <UButton
         icon="i-lucide-play"

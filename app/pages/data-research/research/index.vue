@@ -70,6 +70,18 @@ const evidenceStats = computed(() => {
   return { count: samples.length, total, min, insufficient }
 })
 
+const evidenceMetrics = computed(() => [
+  { key: 'profile', label: t('research.profileLabel'), value: profileName.value, icon: 'i-lucide-fingerprint' },
+  { key: 'version', label: t('research.activeVersionLabel'), value: activeVersion.value || t('research.none'), icon: 'i-lucide-git-commit' },
+  { key: 'versions', label: t('research.versionsLabel'), value: String(research.value?.versions.length ?? 0), icon: 'i-lucide-layers' },
+  { key: 'samples', label: t('research.sampleTitle'), value: `${t('research.totalSamples')} ${evidenceStats.value.total}`, icon: 'i-lucide-database', tone: evidenceStats.value.insufficient ? 'warning' as const : 'success' as const }
+])
+
+const trail = computed(() => [
+  { label: t('nav.data_research') },
+  { label: title.value }
+])
+
 async function approve(proposal: Proposal) {
   creatingId.value = proposal.proposalId
   try {
@@ -97,6 +109,10 @@ useHead({ title })
 
 <template>
   <BasePage id="research" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('research.pips.analyze')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UButton
@@ -171,26 +187,7 @@ useHead({ title })
           </div>
         </template>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div class="min-w-0">
-            <div class="text-[11px] font-medium text-muted uppercase tracking-wider">{{ t('research.profileLabel') }}</div>
-            <div class="text-sm font-semibold text-highlighted truncate mt-1">{{ profileName }}</div>
-          </div>
-          <div class="min-w-0">
-            <div class="text-[11px] font-medium text-muted uppercase tracking-wider">{{ t('research.activeVersionLabel') }}</div>
-            <div class="text-sm font-semibold text-highlighted truncate mt-1">{{ activeVersion || t('research.none') }}</div>
-          </div>
-          <div class="min-w-0">
-            <div class="text-[11px] font-medium text-muted uppercase tracking-wider">{{ t('research.versionsLabel') }}</div>
-            <div class="text-sm font-semibold text-highlighted mt-1">{{ research.versions.length }}</div>
-          </div>
-          <div class="min-w-0">
-            <div class="text-[11px] font-medium text-muted uppercase tracking-wider">{{ t('research.sampleTitle') }}</div>
-            <div class="text-sm font-semibold mt-1" :class="evidenceStats.insufficient ? 'text-warning' : 'text-success'">
-              {{ t('research.totalSamples') }} {{ evidenceStats.total }}
-            </div>
-          </div>
-        </div>
+        <MetricRibbon :items="evidenceMetrics" cols="grid-cols-2 sm:grid-cols-4" />
 
         <UAlert
           class="mt-4"

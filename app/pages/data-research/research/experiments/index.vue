@@ -37,13 +37,42 @@ const STATUSES: { value: string; label: ExperimentState | 'all' }[] = [
 async function refresh() {
   isLoading.value = true
   try {
-    rows.value = await api.experiments({ status: statusFilter.value, limit: 200 })
+    // Fetch the full queue once; status is filtered client-side so the chip
+    // counts reflect every experiment, not a server-narrowed subset.
+    rows.value = await api.experiments({ status: '', limit: 200 })
   } finally {
     isLoading.value = false
   }
 }
 onMounted(refresh)
-watch(statusFilter, refresh)
+
+const filtered = computed(() =>
+  statusFilter.value ? rows.value.filter(r => r.status === statusFilter.value) : rows.value)
+
+const statusChips = computed(() => STATUSES.map(s => ({
+  value: s.value,
+  label: t(`research.status.${s.label}`),
+  count: s.value ? rows.value.filter(r => r.status === s.value).length : rows.value.length
+})))
+
+const ACTIVE_STATES = ['proposed', 'approved', 'running', 'backtested', 'holdout', 'paper_validation']
+
+const metrics = computed(() => {
+  const accepted = rows.value.filter(r => r.status === 'accepted').length
+  const rejected = rows.value.filter(r => r.status === 'rejected').length
+  const active = rows.value.filter(r => ACTIVE_STATES.includes(r.status || '')).length
+  return [
+    { key: 'total', label: t('research.rollup.total'), value: String(rows.value.length), icon: 'i-lucide-test-tube' },
+    { key: 'active', label: t('research.rollup.active'), value: String(active), icon: 'i-lucide-loader', tone: 'primary' as const },
+    { key: 'accepted', label: t('research.rollup.accepted'), value: String(accepted), icon: 'i-lucide-check-circle', tone: 'success' as const },
+    { key: 'rejected', label: t('research.rollup.rejected'), value: String(rejected), icon: 'i-lucide-x-circle', tone: rejected ? 'error' as const : 'default' as const }
+  ]
+})
+
+const trail = computed(() => [
+  { label: t('nav.data_research') },
+  { label: title.value }
+])
 
 // -------- create from a proposal (human approval, D7) --------
 const showCreate = ref(false)
@@ -118,6 +147,10 @@ useHead({ title })
 
 <template>
   <BasePage id="research-experiments" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('research.pips.experiments')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UButton
@@ -151,25 +184,18 @@ useHead({ title })
 
     <template #toolbar>
       <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
-        <UButton
-          v-for="s in STATUSES"
-          :key="s.value || 'all'"
-          :label="t(`research.status.${s.label}`)"
-          size="xs"
-          :color="statusFilter === s.value ? 'primary' : 'neutral'"
-          :variant="statusFilter === s.value ? 'soft' : 'ghost'"
-          @click="statusFilter = s.value"
-        />
+        <FilterChips v-model="statusFilter" :items="statusChips" />
       </div>
     </template>
 
     <template #footer>
-      <SharedListFooter :count="rows.length" :loading="isLoading" />
+      <SharedListFooter :count="filtered.length" :loading="isLoading" />
     </template>
 
-    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6">
+    <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
+      <MetricRibbon :items="metrics" />
       <LazyGridList
-        :items="rows"
+        :items="filtered"
         :columns="columns"
         :loading="isLoading"
         :can-load-more="false"

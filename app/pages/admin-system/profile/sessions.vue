@@ -4,6 +4,11 @@ import type { UserSession } from '~/types/auth'
 import { getErrorMessage } from '~/shared/utils/errors'
 
 const { t } = useI18n()
+
+const trail = computed(() => [
+  { label: t('nav.admin_system') },
+  { label: t('profile.sessions') }
+])
 const notify = useNotify()
 const { hubFetch } = useHub()
 
@@ -116,6 +121,9 @@ useHead({ title: computed(() => t('profile.sessions')) })
 
 <template>
   <BasePage id="profile" :title="t('profile.sessions')" :description="t('profile.sessionsDesc')">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" />
+    </template>
     <template #right>
       <UButton color="error" variant="soft" size="sm" icon="i-lucide-log-out" :label="t('profile.revokeAll')"
         :ui="{ label: 'hidden md:block' }" @click="isRevokeAllOpen = true" />

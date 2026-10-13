@@ -358,7 +358,8 @@ const submit = async (): Promise<void> => {
 
     <UButton
       block
-      size="sm"
+      size="lg"
+      class="font-semibold active:scale-[0.98]"
       :color="side === 'BUY' ? 'success' : 'error'"
       :loading="busy"
       :disabled="submitDisabled"

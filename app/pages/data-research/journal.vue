@@ -114,18 +114,26 @@ const resultLabel = (r: JournalEntry['result']) => {
 const resultColor = (r: JournalEntry['result']): 'success' | 'error' | 'warning' | 'info' | 'neutral' =>
   r === 'TP' ? 'success' : r === 'SL' ? 'error' : r === 'OPEN' ? 'info' : r === 'TIME' ? 'warning' : 'neutral'
 
+const signTone = (v: number | null | undefined) =>
+  v == null ? 'default' as const : v > 0 ? 'success' as const : v < 0 ? 'error' as const : 'default' as const
+
 const statCards = computed(() => {
   const s = stats.value
   return [
-    { key: 'total', label: t('journal.statTotal'), value: s ? String(s.n) : '—' },
-    { key: 'closed', label: t('journal.statClosed'), value: s ? String(s.closed) : '—' },
-    { key: 'open', label: t('journal.statOpen'), value: s ? String(s.open) : '—' },
-    { key: 'winRate', label: t('journal.statWinRate'), value: s ? fmtPct(s.winRate) : '—' },
-    { key: 'expectancy', label: t('journal.statExpectancy'), value: s ? fmtR(s.expectancyR) : '—', r: s?.expectancyR ?? null },
-    { key: 'median', label: t('journal.statMedianR'), value: s ? fmtR(s.medianR) : '—', r: s?.medianR ?? null },
+    { key: 'total', label: t('journal.statTotal'), value: s ? String(s.n) : '—', icon: 'i-lucide-book-marked' },
+    { key: 'closed', label: t('journal.statClosed'), value: s ? String(s.closed) : '—', icon: 'i-lucide-check-check' },
+    { key: 'open', label: t('journal.statOpen'), value: s ? String(s.open) : '—', icon: 'i-lucide-hourglass' },
+    { key: 'winRate', label: t('journal.statWinRate'), value: s ? fmtPct(s.winRate) : '—', icon: 'i-lucide-target' },
+    { key: 'expectancy', label: t('journal.statExpectancy'), value: s ? fmtR(s.expectancyR) : '—', tone: signTone(s?.expectancyR) },
+    { key: 'median', label: t('journal.statMedianR'), value: s ? fmtR(s.medianR) : '—', tone: signTone(s?.medianR) },
     { key: 'pf', label: t('journal.statProfitFactor'), value: s ? fmtR(s.profitFactorR) : '—' }
   ]
 })
+
+const trail = computed(() => [
+  { label: t('nav.data_research') },
+  { label: title.value }
+])
 
 const mobileBar = useMobileBar()
 mobileBar.registerActions(computed(() => [
@@ -142,6 +150,10 @@ useHead({ title })
 
 <template>
   <BasePage id="journal" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('journal.pips.journal')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UBadge
@@ -207,19 +219,7 @@ useHead({ title })
 
     <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
       <!-- Whole-set metrics (D12 gate shown as a badge in the header). -->
-      <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-2 shrink-0">
-        <div
-          v-for="c in statCards"
-          :key="c.key"
-          class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0"
-        >
-          <span class="text-[10px] text-muted uppercase tracking-wider truncate">{{ c.label }}</span>
-          <span
-            class="text-sm font-bold font-mono truncate"
-            :class="'r' in c && c.r != null ? rClass(c.r) : 'text-highlighted'"
-          >{{ c.value }}</span>
-        </div>
-      </div>
+      <MetricRibbon :items="statCards" cols="grid-cols-2 md:grid-cols-4 xl:grid-cols-7" />
 
       <p
         v-if="stats?.insufficient && stats.insufficientReason"

@@ -21,6 +21,11 @@ const { title, description } = useAdminPageChrome({
   titleKey: 'admin.permissionsTitle',
   descKey: 'admin.permissionsDesc'
 })
+
+const trail = computed(() => [
+  { label: t('nav.admin_system') },
+  { label: title.value }
+])
 const { exporting: exportingPermissions, exportModule: exportPermissions } = useModuleExport()
 const { hubFetch, appId } = useHub()
 
@@ -133,6 +138,9 @@ useHead({ title })
 
 <template>
   <BasePage id="permissions" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" />
+    </template>
     <template #right>
       <div class="flex items-center gap-2">
         <UBadge color="neutral" variant="subtle" :label="`${total} ${t('common.total')}`" />

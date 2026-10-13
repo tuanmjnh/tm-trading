@@ -150,11 +150,20 @@ function metricColor(key: string, v: number | null): string {
 const fmtAxisTime = (ms: number) => new Date(ms).toISOString().slice(5, 16).replace('T', ' ')
 const shortHash = (h: string) => h.slice(0, 8)
 
+const trail = computed(() => [
+  { label: t('nav.test_center'), to: '/test-center/runs' },
+  { label: t('runs.compare.title') }
+])
+
 useHead({ title })
 </script>
 
 <template>
   <BasePage id="runs-compare" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('testCenter.pips.compare')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UBadge
@@ -259,13 +268,13 @@ useHead({ title })
 
           <div class="overflow-x-auto">
             <table class="w-full text-xs border-collapse">
-              <thead>
+              <thead class="bg-muted/50">
                 <tr>
-                  <th class="text-left text-[11px] font-medium text-muted uppercase tracking-wider px-2 py-1.5"></th>
+                  <th class="text-left text-[11px] font-medium text-dimmed uppercase tracking-wider px-2 py-1"></th>
                   <th
                     v-for="d in selectedDetails"
                     :key="d.id"
-                    class="text-right text-[11px] font-medium text-muted uppercase tracking-wider px-2 py-1.5 min-w-28"
+                    class="text-right text-[11px] font-medium text-dimmed uppercase tracking-wider px-2 py-1 min-w-28"
                   >
                     <span class="inline-flex items-center gap-1.5">
                       <span class="w-2 h-2 rounded-full" :class="DOT_CLASSES[colorIndex(d.id)]" />
@@ -278,11 +287,11 @@ useHead({ title })
               </thead>
               <tbody>
                 <tr v-for="row in rows" :key="row.key" class="border-t border-default/50">
-                  <td class="px-2 py-1.5 text-muted whitespace-nowrap">{{ t(`runs.compare.metrics.${row.key}`) }}</td>
+                  <td class="px-2 py-1 text-muted whitespace-nowrap">{{ t(`runs.compare.metrics.${row.key}`) }}</td>
                   <td
                     v-for="(v, i) in row.values"
                     :key="i"
-                    class="px-2 py-1.5 text-right font-mono"
+                    class="px-2 py-1 text-right font-mono"
                   >
                     <span
                       class="inline-block px-1 rounded"
@@ -325,13 +334,13 @@ useHead({ title })
           <template v-else-if="pDiff.diffKeys.length">
             <div class="overflow-x-auto">
               <table class="w-full text-xs border-collapse">
-                <thead>
+                <thead class="bg-muted/50">
                   <tr>
-                    <th class="text-left text-[11px] font-medium text-muted uppercase tracking-wider px-2 py-1.5">param</th>
+                    <th class="text-left text-[11px] font-medium text-dimmed uppercase tracking-wider px-2 py-1">param</th>
                     <th
                       v-for="d in selectedDetails"
                       :key="d.id"
-                      class="text-right text-[11px] font-medium text-muted uppercase tracking-wider px-2 py-1.5 min-w-28"
+                      class="text-right text-[11px] font-medium text-dimmed uppercase tracking-wider px-2 py-1 min-w-28"
                     >
                       <span class="inline-flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full" :class="DOT_CLASSES[colorIndex(d.id)]" />
@@ -343,11 +352,11 @@ useHead({ title })
                 </thead>
                 <tbody>
                   <tr v-for="key in pDiff.diffKeys" :key="key" class="border-t border-default/50 bg-warning/5">
-                    <td class="px-2 py-1.5 font-mono text-muted whitespace-nowrap">{{ key }}</td>
+                    <td class="px-2 py-1 font-mono text-muted whitespace-nowrap">{{ key }}</td>
                     <td
                       v-for="d in selectedDetails"
                       :key="d.id"
-                      class="px-2 py-1.5 text-right font-mono text-highlighted break-all max-w-40"
+                      class="px-2 py-1 text-right font-mono text-highlighted break-all max-w-40"
                       :title="paramsValue(d.params[key])"
                     >{{ paramsValue(d.params[key]) }}</td>
                   </tr>

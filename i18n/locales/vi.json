@@ -807,6 +807,17 @@
     "clear_history_desc": "Bạn có chắc chắn muốn xóa lịch sử không?"
   },
   "research": {
+    "pips": {
+      "analyze": "Không gian bằng chứng có phiên bản",
+      "experiments": "Hàng chờ duyệt ứng viên AI",
+      "detail": "Vòng đời & cổng chấp nhận"
+    },
+    "rollup": {
+      "total": "Tổng thí nghiệm",
+      "active": "Đang tiến hành",
+      "accepted": "Đã chấp nhận",
+      "rejected": "Đã từ chối"
+    },
     "analyzeTitle": "Nghiên cứu AI",
     "analyzeDesc": "Đọc tập bằng chứng đã được đánh phiên bản mà AI dựa vào và phê duyệt đề xuất thành thí nghiệm",
     "experimentsTitle": "Thí nghiệm",
@@ -1061,6 +1072,13 @@
     "title": "Nguồn dữ liệu thị trường",
     "desc": "Kiểm tra trực tiếp tình trạng từng nhà cung cấp dữ liệu thị trường. Tách biệt với các bản ghi kết nối chung (nằm trong Tài nguyên chia sẻ).",
     "distinctNote": "Tình trạng nhà cung cấp được thăm dò theo từng sàn, độc lập với danh mục kết nối của tm-hub.",
+    "pip": "Thăm dò tình trạng nhà cung cấp",
+    "metrics": {
+      "venues": "Sàn dữ liệu",
+      "up": "Hoạt động",
+      "down": "Gián đoạn",
+      "unknown": "Không rõ"
+    },
     "venue": "Sàn",
     "status": "Tình trạng",
     "latency": "Độ trễ",
@@ -1077,6 +1095,7 @@
   "systemHealth": {
     "title": "Sức khỏe hệ thống",
     "desc": "Tình trạng tổng thể nền tảng: cơ sở dữ liệu, các dịch vụ nền và thời gian chạy.",
+    "pip": "Đo từ xa runtime",
     "status": "Tình trạng",
     "database": "Cơ sở dữ liệu",
     "version": "Phiên bản",
@@ -1248,6 +1267,13 @@
   },
   "alertRules": {
     "title": "Quy tắc cảnh báo",
+    "pip": "Sentinel điều phối: đã bật",
+    "metrics": {
+      "total": "Quy tắc",
+      "enabled": "Đang bật",
+      "disabled": "Đang tắt",
+      "matches": "Khớp"
+    },
     "desc": "Định nghĩa quy tắc trên luồng sự kiện intel (tin tức / cảnh báo). Quy tắc mô tả điều kiện; dịch vụ alertRules đánh giá và định tuyến kết quả khớp qua pipeline thông báo dùng chung.",
     "create": "Quy tắc mới",
     "edit": "Sửa",
@@ -1351,6 +1377,12 @@
     "send": "Gửi",
     "fieldBody": "Nội dung",
     "description": "Xem thông báo và gửi Web Push đến người dùng.",
+    "pip": "Sổ ghi phát thông báo",
+    "metrics": {
+      "total": "Tổng",
+      "unread": "Chưa đọc",
+      "read": "Đã đọc"
+    },
     "sendTitle": "Gửi thông báo",
     "sendSuccess": "Đã gửi thông báo",
     "sendSuccessDesc": "Đã gửi tới {count} thiết bị",
@@ -1995,6 +2027,9 @@
     "legendNote": "gop 1 ngay/lan tu method + regime + funding + zone"
   },
   "journal": {
+    "pips": {
+      "journal": "Sổ giao dịch đã khớp"
+    },
     "title": "Nhật ký giao dịch",
     "desc": "Nhật ký tập trung mọi lệnh đã thực thi (paper/MT5/exchange/manual) — đọc từ engine/journal, không tính lại.",
     "empty": "Chưa có giao dịch nào",
@@ -2959,6 +2994,13 @@
     "all": "Tất cả",
     "unread": "Chưa đọc",
     "description": "Đọc và trả lời mail từ tài khoản Google đã kết nối",
+    "pip": "Ứng dụng mail hợp nhất",
+    "compose": "Soạn thư",
+    "newMail": "Thư mới",
+    "folders": "Thư mục",
+    "threadsTotal": "{0} hội thoại",
+    "noMessagesInFolder": "Không có tin nhắn trong thư mục này",
+    "hasAttachment": "Có tệp đính kèm",
     "searchPlaceholder": "Tìm mail (cú pháp Gmail)...",
     "filtered": "Lọc: {0}",
     "loadMore": "Tải thêm",
@@ -3637,6 +3679,13 @@
     "title": "Hàng đợi nền"
   },
   "strategyLab": {
+    "pips": {
+      "strategies": "Phiên bản bất biến",
+      "indicators": "Sổ đăng ký chỉ đọc",
+      "methods": "Sổ đăng ký chỉ đọc",
+      "botProfiles": "Cấu hình thực thi",
+      "botInstances": "Phiên đang chạy"
+    },
     "strategies": {
       "title": "Thư viện chiến lược",
       "desc": "Hồ sơ chiến lược tái sử dụng và các phiên bản bất biến",
@@ -3653,6 +3702,10 @@
         "active": "Hoạt động",
         "paused": "Tạm dừng",
         "retired": "Ngừng"
+      },
+      "metrics": {
+        "total": "Tổng chiến lược",
+        "versionedHint": "{n} gắn phiên bản"
       }
     },
     "indicators": {
@@ -3672,6 +3725,9 @@
         "overlay": "Lớp phủ",
         "pane": "Bảng riêng",
         "volume": "Khối lượng"
+      },
+      "metrics": {
+        "total": "Tổng chỉ báo"
       }
     },
     "methods": {
@@ -3691,7 +3747,13 @@
       "profitFactor": "Hệ số lợi nhuận",
       "net": "Ròng",
       "expectancy": "Kỳ vọng",
-      "generated": "Tạo lúc"
+      "generated": "Tạo lúc",
+      "metrics": {
+        "registered": "Phương pháp đăng ký",
+        "leagueRows": "Phương pháp league",
+        "engine": "Phiên bản engine",
+        "winRate": "Tỷ lệ thắng tổng hợp"
+      }
     },
     "bots": {
       "profilesTitle": "Hồ sơ Bot",
@@ -3730,10 +3792,33 @@
         "completed": "Hoàn tất",
         "failed": "Thất bại",
         "halted": "Dừng khẩn"
+      },
+      "metrics": {
+        "total": "Tổng hồ sơ"
+      },
+      "instanceMetrics": {
+        "total": "Tổng thực thể"
       }
     }
   },
   "testCenter": {
+    "pips": {
+      "builder": "Bệ phóng tất định",
+      "forward": "Luồng OOS thời gian thực",
+      "replay": "Core sim tất định",
+      "runs": "Sổ cái xác thực hash",
+      "compare": "Kiểm định overfit"
+    },
+    "runs": {
+      "metrics": {
+        "series": "Chuỗi đã tải",
+        "symbols": "Mã",
+        "trades": "Lệnh",
+        "avgNet": "Net TB",
+        "loadedHint": "trang đã tải",
+        "allHint": "toàn bộ chuỗi"
+      }
+    },
     "builder": {
       "title": "Trình tạo kiểm thử",
       "desc": "Chạy backtest, replay hoặc kiểm thử live-paper kèm manifest D1 đầy đủ.",
@@ -3807,6 +3892,27 @@
     }
   },
   "dataCenter": {
+    "pips": {
+      "overview": "Trung tâm lưu trữ của bộ ghi",
+      "datasets": "Kho bộ dữ liệu tuyển chọn",
+      "recordings": "Bộ ghi luồng thị trường trực tiếp",
+      "quality": "Kết luận toàn vẹn & độ phủ",
+      "lineage": "Đồ thị nguồn gốc"
+    },
+    "metrics": {
+      "datasets": "Bộ dữ liệu",
+      "symbols": "Mã",
+      "timeframes": "Khung TG",
+      "rows": "Số dòng",
+      "groups": "Nhóm",
+      "series": "Chuỗi",
+      "multiHash": "Đa băm",
+      "linked": "Bộ dữ liệu liên kết",
+      "healthy": "Lành mạnh",
+      "flagged": "Bị gắn cờ",
+      "coverage": "Độ phủ TB",
+      "loadedHint": "trang đã tải"
+    },
     "overviewTitle": "Trung tâm dữ liệu",
     "overviewDesc": "Bộ dữ liệu, bản ghi, chất lượng và nguồn gốc dữ liệu kiểm thử trên kho lưu của bộ ghi.",
     "datasetsTitle": "Thư viện bộ dữ liệu",

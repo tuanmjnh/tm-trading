@@ -42,6 +42,31 @@ const verdictColor = (v: QualityVerdict) =>
         : 'neutral'
 const verdictLabel = (v: QualityVerdict) => t(`dataCenter.verdictLabels.${v}`)
 
+const verdictChips = computed(() => [
+  { value: '', label: t('common.all'), count: rows.value.length },
+  { value: 'ok', label: verdictLabel('ok'), count: rows.value.filter(r => r.verdict === 'ok').length },
+  { value: 'gap', label: verdictLabel('gap'), count: rows.value.filter(r => r.verdict === 'gap').length },
+  { value: 'stale', label: verdictLabel('stale'), count: rows.value.filter(r => r.verdict === 'stale').length },
+  { value: 'suspect', label: verdictLabel('suspect'), count: rows.value.filter(r => r.verdict === 'suspect').length },
+  { value: 'empty', label: verdictLabel('empty'), count: rows.value.filter(r => r.verdict === 'empty').length }
+])
+
+const metrics = computed(() => {
+  const cov = rows.value.map(r => r.coveragePct).filter((v): v is number => typeof v === 'number')
+  const avg = cov.length ? cov.reduce((a, b) => a + b, 0) / cov.length : null
+  return [
+    { key: 'datasets', label: t('dataCenter.metrics.datasets'), value: String(rows.value.length), icon: 'i-lucide-database' },
+    { key: 'healthy', label: t('dataCenter.metrics.healthy'), value: String(counts.value.ok), icon: 'i-lucide-circle-check', tone: 'success' as const },
+    { key: 'flagged', label: t('dataCenter.metrics.flagged'), value: String(counts.value.warn), icon: 'i-lucide-triangle-alert', tone: counts.value.warn ? 'warning' as const : 'default' as const },
+    { key: 'coverage', label: t('dataCenter.metrics.coverage'), value: avg == null ? '—' : `${avg.toFixed(1)}%`, icon: 'i-lucide-percent' }
+  ]
+})
+
+const trail = computed(() => [
+  { label: t('nav.data_center'), to: '/data-research/data' },
+  { label: title.value }
+])
+
 const columns = computed<GridColumn[]>(() => [
   { key: 'datasetId', label: t('dataCenter.columns.dataset'), class: 'min-w-52' },
   { key: 'symbol', label: t('dataCenter.columns.symbol'), class: 'w-28' },
@@ -64,6 +89,10 @@ useHead({ title })
 
 <template>
   <BasePage id="data-quality" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('dataCenter.pips.quality')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UBadge :label="`${counts.ok} / ${counts.warn}`" color="neutral" variant="subtle" size="sm" />
@@ -79,16 +108,8 @@ useHead({ title })
     </template>
 
     <template #toolbar>
-      <div class="flex items-center gap-1 flex-wrap px-4 sm:px-6 py-2">
-        <UButton
-          v-for="v in ['', 'ok', 'gap', 'stale', 'suspect', 'empty']"
-          :key="v || 'all'"
-          :label="v ? verdictLabel(v as QualityVerdict) : t('common.all')"
-          size="xs"
-          :color="verdictFilter === v ? 'primary' : 'neutral'"
-          :variant="verdictFilter === v ? 'soft' : 'ghost'"
-          @click="verdictFilter = v"
-        />
+      <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
+        <FilterChips v-model="verdictFilter" :items="verdictChips" />
       </div>
     </template>
 
@@ -96,7 +117,8 @@ useHead({ title })
       <SharedListFooter :count="filtered.length" :loading="isLoading" />
     </template>
 
-    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6">
+    <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
+      <MetricRibbon :items="metrics" />
       <LazyGridList
         :items="filtered"
         :columns="columns"

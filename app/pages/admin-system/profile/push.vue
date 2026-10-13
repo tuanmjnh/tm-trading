@@ -2,6 +2,11 @@
 import type { NavigationMenuItem } from '@nuxt/ui'
 
 const { t } = useI18n()
+
+const trail = computed(() => [
+  { label: t('nav.admin_system') },
+  { label: t('notifications.pushTitle') }
+])
 const {
   isSupported: pushSupported,
   isSubscribed: pushSubscribed,
@@ -58,6 +63,9 @@ useHead({ title: computed(() => t('notifications.pushTitle')) })
 
 <template>
   <BasePage id="profile" :title="t('notifications.pushTitle')" :description="t('notifications.pushDesc')">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" />
+    </template>
     <BaseSectionNav :items="navItems">
       <UCard>
           <div class="flex items-center justify-between gap-3 rounded border border-default bg-elevated/50 p-3">

@@ -13,6 +13,11 @@ definePageMeta({
 })
 
 const { t } = useI18n()
+
+const trail = computed(() => [
+  { label: t('nav.admin_system') },
+  { label: t('configs.title') }
+])
 const toast = useToast()
 const { hubFetch, appId, configs } = useHub()
 
@@ -458,6 +463,9 @@ onMounted(() => load(true))
 
 <template>
   <BasePage id="admin-configs" :title="$t('configs.title')">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" />
+    </template>
     <template #right>
       <div class="flex items-center gap-2">
         <BaseHeaderActions :actions="headerActions" />

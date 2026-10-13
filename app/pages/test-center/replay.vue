@@ -210,10 +210,19 @@ function fmtCandleTime(ms: number): string {
 function fmtPrice(v: number): string {
   return String(Number(v.toFixed(6)))
 }
+
+const trail = computed(() => [
+  { label: t('nav.test_center') },
+  { label: t('replay.title') }
+])
 </script>
 
 <template>
   <BasePage id="replay" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('testCenter.pips.replay')" />
+    </template>
+
     <div class="flex flex-col w-full gap-3 pb-24 lg:pb-6">
       <!-- Session builder -->
       <div class="rounded bg-default ring ring-default p-3 flex flex-col gap-3" data-testid="replay-create-card">
@@ -417,7 +426,7 @@ function fmtPrice(v: number): string {
         <div class="text-sm font-medium">{{ t('replay.played') }}</div>
         <div v-if="events.length" class="overflow-x-auto max-h-[480px] overflow-y-auto">
           <table class="w-full text-sm" data-testid="replay-events">
-            <thead class="sticky top-0 bg-default text-left text-xs uppercase tracking-wide text-muted">
+            <thead class="sticky top-0 bg-default text-left text-xs uppercase tracking-wide text-dimmed">
               <tr>
                 <th class="py-1 pr-3">{{ t('replay.th_time') }}</th>
                 <th class="py-1 pr-3 text-right">{{ t('replay.th_open') }}</th>

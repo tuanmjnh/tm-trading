@@ -129,11 +129,21 @@ function statusColor(s: string): 'primary' | 'success' | 'error' | 'warning' | '
 const title = computed(() => experiment.value?.hypothesis ? experiment.value.hypothesis.slice(0, 60) : t('research.detail.title'))
 const description = computed(() => experimentId.value)
 
+const trail = computed(() => [
+  { label: t('nav.data_research') },
+  { label: t('research.experimentsTitle'), to: '/data-research/research/experiments' },
+  { label: experimentId.value }
+])
+
 useHead({ title })
 </script>
 
 <template>
   <BasePage id="research-experiment" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('research.pips.detail')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UButton
@@ -254,7 +264,7 @@ useHead({ title })
           </template>
 
           <table v-if="comparison" class="w-full text-xs">
-            <thead>
+            <thead class="bg-muted/50">
               <tr class="text-left text-dimmed">
                 <th class="font-medium py-1">{{ t('research.comparison.metric') }}</th>
                 <th class="font-medium py-1 text-right">{{ t('research.comparison.baseline') }}</th>
@@ -264,10 +274,10 @@ useHead({ title })
             </thead>
             <tbody>
               <tr v-for="m in COMPARE_METRICS" :key="m" class="border-t border-default">
-                <td class="py-1.5 text-muted">{{ t(`research.metrics.${m}`) }}</td>
-                <td class="py-1.5 text-right font-mono text-highlighted">{{ fmtNum(comparison.arms.find(a => a.name === 'baseline')?.metrics?.[m]) }}</td>
-                <td class="py-1.5 text-right font-mono text-highlighted">{{ fmtNum(comparison.arms.find(a => a.name === 'candidate')?.metrics?.[m]) }}</td>
-                <td class="py-1.5 text-right font-mono" :class="deltaClass(comparison.delta[m])">{{ fmtDelta(comparison.delta[m]) }}</td>
+                <td class="py-1 text-muted">{{ t(`research.metrics.${m}`) }}</td>
+                <td class="py-1 text-right font-mono text-highlighted">{{ fmtNum(comparison.arms.find(a => a.name === 'baseline')?.metrics?.[m]) }}</td>
+                <td class="py-1 text-right font-mono text-highlighted">{{ fmtNum(comparison.arms.find(a => a.name === 'candidate')?.metrics?.[m]) }}</td>
+                <td class="py-1 text-right font-mono" :class="deltaClass(comparison.delta[m])">{{ fmtDelta(comparison.delta[m]) }}</td>
               </tr>
             </tbody>
           </table>
@@ -286,7 +296,7 @@ useHead({ title })
 
         <div class="overflow-x-auto">
           <table class="w-full text-xs min-w-[720px]">
-            <thead>
+            <thead class="bg-muted/50">
               <tr class="text-left text-dimmed">
                 <th class="font-medium py-1 pe-3">{{ t('research.arms.role') }}</th>
                 <th class="font-medium py-1 px-2 text-right">{{ t('research.arms.trades') }}</th>
@@ -299,18 +309,18 @@ useHead({ title })
             </thead>
             <tbody>
               <tr v-for="a in arms" :key="a.role" class="border-t border-default">
-                <td class="py-1.5 pe-3">
+                <td class="py-1 pe-3">
                   <UBadge :label="t(`research.roles.${a.role}`)" color="neutral" variant="subtle" size="xs" class="font-mono" />
                 </td>
                 <template v-if="a.metrics">
-                  <td class="py-1.5 px-2 text-right font-mono text-highlighted">{{ a.metrics.trades ?? '—' }}</td>
-                  <td class="py-1.5 px-2 text-right font-mono text-highlighted">{{ fmtPct(a.metrics.winRate) }}</td>
-                  <td class="py-1.5 px-2 text-right font-mono text-highlighted">{{ a.metrics.profitFactor === null ? '∞' : fmtNum(a.metrics.profitFactor) }}</td>
-                  <td class="py-1.5 px-2 text-right font-mono" :class="(a.metrics.expectancyR ?? 0) > 0 ? 'text-success' : (a.metrics.expectancyR ?? 0) < 0 ? 'text-error' : 'text-muted'">{{ fmtNum(a.metrics.expectancyR, 3) }}R</td>
-                  <td class="py-1.5 px-2 text-right font-mono text-highlighted">{{ fmtNum(a.metrics.netPct) }}%</td>
-                  <td class="py-1.5 ps-2 text-right font-mono text-muted">{{ fmtNum(a.metrics.maxDrawdownPct) }}%</td>
+                  <td class="py-1 px-2 text-right font-mono text-highlighted">{{ a.metrics.trades ?? '—' }}</td>
+                  <td class="py-1 px-2 text-right font-mono text-highlighted">{{ fmtPct(a.metrics.winRate) }}</td>
+                  <td class="py-1 px-2 text-right font-mono text-highlighted">{{ a.metrics.profitFactor === null ? '∞' : fmtNum(a.metrics.profitFactor) }}</td>
+                  <td class="py-1 px-2 text-right font-mono" :class="(a.metrics.expectancyR ?? 0) > 0 ? 'text-success' : (a.metrics.expectancyR ?? 0) < 0 ? 'text-error' : 'text-muted'">{{ fmtNum(a.metrics.expectancyR, 3) }}R</td>
+                  <td class="py-1 px-2 text-right font-mono text-highlighted">{{ fmtNum(a.metrics.netPct) }}%</td>
+                  <td class="py-1 ps-2 text-right font-mono text-muted">{{ fmtNum(a.metrics.maxDrawdownPct) }}%</td>
                 </template>
-                <td v-else colspan="6" class="py-1.5 text-dimmed italic">{{ t('research.arms.notRun') }}</td>
+                <td v-else colspan="6" class="py-1 text-dimmed italic">{{ t('research.arms.notRun') }}</td>
               </tr>
             </tbody>
           </table>

@@ -141,11 +141,11 @@ const clock = (ms: number): string =>
           class="relative grid grid-cols-2 rounded-[2px] px-1 py-[1px]"
         >
           <span
-            class="absolute inset-y-0 right-0 bg-success/10"
+            class="absolute inset-y-0 right-0 bg-primary/10"
             :style="{ width: barWidth(lvl) }"
             aria-hidden="true"
           />
-          <span class="relative font-mono text-[11px] text-success">{{ formatPrice(lvl[0]) }}</span>
+          <span class="relative font-mono text-[11px] text-primary">{{ formatPrice(lvl[0]) }}</span>
           <span class="relative text-right font-mono text-[11px] text-default/80">{{ formatQty(lvl[1]) }}</span>
         </div>
       </div>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MarketSourceHealth, MarketSourceHealthResponse } from '~~/types/health'
+import type { MetricItem } from '~/components/MetricRibbon.vue'
 
 // Market Data Sources (roadmap §58 acceptance #6). Live per-venue probes of the
 // market data providers (§30.1) — DISTINCT from tm-hub connection records
@@ -33,6 +34,23 @@ onMounted(refresh)
 const statusColor = (s: MarketSourceHealth['status']) =>
   s === 'up' ? 'success' : s === 'down' ? 'error' : 'neutral'
 
+const metrics = computed<MetricItem[]>(() => {
+  const up = sources.value.filter(s => s.status === 'up').length
+  const down = sources.value.filter(s => s.status === 'down').length
+  const unknown = sources.value.length - up - down
+  return [
+    { key: 'venues', label: t('marketSources.metrics.venues'), value: String(sources.value.length), icon: 'i-lucide-database-zap' },
+    { key: 'up', label: t('marketSources.metrics.up'), value: String(up), icon: 'i-lucide-circle-check', tone: 'success' as const },
+    { key: 'down', label: t('marketSources.metrics.down'), value: String(down), icon: 'i-lucide-circle-x', tone: down > 0 ? 'error' as const : 'default' as const },
+    { key: 'unknown', label: t('marketSources.metrics.unknown'), value: String(unknown), icon: 'i-lucide-circle-help' }
+  ]
+})
+
+const trail = computed(() => [
+  { label: t('nav.admin_system') },
+  { label: title.value }
+])
+
 const mobileBar = useMobileBar()
 mobileBar.registerActions(computed(() => [
   { icon: 'i-lucide-refresh-cw', label: t('marketSources.refresh'), onSelect: refresh }
@@ -43,6 +61,10 @@ useHead({ title })
 
 <template>
   <BasePage id="system-data-sources" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('marketSources.pip')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UBadge
@@ -64,6 +86,8 @@ useHead({ title })
     </template>
 
     <div class="w-full pb-24 lg:pb-6 space-y-4">
+      <MetricRibbon :items="metrics" />
+
       <UAlert
         icon="i-lucide-info"
         color="neutral"

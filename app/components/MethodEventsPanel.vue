@@ -134,8 +134,8 @@ const leagueRows = computed(() => props.league?.methods ?? [])
       <p class="mt-1 text-[11px] text-muted">{{ t('trade.leagueHint') }}</p>
       <div class="mt-1 overflow-x-auto rounded-md ring-1 ring-default">
         <table class="w-full text-left text-[11px]">
-          <thead>
-            <tr class="border-b border-default text-muted">
+          <thead class="bg-muted/50">
+            <tr class="border-b border-default text-dimmed">
               <th class="px-2 py-1 font-medium">{{ t('trade.colMethod') }}</th>
               <th class="px-2 py-1 font-medium">{{ t('trade.colTrades') }}</th>
               <th class="px-2 py-1 font-medium">{{ t('trade.colWR') }}</th>

@@ -20,6 +20,29 @@ const planeFilter = ref('')
 const filtered = computed(() =>
   planeFilter.value ? rows.value.filter(r => r.plane === planeFilter.value) : rows.value)
 
+const planeChips = computed(() => [
+  { value: '', label: t('common.all'), count: rows.value.length },
+  { value: 'candles', label: t('dataCenter.planeLabels.candles'), count: rows.value.filter(r => r.plane === 'candles').length },
+  { value: 'feed', label: t('dataCenter.planeLabels.feed'), count: rows.value.filter(r => r.plane === 'feed').length }
+])
+
+const metrics = computed(() => {
+  const symbols = new Set(rows.value.map(r => r.symbol))
+  const tfs = new Set(rows.value.map(r => r.timeframe).filter(Boolean))
+  const totalRows = rows.value.reduce((a, r) => a + (r.count || 0), 0)
+  return [
+    { key: 'groups', label: t('dataCenter.metrics.groups'), value: String(rows.value.length), icon: 'i-lucide-video' },
+    { key: 'symbols', label: t('dataCenter.metrics.symbols'), value: String(symbols.size), icon: 'i-lucide-hash' },
+    { key: 'timeframes', label: t('dataCenter.metrics.timeframes'), value: String(tfs.size), icon: 'i-lucide-clock' },
+    { key: 'rows', label: t('dataCenter.metrics.rows'), value: totalRows.toLocaleString(), icon: 'i-lucide-rows-3' }
+  ]
+})
+
+const trail = computed(() => [
+  { label: t('nav.data_center'), to: '/data-research/data' },
+  { label: title.value }
+])
+
 async function refresh() {
   isLoading.value = true
   try {
@@ -53,6 +76,10 @@ useHead({ title })
 
 <template>
   <BasePage id="data-recordings" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('dataCenter.pips.recordings')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UButton
@@ -76,16 +103,8 @@ useHead({ title })
     </template>
 
     <template #toolbar>
-      <div class="flex items-center gap-1 flex-wrap px-4 sm:px-6 py-2">
-        <UButton
-          v-for="p in ['', 'candles', 'feed']"
-          :key="p || 'all'"
-          :label="p ? t(`dataCenter.planeLabels.${p}`) : t('common.all')"
-          size="xs"
-          :color="planeFilter === p ? 'primary' : 'neutral'"
-          :variant="planeFilter === p ? 'soft' : 'ghost'"
-          @click="planeFilter = p"
-        />
+      <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
+        <FilterChips v-model="planeFilter" :items="planeChips" />
       </div>
     </template>
 
@@ -93,7 +112,8 @@ useHead({ title })
       <SharedListFooter :count="filtered.length" :loading="isLoading" />
     </template>
 
-    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6">
+    <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
+      <MetricRibbon :items="metrics" />
       <LazyGridList
         :items="filtered"
         :columns="columns"

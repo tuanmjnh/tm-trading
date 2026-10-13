@@ -8,6 +8,11 @@ definePageMeta({
 })
 
 const { t } = useI18n()
+
+const trail = computed(() => [
+  { label: t('nav.admin_system') },
+  { label: t('profile.security') }
+])
 const notify = useNotify()
 const { hubFetch, appId } = useHub()
 const passkeyApi = usePasskey()
@@ -225,6 +230,9 @@ useHead({ title: computed(() => t('profile.security')) })
 
 <template>
   <BasePage id="profile" :title="t('profile.security')" :description="t('settings.passwordDesc')">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" />
+    </template>
     <template #right>
       <UButton type="submit" form="security-form" icon="i-lucide-key-round" :label="t('profile.changePassword')"
         color="primary" variant="soft" :ui="{ label: 'hidden md:block' }" :loading="passwordLoading" />

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
+import type { MetricItem } from '~/components/MetricRibbon.vue'
+import type { FilterChip } from '~/components/FilterChips.vue'
 import type { BotInstance } from '~~/types/bots'
 import { formatTimeAgo } from '@vueuse/core'
 
@@ -20,14 +22,13 @@ const stateFilter = ref('')
 async function refresh() {
   isLoading.value = true
   try {
-    instances.value = await botsApi.instances({ limit: 200, state: stateFilter.value })
+    instances.value = await botsApi.instances({ limit: 200 })
   } finally {
     isLoading.value = false
   }
 }
 
 onMounted(refresh)
-watch(stateFilter, refresh)
 
 const stateColor = (s: string) =>
   s === 'running' ? 'success'
@@ -36,6 +37,42 @@ const stateColor = (s: string) =>
         : s === 'failed' || s === 'halted' ? 'error'
           : 'neutral'
 const stateLabel = (s: string) => t(`strategyLab.bots.stateLabels.${s}`)
+
+const stateCounts = computed(() => {
+  const c: Record<string, number> = {}
+  for (const it of instances.value) c[it.state] = (c[it.state] ?? 0) + 1
+  return c
+})
+
+const filtered = computed(() =>
+  stateFilter.value ? instances.value.filter(i => i.state === stateFilter.value) : instances.value
+)
+
+const metrics = computed<MetricItem[]>(() => [
+  { key: 'total', label: t('strategyLab.bots.instanceMetrics.total'), value: String(instances.value.length), tone: 'primary' },
+  { key: 'running', label: t('strategyLab.bots.stateLabels.running'), value: String(stateCounts.value.running ?? 0), tone: 'success' },
+  { key: 'completed', label: t('strategyLab.bots.stateLabels.completed'), value: String(stateCounts.value.completed ?? 0) },
+  {
+    key: 'failed',
+    label: t('strategyLab.bots.stateLabels.failed'),
+    value: String((stateCounts.value.failed ?? 0) + (stateCounts.value.halted ?? 0)),
+    tone: 'error'
+  }
+])
+
+const stateChips = computed<FilterChip[]>(() => [
+  { value: '', label: t('common.all'), count: instances.value.length },
+  { value: 'running', label: t('strategyLab.bots.stateLabels.running'), count: stateCounts.value.running ?? 0 },
+  { value: 'paused', label: t('strategyLab.bots.stateLabels.paused'), count: stateCounts.value.paused ?? 0 },
+  { value: 'queued', label: t('strategyLab.bots.stateLabels.queued'), count: stateCounts.value.queued ?? 0 },
+  { value: 'completed', label: t('strategyLab.bots.stateLabels.completed'), count: stateCounts.value.completed ?? 0 },
+  { value: 'failed', label: t('strategyLab.bots.stateLabels.failed'), count: stateCounts.value.failed ?? 0 }
+])
+
+const trail = computed(() => [
+  { label: t('nav.strategy_lab') },
+  { label: t('nav.bot_instances') }
+])
 
 const columns = computed<GridColumn[]>(() => [
   { key: 'instanceId', label: t('strategyLab.bots.instance'), class: 'w-48' },
@@ -57,6 +94,10 @@ useHead({ title })
 
 <template>
   <BasePage id="bot_instances" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('strategyLab.pips.botInstances')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UButton
@@ -80,95 +121,91 @@ useHead({ title })
     </template>
 
     <template #toolbar>
-      <div class="flex items-center gap-1 flex-wrap px-4 sm:px-6 py-2">
-        <UButton
-          v-for="s in ['', 'running', 'paused', 'queued', 'completed', 'failed']"
-          :key="s || 'all'"
-          :label="s ? stateLabel(s) : t('common.all')"
-          size="xs"
-          :color="stateFilter === s ? 'primary' : 'neutral'"
-          :variant="stateFilter === s ? 'soft' : 'ghost'"
-          @click="stateFilter = s"
-        />
+      <div class="px-4 sm:px-6 py-2">
+        <FilterChips v-model="stateFilter" :items="stateChips" />
       </div>
     </template>
 
     <template #footer>
-      <SharedListFooter :count="instances.length" :loading="isLoading" />
+      <SharedListFooter :count="filtered.length" :loading="isLoading" />
     </template>
 
-    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6">
-      <LazyGridList
-        :items="instances"
-        :columns="columns"
-        :loading="isLoading"
-        :can-load-more="false"
-        v-model:view-mode="viewMode"
-        item-key="_id"
-        storage-key="bot-instances-view-mode"
-        @refresh="refresh"
-      >
-        <template #instanceId="{ item }">
-          <span class="text-[11px] font-mono text-highlighted truncate">{{ item.instanceId }}</span>
-        </template>
+    <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
+      <MetricRibbon :items="metrics" />
 
-        <template #botProfileId="{ item }">
-          <span class="text-[11px] font-mono text-muted truncate">{{ item.botProfileId || '—' }}</span>
-        </template>
+      <div class="flex-1 min-h-0">
+        <LazyGridList
+          :items="filtered"
+          :columns="columns"
+          :loading="isLoading"
+          :can-load-more="false"
+          v-model:view-mode="viewMode"
+          item-key="_id"
+          storage-key="bot-instances-view-mode"
+          @refresh="refresh"
+        >
+          <template #instanceId="{ item }">
+            <span class="text-[11px] font-mono text-highlighted truncate">{{ item.instanceId }}</span>
+          </template>
 
-        <template #state="{ item }">
-          <UBadge :label="stateLabel(item.state)" :color="stateColor(item.state)" variant="subtle" size="xs" />
-        </template>
+          <template #botProfileId="{ item }">
+            <span class="text-[11px] font-mono text-muted truncate">{{ item.botProfileId || '—' }}</span>
+          </template>
 
-        <template #startedAt="{ item }">
-          <time v-if="item.startedAt" :datetime="new Date(item.startedAt).toISOString()" class="text-[11px] text-muted">
-            {{ formatTimeAgo(new Date(item.startedAt)) }}
-          </time>
-          <span v-else class="text-[11px] text-dimmed">—</span>
-        </template>
+          <template #state="{ item }">
+            <UBadge :label="stateLabel(item.state)" :color="stateColor(item.state)" variant="subtle" size="xs" />
+          </template>
 
-        <template #counts="{ item }">
-          <span class="text-[11px] text-muted">
-            {{ item.counts?.signals ?? 0 }} / {{ item.counts?.orders ?? 0 }} / {{ item.counts?.trades ?? 0 }}
-          </span>
-        </template>
-
-        <template #lastEventAt="{ item }">
-          <time v-if="item.lastEventAt" :datetime="new Date(item.lastEventAt).toISOString()" class="text-[11px] text-muted">
-            {{ formatTimeAgo(new Date(item.lastEventAt)) }}
-          </time>
-          <span v-else class="text-[11px] text-dimmed">—</span>
-        </template>
-
-        <template #health="{ item }">
-          <span class="text-[11px] text-muted">{{ item.health }}</span>
-        </template>
-
-        <template #mobile-content="{ item }">
-          <div class="flex items-start gap-3">
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 text-xs">
-                <span class="font-semibold text-highlighted font-mono truncate">{{ item.instanceId }}</span>
-                <UBadge :label="stateLabel(item.state)" :color="stateColor(item.state)" variant="subtle" size="xs" class="shrink-0" />
-              </div>
-              <div class="text-[11px] text-dimmed mt-0.5 truncate">
-                {{ item.botProfileId || '—' }} · {{ item.mode }}
-              </div>
-            </div>
-            <time v-if="item.startedAt" :datetime="new Date(item.startedAt).toISOString()" class="text-[10px] text-muted shrink-0">
+          <template #startedAt="{ item }">
+            <time v-if="item.startedAt" :datetime="new Date(item.startedAt).toISOString()" class="text-[11px] text-muted">
               {{ formatTimeAgo(new Date(item.startedAt)) }}
             </time>
-          </div>
-        </template>
+            <span v-else class="text-[11px] text-dimmed">—</span>
+          </template>
 
-        <template #empty>
-          <AdminEmptyState
-            :title="t('strategyLab.bots.instancesEmpty')"
-            :description="t('strategyLab.bots.instancesEmptyHint')"
-            icon="i-lucide-cpu"
-          />
-        </template>
-      </LazyGridList>
+          <template #counts="{ item }">
+            <span class="text-[11px] text-muted">
+              {{ item.counts?.signals ?? 0 }} / {{ item.counts?.orders ?? 0 }} / {{ item.counts?.trades ?? 0 }}
+            </span>
+          </template>
+
+          <template #lastEventAt="{ item }">
+            <time v-if="item.lastEventAt" :datetime="new Date(item.lastEventAt).toISOString()" class="text-[11px] text-muted">
+              {{ formatTimeAgo(new Date(item.lastEventAt)) }}
+            </time>
+            <span v-else class="text-[11px] text-dimmed">—</span>
+          </template>
+
+          <template #health="{ item }">
+            <span class="text-[11px] text-muted">{{ item.health }}</span>
+          </template>
+
+          <template #mobile-content="{ item }">
+            <div class="flex items-start gap-3">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="font-semibold text-highlighted font-mono truncate">{{ item.instanceId }}</span>
+                  <UBadge :label="stateLabel(item.state)" :color="stateColor(item.state)" variant="subtle" size="xs" class="shrink-0" />
+                </div>
+                <div class="text-[11px] text-dimmed mt-0.5 truncate">
+                  {{ item.botProfileId || '—' }} · {{ item.mode }}
+                </div>
+              </div>
+              <time v-if="item.startedAt" :datetime="new Date(item.startedAt).toISOString()" class="text-[10px] text-muted shrink-0">
+                {{ formatTimeAgo(new Date(item.startedAt)) }}
+              </time>
+            </div>
+          </template>
+
+          <template #empty>
+            <AdminEmptyState
+              :title="t('strategyLab.bots.instancesEmpty')"
+              :description="t('strategyLab.bots.instancesEmptyHint')"
+              icon="i-lucide-cpu"
+            />
+          </template>
+        </LazyGridList>
+      </div>
     </div>
   </BasePage>
 </template>

@@ -23,6 +23,23 @@ const filtered = computed(() => {
   return s ? rows.value.filter(r => r.symbol.toLowerCase().includes(s)) : rows.value
 })
 
+const metrics = computed(() => {
+  const symbols = new Set(rows.value.map(r => r.symbol))
+  const multi = rows.value.filter(r => r.dataHashCount > 1).length
+  const linked = new Set(rows.value.flatMap(r => r.datasetIds)).size
+  return [
+    { key: 'series', label: t('dataCenter.metrics.series'), value: String(rows.value.length), icon: 'i-lucide-git-branch' },
+    { key: 'symbols', label: t('dataCenter.metrics.symbols'), value: String(symbols.size), icon: 'i-lucide-hash' },
+    { key: 'multiHash', label: t('dataCenter.metrics.multiHash'), value: String(multi), icon: 'i-lucide-shield-alert', tone: multi ? 'warning' as const : 'default' as const },
+    { key: 'linked', label: t('dataCenter.metrics.linked'), value: String(linked), icon: 'i-lucide-link' }
+  ]
+})
+
+const trail = computed(() => [
+  { label: t('nav.data_center'), to: '/data-research/data' },
+  { label: title.value }
+])
+
 async function refresh() {
   isLoading.value = true
   try {
@@ -55,6 +72,10 @@ useHead({ title })
 
 <template>
   <BasePage id="data-lineage" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('dataCenter.pips.lineage')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UInput
@@ -80,7 +101,8 @@ useHead({ title })
       <SharedListFooter :count="filtered.length" :loading="isLoading" />
     </template>
 
-    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6">
+    <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
+      <MetricRibbon :items="metrics" />
       <LazyGridList
         :items="filtered"
         :columns="columns"

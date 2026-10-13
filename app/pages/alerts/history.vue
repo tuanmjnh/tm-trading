@@ -36,6 +36,22 @@ const isSendOpen = ref(false)
 const isDeleteOpen = ref(false)
 const deletingId = ref('')
 
+const metrics = computed(() => {
+  const total = notify.value.length
+  const unread = unreadCount.value
+  return [
+    { key: 'total', label: t('notifications.metrics.total'), value: String(total), icon: 'i-lucide-inbox' },
+    { key: 'unread', label: t('notifications.metrics.unread'), value: String(unread), icon: 'i-lucide-mail', tone: unread ? 'warning' as const : 'default' as const },
+    { key: 'read', label: t('notifications.metrics.read'), value: String(Math.max(0, total - unread)), icon: 'i-lucide-mail-open' }
+  ]
+})
+
+const trail = computed(() => [
+  { label: t('nav.alerts_notifications') },
+  { label: title.value }
+])
+
+
 onMounted(async () => {
   await fetchNotify()
 })
@@ -124,6 +140,10 @@ useHead({ title })
 
 <template>
   <BasePage id="notifications" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('notifications.pip')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <BaseHeaderActions :actions="headerActions" />
@@ -149,7 +169,8 @@ useHead({ title })
       <SharedListFooter :count="notify.length" :has-more="false" :loading="isLoading" />
     </template>
 
-    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6">
+    <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
+      <MetricRibbon :items="metrics" cols="grid-cols-1 sm:grid-cols-3" />
       <UAlert v-if="!auth.user.value" color="info" variant="subtle" icon="i-lucide-info"
         :title="t('notifications.signInTitle')" :description="t('notifications.signInDesc')" />
 

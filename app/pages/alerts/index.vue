@@ -26,9 +26,7 @@ const rows = ref<AlertRule[]>([])
 const isLoading = ref(false)
 const saving = ref(false)
 const mongo = ref<'up' | 'down'>('up')
-const statusFilter = ref<'' | 'enabled' | 'disabled'>('')
-
-const FILTERS: Array<'' | 'enabled' | 'disabled'> = ['', 'enabled', 'disabled']
+const statusFilter = ref<string>('')
 
 async function refresh() {
   isLoading.value = true
@@ -47,6 +45,28 @@ const filtered = computed(() => {
   if (statusFilter.value === 'disabled') return rows.value.filter((r) => !r.enabled)
   return rows.value
 })
+
+const statusChips = computed(() => [
+  { value: '', label: t('common.all'), count: rows.value.length },
+  { value: 'enabled', label: t('alertRules.filter_enabled'), count: rows.value.filter(r => r.enabled).length },
+  { value: 'disabled', label: t('alertRules.filter_disabled'), count: rows.value.filter(r => !r.enabled).length }
+])
+
+const metrics = computed(() => {
+  const matches = rows.value.reduce((a, r) => a + (r.stats?.matches || 0), 0)
+  const enabled = rows.value.filter(r => r.enabled).length
+  return [
+    { key: 'total', label: t('alertRules.metrics.total'), value: String(rows.value.length), icon: 'i-lucide-shield' },
+    { key: 'enabled', label: t('alertRules.metrics.enabled'), value: String(enabled), icon: 'i-lucide-circle-check', tone: 'success' as const },
+    { key: 'disabled', label: t('alertRules.metrics.disabled'), value: String(rows.value.length - enabled), icon: 'i-lucide-circle-slash' },
+    { key: 'matches', label: t('alertRules.metrics.matches'), value: matches.toLocaleString(), icon: 'i-lucide-activity' }
+  ]
+})
+
+const trail = computed(() => [
+  { label: t('nav.alerts_notifications') },
+  { label: title.value }
+])
 
 // -------- editor (create / edit) --------
 const showEditor = ref(false)
@@ -171,6 +191,10 @@ useHead({ title })
 
 <template>
   <BasePage id="alerts" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('alertRules.pip')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UBadge v-if="mongo === 'down'" :label="t('alertRules.mongoDown')" color="warning" variant="subtle" size="xs" />
@@ -197,15 +221,7 @@ useHead({ title })
 
     <template #toolbar>
       <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
-        <UButton
-          v-for="f in FILTERS"
-          :key="f || 'all'"
-          :label="f ? t(`alertRules.filter_${f}`) : t('marketCalendar.allLevels')"
-          size="xs"
-          :color="statusFilter === f ? 'primary' : 'neutral'"
-          :variant="statusFilter === f ? 'soft' : 'ghost'"
-          @click="statusFilter = f"
-        />
+        <FilterChips v-model="statusFilter" :items="statusChips" />
         <UButton
           icon="i-lucide-history"
           :label="t('alertRules.historyLink')"
@@ -222,10 +238,10 @@ useHead({ title })
       <SharedListFooter :count="filtered.length" :loading="isLoading" />
     </template>
 
-    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6">
+    <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
+      <MetricRibbon :items="metrics" />
       <UAlert
         v-if="mongo === 'down'"
-        class="mb-3"
         color="warning"
         variant="subtle"
         icon="i-lucide-database-zap"

@@ -6,6 +6,11 @@ const title = computed(() => t('nav.data_center'))
 const description = computed(() => t('dataCenter.overviewDesc'))
 const dc = useDataCenter()
 
+const trail = computed(() => [
+  { label: t('nav.data_research') },
+  { label: title.value }
+])
+
 const stats = reactive({ datasets: 0, recordings: 0, qualityWarn: 0, lineage: 0 })
 const isLoading = ref(false)
 
@@ -49,6 +54,10 @@ useHead({ title })
 
 <template>
   <BasePage id="data" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('dataCenter.pips.overview')" />
+    </template>
+
     <template #right>
       <UButton
         icon="i-lucide-refresh-cw"

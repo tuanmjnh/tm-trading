@@ -13,6 +13,11 @@ const { title, description } = useAdminPageChrome({
 })
 const mobileBar = useMobileBar()
 
+const trail = computed(() => [
+  { label: t('nav.alerts_notifications') },
+  { label: title.value }
+])
+
 const appId = computed(() => hubAppId)
 
 const profile = ref<InboxProfile | null>(null)
@@ -403,6 +408,10 @@ useHead({ title })
 
 <template>
   <BasePage id="inbox" flush :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('inbox.pip')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UBadge v-if="profile" :label="connected && profile.email ? profile.email : t('inbox.notConnected')"

@@ -54,13 +54,14 @@ Overlay shadows (floating menus only):
 | `brand` | `#2b7fff` | `primary` | CTAs, active nav, links, focus chrome |
 | `brand-hover` | `#1d64e0` | — | long/buy button hover, active press |
 | `telemetry` | `#38bdf8` | `secondary` / `info` | crosshair, selected tabs, live pips |
-| `positive` | `#10b981` | `success` | positive PnL, bids, long/buy fills |
+| `positive` | `#10b981` | `success` | positive PnL, long/buy fills |
 | `negative` | `#ef4444` | `error` | negative PnL, asks, short/sell fills |
 | `warning` | `#f59e0b` | `warning` | leverage / slippage / maintenance |
-| `algo` | `#8b5cf6` | — | ML signals, research/algo chips |
+| `algo` | `#8b5cf6` | — | ML signals / research chips — **reserved** (no mockup or component uses it yet) |
 
-Muted signal fills for depth bars: `rgba(43,127,255,.12)` (bid) /
-`rgba(239,68,68,.12)` (ask).
+Muted signal fills for depth bars: `rgba(43,127,255,.10)` (bid, blue) /
+`rgba(239,68,68,.10)` (ask, red). The ladder is blue/red — green is reserved for PnL and
+buy-side fills, never depth (matching the mockups).
 
 ## Typography
 
@@ -100,8 +101,9 @@ Dual-engine protocol. Loaded automatically by `@nuxt/fonts` (bundled with `@nuxt
   hover `hover`.
 - **Ghost/tool button**: transparent, `text-secondary`; hover `text-primary` +
   `rgba(30,45,74,.4)`.
-- **Algo chip**: bg `rgba(99,102,241,.12)`, border `rgba(139,92,246,.3)`, text `algo`,
-  mono 11px.
+- **Algo chip** (reserved — no mockup or component uses it yet; add the `algo` Nuxt UI
+  colour mapping when an ML-signal surface appears): bg `rgba(99,102,241,.12)`, border
+  `rgba(139,92,246,.3)`, text `algo`, mono 11px.
 - **Live pip**: 4px dot `brand` with `box-shadow: 0 0 6px #2b7fff` + uppercase `label-micro`.
   Implemented as `app/components/LivePip.vue` (props `active`, `label`); inactive falls
   back to a muted `bg-default` dot with `text-dimmed` caption and no glow. Used on the
@@ -122,7 +124,8 @@ Dual-engine protocol. Loaded automatically by `@nuxt/fonts` (bundled with `@nuxt
   `focus` (1px, no halo). Suffix unit label `text-dim`, mono.
 - **Table header**: bg `panel`, `text-dim`, uppercase, Inter 600, 11px,
   border-bottom `border`. Row zebra `transparent` / `rgba(14,23,38,.5)`; hover `popover`.
-- **Depth bar**: bids right-to-left `rgba(43,127,255,.08)`; asks `rgba(239,68,68,.08)`.
+- **Depth bar**: bids right-to-left `rgba(43,127,255,.10)` (`bg-primary/10`); asks
+  `rgba(239,68,68,.10)` (`bg-error/10`). Implemented in `app/components/OrderBook.vue`.
 
 ## Token → Nuxt UI v4 mapping
 

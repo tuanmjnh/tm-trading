@@ -65,7 +65,7 @@ const REQUIRED: string[] = [
 describe('research workspace files exist (§58.9 Slice 5)', () => {
   it('the three leaf pages exist', () => {
     assert.ok(existsSync(join(PAGES, 'index.vue')), 'missing research/index.vue')
-    assert.ok(existsSync(join(PAGES, 'experiments.vue')), 'missing research/experiments.vue')
+    assert.ok(existsSync(join(PAGES, 'experiments', 'index.vue')), 'missing research/experiments/index.vue')
     assert.ok(existsSync(join(PAGES, 'experiments', '[id].vue')), 'missing research/experiments/[id].vue')
   })
 
