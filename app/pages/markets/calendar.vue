@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { IntelNewsItem, IntelRegime } from '~~/types/intel'
 import type { NewsDay } from '~/utils/calendar'
+import type { MetricItem } from '~/components/MetricRibbon.vue'
 
 // =============================================================================
 //  News Calendar (roadmap §58.5 /markets/calendar) — the intel `news` stream
@@ -21,7 +22,7 @@ const mongo = ref<'up' | 'down'>('up')
 const generatedAt = ref<string | null>(null)
 const total = ref(0)
 const isLoading = ref(false)
-const levelFilter = ref<'high' | 'med' | ''>('')
+const levelFilter = ref('')
 const search = ref('')
 
 const LEVELS: Array<'high' | 'med' | ''> = ['', 'high', 'med']
@@ -41,9 +42,23 @@ async function refresh() {
 }
 onMounted(refresh)
 
-const filtered = computed(() => filterNews(news.value, { level: levelFilter.value, query: search.value }))
+const filtered = computed(() => filterNews(news.value, { level: levelFilter.value as 'high' | 'med' | '', query: search.value }))
 const days = computed<NewsDay[]>(() => groupNewsByDay(filtered.value))
 const shownCount = computed(() => days.value.reduce((n, d) => n + d.items.length, 0))
+
+const chips = computed(() => LEVELS.map(lv => ({
+  value: lv,
+  label: lv ? t(`intel.level_${lv}`) : t('marketCalendar.allLevels'),
+  count: lv ? news.value.filter(n => n.level === lv).length : news.value.length
+})))
+
+const metrics = computed<MetricItem[]>(() => [
+  { key: 'total', label: t('marketCalendar.metrics.total'), value: String(total.value), icon: 'i-lucide-newspaper', tone: 'primary' },
+  { key: 'high', label: t('marketCalendar.metrics.high'), value: String(news.value.filter(n => n.level === 'high').length), icon: 'i-lucide-triangle-alert', tone: 'error' },
+  { key: 'med', label: t('marketCalendar.metrics.med'), value: String(news.value.filter(n => n.level === 'med').length), icon: 'i-lucide-activity', tone: 'warning' }
+])
+
+const trail = computed(() => [{ label: t('nav.markets') }, { label: title.value }])
 
 const levelColor = (l: IntelNewsItem['level']): 'error' | 'warning' =>
   l === 'high' ? 'error' : 'warning'
@@ -73,6 +88,10 @@ useHead({ title })
 
 <template>
   <BasePage id="markets-calendar" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('marketCalendar.pip')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UBadge v-if="mongo === 'down'" :label="t('marketCalendar.mongoDown')" color="warning" variant="subtle" size="xs" />
@@ -91,15 +110,7 @@ useHead({ title })
 
     <template #toolbar>
       <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
-        <UButton
-          v-for="lv in LEVELS"
-          :key="lv || 'all-levels'"
-          :label="lv ? t(`intel.level_${lv}`) : t('marketCalendar.allLevels')"
-          size="xs"
-          :color="levelFilter === lv ? 'primary' : 'neutral'"
-          :variant="levelFilter === lv ? 'soft' : 'ghost'"
-          @click="levelFilter = lv"
-        />
+        <FilterChips v-model="levelFilter" :items="chips" />
         <USeparator orientation="vertical" class="h-4" />
         <UInput
           v-model="search"
@@ -126,6 +137,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-3">
+      <MetricRibbon :items="metrics" />
       <UAlert
         v-if="mongo === 'down'"
         color="warning"

@@ -3,6 +3,7 @@ import type { GridColumn } from '~/components/gridList/Index.vue'
 import type { RunSeries } from '~~/types/runs'
 import type { RiskStatusData } from '~~/types/risk'
 import type { IntelData, IntelZone } from '~~/types/intel'
+import type { MetricItem } from '~/components/MetricRibbon.vue'
 import { formatTimeAgo } from '@vueuse/core'
 import { getErrorMessage } from '~/shared/utils/errors'
 
@@ -84,16 +85,14 @@ const dataWarnings = computed(() =>
   series.value.reduce((s, i) => s + i.warnings.filter(w => w !== 'multipleRuns').length, 0)
 )
 
-const cards = computed(() => [
+const cards = computed<MetricItem[]>(() => [
   {
     key: 'series',
     label: t('dashboard.series'),
     value: String(series.value.length),
     hint: t('dashboard.seriesHint'),
     icon: 'i-lucide-layers-3',
-    // Class day du (khong dung template string) de Tailwind scan thay va sinh class.
-    valueClass: 'text-primary',
-    iconClass: 'bg-primary/10 text-primary'
+    tone: 'primary'
   },
   {
     key: 'runs',
@@ -101,8 +100,7 @@ const cards = computed(() => [
     value: String(totalRuns.value),
     hint: t('dashboard.totalRunsHint'),
     icon: 'i-lucide-flask-conical',
-    valueClass: 'text-success',
-    iconClass: 'bg-success/10 text-success'
+    tone: 'success'
   },
   {
     key: 'trades',
@@ -110,8 +108,7 @@ const cards = computed(() => [
     value: String(totalTrades.value),
     hint: t('dashboard.totalTradesHint'),
     icon: 'i-lucide-list-ordered',
-    valueClass: 'text-secondary',
-    iconClass: 'bg-secondary/10 text-secondary'
+    tone: 'info'
   },
   {
     key: 'warnings',
@@ -119,14 +116,11 @@ const cards = computed(() => [
     value: String(dataWarnings.value),
     hint: t('dashboard.dataWarningsHint'),
     icon: 'i-lucide-triangle-alert',
-    valueClass: dataWarnings.value > 0
-      ? 'text-warning'
-      : 'text-info',
-    iconClass: dataWarnings.value > 0
-      ? 'bg-warning/10 text-warning'
-      : 'bg-info/10 text-info'
+    tone: dataWarnings.value > 0 ? 'warning' : 'info'
   }
 ])
+
+const trail = computed(() => [{ label: t('dashboard.title') }])
 
 const columns = computed<GridColumn[]>(() => [
   { key: 'symbol', label: t('runs.symbol'), class: 'w-44' },
@@ -197,6 +191,10 @@ useHead({ title: computed(() => t('dashboard.title')) })
 
 <template>
   <BasePage id="home" :title="t('dashboard.title')" :description="t('dashboard.description')">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UButton
@@ -230,22 +228,7 @@ useHead({ title: computed(() => t('dashboard.title')) })
       />
 
       <!-- KPI -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-        <UCard v-for="card in cards" :key="card.key" class="hover:border-primary/50 transition-colors">
-          <div class="flex items-center justify-between gap-2">
-            <div class="min-w-0">
-              <div class="text-xs font-medium text-muted uppercase tracking-wider truncate">{{ card.label }}</div>
-              <div class="text-2xl font-bold mt-1.5" :class="card.valueClass">
-                {{ card.value }}
-              </div>
-              <p class="text-[11px] text-muted mt-1 truncate">{{ card.hint }}</p>
-            </div>
-            <div class="p-3 rounded shrink-0" :class="card.iconClass">
-              <UIcon :name="card.icon" class="flex w-5 h-5" />
-            </div>
-          </div>
-        </UCard>
-      </div>
+      <MetricRibbon :items="cards" />
 
       <!-- Risk gate + drift (Phase 7) -->
       <UCard>

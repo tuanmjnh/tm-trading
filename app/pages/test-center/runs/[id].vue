@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
+import type { MetricItem } from '~/components/MetricRibbon.vue'
 import type { RunSeriesDetail, RunTrade } from '~~/types/runs'
 import { getErrorMessage } from '~/shared/utils/errors'
 
@@ -33,6 +34,11 @@ const description = computed(() => {
   if (!s) return t('runs.desc')
   return `${s.method} · v${s.engineVersion} · ${s.paramsHash.slice(0, 8)}`
 })
+
+const trail = computed(() => [
+  { label: t('nav.test_center'), to: '/test-center/runs' },
+  { label: title.value }
+])
 
 const params = computed(() => {
   if (!data.value) return []
@@ -80,17 +86,17 @@ const firstEqT = computed(() => eqPoints.value[0]?.t ?? null)
 const lastEqT = computed(() => eqPoints.value[eqPoints.value.length - 1]?.t ?? null)
 const fmtEqTime = (v: string | null) => (v ? new Date(v).toISOString().slice(0, 16).replace('T', ' ') : '—')
 
-const statCards = computed(() => {
+const metrics = computed<MetricItem[]>(() => {
   const s = data.value?.summary
   if (!s) return []
   return [
     { key: 'trades', label: t('runs.detail.stats.trades'), value: String(s.trades), hint: s.open ? `+${s.open} ${t('runs.open')}` : '' },
     { key: 'winRate', label: t('runs.detail.stats.winRate'), value: `${(s.winRate * 100).toFixed(1)}%`, hint: `${s.wins}W / ${s.losses}L` },
     { key: 'pf', label: t('runs.detail.stats.profitFactor'), value: s.profitFactor === null ? '∞' : s.profitFactor.toFixed(2), hint: '' },
-    { key: 'net', label: t('runs.detail.stats.net'), value: `${s.netPct.toFixed(2)}%`, hint: t('runs.detail.stats.netHint'), color: s.netPct > 0 ? 'text-success' : s.netPct < 0 ? 'text-error' : 'text-highlighted' },
+    { key: 'net', label: t('runs.detail.stats.net'), value: `${s.netPct.toFixed(2)}%`, hint: t('runs.detail.stats.netHint'), tone: s.netPct > 0 ? 'success' : s.netPct < 0 ? 'error' : 'default' },
     { key: 'maxDD', label: t('runs.detail.stats.maxDD'), value: `${s.maxDrawdownPct.toFixed(2)}%`, hint: '' },
     { key: 'medianR', label: t('runs.detail.stats.medianR'), value: `${s.medianRr.toFixed(2)}R`, hint: `avg ${s.avgRr.toFixed(2)}R` },
-    { key: 'expectancy', label: t('runs.detail.stats.expectancy'), value: `${s.expectancy.toFixed(3)}R`, hint: t('runs.detail.stats.expectancyHint'), color: s.expectancy > 0 ? 'text-success' : s.expectancy < 0 ? 'text-error' : 'text-highlighted' },
+    { key: 'expectancy', label: t('runs.detail.stats.expectancy'), value: `${s.expectancy.toFixed(3)}R`, hint: t('runs.detail.stats.expectancyHint'), tone: s.expectancy > 0 ? 'success' : s.expectancy < 0 ? 'error' : 'default' },
     { key: 'degenerate', label: t('runs.detail.stats.degenerate'), value: String(s.degenerateRisk), hint: t('runs.detail.stats.degenerateHint') }
   ]
 })
@@ -126,6 +132,10 @@ useHead({ title })
 
 <template>
   <BasePage id="run-detail" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('testCenter.pips.runDetail')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UButton
@@ -161,17 +171,7 @@ useHead({ title })
       />
 
       <!-- KPI -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <UCard v-for="card in statCards" :key="card.key" class="hover:border-primary/40 transition-colors">
-          <div class="flex items-center justify-between gap-2">
-            <div class="min-w-0">
-              <div class="text-[11px] font-medium text-muted uppercase tracking-wider truncate">{{ card.label }}</div>
-              <div class="text-xl font-bold mt-1 truncate" :class="card.color || 'text-highlighted'">{{ card.value }}</div>
-              <p v-if="card.hint" class="text-[10px] text-dimmed mt-0.5 truncate">{{ card.hint }}</p>
-            </div>
-          </div>
-        </UCard>
-      </div>
+      <MetricRibbon :items="metrics" />
 
       <!-- Duong equity - diem cuoi/dam khoa voi summary (D1, tests/equity.test.ts) -->
       <UCard v-if="eqChart">

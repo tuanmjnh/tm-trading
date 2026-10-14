@@ -3,6 +3,7 @@ import type { GridColumn } from '~/components/gridList/Index.vue'
 import type { PositionItem } from '~~/types/positions'
 import { formatTimeAgo } from '@vueuse/core'
 import { getErrorMessage } from '~/shared/utils/errors'
+import type { MetricItem } from '~/components/MetricRibbon.vue'
 
 const { t } = useI18n()
 const notify = useNotify()
@@ -102,16 +103,17 @@ const statusLabel = (s: string) =>
 const statusColor = (s: string): 'success' | 'neutral' | 'warning' =>
   s === 'open' ? 'success' : s === 'cancelled' ? 'warning' : 'neutral'
 
-const statCards = computed(() => [
-  { key: 'open', label: t('positions.statOpen'), value: meta.value ? String(meta.value.open) : '—' },
-  { key: 'closed', label: t('positions.statClosed'), value: meta.value ? String(meta.value.closed) : '—' },
-  {
-    key: 'realized',
-    label: t('positions.statRealized'),
-    value: meta.value ? fmtMoney(meta.value.realizedPnlAbs) : '—',
-    money: meta.value?.realizedPnlAbs ?? null
-  }
-])
+const metrics = computed<MetricItem[]>(() => {
+  const m = meta.value
+  const realized = m?.realizedPnlAbs ?? null
+  return [
+    { key: 'open', label: t('positions.statOpen'), value: m ? String(m.open) : '—', icon: 'i-lucide-layers', tone: 'success' },
+    { key: 'closed', label: t('positions.statClosed'), value: m ? String(m.closed) : '—', icon: 'i-lucide-archive' },
+    { key: 'realized', label: t('positions.statRealized'), value: m ? fmtMoney(m.realizedPnlAbs) : '—', icon: 'i-lucide-trending-up', tone: realized == null ? 'default' : realized > 0 ? 'success' : realized < 0 ? 'error' : 'default' }
+  ]
+})
+
+const trail = computed(() => [{ label: t('nav.trading') }, { label: title.value }])
 
 const mobileBar = useMobileBar()
 mobileBar.registerActions(computed(() => [
@@ -128,6 +130,10 @@ useHead({ title })
 
 <template>
   <BasePage id="positions" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('positions.pip')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UBadge
@@ -185,19 +191,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
-      <div class="grid grid-cols-3 gap-2 shrink-0">
-        <div
-          v-for="c in statCards"
-          :key="c.key"
-          class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0"
-        >
-          <span class="text-[10px] text-muted uppercase tracking-wider truncate">{{ c.label }}</span>
-          <span
-            class="text-sm font-bold font-mono truncate"
-            :class="'money' in c ? moneyClass(c.money) : 'text-highlighted'"
-          >{{ c.value }}</span>
-        </div>
-      </div>
+      <MetricRibbon :items="metrics" cols="grid-cols-3" />
 
       <div class="flex-1 min-h-0">
         <LazyGridList

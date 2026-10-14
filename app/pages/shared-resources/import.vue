@@ -243,10 +243,16 @@ function clearAll() {
   runResult.value = null
   pasteText.value = ''
 }
+
+const trail = computed(() => [{ label: t('nav.shared_resources') }, { label: t('import.title') }])
 </script>
 
 <template>
   <BasePage id="admin-import" :title="$t('import.title')">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UButton

@@ -1124,6 +1124,13 @@
   "marketExplorer": {
     "title": "Market Explorer",
     "desc": "Search the canonical instrument catalog: venues, data availability and live provider health.",
+    "pip": "Canonical catalog",
+    "metrics": {
+      "instruments": "Instruments",
+      "active": "Active",
+      "venues": "Venues",
+      "providersUp": "Providers up"
+    },
     "search": "Search symbol, base, quote or native",
     "allTypes": "All types",
     "allStatuses": "All statuses",
@@ -1155,6 +1162,7 @@
   },
   "paper": {
     "title": "Paper Account",
+    "pip": "Simulation account",
     "desc": "Account-level equity, risk, exposure and PnL overview for the simulation account — read-only projection of engine state.",
     "equity": "Equity",
     "currency": "Currency",
@@ -1182,6 +1190,7 @@
   },
   "paperOrders": {
     "title": "Paper Orders",
+    "pip": "Order lifecycle",
     "desc": "Paper order lifecycle and history from the simulation engine. Cancelling stops only intents the executor has not started filling.",
     "allStatuses": "All",
     "searchSymbol": "Symbol",
@@ -1224,6 +1233,10 @@
   "marketScanner": {
     "title": "Scanner",
     "desc": "Live scanner candidates — movers, money flow and accumulation detected by the scanner service, joined to the canonical instrument catalog.",
+    "pip": "Live scanner",
+    "metrics": {
+      "candidates": "Candidates"
+    },
     "allTypes": "All",
     "search": "Search symbol",
     "signalLabels": {
@@ -1255,6 +1268,12 @@
   "marketCalendar": {
     "title": "News Calendar",
     "desc": "Scored market headlines from the news service, grouped by UTC day — a news/events calendar over the existing intel `news` stream.",
+    "pip": "News & events",
+    "metrics": {
+      "total": "Headlines",
+      "high": "High impact",
+      "med": "Medium"
+    },
     "allLevels": "All",
     "search": "Search headlines",
     "mongoDown": "Mongo offline",
@@ -1445,6 +1464,7 @@
   },
   "signals": {
     "title": "Live Signals",
+    "pip": "Webhook intake",
     "desc": "TradingView alerts received by the webhook (collection alerts, deduped D4).",
     "empty": "No signals yet",
     "emptyHint": "Create a TV alert pointing at the webhook — incoming signals will appear here.",
@@ -1946,6 +1966,7 @@
   },
   "intel": {
     "title": "Market Intel",
+    "pip": "Regime & confluence",
     "services": "Services",
     "noServices": "Services not started",
     "overdue": "OVERDUE",
@@ -2071,6 +2092,7 @@
   },
   "positions": {
     "title": "Positions",
+    "pip": "Position blotters",
     "desc": "What is held right now — read from the engine positions collection (paper / MT5 / exchange / manual).",
     "empty": "No positions yet",
     "emptyHint": "Open a trade through the risk gate (paper executor) and it will appear here.",
@@ -2103,6 +2125,7 @@
   },
   "accounts": {
     "title": "Accounts",
+    "pip": "Account activity",
     "desc": "Per-account view derived from positions plus the latest equity snapshot — nothing is recalculated.",
     "empty": "No accounts yet",
     "emptyHint": "Accounts appear once a position or an equity snapshot exists.",
@@ -2122,6 +2145,7 @@
   },
   "trade": {
     "title": "Trade Terminal",
+    "pip": "Live desk",
     "desc": "Live candlestick chart, quotes and trades — lightweight-charts fed by /ws/market and the S4 history API.",
     "symbol": "Symbol",
     "tf": "Timeframe",
@@ -3807,7 +3831,8 @@
       "forward": "Realtime OOS stream",
       "replay": "Deterministic core sim",
       "runs": "Hash-verified ledger",
-      "compare": "Overfit validation"
+      "compare": "Overfit validation",
+      "runDetail": "Per-series breakdown"
     },
     "runs": {
       "metrics": {

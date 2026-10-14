@@ -302,11 +302,17 @@ mobileBar.registerActions(computed(() => [
   }
 ]))
 
+const trail = computed(() => [{ label: t('nav.shared_resources') }, { label: title.value }])
+
 useHead({ title })
 </script>
 
 <template>
   <BasePage id="connections" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UButton icon="i-lucide-refresh-cw" variant="soft" size="sm" :loading="loading" @click="refresh()" />

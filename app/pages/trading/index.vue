@@ -46,6 +46,8 @@ const { title, description } = useAdminPageChrome({
   descKey: 'trade.desc'
 })
 
+const trail = computed(() => [{ label: t('nav.trading') }, { label: title.value }])
+
 useHead({ title })
 
 const feed = useMarketStream()
@@ -450,6 +452,10 @@ const sideClass = (side?: string): string =>
 
 <template>
   <BasePage id="trade" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('trade.pip')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UBadge v-if="inReplay" color="warning" variant="solid" size="sm">

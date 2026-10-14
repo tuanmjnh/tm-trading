@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AccountItem } from '~~/types/accounts'
 import { getErrorMessage } from '~/shared/utils/errors'
+import type { MetricItem } from '~/components/MetricRibbon.vue'
 
 const { t } = useI18n()
 const notify = useNotify()
@@ -44,31 +45,19 @@ function fmtUtc(iso: string | null): string {
   return `${d.toISOString().slice(0, 16).replace('T', ' ')} UTC`
 }
 
-const statCards = computed(() => [
-  { key: 'accounts', label: t('accounts.statAccounts'), value: String(items.value.length) },
-  {
-    key: 'open',
-    label: t('accounts.statOpen'),
-    value: String(items.value.reduce((s, a) => s + a.open, 0))
-  },
-  {
-    key: 'closed',
-    label: t('accounts.statClosed'),
-    value: String(items.value.reduce((s, a) => s + a.closed, 0))
-  },
-  {
-    key: 'realized',
-    label: t('accounts.statRealized'),
-    value: fmtMoney(
-      items.value.some(a => a.realizedPnlAbs != null)
-        ? items.value.reduce((s, a) => s + (a.realizedPnlAbs ?? 0), 0)
-        : null
-    ),
-    money: items.value.some(a => a.realizedPnlAbs != null)
-      ? items.value.reduce((s, a) => s + (a.realizedPnlAbs ?? 0), 0)
-      : null
-  }
-])
+const metrics = computed<MetricItem[]>(() => {
+  const sumRealized = items.value.some(a => a.realizedPnlAbs != null)
+    ? items.value.reduce((s, a) => s + (a.realizedPnlAbs ?? 0), 0)
+    : null
+  return [
+    { key: 'accounts', label: t('accounts.statAccounts'), value: String(items.value.length), icon: 'i-lucide-wallet', tone: 'primary' },
+    { key: 'open', label: t('accounts.statOpen'), value: String(items.value.reduce((s, a) => s + a.open, 0)), icon: 'i-lucide-layers', tone: 'success' },
+    { key: 'closed', label: t('accounts.statClosed'), value: String(items.value.reduce((s, a) => s + a.closed, 0)), icon: 'i-lucide-archive' },
+    { key: 'realized', label: t('accounts.statRealized'), value: fmtMoney(sumRealized), icon: 'i-lucide-trending-up', tone: sumRealized == null ? 'default' : sumRealized > 0 ? 'success' : sumRealized < 0 ? 'error' : 'default' }
+  ]
+})
+
+const trail = computed(() => [{ label: t('nav.trading') }, { label: title.value }])
 
 const mobileBar = useMobileBar()
 mobileBar.registerActions(computed(() => [
@@ -85,6 +74,10 @@ useHead({ title })
 
 <template>
   <BasePage id="accounts" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('accounts.pip')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UBadge
@@ -106,19 +99,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full gap-3 pb-24 lg:pb-6">
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
-        <div
-          v-for="c in statCards"
-          :key="c.key"
-          class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0"
-        >
-          <span class="text-[10px] text-muted uppercase tracking-wider truncate">{{ c.label }}</span>
-          <span
-            class="text-sm font-bold font-mono truncate"
-            :class="'money' in c ? moneyClass(c.money) : 'text-highlighted'"
-          >{{ c.value }}</span>
-        </div>
-      </div>
+      <MetricRibbon :items="metrics" />
 
       <div
         v-if="items.length"

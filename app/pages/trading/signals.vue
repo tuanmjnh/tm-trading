@@ -89,11 +89,17 @@ mobileBar.registerInfo(computed(() => ({
   loading: isLoading.value
 })))
 
+const trail = computed(() => [{ label: t('nav.trading') }, { label: title.value }])
+
 useHead({ title })
 </script>
 
 <template>
   <BasePage id="signals" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('signals.pip')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UBadge

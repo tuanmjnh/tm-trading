@@ -2,6 +2,7 @@
 import type { GridColumn } from '~/components/gridList/Index.vue'
 import type { IntelRegime, IntelServiceRow } from '~~/types/intel'
 import type { ScannerCandidate, ScannerSignal } from '~/utils/scanner'
+import type { MetricItem } from '~/components/MetricRibbon.vue'
 
 // =============================================================================
 //  Scanner (roadmap §58.5 /markets/scanner) — one symbol-centric candidate list
@@ -25,10 +26,9 @@ const regime = ref<IntelRegime | null>(null)
 const catalogSize = ref(0)
 const isLoading = ref(false)
 const search = ref('')
-const typeFilter = ref<ScannerSignal | ''>('')
+const typeFilter = ref('')
 
 const SIGNAL_TYPES: ScannerSignal[] = ['mover', 'flow', 'accum']
-const TYPE_FILTERS: Array<ScannerSignal | ''> = ['', ...SIGNAL_TYPES]
 
 async function refresh() {
   isLoading.value = true
@@ -49,7 +49,7 @@ onMounted(refresh)
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase()
   return candidates.value.filter((c) => {
-    if (typeFilter.value && !c.signals.includes(typeFilter.value)) return false
+    if (typeFilter.value && !c.signals.includes(typeFilter.value as ScannerSignal)) return false
     if (q) {
       const hay = `${c.symbol} ${c.instrument?.symbol ?? ''} ${c.instrument?.engineSymbol ?? ''}`.toLowerCase()
       if (!hay.includes(q)) return false
@@ -94,6 +94,26 @@ function tradeTarget(c: ScannerCandidate): string {
   return TERMINAL_SYMBOL.test(sym) ? `/trading?instrument=${encodeURIComponent(sym)}` : ''
 }
 
+const signalCounts = computed(() => ({
+  mover: candidates.value.filter(c => c.signals.includes('mover')).length,
+  flow: candidates.value.filter(c => c.signals.includes('flow')).length,
+  accum: candidates.value.filter(c => c.signals.includes('accum')).length
+}))
+
+const metrics = computed<MetricItem[]>(() => [
+  { key: 'candidates', label: t('marketScanner.metrics.candidates'), value: String(candidates.value.length), icon: 'i-lucide-radar', tone: 'primary' },
+  { key: 'mover', label: t('marketScanner.signalLabels.mover'), value: String(signalCounts.value.mover), icon: 'i-lucide-trending-up', tone: 'warning' },
+  { key: 'flow', label: t('marketScanner.signalLabels.flow'), value: String(signalCounts.value.flow), icon: 'i-lucide-waves', tone: 'info' },
+  { key: 'accum', label: t('marketScanner.signalLabels.accum'), value: String(signalCounts.value.accum), icon: 'i-lucide-minimize-2', tone: 'success' }
+])
+
+const chips = computed(() => [
+  { value: '', label: t('marketScanner.allTypes'), count: candidates.value.length },
+  ...SIGNAL_TYPES.map(s => ({ value: s, label: t(`marketScanner.signalLabels.${s}`), count: signalCounts.value[s] }))
+])
+
+const trail = computed(() => [{ label: t('nav.markets') }, { label: title.value }])
+
 const columns = computed<GridColumn[]>(() => [
   { key: 'symbol', label: t('marketScanner.columns.symbol'), class: 'min-w-32' },
   { key: 'signals', label: t('marketScanner.columns.signals'), class: 'min-w-40' },
@@ -114,6 +134,10 @@ useHead({ title })
 
 <template>
   <BasePage id="markets-scanner" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('marketScanner.pip')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UBadge v-if="mongo === 'down'" :label="t('marketScanner.mongoDown')" color="warning" variant="subtle" size="xs" />
@@ -146,15 +170,7 @@ useHead({ title })
 
     <template #toolbar>
       <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
-        <UButton
-          v-for="ty in TYPE_FILTERS"
-          :key="ty || 'all-signals'"
-          :label="ty ? t(`marketScanner.signalLabels.${ty}`) : t('marketScanner.allTypes')"
-          size="xs"
-          :color="typeFilter === ty ? 'primary' : 'neutral'"
-          :variant="typeFilter === ty ? 'soft' : 'ghost'"
-          @click="typeFilter = ty"
-        />
+        <FilterChips v-model="typeFilter" :items="chips" />
         <USeparator orientation="vertical" class="h-4" />
         <UBadge
           v-if="regime"
@@ -187,7 +203,8 @@ useHead({ title })
       <SharedListFooter :count="filtered.length" :loading="isLoading" />
     </template>
 
-    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6">
+    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-3">
+      <MetricRibbon :items="metrics" />
       <LazyGridList
         :items="filtered"
         :columns="columns"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { IntelData, IntelZone, IntelFlow, IntelNewsItem } from '~~/types/intel'
+import type { MetricItem } from '~/components/MetricRibbon.vue'
 import { getErrorMessage } from '~/shared/utils/errors'
 
 // =============================================================================
@@ -98,11 +99,28 @@ mobileBar.registerInfo(computed(() => ({
   loading: isLoading.value
 })))
 
+const metrics = computed<MetricItem[]>(() => {
+  const r = intel.value?.regime
+  const fng = r?.fng?.value
+  return [
+    { key: 'asi', label: t('regime.asi'), value: String(r?.asi?.d90 ?? '—'), hint: `30 ${r?.asi?.d30 ?? '—'} · 365 ${r?.asi?.d365 ?? '—'}`, icon: 'i-lucide-activity', tone: 'primary' },
+    { key: 'fng', label: t('regime.fng'), value: String(fng ?? '—'), hint: r?.fng?.classification || '—', icon: 'i-lucide-gauge', tone: fng == null ? 'default' : fng <= 25 ? 'error' : fng >= 75 ? 'success' : 'default' },
+    { key: 'btcDom', label: t('regime.btcDom'), value: fmtPct(r?.btcDom, 1), hint: `ETH ${fmtPct(r?.ethDom, 1)}`, icon: 'i-lucide-pie-chart', tone: 'info' },
+    { key: 'mcap', label: t('regime.mcap'), value: fmtPct(r?.mcapChg24h, 2), hint: `${t('regime.flags')} · ${r?.flags.length ?? 0}`, icon: 'i-lucide-coins', tone: (r?.mcapChg24h ?? 0) > 0 ? 'success' : (r?.mcapChg24h ?? 0) < 0 ? 'error' : 'default' }
+  ]
+})
+
+const trail = computed(() => [{ label: t('nav.markets') }, { label: title.value }])
+
 useHead({ title })
 </script>
 
 <template>
   <BasePage id="intel" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('intel.pip')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UBadge
@@ -166,31 +184,7 @@ useHead({ title })
           <span v-if="intel.regime.ts" class="text-[10px] text-dimmed font-mono">{{ fmtUtc(intel.regime.ts) }}</span>
         </div>
 
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div class="rounded bg-elevated/50 p-3">
-            <p class="text-[10px] text-muted uppercase tracking-wide">ASI 90d</p>
-            <p class="text-lg font-bold font-mono text-highlighted">{{ intel.regime.asi?.d90 ?? '—' }}</p>
-            <p class="text-[10px] text-dimmed font-mono">30 {{ intel.regime.asi?.d30 ?? '—' }} · 365 {{ intel.regime.asi?.d365 ?? '—' }}</p>
-          </div>
-          <div class="rounded bg-elevated/50 p-3">
-            <p class="text-[10px] text-muted uppercase tracking-wide">Fear &amp; Greed</p>
-            <p
-              class="text-lg font-bold font-mono"
-              :class="intel.regime.fng ? (intel.regime.fng.value <= 25 ? 'text-error' : intel.regime.fng.value >= 75 ? 'text-success' : 'text-highlighted') : 'text-highlighted'"
-            >{{ intel.regime.fng?.value ?? '—' }}</p>
-            <p class="text-[10px] text-dimmed truncate">{{ intel.regime.fng?.classification || '—' }}</p>
-          </div>
-          <div class="rounded bg-elevated/50 p-3">
-            <p class="text-[10px] text-muted uppercase tracking-wide">{{ t('regime.btcDom') }}</p>
-            <p class="text-lg font-bold font-mono text-highlighted">{{ fmtPct(intel.regime.btcDom, 1) }}</p>
-            <p class="text-[10px] text-dimmed font-mono truncate">ETH {{ fmtPct(intel.regime.ethDom, 1) }}</p>
-          </div>
-          <div class="rounded bg-elevated/50 p-3">
-            <p class="text-[10px] text-muted uppercase tracking-wide">{{ t('regime.mcap') }}</p>
-            <p class="text-lg font-bold font-mono" :class="netColor(intel.regime.mcapChg24h ?? 0)">{{ fmtPct(intel.regime.mcapChg24h, 2) }}</p>
-            <p class="text-[10px] text-dimmed truncate">{{ t('regime.flags') }} · {{ intel.regime.flags.length }}</p>
-          </div>
-        </div>
+        <MetricRibbon :items="metrics" />
 
         <div v-if="intel.regime.flags.length || intel.regime.unlocks48h.length" class="flex flex-col gap-2">
           <div class="flex flex-wrap gap-1.5">

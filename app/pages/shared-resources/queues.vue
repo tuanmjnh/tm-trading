@@ -2,6 +2,7 @@
 import { formatTimeAgo } from '@vueuse/core'
 import { getErrorMessage } from '~/shared/utils/errors'
 import type { GridColumn } from '~/components/gridList/Index.vue'
+import type { MetricItem } from '~/components/MetricRibbon.vue'
 import type { HeaderAction } from '~/components/base/HeaderActions.vue'
 
 const { t } = useI18n()
@@ -76,12 +77,12 @@ const tabs: { key: QueueKey, label: string, icon: string }[] = [
   { key: 'import', label: 'queues.tabImport', icon: 'i-lucide-file-input' }
 ]
 
-const statCards = computed(() => [
-  { key: 'waiting', label: t('queues.statWaiting'), value: stats.value?.total.waiting ?? 0, color: 'warning' as const, icon: 'i-lucide-clock' },
-  { key: 'active', label: t('queues.statActive'), value: stats.value?.total.active ?? 0, color: 'info' as const, icon: 'i-lucide-loader-circle' },
-  { key: 'completed', label: t('queues.statCompleted'), value: stats.value?.total.completed ?? 0, color: 'success' as const, icon: 'i-lucide-check-circle' },
-  { key: 'failed', label: t('queues.statFailed'), value: stats.value?.total.failed ?? 0, color: 'error' as const, icon: 'i-lucide-x-circle' },
-  { key: 'delayed', label: t('queues.statDelayed'), value: stats.value?.total.delayed ?? 0, color: 'primary' as const, icon: 'i-lucide-calendar-clock' }
+const statCards = computed<MetricItem[]>(() => [
+  { key: 'waiting', label: t('queues.statWaiting'), value: String(stats.value?.total.waiting ?? 0), tone: 'warning', icon: 'i-lucide-clock' },
+  { key: 'active', label: t('queues.statActive'), value: String(stats.value?.total.active ?? 0), tone: 'info', icon: 'i-lucide-loader-circle' },
+  { key: 'completed', label: t('queues.statCompleted'), value: String(stats.value?.total.completed ?? 0), tone: 'success', icon: 'i-lucide-check-circle' },
+  { key: 'failed', label: t('queues.statFailed'), value: String(stats.value?.total.failed ?? 0), tone: 'error', icon: 'i-lucide-x-circle' },
+  { key: 'delayed', label: t('queues.statDelayed'), value: String(stats.value?.total.delayed ?? 0), tone: 'primary', icon: 'i-lucide-calendar-clock' }
 ])
 
 const priorityRows = computed(() => {
@@ -233,11 +234,17 @@ mobileBar.registerActions(computed(() => [
 onMounted(load)
 watch(appId, (next) => { if (next) load() })
 
+const trail = computed(() => [{ label: t('nav.shared_resources') }, { label: title.value }])
+
 useHead({ title })
 </script>
 
 <template>
   <BasePage id="queues" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UBadge
@@ -281,19 +288,7 @@ useHead({ title })
       />
 
       <template v-if="enabled">
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <div
-            v-for="card in statCards"
-            :key="card.key"
-            class="rounded bg-default ring ring-default p-3 flex flex-col gap-1"
-          >
-            <div class="flex items-center gap-1.5 text-muted">
-              <UIcon :name="card.icon" class="size-3.5" />
-              <span class="text-[11px] font-medium uppercase tracking-wide">{{ card.label }}</span>
-            </div>
-            <span class="text-xl font-semibold text-highlighted">{{ card.value }}</span>
-          </div>
-        </div>
+        <MetricRibbon :items="statCards" cols="grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" />
 
         <div class="rounded bg-default ring ring-default overflow-x-auto">
           <table class="w-full text-sm">

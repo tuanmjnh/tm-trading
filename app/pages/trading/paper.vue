@@ -2,6 +2,7 @@
 import type { LiveAccount } from '~~/types/positions'
 import type { RiskAccountDay } from '~~/types/risk'
 import { getErrorMessage } from '~/shared/utils/errors'
+import type { MetricItem } from '~/components/MetricRibbon.vue'
 
 // =============================================================================
 //  Paper Account overview (roadmap §20, §21, §58.5 /paper). Account-level
@@ -52,9 +53,27 @@ const moneyClass = (v: number | null | undefined) =>
 const pnlClass = (v: number | null | undefined) =>
   v == null || !Number.isFinite(v) ? 'text-dimmed' : v >= 0 ? 'text-success' : 'text-error'
 
-const utilizationClass = (v: number) => (v >= 80 ? 'text-error' : v >= 50 ? 'text-warning' : 'text-highlighted')
-
 const modeColor = (m: string): 'primary' | 'info' => (m === 'LIVE_PAPER' ? 'primary' : 'info')
+
+const metrics = computed<MetricItem[]>(() => {
+  const a = account.value
+  if (!a) return []
+  const tone = (v: number | null | undefined): MetricItem['tone'] => (v == null ? 'default' : v > 0 ? 'success' : v < 0 ? 'error' : 'default')
+  return [
+    { key: 'balance', label: t('paper.balance'), value: fmtNum(a.balance), icon: 'i-lucide-wallet', tone: 'primary' },
+    { key: 'realized', label: t('paper.realized'), value: fmtMoney(a.realizedPnl), icon: 'i-lucide-trending-up', tone: tone(a.realizedPnl) },
+    { key: 'dailyPnl', label: t('paper.dailyPnl'), value: fmtMoney(a.dailyPnl), icon: 'i-lucide-calendar-days', tone: tone(a.dailyPnl) },
+    { key: 'unrealized', label: t('paper.unrealized'), value: fmtMoney(a.unrealized), icon: 'i-lucide-line-chart', tone: tone(a.unrealized) },
+    { key: 'openPositions', label: t('paper.openPositions'), value: String(a.openPositions), icon: 'i-lucide-layers', tone: a.openPositions > 0 ? 'success' : 'default' },
+    { key: 'notional', label: t('paper.notional'), value: fmtNum(a.notional), icon: 'i-lucide-banknote' },
+    { key: 'freeMargin', label: t('paper.freeMargin'), value: fmtNum(a.freeMargin), icon: 'i-lucide-piggy-bank' },
+    { key: 'utilization', label: t('paper.utilization'), value: fmtPct(a.utilizationPct), icon: 'i-lucide-gauge', tone: a.utilizationPct >= 80 ? 'error' : a.utilizationPct >= 50 ? 'warning' : 'default' },
+    { key: 'maxDrawdown', label: t('paper.maxDrawdown'), value: a.maxDrawdownPct != null ? `${fmtNum(a.maxDrawdown)} (${fmtPct(a.maxDrawdownPct)})` : fmtNum(a.maxDrawdown), icon: 'i-lucide-trending-down', tone: a.maxDrawdownPct != null ? 'error' : 'default' },
+    { key: 'maintenance', label: t('paper.maintenance'), value: fmtNum(a.maintenance), icon: 'i-lucide-wrench' }
+  ]
+})
+
+const trail = computed(() => [{ label: t('nav.trading') }, { label: title.value }])
 
 const mobileBar = useMobileBar()
 mobileBar.registerActions(computed(() => [
@@ -71,6 +90,10 @@ useHead({ title })
 
 <template>
   <BasePage id="paper" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('paper.pip')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UBadge
@@ -123,53 +146,7 @@ useHead({ title })
       </div>
 
       <!-- Key metrics grid -->
-      <div
-        v-if="account"
-        class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2"
-      >
-        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
-          <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.balance') }}</span>
-          <span class="text-sm font-bold font-mono text-highlighted">{{ fmtNum(account.balance) }}</span>
-        </div>
-        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
-          <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.realized') }}</span>
-          <span class="text-sm font-bold font-mono" :class="moneyClass(account.realizedPnl)">{{ fmtMoney(account.realizedPnl) }}</span>
-        </div>
-        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
-          <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.dailyPnl') }}</span>
-          <span class="text-sm font-bold font-mono" :class="moneyClass(account.dailyPnl)">{{ fmtMoney(account.dailyPnl) }}</span>
-        </div>
-        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
-          <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.unrealized') }}</span>
-          <span class="text-sm font-bold font-mono" :class="moneyClass(account.unrealized)">{{ fmtMoney(account.unrealized) }}</span>
-        </div>
-        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
-          <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.openPositions') }}</span>
-          <span class="text-sm font-bold font-mono" :class="account.openPositions > 0 ? 'text-success' : 'text-highlighted'">{{ account.openPositions }}</span>
-        </div>
-        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
-          <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.notional') }}</span>
-          <span class="text-sm font-bold font-mono text-highlighted">{{ fmtNum(account.notional) }}</span>
-        </div>
-        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
-          <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.freeMargin') }}</span>
-          <span class="text-sm font-bold font-mono text-highlighted">{{ fmtNum(account.freeMargin) }}</span>
-        </div>
-        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
-          <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.utilization') }}</span>
-          <span class="text-sm font-bold font-mono" :class="utilizationClass(account.utilizationPct)">{{ fmtPct(account.utilizationPct) }}</span>
-        </div>
-        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
-          <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.maxDrawdown') }}</span>
-          <span class="text-sm font-bold font-mono" :class="account.maxDrawdownPct != null ? 'text-error' : 'text-dimmed'">
-            {{ fmtNum(account.maxDrawdown) }}{{ account.maxDrawdownPct != null ? ` (${fmtPct(account.maxDrawdownPct)})` : '' }}
-          </span>
-        </div>
-        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5">
-          <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('paper.maintenance') }}</span>
-          <span class="text-sm font-bold font-mono text-highlighted">{{ fmtNum(account.maintenance) }}</span>
-        </div>
-      </div>
+      <MetricRibbon v-if="account" :items="metrics" />
 
       <!-- Risk gate status (D7 kill-switch) -->
       <section class="rounded bg-default ring ring-default p-3 flex flex-col gap-2">

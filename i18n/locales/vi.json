@@ -1124,6 +1124,13 @@
   "marketExplorer": {
     "title": "Khám phá thị trường",
     "desc": "Tìm kiếm trong danh mục công cụ chuẩn: các sàn, khả dụng dữ liệu và tình trạng nhà cung cấp trực tiếp.",
+    "pip": "Danh mục chuẩn",
+    "metrics": {
+      "instruments": "Công cụ",
+      "active": "Đang hoạt động",
+      "venues": "Sàn",
+      "providersUp": "Nhà cung cấp hoạt động"
+    },
     "search": "Tìm symbol, base, quote hoặc native",
     "allTypes": "Mọi loại",
     "allStatuses": "Mọi trạng thái",
@@ -1155,6 +1162,7 @@
   },
   "paper": {
     "title": "Tài khoản Paper",
+    "pip": "Tài khoản mô phỏng",
     "desc": "Tổng quan cấp tài khoản: vốn, rủi ro, mức mở positions và PnL của tài khoản mô phỏng — bản chiếu read-only từ trạng thái engine.",
     "equity": "Vốn (Equity)",
     "currency": "Tiền tệ",
@@ -1182,6 +1190,7 @@
   },
   "paperOrders": {
     "title": "Lệnh Paper",
+    "pip": "Vòng đời lệnh",
     "desc": "Vòng đời và lịch sử lệnh giấy từ engine mô phỏng. Hủy chỉ dừng các ý định chưa bắt đầu khớp.",
     "allStatuses": "Tất cả",
     "searchSymbol": "Symbol",
@@ -1224,6 +1233,10 @@
   "marketScanner": {
     "title": "Scanner",
     "desc": "Ứng viên scanner trực tiếp — biến động, dòng tiền và gom hàng do dịch vụ scanner phát hiện, gắn với danh mục instrument chuẩn.",
+    "pip": "Scanner trực tiếp",
+    "metrics": {
+      "candidates": "Ứng viên"
+    },
     "allTypes": "Tất cả",
     "search": "Tìm symbol",
     "signalLabels": {
@@ -1255,6 +1268,12 @@
   "marketCalendar": {
     "title": "Lịch tin tức",
     "desc": "Tin tức thị trường đã chấm điểm từ dịch vụ news, gom theo ngày UTC — lịch tin tức/sự kiện trên chính luồng `news` của intel.",
+    "pip": "Tin tức & sự kiện",
+    "metrics": {
+      "total": "Tin tức",
+      "high": "Tác động cao",
+      "med": "Trung bình"
+    },
     "allLevels": "Tất cả",
     "search": "Tìm tin tức",
     "mongoDown": "Mongo ngoại tuyến",
@@ -1445,6 +1464,7 @@
   },
   "signals": {
     "title": "Tín hiệu Live",
+    "pip": "Nhận webhook",
     "desc": "Alert TradingView webhook nhận được (collection alerts, khử trùng lặp D4).",
     "empty": "Chưa có tín hiệu",
     "emptyHint": "Tạo alert TV trỏ tới webhook — tín hiệu đến sẽ hiển thị ở đây.",
@@ -1946,6 +1966,7 @@
   },
   "intel": {
     "title": "Market Intel",
+    "pip": "Chế độ & hội tụ",
     "services": "Dịch vụ",
     "noServices": "Services chưa chạy",
     "overdue": "QUÁ HẠN",
@@ -2071,6 +2092,7 @@
   },
   "positions": {
     "title": "Vị thế",
+    "pip": "Sổ vị thế",
     "desc": "Những gì đang giữ — đọc từ collection positions của engine (paper / MT5 / sàn / tay).",
     "empty": "Chưa có vị thế nào",
     "emptyHint": "Mở lệnh qua risk gate (paper executor) sẽ xuất hiện tại đây.",
@@ -2103,6 +2125,7 @@
   },
   "accounts": {
     "title": "Tài khoản",
+    "pip": "Hoạt động tài khoản",
     "desc": "Xem theo tài khoản — suy ra từ positions và snapshot equity mới nhất, không tính lại.",
     "empty": "Chưa có tài khoản nào",
     "emptyHint": "Tài khoản xuất hiện khi có vị thế hoặc snapshot equity.",
@@ -2122,6 +2145,7 @@
   },
   "trade": {
     "title": "Bảng giao dịch",
+    "pip": "Bàn giao dịch trực tiếp",
     "desc": "Biểu đồ nến trực tiếp, giá và giao dịch — lightweight-charts nhận dữ liệu từ /ws/market và API lịch sử S4.",
     "symbol": "Mã",
     "tf": "Khung thời gian",
@@ -3807,7 +3831,8 @@
       "forward": "Luồng OOS thời gian thực",
       "replay": "Core sim tất định",
       "runs": "Sổ cái xác thực hash",
-      "compare": "Kiểm định overfit"
+      "compare": "Kiểm định overfit",
+      "runDetail": "Phân rã theo chuỗi"
     },
     "runs": {
       "metrics": {

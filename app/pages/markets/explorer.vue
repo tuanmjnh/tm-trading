@@ -2,6 +2,7 @@
 import type { GridColumn } from '~/components/gridList/Index.vue'
 import type { Instrument } from '~~/types/instruments'
 import type { MarketSourceHealth } from '~~/types/health'
+import type { MetricItem } from '~/components/MetricRibbon.vue'
 
 // =============================================================================
 //  Market Explorer (roadmap §57.4 B, §58.5 /markets). Search + discovery over
@@ -91,6 +92,30 @@ function tradeTarget(item: Instrument) {
   return item.engineSymbol ? `/trading?instrument=${encodeURIComponent(item.engineSymbol)}` : ''
 }
 
+const stats = ref<{ total: number, active: number }>({ total: 0, active: 0 })
+
+async function loadStats() {
+  try {
+    const list = await catalog.instruments({})
+    stats.value = { total: list.length, active: list.filter(i => i.status === 'active').length }
+  } catch {
+    stats.value = { total: 0, active: 0 }
+  }
+}
+onMounted(loadStats)
+
+const metrics = computed<MetricItem[]>(() => {
+  const up = sourceHealth.value.filter(s => s.status === 'up').length
+  return [
+    { key: 'instruments', label: t('marketExplorer.metrics.instruments'), value: String(stats.value.total), icon: 'i-lucide-database', tone: 'primary' },
+    { key: 'active', label: t('marketExplorer.metrics.active'), value: String(stats.value.active), icon: 'i-lucide-circle-check', tone: 'success' },
+    { key: 'venues', label: t('marketExplorer.metrics.venues'), value: String(providerIds.value.size), icon: 'i-lucide-hub', tone: 'info' },
+    { key: 'providersUp', label: t('marketExplorer.metrics.providersUp'), value: sourceHealth.value.length ? `${up}/${sourceHealth.value.length}` : '—', icon: 'i-lucide-activity', tone: up > 0 && up === sourceHealth.value.length ? 'success' : 'warning' }
+  ]
+})
+
+const trail = computed(() => [{ label: t('nav.markets') }, { label: title.value }])
+
 const columns = computed<GridColumn[]>(() => [
   { key: 'symbol', label: t('marketExplorer.columns.instrument'), class: 'min-w-36' },
   { key: 'id', label: t('marketExplorer.columns.catalogId'), class: 'min-w-44' },
@@ -112,6 +137,10 @@ useHead({ title })
 
 <template>
   <BasePage id="markets-explorer" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('marketExplorer.pip')" />
+    </template>
+
     <template #right>
       <UButton
         icon="i-lucide-refresh-cw"
@@ -159,7 +188,8 @@ useHead({ title })
       <SharedListFooter :count="filtered.length" :loading="isLoading" />
     </template>
 
-    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6">
+    <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-3">
+      <MetricRibbon :items="metrics" />
       <LazyGridList
         :items="filtered"
         :columns="columns"

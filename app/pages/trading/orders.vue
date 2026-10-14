@@ -2,6 +2,7 @@
 import type { GridColumn } from '~/components/gridList/Index.vue'
 import type { PaperOrderItem } from '~~/types/orders'
 import { getErrorMessage } from '~/shared/utils/errors'
+import type { MetricItem } from '~/components/MetricRibbon.vue'
 
 // =============================================================================
 //  Paper Orders lifecycle + history (roadmap §17.2, §26.4, §58.5 /orders).
@@ -101,11 +102,29 @@ mobileBar.registerInfo(computed(() => ({
   loading: isLoading.value
 })))
 
+const metrics = computed<MetricItem[]>(() => {
+  const m = meta.value
+  return [
+    { key: 'live', label: t('paperOrders.metaLive'), value: String(m?.live ?? 0), icon: 'i-lucide-loader', tone: 'info' },
+    { key: 'filled', label: t('paperOrders.metaFilled'), value: String(m?.filled ?? 0), icon: 'i-lucide-circle-check', tone: 'success' },
+    { key: 'cancelled', label: t('paperOrders.metaCancelled'), value: String(m?.cancelled ?? 0), icon: 'i-lucide-circle-slash' },
+    { key: 'rejected', label: t('paperOrders.metaRejected'), value: String(m?.rejected ?? 0), icon: 'i-lucide-circle-x', tone: 'error' },
+    { key: 'expired', label: t('paperOrders.metaExpired'), value: String(m?.expired ?? 0), icon: 'i-lucide-clock' },
+    { key: 'total', label: t('paperOrders.metaTotal'), value: String(m?.total ?? 0), icon: 'i-lucide-list-checks', tone: 'primary' }
+  ]
+})
+
+const trail = computed(() => [{ label: t('nav.trading') }, { label: title.value }])
+
 useHead({ title })
 </script>
 
 <template>
   <BasePage id="paper-orders" :title="title" :description="description">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" :pip="t('paperOrders.pip')" />
+    </template>
+
     <template #right>
       <div class="flex items-center gap-2">
         <UBadge
@@ -154,32 +173,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
-      <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
-        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0">
-          <span class="text-[10px] text-muted uppercase tracking-wider truncate">{{ t('paperOrders.metaLive') }}</span>
-          <span class="text-sm font-bold font-mono text-info">{{ meta?.live ?? 0 }}</span>
-        </div>
-        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0">
-          <span class="text-[10px] text-muted uppercase tracking-wider truncate">{{ t('paperOrders.metaFilled') }}</span>
-          <span class="text-sm font-bold font-mono text-success">{{ meta?.filled ?? 0 }}</span>
-        </div>
-        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0">
-          <span class="text-[10px] text-muted uppercase tracking-wider truncate">{{ t('paperOrders.metaCancelled') }}</span>
-          <span class="text-sm font-bold font-mono text-muted">{{ meta?.cancelled ?? 0 }}</span>
-        </div>
-        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0">
-          <span class="text-[10px] text-muted uppercase tracking-wider truncate">{{ t('paperOrders.metaRejected') }}</span>
-          <span class="text-sm font-bold font-mono text-error">{{ meta?.rejected ?? 0 }}</span>
-        </div>
-        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0">
-          <span class="text-[10px] text-muted uppercase tracking-wider truncate">{{ t('paperOrders.metaExpired') }}</span>
-          <span class="text-sm font-bold font-mono text-dimmed">{{ meta?.expired ?? 0 }}</span>
-        </div>
-        <div class="rounded bg-default ring ring-default px-3 py-2 flex flex-col gap-0.5 min-w-0">
-          <span class="text-[10px] text-muted uppercase tracking-wider truncate">{{ t('paperOrders.metaTotal') }}</span>
-          <span class="text-sm font-bold font-mono text-highlighted">{{ meta?.total ?? 0 }}</span>
-        </div>
-      </div>
+      <MetricRibbon :items="metrics" cols="grid-cols-2 sm:grid-cols-3 xl:grid-cols-6" />
 
       <LazyGridList
         :items="items"

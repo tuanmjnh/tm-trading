@@ -43,10 +43,16 @@ const toFile = (link: string) => ({
   created_at: new Date().toISOString(),
   display_name: link.split('/').pop() || link
 }) as Cloudinary.IFileAttach
+
+const trail = computed(() => [{ label: t('nav.shared_resources') }, { label: t('media.title') }])
 </script>
 
 <template>
   <BasePage id="media" :title="t('media.title')">
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" />
+    </template>
+
     <template #default>
       <div class="flex-1 flex flex-col min-h-0 relative">
         <!-- UTabs requires flex-1 min-h-0 so child slots can scroll -->

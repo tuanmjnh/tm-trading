@@ -4,6 +4,10 @@
     :title="t('utilities.title')"
     :description="t('utilities.subtitle')"
   >
+    <template #eyebrow>
+      <PageEyebrow :trail="trail" />
+    </template>
+
     <div class="space-y-4">
       <UtilitiesToolTabs
         v-if="route.path !== '/tools/editor'"
@@ -36,6 +40,8 @@ const pageTitle = computed(() => {
     default: return t('utilities.title')
   }
 })
+
+const trail = computed(() => [{ label: t('nav.tools') }, { label: pageTitle.value }])
 
 useHead({ title: pageTitle })
 
