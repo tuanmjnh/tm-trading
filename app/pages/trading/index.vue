@@ -19,7 +19,7 @@ import {
   type CandleMessage,
   type QuoteMessage
 } from '../../utils/marketFeed'
-import { INDICATORS, type IndicatorSelection } from '../../utils/indicators'
+import { INDICATORS, type IndicatorKind, type IndicatorSelection } from '../../utils/indicators'
 import type {
   IntelAccum,
   IntelData,
@@ -69,16 +69,29 @@ onMounted(() => {
 const symbols = computed(() =>
   feed.state.hello?.symbols?.length ? feed.state.hello.symbols : ['BTCUSDT']
 )
-const timeframes = computed(() =>
-  feed.state.hello?.timeframes?.length ? feed.state.hello.timeframes : ['1m', '4m', '10m']
-)
 
-// Keep the selection valid once the hello snapshot reveals the real lists.
+// -----------------------------------------------------------------------------
+//  TradingView-style timeframe scale (curated m / h / d / w). The REST history
+//  API serves every one of these; the LIVE plane only streams candle frames for
+//  the `liveTimeframes` subset (whatever the WS hello advertises, default
+//  1m/4m/10m). Selecting a history-only timeframe still renders the full
+//  indicator stack over REST bars — it just doesn't get a live tail, and is
+//  marked with an "H" badge so the distinction is explicit, never silent.
+// -----------------------------------------------------------------------------
+const TF_SCALE = ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '12h', '1D', '1W'] as const
+type Timeframe = typeof TF_SCALE[number]
+
+/** Timeframes that receive live candle frames from the plane. */
+const liveTimeframes = computed<ReadonlySet<string>>(() => {
+  const list = feed.state.hello?.timeframes?.length ? feed.state.hello.timeframes : ['1m', '4m', '10m']
+  return new Set(list)
+})
+
+const isLiveTf = (tf: string): boolean => liveTimeframes.value.has(tf)
+
+// Keep the selection valid once the hello snapshot reveals the live subset.
 watch(symbols, (list) => {
   if (list.length && !list.includes(symbol.value)) symbol.value = list[0]!
-}, { immediate: true })
-watch(timeframes, (list) => {
-  if (list.length && !list.includes(timeframe.value)) timeframe.value = list[0]!
 }, { immediate: true })
 
 const quote = computed(() => feed.state.quotes[symbol.value])
@@ -97,6 +110,24 @@ const toggleIndicator = (id: string): void => {
 const indicatorSelections = computed<IndicatorSelection[]>(() =>
   enabledIndicators.value.map((id) => ({ id }))
 )
+
+// TradingView-style quick-toggle groups: indicators bucketed by `kind` so the
+// toolbar can lay out Overlay / Oscillators / Volume as labelled checkbox rows.
+const indGroupLabel: Record<IndicatorKind, string> = {
+  overlay: 'trade.groupOverlay',
+  pane: 'trade.groupPane',
+  volume: 'trade.groupVolume'
+}
+const indicatorGroups = computed(() => {
+  const order: IndicatorKind[] = ['overlay', 'pane', 'volume']
+  return order
+    .map(kind => ({
+      kind,
+      label: t(indGroupLabel[kind]),
+      items: INDICATORS.filter(i => i.kind === kind)
+    }))
+    .filter(g => g.items.length > 0)
+})
 
 // Shared method selection (roadmap 7T): MethodControls picks a method id,
 // PositionPanel filters its rows by it. '' = no filter.
@@ -470,128 +501,70 @@ const sideClass = (side?: string): string =>
       </div>
     </template>
 
-    <div class="flex flex-col w-full gap-3 pb-24 lg:pb-6">
-      <!-- Controls: symbol, timeframe, live quote header -->
-      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 rounded bg-default ring ring-default p-3">
-        <USelect
-          v-model="symbol"
-          :items="symbols"
-          size="sm"
-          class="w-40"
-          :disabled="inReplay"
-          :aria-label="t('trade.symbol')"
-        />
+    <div class="flex flex-col w-full gap-1 pb-24 lg:pb-1">
+      <!-- ── Band 1: instrument / timeframe / quote (mockup quote header) ── -->
+      <div class="flex flex-col gap-2 px-3 py-2 bg-muted/40 border border-default rounded-t lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-4 min-w-0">
+          <TradingSymbolPicker v-model="symbol" class="w-full sm:w-72 lg:w-64" :disabled="inReplay" />
+          <div class="flex flex-wrap items-center gap-0.5" role="group" :aria-label="t('trade.tf')">
+            <UButton
+              v-for="tf in TF_SCALE"
+              :key="tf"
+              size="xs"
+              :color="tf === timeframe ? 'primary' : 'neutral'"
+              :variant="tf === timeframe ? 'soft' : 'ghost'"
+              :disabled="inReplay"
+              :data-testid="`tf-${tf}`"
+              class="gap-1"
+              @click="timeframe = tf"
+            >
+              {{ tf }}
+              <span v-if="!isLiveTf(tf)" class="text-[9px] leading-none opacity-60 font-mono" :title="t('trade.tfHistoryHint')">H</span>
+            </UButton>
+          </div>
+        </div>
+        <div v-if="displayQuote" class="flex items-center gap-4 font-mono text-xs">
+          <span class="flex flex-col"><span class="text-[9px] uppercase tracking-wider text-dimmed">{{ t('trade.bid') }}</span><span class="font-semibold text-primary">{{ formatPrice(displayQuote.bid) }}</span></span>
+          <span class="flex flex-col"><span class="text-[9px] uppercase tracking-wider text-dimmed">{{ t('trade.ask') }}</span><span class="font-semibold text-primary">{{ formatPrice(displayQuote.ask) }}</span></span>
+          <span class="flex flex-col"><span class="text-[9px] uppercase tracking-wider text-dimmed">{{ t('trade.spread') }}</span><span class="text-default">{{ formatPrice(spreadOf(displayQuote)) }}</span></span>
+        </div>
+        <span v-else class="text-xs text-dimmed">{{ t('trade.waitingQuote') }}</span>
+      </div>
 
-        <div class="flex items-center gap-1" role="group" :aria-label="t('trade.tf')">
-          <UButton
-            v-for="tf in timeframes"
-            :key="tf"
-            size="xs"
-            :color="tf === timeframe ? 'primary' : 'neutral'"
-            :variant="tf === timeframe ? 'soft' : 'ghost'"
-            :disabled="inReplay"
-            @click="timeframe = tf"
-          >
-            {{ tf }}
-          </UButton>
+      <!-- ── Band 2: indicator quick-toggles + replay CTA (compact toolbar) ── -->
+      <div class="flex flex-col gap-2 px-3 py-2 bg-default border-x border-default lg:flex-row lg:items-center lg:justify-between" data-testid="indicator-toggles">
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2" role="group" :aria-label="t('trade.quickToggles')">
+          <span class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-dimmed"><UIcon name="i-lucide-list-checks" class="size-3.5 text-primary" />{{ t('trade.quickToggles') }}</span>
+          <div v-for="group in indicatorGroups" :key="group.kind" class="flex items-center gap-2" :data-testid="`ind-group-${group.kind}`">
+            <span class="text-[10px] uppercase tracking-wider text-dimmed">{{ group.label }}</span>
+            <UCheckbox
+              v-for="ind in group.items"
+              :key="ind.id"
+              :model-value="enabledIndicators.includes(ind.id)"
+              :label="t(`trade.ind.${ind.id}`)"
+              size="xs"
+              :data-testid="`ind-${ind.id}`"
+              @update:model-value="toggleIndicator(ind.id)"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Band 3: per-symbol intel chips (Phase 8/9, hidden in replay) ── -->
+      <TradeIntel v-if="!inReplay" :symbol="symbol" :funding="intelFunding" :flow="intelFlow" :accum="intelAccum" :regime="intelRegime" :oi-trend-pct="intelOiTrend" />
+
+      <!-- ── Replay controls + session book (7R2) — start CTA when detached ── -->
+      <ReplayPanel :session="replaySession" :events="replayEvents" :orders="replayOrders" :positions="replayPositions" :seed="replaySeed" :active-method="activeMethod" :busy="replayBusy" :error="replayError" @start="startReplay" @play="replayPlay" @pause="replayPause" @step="replayStep" @detach="replayDetach" />
+
+      <!-- ── THE DOCK (mockup: flush 12-col — watchlist 2 / chart 7 / order-book+trades 3) ── -->
+      <div class="grid grid-cols-1 gap-1 lg:grid-cols-12 lg:items-stretch">
+        <!-- Left rail: watchlist (col-span-2) -->
+        <div class="lg:col-span-2 order-2 lg:order-1 flex flex-col rounded border border-default bg-default overflow-hidden">
+          <Watchlist :symbol="symbol" @select="symbol = $event" />
         </div>
 
-        <div v-if="displayQuote" class="ml-auto flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
-          <span class="flex items-baseline gap-1.5">
-            <span class="text-xs text-muted">{{ t('trade.bid') }}</span>
-            <span class="font-mono">{{ formatPrice(displayQuote.bid) }}</span>
-          </span>
-          <span class="flex items-baseline gap-1.5">
-            <span class="text-xs text-muted">{{ t('trade.ask') }}</span>
-            <span class="font-mono">{{ formatPrice(displayQuote.ask) }}</span>
-          </span>
-          <span class="flex items-baseline gap-1.5">
-            <span class="text-xs text-muted">{{ t('trade.spread') }}</span>
-            <span class="font-mono">{{ formatPrice(spreadOf(displayQuote)) }}</span>
-          </span>
-        </div>
-        <span v-else class="ml-auto text-xs text-muted">{{ t('trade.waitingQuote') }}</span>
-      </div>
-
-      <!-- Indicator toggles -->
-      <div
-        class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded bg-default ring ring-default p-3"
-        role="group"
-        :aria-label="t('trade.indicators')"
-      >
-        <span class="text-xs font-medium tracking-wide text-muted uppercase">
-          {{ t('trade.indicators') }}
-        </span>
-        <UButton
-          v-for="ind in INDICATORS"
-          :key="ind.id"
-          size="xs"
-          :color="enabledIndicators.includes(ind.id) ? 'primary' : 'neutral'"
-          :variant="enabledIndicators.includes(ind.id) ? 'soft' : 'ghost'"
-          :aria-pressed="enabledIndicators.includes(ind.id)"
-          @click="toggleIndicator(ind.id)"
-        >
-          {{ t(`trade.ind.${ind.id}`) }}
-        </UButton>
-      </div>
-
-      <!-- Per-symbol intel chips (Phase 8/9) — hidden while a replay session owns the terminal -->
-      <TradeIntel
-        v-if="!inReplay"
-        :symbol="symbol"
-        :funding="intelFunding"
-        :flow="intelFlow"
-        :accum="intelAccum"
-        :regime="intelRegime"
-        :oi-trend-pct="intelOiTrend"
-      />
-
-      <!-- Phase 10: method event inspector + confluence explanation (hidden in replay) -->
-      <div v-if="!inReplay" class="grid grid-cols-1 gap-3 xl:grid-cols-4">
-        <MethodEventsPanel
-          class="xl:col-span-2"
-          :symbol="symbol"
-          :methods="methodMeta"
-          :enabled="enabledMethods"
-          :events="methodEvents"
-          :loading="methodLoading"
-          :error="methodError"
-          :league="methodLeague"
-          :selected="selectedMethodEvent"
-          @toggle="toggleMethod"
-          @clear="clearMethods"
-        />
-        <ConfluenceCard
-          class="xl:col-span-2"
-          :symbol="symbol"
-          :detail="confluenceDetail"
-          :loading="confluenceLoading"
-        />
-      </div>
-
-      <!-- Replay controls + session book (7R2) — start CTA when detached -->
-      <ReplayPanel
-        :session="replaySession"
-        :events="replayEvents"
-        :orders="replayOrders"
-        :positions="replayPositions"
-        :seed="replaySeed"
-        :active-method="activeMethod"
-        :busy="replayBusy"
-        :error="replayError"
-        @start="startReplay"
-        @play="replayPlay"
-        @pause="replayPause"
-        @step="replayStep"
-        @detach="replayDetach"
-      />
-
-      <div class="grid grid-cols-1 gap-3 xl:grid-cols-4">
-        <!-- Watchlist -->
-        <Watchlist :symbol="symbol" @select="symbol = $event" />
-
-        <!-- Chart -->
-        <div class="p-3 rounded bg-default ring ring-default xl:col-span-2">
+        <!-- Chart (col-span-7, fixed height like mockup h-[460px]) -->
+        <div class="lg:col-span-7 order-1 lg:order-2 flex flex-col rounded border border-default bg-default overflow-hidden">
           <TradeChart
             :symbol="symbol"
             :timeframe="timeframe"
@@ -606,71 +579,60 @@ const sideClass = (side?: string): string =>
           />
         </div>
 
-        <!-- Right column: orderbook + stream status + trade tape -->
-        <div class="flex flex-col gap-3">
+        <!-- Right pane: order book + stream + tape (col-span-3) -->
+        <div class="lg:col-span-3 order-3 flex flex-col gap-1">
           <OrderBook :symbol="symbol" />
 
           <!-- Stream / provider status -->
-          <div class="rounded bg-default ring ring-default p-3 flex flex-col gap-3">
+          <div class="rounded border border-default bg-default p-3 flex flex-col gap-2">
             <div class="flex items-center justify-between">
-              <h3 class="text-sm font-semibold">{{ t('trade.stream') }}</h3>
-              <LivePip :active="feed.state.connection === 'open'" />
+              <h3 class="text-sm font-semibold text-highlighted">{{ t('trade.stream') }}</h3>
+              <UBadge :color="connectionBadge.color" variant="subtle" size="sm">{{ providerState ?? '—' }}</UBadge>
             </div>
-            <div class="flex items-center justify-between text-sm">
-              <span class="text-muted">{{ t('trade.provider') }}</span>
-              <UBadge :color="connectionBadge.color" variant="subtle" size="sm">
-                {{ providerState ?? '—' }}
-              </UBadge>
-            </div>
-            <p v-if="feed.state.lastError" class="font-mono text-xs break-all text-error/80">
-              {{ t('trade.lastError') }}: {{ feed.state.lastError }}
-            </p>
+            <p v-if="feed.state.lastError" class="font-mono text-xs break-all text-error/80">{{ t('trade.lastError') }}: {{ feed.state.lastError }}</p>
           </div>
 
           <!-- Recent trades tape -->
-          <div class="rounded bg-default ring ring-default p-3 flex flex-col gap-2 flex-1 min-h-48">
+          <div class="rounded border border-default bg-default p-3 flex flex-col gap-2 flex-1 min-h-40">
             <div class="flex items-baseline justify-between">
-              <h3 class="text-sm font-semibold">{{ t('trade.tape') }}</h3>
-              <div class="flex items-center gap-2">
-                <LivePip :active="feed.state.connection === 'open'" />
-                <span class="text-xs text-muted">{{ symbol }}</span>
-              </div>
+              <h3 class="text-sm font-semibold text-highlighted">{{ t('trade.tape') }}</h3>
+              <span class="text-xs text-dimmed font-mono">{{ symbol }}</span>
             </div>
-
             <div v-if="tape.length" class="flex flex-col text-sm">
-              <div class="grid grid-cols-3 gap-2 pb-1 text-xs text-muted border-b border-default">
-                <span>{{ t('trade.time') }}</span>
-                <span class="text-right">{{ t('trade.price') }}</span>
-                <span class="text-right">{{ t('trade.qty') }}</span>
+              <div class="grid grid-cols-3 gap-2 pb-1 text-[10px] uppercase tracking-wider text-dimmed border-b border-default">
+                <span>{{ t('trade.time') }}</span><span class="text-right">{{ t('trade.price') }}</span><span class="text-right">{{ t('trade.qty') }}</span>
               </div>
-              <div
-                v-for="trade in tape"
-                :key="trade.id ?? `${trade.eventTime}-${trade.ingestTime}`"
-                class="grid grid-cols-3 gap-2 py-0.5 font-mono text-xs"
-              >
-                <span class="text-muted">{{ tapeTime(trade.eventTime) }}</span>
-                <span class="text-right" :class="sideClass(trade.side)">
-                  {{ formatPrice(trade.price) }}
-                </span>
-                <span class="text-right text-default">
-                  {{ trade.quantity !== undefined ? trade.quantity : '—' }}
-                </span>
+              <div v-for="trade in tape" :key="trade.id ?? `${trade.eventTime}-${trade.ingestTime}`" class="grid grid-cols-3 gap-2 py-0.5 font-mono text-xs">
+                <span class="text-dimmed">{{ tapeTime(trade.eventTime) }}</span>
+                <span class="text-right" :class="sideClass(trade.side)">{{ formatPrice(trade.price) }}</span>
+                <span class="text-right text-muted">{{ trade.quantity !== undefined ? trade.quantity : '—' }}</span>
               </div>
             </div>
-            <p v-else class="py-6 text-center text-sm text-muted">{{ t('trade.tapeEmpty') }}</p>
+            <p v-else class="py-6 text-center text-sm text-dimmed">{{ t('trade.tapeEmpty') }}</p>
           </div>
         </div>
       </div>
 
-      <!-- Terminal bottom row (roadmap §10): ticket, methods, signals, risk, positions -->
-      <div class="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-5">
-        <TradeTicket
+      <!-- ── Band 4: method events + confluence (Phase 10, hidden in replay) ── -->
+      <div v-if="!inReplay" class="grid grid-cols-1 gap-1 xl:grid-cols-2">
+        <MethodEventsPanel
           :symbol="symbol"
-          :tf="timeframe"
-          :quote="displayQuote"
-          :replay-session-id="replaySession?.id ?? null"
-          @placed="signalsReload++"
+          :methods="methodMeta"
+          :enabled="enabledMethods"
+          :events="methodEvents"
+          :loading="methodLoading"
+          :error="methodError"
+          :league="methodLeague"
+          :selected="selectedMethodEvent"
+          @toggle="toggleMethod"
+          @clear="clearMethods"
         />
+        <ConfluenceCard :symbol="symbol" :detail="confluenceDetail" :loading="confluenceLoading" />
+      </div>
+
+      <!-- ── Band 5: execution desk (roadmap §10) — ticket, methods, signals, risk, positions ── -->
+      <div class="grid grid-cols-1 gap-1 lg:grid-cols-2 xl:grid-cols-5">
+        <TradeTicket :symbol="symbol" :tf="timeframe" :quote="displayQuote" :replay-session-id="replaySession?.id ?? null" @placed="signalsReload++" />
         <MethodControls v-model="activeMethod" />
         <SignalPanel :symbol="symbol" :reload-key="signalsReload" />
         <OrdersPanel :reload="signalsReload" />
