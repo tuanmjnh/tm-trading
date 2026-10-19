@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
   if (!BotInstance) return { success: false, error: 'mongo down', data: null, meta: { mongo: 'down' } }
 
   try {
-    const data = await BotInstance.findOne({ _id: id }).lean()
+    const data = await BotInstance.findOne({ _id: id, ownerId: requireOwnerId(event) }).lean()
     if (!data) return { success: false, error: 'instance not found', data: null }
     return { success: true, data }
   } catch {

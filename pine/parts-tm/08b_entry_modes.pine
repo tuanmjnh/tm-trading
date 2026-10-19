@@ -1,0 +1,86 @@
+// =============================================================================
+//  L7b - ENTRY MODES BY MARKET STATE (v2.1 Phase 3)
+// =============================================================================
+//  Each mode publishes: activation, confirmation, invalidation and expiry. The
+//  state machine only accepts a NEW trade when an enabled mode is ready AND its
+//  direction matches the direction-aware score. Modes never override risk gates.
+//
+//  A - Trend Pullback: trending regime, HTF not opposed, pullback into EMA/FVG/
+//      OB, then a close back in the trend direction.
+//  B - Liquidity Sweep Reversal: sweep of a tracked level, then a rejection /
+//      engulfing confirmation within a bounded window after the sweep.
+//  C - Range Mean-Reversion: RANGING regime, price at a range edge, rejection
+//      candle back inside the range. Disabled by default until validated OOS.
+// =============================================================================
+
+float tm_atrSafe = nz(tm_atr, close * 0.01)
+float tm_pbTol   = tm_atrSafe * tm_modePullTol
+float tm_rgTol   = tm_atrSafe * tm_modeRangeTol
+
+// --- Mode A: Trend Pullback --------------------------------------------------
+int  tm_modeADir   = tm_regime.code == 1 ? tm_regime.trendDir : 0
+bool tm_modeAMtfOk = tm_modeADir == 1 ? tm_ctxDir >= 0 and tm_setupDir >= 0 : tm_modeADir == -1 ? tm_ctxDir <= 0 and tm_setupDir <= 0 : false
+
+bool tm_modeAPullLong  = (low <= tm_emaF + tm_pbTol) or (not na(tm_nearFvgBullPx) and low <= tm_nearFvgBullPx + tm_pbTol) or (not na(tm_nearObBullPx) and low <= tm_nearObBullPx + tm_pbTol)
+bool tm_modeAPullShort = (high >= tm_emaF - tm_pbTol) or (not na(tm_nearFvgBearPx) and high >= tm_nearFvgBearPx - tm_pbTol) or (not na(tm_nearObBearPx) and high >= tm_nearObBearPx - tm_pbTol)
+bool tm_modeAConfirmLong  = close > open and close >= tm_emaF - tm_pbTol
+bool tm_modeAConfirmShort = close < open and close <= tm_emaF + tm_pbTol
+
+bool tm_modeAReadyLong  = tm_modeA_on and tm_modeADir == 1 and tm_modeAMtfOk and tm_modeAPullLong and tm_modeAConfirmLong
+bool tm_modeAReadyShort = tm_modeA_on and tm_modeADir == -1 and tm_modeAMtfOk and tm_modeAPullShort and tm_modeAConfirmShort
+
+// --- Mode B: Liquidity Sweep Reversal ---------------------------------------
+int tm_sweepAgeBull = tm_lastSweepBullBar >= 0 ? bar_index - tm_lastSweepBullBar : 999999
+int tm_sweepAgeBear = tm_lastSweepBearBar >= 0 ? bar_index - tm_lastSweepBearBar : 999999
+bool tm_sweepFreshBull = tm_sweepAgeBull <= tm_modeSweepBars and not na(tm_lastSweepBullPx)
+bool tm_sweepFreshBear = tm_sweepAgeBear <= tm_modeSweepBars and not na(tm_lastSweepBearPx)
+bool tm_modeBConfirmLong  = tm_bullPin or tm_bullEng or tm_bullRej
+bool tm_modeBConfirmShort = tm_bearPin or tm_bearEng or tm_bearRej
+
+bool tm_modeBReadyLong  = tm_modeB_on and tm_sweepFreshBull and tm_modeBConfirmLong and close > tm_lastSweepBullPx
+bool tm_modeBReadyShort = tm_modeB_on and tm_sweepFreshBear and tm_modeBConfirmShort and close < tm_lastSweepBearPx
+
+// Invalidation: price accepts beyond the swept extreme instead of rejecting it.
+bool tm_modeBInvalidLong  = tm_modeB_on and tm_sweepFreshBull and close < tm_lastSweepBullPx - 0.1 * tm_atrSafe
+bool tm_modeBInvalidShort = tm_modeB_on and tm_sweepFreshBear and close > tm_lastSweepBearPx + 0.1 * tm_atrSafe
+
+// --- Mode C: Range Mean-Reversion -------------------------------------------
+bool tm_rangeBoxOk = tm_regime.code == 0 and not na(tm_nearestRes) and not na(tm_nearestSup) and (tm_nearestRes - tm_nearestSup) > tm_atrSafe
+bool tm_modeCNearSup = tm_rangeBoxOk and close <= tm_nearestSup + tm_rgTol and close >= tm_nearestSup - tm_atrSafe
+bool tm_modeCNearRes = tm_rangeBoxOk and close >= tm_nearestRes - tm_rgTol and close <= tm_nearestRes + tm_atrSafe
+bool tm_modeCReadyLong  = tm_modeC_on and tm_modeCNearSup and (tm_bullPin or tm_bullEng or tm_bullRej) and close > open
+bool tm_modeCReadyShort = tm_modeC_on and tm_modeCNearRes and (tm_bearPin or tm_bearEng or tm_bearRej) and close < open
+
+// --- Mode Selection (A > B > C) ---------------------------------------------
+// Priority is deterministic and documented so the same bar always resolves to
+// the same mode. C stays opt-in until the range classifier is validated OOS.
+int    tm_modeDir    = 0
+string tm_activeMode = "NONE"
+
+if tm_modeAReadyLong
+    tm_modeDir    := 1
+    tm_activeMode := "A_TREND_PULLBACK"
+else if tm_modeAReadyShort
+    tm_modeDir    := -1
+    tm_activeMode := "A_TREND_PULLBACK"
+else if tm_modeBReadyLong
+    tm_modeDir    := 1
+    tm_activeMode := "B_LIQUIDITY_SWEEP"
+else if tm_modeBReadyShort
+    tm_modeDir    := -1
+    tm_activeMode := "B_LIQUIDITY_SWEEP"
+else if tm_modeCReadyLong
+    tm_modeDir    := 1
+    tm_activeMode := "C_RANGE_REVERSION"
+else if tm_modeCReadyShort
+    tm_modeDir    := -1
+    tm_activeMode := "C_RANGE_REVERSION"
+
+bool tm_modeReady = tm_modeDir != 0
+
+// Why no mode is active (stable priority, used by the dashboard/alerts).
+bool tm_modeAwaitConfirm = tm_modeReady or tm_modeAPullLong or tm_modeAPullShort or tm_sweepFreshBull or tm_sweepFreshBear or tm_modeCNearSup or tm_modeCNearRes
+string tm_modeReason = not tm_modeFilterOn ? "OK" : tm_modeReady ? (tm_activeMode == "A_TREND_PULLBACK" ? "MODE_A_PULLBACK" : tm_activeMode == "B_LIQUIDITY_SWEEP" ? "MODE_B_SWEEP" : "MODE_C_RANGE") : tm_modeBInvalidLong or tm_modeBInvalidShort ? "MODE_INVALIDATED" : tm_modeAwaitConfirm ? "WAIT_CONFIRMATION" : tm_modeADir != 0 ? "WAIT_PULLBACK" : "NO_SETUP"
+
+// The mode is a gate, not a score bonus: a great score cannot bypass it.
+bool tm_modeGateOk = not tm_modeFilterOn or (tm_modeReady and tm_modeDir == tm_dir)

@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'invalid_replay_session', message: v.error ?? 'invalid session body' })
   }
   try {
-    return { success: true, data: await createReplaySession(v.value) }
+    return { success: true, data: await createReplaySession(v.value, {}, requireOwnerId(event)) }
   } catch (err) {
     throw replayHttpError(err)
   }

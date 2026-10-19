@@ -68,6 +68,8 @@ function toItem(p: any, states: readonly string[] = FALLBACK_ORDER_STATES): Pape
     expiredAt: toIso(p.expiredAt),
     fillPrice: num(p.fillPrice),
     filledQty: num(p.filledQty) ?? 0,
+    leverage: Number.isInteger(p.leverage) ? p.leverage : null,
+    sessionId: p.sessionId == null ? null : String(p.sessionId),
     fee: num(p.fee),
     slippageBps: num(p.slippageBps),
     createdAt: toIso(p.createdAt) ?? '',
@@ -78,9 +80,17 @@ function toItem(p: any, states: readonly string[] = FALLBACK_ORDER_STATES): Pape
 
 export interface ListOrdersQuery {
   limit: number
+  /**
+   * Tenancy (docs/web-app/user-tenancy-plan.md): hub user id (`sub`) that owns
+   * the orders. Required — an unscoped read would leak another account's book.
+   */
+  ownerId: string
   cursor?: string
   status?: string
   symbol?: string
+  sessionId?: string
+  /** Narrow to one sub-book (account switcher, §61.17 Phase B). */
+  account?: string
 }
 
 export interface ListOrdersResult {
@@ -112,9 +122,11 @@ export async function listPaperOrders(q: ListOrdersQuery): Promise<ListOrdersRes
   })
   if (!PaperOrder) return empty()
 
-  const filter: Record<string, any> = {}
+  const filter: Record<string, any> = { ownerId: q.ownerId }
   if (q.status) filter.status = q.status
   if (q.symbol) filter.symbol = q.symbol.toUpperCase()
+  if (q.sessionId) filter.sessionId = q.sessionId
+  if (q.account) filter.accountId = q.account
   if (q.cursor) {
     if (!Types.ObjectId.isValid(q.cursor)) {
       throw createError({ statusCode: 400, statusMessage: 'error.invalidCursor', message: 'cursor khong phai id hop le' })
@@ -132,16 +144,18 @@ export async function listPaperOrders(q: ListOrdersQuery): Promise<ListOrdersRes
       .lean()
     const total = await PaperOrder.countDocuments(countFilter)
 
-    // Header stats are global (not per filter).
+    // Header stats are per owner but not per filter (the owner scope is never
+    // dropped — only the user's own book is counted).
+    const scope = { ownerId: q.ownerId }
     const [live, pending, working, partial, filled, cancelled, expired, rejected] = await Promise.all([
-      PaperOrder.countDocuments({ status: { $in: ['riskChecked', 'pending', 'partiallyFilled'] } }),
-      PaperOrder.countDocuments({ status: 'pending' }),
-      PaperOrder.countDocuments({ status: 'riskChecked' }),
-      PaperOrder.countDocuments({ status: 'partiallyFilled' }),
-      PaperOrder.countDocuments({ status: 'filled' }),
-      PaperOrder.countDocuments({ status: 'cancelled' }),
-      PaperOrder.countDocuments({ status: 'expired' }),
-      PaperOrder.countDocuments({ status: 'rejected' })
+      PaperOrder.countDocuments({ ...scope, status: { $in: ['riskChecked', 'pending', 'partiallyFilled'] } }),
+      PaperOrder.countDocuments({ ...scope, status: 'pending' }),
+      PaperOrder.countDocuments({ ...scope, status: 'riskChecked' }),
+      PaperOrder.countDocuments({ ...scope, status: 'partiallyFilled' }),
+      PaperOrder.countDocuments({ ...scope, status: 'filled' }),
+      PaperOrder.countDocuments({ ...scope, status: 'cancelled' }),
+      PaperOrder.countDocuments({ ...scope, status: 'expired' }),
+      PaperOrder.countDocuments({ ...scope, status: 'rejected' })
     ])
 
     return {
@@ -156,6 +170,11 @@ export async function listPaperOrders(q: ListOrdersQuery): Promise<ListOrdersRes
 
 export interface CancelOrderParams {
   alertKey: string
+  /**
+   * Tenancy (docs/web-app/user-tenancy-plan.md): hub user id (`sub`) that owns
+   * the order. Required — cancel must never reach another account's alert.
+   */
+  ownerId: string
   by?: string
   reason?: string
 }
@@ -171,7 +190,7 @@ export async function cancelPaperOrder(p: CancelOrderParams): Promise<CancelOrde
   // Compare-and-swap on the ALERT: only intents the engine has not started to
   // execute may be cancelled. cancelledAt carries the by/reason (D14).
   const alerted = await Alert.updateOne(
-    { alertKey: p.alertKey, status: { $in: ['received', 'working'] } },
+    { ownerId: p.ownerId, alertKey: p.alertKey, status: { $in: ['received', 'working'] } },
     { $set: { status: 'cancelled', cancelBy: p.by ?? 'terminal', cancelReason: p.reason ?? 'manual' } }
   )
   if (!(alerted.modifiedCount > 0)) {
@@ -185,11 +204,11 @@ export async function cancelPaperOrder(p: CancelOrderParams): Promise<CancelOrde
   // Mirror onto the order doc. Missing doc (pre-upsert) still counts: the
   // alert stop alone guarantees no fill happens from here on.
   await PaperOrder.updateOne(
-    { alertKey: p.alertKey, status: { $in: ['created', 'riskChecked', 'pending', 'partiallyFilled'] } },
+    { ownerId: p.ownerId, alertKey: p.alertKey, status: { $in: ['created', 'riskChecked', 'pending', 'partiallyFilled'] } },
     { $set: { status: 'cancelled', cancelBy: p.by ?? 'terminal', cancelReason: p.reason ?? 'manual', cancelledAt: now, updatedAt: now } }
   )
 
-  const order = await PaperOrder.findOne({ alertKey: p.alertKey }).lean().catch(() => null)
+  const order = await PaperOrder.findOne({ ownerId: p.ownerId, alertKey: p.alertKey }).lean().catch(() => null)
   return {
     success: true,
     status: order?.status ?? 'cancelled',

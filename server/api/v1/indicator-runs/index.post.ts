@@ -110,7 +110,7 @@ export default defineEventHandler(async (event: H3Event) => {
     })
   }
 
-  const id = await saveIndicatorRun(run)
+  const id = await saveIndicatorRun(run, requireOwnerId(event))
   if (!id) {
     throw createError({
       statusCode: 503,

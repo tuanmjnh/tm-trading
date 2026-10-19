@@ -1,0 +1,154 @@
+// =============================================================================
+//  L8 - SCORING ENGINE (0-100) + L9 RISK ENGINE
+//  11 nhom trong so tong 100. Moi nhom la AVERAGE cua cac chi so ben trong
+//  (khong tinh trung lap correlated - v2 §2). Tat ca trong so configurable.
+// =============================================================================
+
+// Nhom Score rieng (truoc khi nhan trong so) - moi nhom [-1, +1]
+float pa_gTrend = pa_trendScore
+float pa_gStruct = (pa_bosUp or pa_chochUp or pa_mssUp) ? 1.0 : (pa_bosDown or pa_chochDown or pa_mssDown) ? -1.0 : float(pa_trend) * 0.5
+float pa_gLiq = pa_sweepBull ? 1.0 : pa_sweepBear ? -1.0 : pa_retestBull ? 0.7 : pa_retestBear ? -0.7 : 0.0
+float pa_gLoc = pa_locationScore
+float pa_gSr = f_nearSupport(sr_zones, pa_atr) ? 1.0 : f_nearResistance(sr_zones, pa_atr) ? -1.0 : pa_nearFvgBull and not pa_nearFvgBear ? 1.0 : pa_nearFvgBear and not pa_nearFvgBull ? -1.0 : 0.0
+float pa_gCandle = pa_cpScore
+float pa_gVolume = pa_volumeScore
+float pa_gVol = pa_atrRegime * (close >= open ? 1.0 : -1.0) * 0.5 + pa_volScore * 0.5
+float pa_gMom = pa_momScore
+float pa_gSess = pa_sessScore * (close >= open ? 1.0 : -1.0)
+float pa_gMtf = pa_gMtfBias
+
+float pa_wTotal = pa_w_trend + pa_w_struct + pa_w_liq + pa_w_loc + pa_w_sr + pa_w_candle + pa_w_vol + pa_w_atr + pa_w_mom + pa_w_sess + pa_w_mtf
+
+float pa_wSum = pa_w_trend * pa_gTrend + pa_w_struct * pa_gStruct + pa_w_liq * pa_gLiq + pa_w_loc * pa_gLoc + pa_w_sr * pa_gSr + pa_w_candle * pa_gCandle + pa_w_vol * pa_gVolume + pa_w_atr * pa_gVol + pa_w_mom * pa_gMom + pa_w_sess * pa_gSess + pa_w_mtf * pa_gMtf
+
+float pa_rawScore = pa_wTotal > 0.0 ? f_clamp(pa_wSum / pa_wTotal, -1.0, 1.0) : 0.0
+float pa_score100 = math.round(50 + pa_rawScore * 50)
+int   pa_dir      = pa_rawScore > 0.0 ? 1 : pa_rawScore < 0.0 ? -1 : 0
+
+string pa_quality = pa_score100 <= pa_scr_noTrade ? "NO TRADE" : pa_score100 <= pa_scr_weak ? "WEAK" : pa_score100 <= pa_scr_setup ? "SETUP" : pa_score100 <= pa_scr_strong ? "STRONG" : "A+"
+
+// --- MTF gates (v2 §4): LTF khong duoc override HTF -----------------------------
+bool pa_okSetup = not pa_htfFilter or pa_setupDir == 0 or pa_setupDir == pa_dir
+bool pa_htfVeto = pa_htfVetoOn and pa_ctxDir != 0 and pa_dir != 0 and pa_ctxDir != pa_dir
+bool pa_okMtf   = pa_okSetup and not pa_htfVeto
+
+// -----------------------------------------------------------------------------
+//  B-P1-2 REGIME GATE (method §4.2 #7 - port tu parts-tm2/03)
+// -----------------------------------------------------------------------------
+float pa_regBbwLowest  = ta.lowest(pa_bbWidth, pa_regBbwLen)
+float pa_regBbwHighest = ta.highest(pa_bbWidth, pa_regBbwLen)
+float pa_regBbwPct     = (pa_regBbwHighest - pa_regBbwLowest) > 0.0 ? (pa_bbWidth - pa_regBbwLowest) / (pa_regBbwHighest - pa_regBbwLowest) * 100.0 : 50.0
+bool  pa_isSqueeze     = pa_regBbwPct <= pa_regBbwSqueeze
+
+string pa_regime = "RANGING"
+if pa_adx >= pa_regAdxTrend and not pa_isSqueeze
+    pa_regime := "TRENDING"
+else if pa_adx < pa_regAdxChop or (pa_isSqueeze and math.abs(pa_emaF - pa_emaM) < 0.1 * pa_atr)
+    pa_regime := "CHOPPY"
+else
+    pa_regime := "RANGING"
+
+bool pa_nearRangeEdge = f_nearSupport(sr_zones, pa_atr * pa_regRangeEdge) or f_nearResistance(sr_zones, pa_atr * pa_regRangeEdge) or (pa_liq_pdOn and (math.abs(close - pa_pdl) <= pa_regRangeEdge * pa_atr or math.abs(close - pa_pdh) <= pa_regRangeEdge * pa_atr))
+bool pa_okRegime      = not pa_regOn or (pa_regime == "TRENDING") or (pa_regime == "RANGING" and pa_nearRangeEdge)
+
+// -----------------------------------------------------------------------------
+//  B-P0-3 CONFLUENCE 0-3 (method n08: trend khung lon + level + nen xac nhan)
+// -----------------------------------------------------------------------------
+bool pa_cfTrendBull = pa_ctxDir == 1 or (pa_ctxDir == 0 and pa_setupDir == 1)
+bool pa_cfTrendBear = pa_ctxDir == -1 or (pa_ctxDir == 0 and pa_setupDir == -1)
+bool pa_cf1 = pa_dir == 1 ? pa_cfTrendBull : pa_dir == -1 ? pa_cfTrendBear : false
+
+bool pa_nearSrBull = f_nearSupport(sr_zones, pa_atr * pa_cfLevelTol) or pa_nearFvgBull
+bool pa_nearPdPwb  = (pa_liq_pdOn and math.abs(low - pa_pdl) <= pa_cfLevelTol * pa_atr) or (pa_liq_pwOn and math.abs(low - pa_pwl) <= pa_cfLevelTol * pa_atr) or (pa_liq_sessOn and not na(pa_sessLo) and math.abs(low - pa_sessLo) <= pa_cfLevelTol * pa_atr)
+bool pa_nearTlBull = pa_tlUpOk and not na(pa_tlUpAt) and math.abs(low - pa_tlUpAt) <= pa_cfLevelTol * pa_atr
+bool pa_cfLevelBull = pa_nearSrBull or pa_nearPdPwb or pa_nearTlBull or pa_sweepBull
+
+bool pa_nearSrBear = f_nearResistance(sr_zones, pa_atr * pa_cfLevelTol) or pa_nearFvgBear
+bool pa_nearPdPws  = (pa_liq_pdOn and math.abs(high - pa_pdh) <= pa_cfLevelTol * pa_atr) or (pa_liq_pwOn and math.abs(high - pa_pwh) <= pa_cfLevelTol * pa_atr) or (pa_liq_sessOn and not na(pa_sessHi) and math.abs(high - pa_sessHi) <= pa_cfLevelTol * pa_atr)
+bool pa_nearTlBear = pa_tlDnOk and not na(pa_tlDnAt) and math.abs(high - pa_tlDnAt) <= pa_cfLevelTol * pa_atr
+bool pa_cfLevelBear = pa_nearSrBear or pa_nearPdPws or pa_nearTlBear or pa_sweepBear
+
+bool pa_cf2 = pa_dir == 1 ? pa_cfLevelBull : pa_dir == -1 ? pa_cfLevelBear : false
+
+bool pa_cfCandleBull = pa_cpScore > 0 or pa_patSigDir == "bull" or pa_bosUp or pa_mssUp or pa_bullPin or pa_bullEng or pa_ibBull or pa_3Soldiers
+bool pa_cfCandleBear = pa_cpScore < 0 or pa_patSigDir == "bear" or pa_bosDown or pa_mssDown or pa_bearPin or pa_bearEng or pa_ibBear or pa_3Crows
+bool pa_cf3 = pa_dir == 1 ? pa_cfCandleBull : pa_dir == -1 ? pa_cfCandleBear : false
+
+int pa_confluenceScore = (pa_cf1 ? 1 : 0) + (pa_cf2 ? 1 : 0) + (pa_cf3 ? 1 : 0)
+bool pa_okConfluence   = not pa_cfOn or not pa_cfRequire3 or pa_confluenceScore >= 3
+
+// =============================================================================
+//  L9 - RISK ENGINE  (Entry/SL/TP plan + gate logic)
+// =============================================================================
+
+type PaPlan
+    bool  valid
+    int   dir
+    float entry
+    float sl
+    float tp1
+    float tp2
+    float tp3
+    float risk
+    float rr1
+
+f_buildPaPlan(int dir) =>
+    float a      = pa_atr
+    float entry  = close
+    bool  atrOk  = not na(a) and a > 0.0
+
+    float pad    = a * pa_sl_padAtr
+    float swing  = dir == 1 ? nz(pa_swingLo, low) : nz(pa_swingHi, high)
+    float sDist  = dir == 1 ? (entry - swing) + pad : (swing - entry) + pad
+    float aDist  = a * pa_sl_atrMul
+    float base   = (aDist + sDist) * 0.5
+    float dist   = f_clamp(nz(base, aDist), a * pa_sl_minAtr, math.max(a * pa_sl_maxAtr, a * pa_sl_minAtr))
+
+    float sl     = entry - dir * dist
+    float risk   = dist
+
+    float rr2    = math.max(pa_rr2, pa_rr1)
+    float rr3    = math.max(pa_rr3, rr2)
+
+    bool  dirOk  = dir != 0
+    bool  slOk   = dist > 0.0 and (dir == 1 ? sl < entry : sl > entry)
+    bool  rrOk   = pa_rrMin <= 0.0 or pa_rr1 >= pa_rrMin
+    bool  valid  = atrOk and dirOk and slOk and rrOk
+
+    // B-P1-3: Measured move TP
+    float tp1 = na
+    float tp2 = na
+    float tp3 = na
+    if pa_tpMode == "Measured move (B-P1-3)"
+        float mmDist = pa_patHeight > 0.0 ? pa_patHeight : not na(pa_lastHigh) and not na(pa_lastLow) ? math.abs(pa_lastHigh - pa_lastLow) : 0.0
+        if mmDist > 0.0
+            tp1 := entry + dir * (mmDist * 0.5)
+            tp2 := entry + dir * mmDist
+            tp3 := entry + dir * (mmDist * 1.5)
+        else if pa_tpMmFallback
+            tp1 := entry + dir * pa_rr1 * risk
+            tp2 := entry + dir * rr2     * risk
+            tp3 := entry + dir * rr3     * risk
+    else
+        tp1 := entry + dir * pa_rr1 * risk
+        tp2 := entry + dir * rr2     * risk
+        tp3 := entry + dir * rr3     * risk
+
+    PaPlan.new(valid, dir, entry, sl, tp1, tp2, tp3, risk, pa_rr1)
+
+pa_plan = f_buildPaPlan(pa_dir)
+
+var int  pa_dayCount  = 0
+var int  pa_barsSince = 999999
+pa_barsSince += 1
+
+if f_isNewDay()
+    pa_dayCount := 0
+
+bool pa_okBar    = pa_confirmOnly ? barstate.isconfirmed : true
+bool pa_okCool   = pa_barsSince >= pa_coolBars
+bool pa_okDay    = pa_dayCount < pa_maxDay
+bool pa_okScore  = pa_score100 > pa_scr_noTrade
+bool pa_okDir    = pa_dir != 0
+bool pa_okFilter = pa_okMtf and pa_okCool and pa_okDay and pa_okScore and pa_okDir and pa_okConfluence and pa_okRegime
+bool pa_signal   = pa_plan.valid and pa_okFilter

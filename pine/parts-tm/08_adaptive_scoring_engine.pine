@@ -1,0 +1,114 @@
+// =============================================================================
+//  L7 - DIRECTION-AWARE SCORING ENGINE (v2.1)
+// =============================================================================
+//  Roadmap v2.1 P0: the v2.0 engine mapped one signed raw score to a 0-100
+//  quality score (score100 = 50 + raw * 50) and then compared it to a single
+//  no-trade threshold. Bearish evidence therefore produced a LOW score that
+//  could never pass the quality gate, so SHORT setups were blocked by design.
+//
+//  Contract implemented here:
+//    1. Every group emits a signed value f in [-1, 1] (direction + magnitude).
+//    2. LONG consumes max(f, 0), SHORT consumes max(-f, 0): identical weights,
+//       identical scale, identical thresholds.
+//    3. Side score = 100 * weightedSupport / enabledDirectionalWeight, so a
+//       neutral group dilutes BOTH sides and cannot favour one of them.
+//    4. Direction needs a minimum side score and a margin; otherwise the state
+//       is NO_DIRECTION / AMBIGUOUS_SETUP and no side is forced.
+//    5. Regime/volatility is not a directional feature: it drives mode + gates.
+//       No hidden "choppy damping" multiplier that would make scores
+//       incomparable between regimes.
+// =============================================================================
+
+string tm_scoreVersion    = "2.1"
+string tm_scoreFeatureSet = "structure+location+trend+momentum+volume+mtf"
+
+// --- 1. Normalized Group Scores [-1.0 to +1.0] -------------------------------
+float tm_gTrend  = tm_trendScore
+float tm_gStruct = (tm_bosUp or tm_chochUp or tm_mssUp) ? 1.0 : (tm_bosDown or tm_chochDown or tm_mssDown) ? -1.0 : float(tm_trend) * 0.5
+float tm_gLiq    = tm_sweepBull ? 1.0 : tm_sweepBear ? -1.0 : tm_retestBull ? 0.7 : tm_retestBear ? -0.7 : 0.0
+float tm_gLoc    = tm_vwapScore
+float tm_gSr     = f_nearSupport(sr_zones, tm_atr) ? 1.0 : f_nearResistance(sr_zones, tm_atr) ? -1.0 : not na(tm_nearFvgBullPx) ? 0.8 : not na(tm_nearFvgBearPx) ? -0.8 : 0.0
+float tm_gCandle = tm_cpScore
+float tm_gVolume = tm_volumeScore
+float tm_gMom    = tm_momScore
+float tm_gSess   = (close >= open ? 1.0 : -1.0) * (tm_cryptoSessionNeutral ? 0.0 : 0.5)
+float tm_gMtf    = tm_gMtfBias
+
+// --- 2. Dynamic Regime-Adaptive Weighting ------------------------------------
+// Regime only re-weights DIRECTIONAL evidence. It never flips a sign and never
+// adds a one-sided bonus.
+float curW_trend  = tm_w_trend
+float curW_struct = tm_w_struct
+float curW_liq    = tm_w_liq
+float curW_loc    = tm_w_loc
+float curW_sr     = tm_w_sr
+float curW_mom    = tm_w_mom
+
+if tm_regime.code == 1 // TRENDING REGIME
+    curW_trend  := tm_w_trend  * 1.30
+    curW_struct := tm_w_struct * 1.25
+    curW_mom    := tm_w_mom    * 1.20
+    curW_sr     := tm_w_sr     * 0.60
+else if tm_regime.code == 0 // RANGING REGIME
+    curW_trend  := tm_w_trend  * 0.60
+    curW_sr     := tm_w_sr     * 1.30
+    curW_liq    := tm_w_liq    * 1.30
+    curW_loc    := tm_w_loc    * 1.20
+else if tm_regime.code == -1 // CHOPPY SQUEEZE
+    curW_trend  := tm_w_trend  * 0.50
+    curW_struct := tm_w_struct * 0.50
+    curW_mom    := tm_w_mom    * 0.50
+
+// --- 3. Ablation Feature Config (v2.1 protocol A-E) --------------------------
+// A: Structure + Location. B: A + Trend/Momentum. C: B + Volume.
+// D: C + MTF/Session. E: full feature set.
+// Note: E is about FEATURES. Execution gates remain the explicit toggles in
+// "TM · Eligibility Gates" so an ablation cannot silently disarm safety rules.
+int tm_cfgCode = tm_ablationMode == "A (Structure + Location)" ? 1 : tm_ablationMode == "B (A + Trend/Momentum)" ? 2 : tm_ablationMode == "C (B + Volume)" ? 3 : tm_ablationMode == "D (C + MTF + Regime)" ? 4 : 5
+string tm_cfgName = tm_cfgCode == 1 ? "A" : tm_cfgCode == 2 ? "B" : tm_cfgCode == 3 ? "C" : tm_cfgCode == 4 ? "D" : "E"
+
+float cfgTrend  = tm_cfgCode >= 2 ? curW_trend : 0.0
+float cfgStruct = curW_struct
+float cfgLiq    = curW_liq
+float cfgLoc    = curW_loc
+float cfgSr     = curW_sr
+float cfgCandle = tm_w_candle
+float cfgVol    = tm_cfgCode >= 3 ? tm_w_vol : 0.0
+float cfgMom    = tm_cfgCode >= 2 ? curW_mom : 0.0
+float cfgSess   = tm_cfgCode >= 4 ? tm_w_sess : 0.0
+float cfgMtf    = tm_cfgCode >= 4 ? tm_w_mtf : 0.0
+
+// --- 4. Symmetric Side Scores (0..100) ---------------------------------------
+float tm_wDirTotal = cfgTrend + cfgStruct + cfgLiq + cfgLoc + cfgSr + cfgCandle + cfgVol + cfgMom + cfgSess + cfgMtf
+
+float tm_longWeighted = cfgTrend  * f_tmLongPart(tm_gTrend) + cfgStruct * f_tmLongPart(tm_gStruct) + cfgLiq * f_tmLongPart(tm_gLiq) + cfgLoc * f_tmLongPart(tm_gLoc) + cfgSr * f_tmLongPart(tm_gSr) + cfgCandle * f_tmLongPart(tm_gCandle) + cfgVol * f_tmLongPart(tm_gVolume) + cfgMom * f_tmLongPart(tm_gMom) + cfgSess * f_tmLongPart(tm_gSess) + cfgMtf * f_tmLongPart(tm_gMtf)
+float tm_shortWeighted = cfgTrend * f_tmShortPart(tm_gTrend) + cfgStruct * f_tmShortPart(tm_gStruct) + cfgLiq * f_tmShortPart(tm_gLiq) + cfgLoc * f_tmShortPart(tm_gLoc) + cfgSr * f_tmShortPart(tm_gSr) + cfgCandle * f_tmShortPart(tm_gCandle) + cfgVol * f_tmShortPart(tm_gVolume) + cfgMom * f_tmShortPart(tm_gMom) + cfgSess * f_tmShortPart(tm_gSess) + cfgMtf * f_tmShortPart(tm_gMtf)
+
+int tm_longScore100  = f_tmSideScore(tm_longWeighted, tm_wDirTotal)
+int tm_shortScore100 = f_tmSideScore(tm_shortWeighted, tm_wDirTotal)
+
+// --- 5. Direction Selection (minimum side score + margin) --------------------
+bool   tm_longMinOk  = tm_longScore100 > tm_scr_noTrade
+bool   tm_shortMinOk = tm_shortScore100 > tm_scr_noTrade
+int    tm_scoreGap   = math.abs(tm_longScore100 - tm_shortScore100)
+string tm_directionCode = not (tm_longMinOk or tm_shortMinOk) ? "NO_DIRECTION" : tm_longMinOk and tm_shortMinOk and tm_scoreGap < tm_scoreMargin ? "AMBIGUOUS_SETUP" : "OK"
+int    tm_candidateDir  = tm_longMinOk and tm_longScore100 >= tm_shortScore100 ? 1 : tm_shortMinOk and tm_shortScore100 > tm_longScore100 ? -1 : 0
+int    tm_dir           = tm_directionCode == "OK" ? tm_candidateDir : 0
+
+// Backwards-compatible aliases used by the planner, state machine and visuals.
+// `tm_score100` now means "score of the selected side" (never a signed quality).
+int tm_score100 = tm_dir == 1 ? tm_longScore100 : tm_dir == -1 ? tm_shortScore100 : math.max(tm_longScore100, tm_shortScore100)
+
+// A directionless/ambiguous bar is not a tradeable quality, even when one side
+// happens to be strong. Report NO TRADE so the dashboard cannot show "A+"
+// next to NO_DIRECTION/AMBIGUOUS_SETUP.
+string tm_quality      = tm_directionCode != "OK" ? "NO TRADE" : f_tmLevelName(f_tmScoreLevel(tm_score100, tm_scr_noTrade, tm_scr_weak, tm_scr_setup, tm_scr_strong))
+int    tm_qualityLevel = tm_directionCode != "OK" ? 0 : f_tmScoreLevel(tm_score100, tm_scr_noTrade, tm_scr_weak, tm_scr_setup, tm_scr_strong)
+int    tm_minReqLevel  = f_tmMinLevel(tm_minQuality)
+bool   tm_okQuality    = tm_qualityLevel >= tm_minReqLevel
+
+// Single score-side gate code. Empty direction and low quality are DIFFERENT
+// states: "no setup" is not "blocked".
+string tm_scoreBlockCode = tm_directionCode != "OK" ? tm_directionCode : not tm_okQuality ? (tm_dir == 1 ? "BLOCKED_SCORE_LONG" : tm_dir == -1 ? "BLOCKED_SCORE_SHORT" : "NO_DIRECTION") : "OK"
+
+string tm_scoreMeta = "v" + tm_scoreVersion + "|cfg" + tm_cfgName + "|L" + str.tostring(tm_longScore100) + "|S" + str.tostring(tm_shortScore100) + "|m" + str.tostring(tm_scoreGap)

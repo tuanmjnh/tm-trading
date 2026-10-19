@@ -30,6 +30,10 @@ async function refresh() {
 
 onMounted(refresh)
 
+function openDetail(item: StrategyProfile) {
+  navigateTo(`/strategy-lab/${encodeURIComponent(item._id)}`)
+}
+
 const statusColor = (s: string) =>
   s === 'active' ? 'success' : s === 'paused' ? 'warning' : s === 'retired' ? 'error' : 'neutral'
 const statusLabel = (s: string) => t(`strategyLab.strategies.statusLabels.${s}`)
@@ -129,6 +133,7 @@ useHead({ title })
           item-key="_id"
           storage-key="strategies-view-mode"
           @refresh="refresh"
+          @click="openDetail"
         >
           <template #name="{ item }">
             <div class="flex flex-col min-w-0">

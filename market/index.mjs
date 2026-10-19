@@ -18,6 +18,7 @@ import { createTradingClock } from './clock.mjs'
 import { createEventBus } from './eventBus.mjs'
 import { createMonitor } from './monitor.mjs'
 import { createQuoteStore } from './quoteStore.mjs'
+import { createTicker24Store } from './ticker24Store.mjs'
 import { createOrderbookStore } from './orderbookStore.mjs'
 import { createCandleBuilder } from './candleBuilder.mjs'
 import { createAggregator } from './aggregate.mjs'
@@ -61,26 +62,36 @@ export function createMarketPlane({
   const eventBus = bus || createEventBus()
   const monitor = createMonitor()
   const quoteStore = createQuoteStore()
+  const ticker24Store = createTicker24Store()
   const orderbookStore = createOrderbookStore()
   let depthSyncRef = depthSync
 
+  /** Live symbol set — grows via addSymbol (TradingView-style search). */
+  const liveSymbols = []
+  const normalizeSym = (sym) => {
+    const s = String(sym || '').trim().toUpperCase()
+    return /^[A-Z0-9]{5,20}$/.test(s) ? s : null
+  }
   /** symbol -> tf -> candle builder (source='trades') */
   const builders = new Map()
   /** symbol -> tf -> aggregator (source='kline', tf > base) */
   const aggregators = new Map()
-  if (source === 'trades') {
-    for (const sym of symbols) {
+  const ensureSymbol = (sym) => {
+    const s = normalizeSym(sym)
+    if (!s || liveSymbols.includes(s)) return null
+    liveSymbols.push(s)
+    if (source === 'trades') {
       const per = new Map()
-      for (const { tf } of tfMs) per.set(tf, createCandleBuilder({ symbol: sym, timeframe: tf, source: 'plane', ingest }))
-      builders.set(sym, per)
-    }
-  } else {
-    for (const sym of symbols) {
+      for (const { tf } of tfMs) per.set(tf, createCandleBuilder({ symbol: s, timeframe: tf, source: 'plane', ingest }))
+      builders.set(s, per)
+    } else {
       const per = new Map()
       for (const { tf, ms } of tfMs) if (ms > baseTf.ms) per.set(tf, createAggregator({ timeframe: tf, source: 'plane', ingest }))
-      aggregators.set(sym, per)
+      aggregators.set(s, per)
     }
+    return s
   }
+  for (const sym of symbols) ensureSymbol(sym)
 
   const stats = { routed: 0, futureDropped: 0, unknownTopic: 0 }
 
@@ -131,6 +142,10 @@ export function createMarketPlane({
         if (quoteStore.apply(event)) eventBus.emit(TOPICS.QUOTE, event)
         break
       }
+      case TOPICS.TICKER_24H: {
+        if (ticker24Store.apply(event)) eventBus.emit(TOPICS.TICKER_24H, event)
+        break
+      }
       case TOPICS.BOOK: {
         const errorsBefore = orderbookStore.stats().sequenceErrors
         const applied = orderbookStore.applyDiff(event)
@@ -179,14 +194,31 @@ export function createMarketPlane({
     bus: eventBus,
     monitor,
     quoteStore,
+    ticker24Store,
     orderbookStore,
     builders,
     aggregators,
     provider,
     route,
     /** Static config exposed to WS clients (hello frame) and the UI. */
-    symbols: [...symbols],
+    symbols: liveSymbols,
     timeframes: [...timeframes],
+    /**
+     * Serve one more symbol at runtime: builders + provider streams + a
+     * depth snapshot sync. Returns true when newly added (false = invalid
+     * or already served). Invalid input never throws — callers report it.
+     */
+    addSymbol(sym) {
+      const s = ensureSymbol(sym)
+      if (!s) return false
+      try {
+        if (provider && typeof provider.subscribeMore === 'function') provider.subscribeMore([s])
+      } catch { /* provider stays on its bootstrap set — resubscribe covers it */ }
+      try {
+        depthSyncRef?.resync?.(s)
+      } catch { /* snapshot sync is best-effort; diffs self-heal via resync */ }
+      return true
+    },
     /** Late-attach a depth snapshot sync (created after the plane, shares its store/bus). */
     attachDepthSync(sync) {
       depthSyncRef = sync || null
@@ -209,15 +241,17 @@ export function createMarketPlane({
       try { depthSyncRef?.stop?.() } catch { /* depth sync must not throw out */ }
       try { provider?.close?.() } catch { /* provider close must not throw out */ }
     },
-    stats: () => ({ ...stats, bus: eventBus.stats(), monitor: monitor.status(), quotes: quoteStore.stats(), book: orderbookStore.stats(), depth: depthSyncRef?.stats?.() ?? null })
+    stats: () => ({ ...stats, bus: eventBus.stats(), monitor: monitor.status(), quotes: quoteStore.stats(), ticker24: ticker24Store.stats(), book: orderbookStore.stats(), depth: depthSyncRef?.stats?.() ?? null })
   }
 }
 
-export { TOPICS, defaultIngest, tradeEvent, quoteEvent, candleEvent, MARKET_KINDS } from './events.mjs'
+export { TOPICS, defaultIngest, tradeEvent, quoteEvent, ticker24Event, candleEvent, MARKET_KINDS } from './events.mjs'
 export { createTradingClock } from './clock.mjs'
 export { createEventBus } from './eventBus.mjs'
 export { createMonitor } from './monitor.mjs'
 export { createQuoteStore } from './quoteStore.mjs'
+export { createTicker24Store } from './ticker24Store.mjs'
+export { createTicker24Poll } from './ticker24Poll.mjs'
 export { createOrderbookStore } from './orderbookStore.mjs'
 export { createDepthSync } from './depthSync.mjs'
 export { createCandleBuilder } from './candleBuilder.mjs'

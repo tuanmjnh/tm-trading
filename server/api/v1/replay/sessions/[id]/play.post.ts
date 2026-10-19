@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event).catch(() => undefined)
   const speed = body && typeof body === 'object' ? (body as { speed?: unknown }).speed : undefined
   try {
-    return { success: true, data: playReplaySession(id, speed) }
+    return { success: true, data: playReplaySession(id, speed, requireOwnerId(event)) }
   } catch (err) {
     throw replayHttpError(err)
   }

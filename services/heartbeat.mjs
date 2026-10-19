@@ -31,6 +31,7 @@ export const DEFAULT_INTERVALS = Object.freeze({
   reconcile: Number(process.env.RECONCILE_INTERVAL || 21600), // §24.2 — venue compare every 6h
   crossScan: Number(process.env.CROSS_SCAN_INTERVAL || 14400), // §36 — cross-venue scan every 4h
   alertRules: Number(process.env.ALERT_RULES_INTERVAL || 300), // §58.5 — evaluate alert rules every 5m
+  macro: Number(process.env.MACRO_INTERVAL || 21600), // §60 Slice F — FRED vintages every 6h
 })
 
 /** Nhắc lại Telegram sau khi overdue: 6h (đổi qua HEARTBEAT_REMIND_H). */
@@ -136,4 +137,37 @@ export async function checkOverdue({ file = HEARTBEAT_FILE, now = Date.now(), se
     }
   }
   return { overdue, alerted }
+}
+
+// ---------------------------------------------------------------------------
+//  Standalone alerter (V3.5 §59.15 Slice F).
+//
+//  `checkOverdue` already fires Telegram, but only from inside the services
+//  orchestrator's watch loop — so a deployment running paper alone (or a cron
+//  that never starts `services/run.mjs watch`) had no overdue alerting at all.
+//  This CLI closes that: it needs nothing but the heartbeat file, and it exits
+//  non-zero when something is overdue so cron/systemd surfaces the failure too.
+//
+//    node services/heartbeat.mjs status   # human table, exit 1 if overdue
+//    node services/heartbeat.mjs check    # + Telegram, exit 1 if overdue
+// ---------------------------------------------------------------------------
+const isMain = process.argv[1] && process.argv[1].endsWith('heartbeat.mjs')
+if (isMain) {
+  const cmd = process.argv[2] || 'status'
+  const asJson = process.argv.includes('--json')
+  const rows = evaluateHeartbeat(readHeartbeat())
+  const overdue = rows.filter((r) => r.overdue)
+  if (cmd === 'check') {
+    const { sendTelegram } = await import('./telegram.mjs')
+    const res = await checkOverdue({ send: (t) => sendTelegram(t, '[heartbeat]') })
+    if (asJson) console.log(JSON.stringify(res.overdue.map((r) => ({ name: r.name, overdueSec: r.overdueSec }))))
+    else console.log(res.overdue.length ? `[heartbeat] OVERDUE: ${res.overdue.map((r) => r.name).join(', ')} (alerted: ${res.alerted.join(',') || 'none'})` : '[heartbeat] all services within their cycle')
+  } else if (asJson) {
+    console.log(JSON.stringify(rows))
+  } else {
+    for (const r of rows) {
+      console.log(`${r.overdue ? 'DEAD' : 'OK  '} ${String(r.name).padEnd(12)} age ${Math.round(r.overdueSec / 60)}m / cycle ${Math.round(r.intervalSec / 60)}m`)
+    }
+  }
+  process.exit(overdue.length ? 1 : 0)
 }

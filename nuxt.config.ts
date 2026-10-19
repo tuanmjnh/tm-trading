@@ -1,8 +1,16 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { hubEnvReport, resolveHubEnv } from './shared/utils/hubEnv'
 
 const ROOT_DIR = fileURLToPath(new URL('.', import.meta.url))
+
+// Hub endpoint: one explicit order, one named source, and no silent localhost.
+// `NUXT_PUBLIC_HUB_URL` is a RUNTIME value, so a stale process env (or an empty
+// value in .env) used to redirect login to localhost with no message at all.
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
+const HUB_ENV = resolveHubEnv(process.env, { isProduction: IS_PRODUCTION })
+hubEnvReport(HUB_ENV, { isProduction: IS_PRODUCTION })
 
 const PNPM_VIRTUAL = join(ROOT_DIR, 'node_modules', '.pnpm', 'node_modules')
 const PROSEMIRROR_PKGS = [
@@ -28,7 +36,9 @@ export default defineNuxtConfig({
   ssr: false,
   spaLoadingTemplate: 'spa-loading-template.html',
   devtools: { enabled: false },
-  sourcemap: { client: true, server: false },
+  // Client sourcemaps are a dev-time convenience only: shipping them in
+  // production inflates the transfer and exposes the original source.
+  sourcemap: { client: !IS_PRODUCTION, server: false },
   experimental: {
     appManifest: false
   },
@@ -129,8 +139,12 @@ export default defineNuxtConfig({
     redisPort: parseInt(process.env.REDIS_PORT || '6379', 10),
     public: {
       apiPrefix: '/api/v1',
-      hubUrl: process.env.NUXT_PUBLIC_HUB_URL || process.env.HUB_URL || 'http://localhost:4000',
-      hubAppId: process.env.NUXT_PUBLIC_HUB_APP_ID || process.env.HUB_APP_ID || ''
+      hubUrl: HUB_ENV.url,
+      hubAppId: HUB_ENV.appId,
+      // Diagnostics: the admin/docs page can show WHERE the URL came from
+      // instead of leaving "which env won?" to guesswork.
+      hubUrlSource: HUB_ENV.source,
+      hubEnvProblem: HUB_ENV.problem || ''
     }
   },
   i18n: {

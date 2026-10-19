@@ -18,29 +18,29 @@ const { title, description } = useAdminPageChrome({
   descKey: 'paper.desc'
 })
 const paper = usePaperAccounts()
+const { version: workspaceVersion } = useTradingWorkspace()
+const { loading: isLoading, error: loadError, hasError, isStale, run } = useResourceState()
 
 const ACCOUNT = 'default'
 const account = ref<LiveAccount | null>(null)
 const risk = ref<RiskAccountDay[] | null>(null)
 const riskDay = ref('')
 const mongoDown = ref(false)
-const isLoading = ref(false)
 
 async function load() {
-  isLoading.value = true
-  try {
+  await run(async () => {
     const [acc, riskRes] = await Promise.all([paper.account(ACCOUNT), paper.riskStatus()])
     account.value = acc
     risk.value = riskRes?.accounts ?? null
     riskDay.value = riskRes?.day ?? ''
     mongoDown.value = riskRes ? riskRes.mongo === 'down' : !acc
-  } catch (err) {
-    notify.error(t('paper.title'), getErrorMessage(err, key => t(key)))
-  } finally {
-    isLoading.value = false
-  }
+  })
+  if (hasError.value) notify.error(t('paper.title'), getErrorMessage(loadError.value, key => t(key)))
 }
 onMounted(load)
+// §61.17 Phase C: account/order/fill events change the account projection —
+// refetch when the workspace says this view changed.
+watch(workspaceVersion('paper'), load)
 
 const fmtMoney = (v: number | null | undefined) =>
   v == null || !Number.isFinite(v) ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(2)}`
@@ -122,6 +122,13 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full gap-3 pb-24 lg:pb-6">
+      <SharedRefreshNotice
+        :stale="isStale"
+        :retrying="isLoading"
+        :message="t('common.staleData')"
+        @retry="load"
+      />
+
       <!-- Equity summary -->
       <div
         v-if="account"
@@ -188,7 +195,14 @@ useHead({ title })
       </div>
 
       <AdminEmptyState
-        v-if="!isLoading && !account"
+        v-if="hasError && !account"
+        :title="t('common.loadErrorTitle')"
+        :description="t('common.loadErrorHint')"
+        icon="i-lucide-triangle-alert"
+        :actions="[{ label: t('common.retry'), icon: 'i-lucide-refresh-cw', color: 'warning', onClick: load }]"
+      />
+      <AdminEmptyState
+        v-else-if="!isLoading && !account"
         :title="t('paper.empty')"
         :description="t('paper.emptyHint')"
         icon="i-lucide-wallet"

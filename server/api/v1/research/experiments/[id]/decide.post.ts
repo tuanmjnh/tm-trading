@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const data = await decideExperiment(id, body.accept, asOpts(body.opts))
+    const data = await decideExperiment(id, body.accept, asOpts(body.opts), {}, requireOwnerId(event))
     return { success: true, data }
   } catch (err) {
     throw researchHttpError(err)

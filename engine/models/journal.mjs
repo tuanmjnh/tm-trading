@@ -11,8 +11,13 @@ import mongoose from 'mongoose'
 const JournalSchema = new mongoose.Schema(
   {
     // Dedupe key derived from the upstream identity — NOT a new order-id scheme.
-    key: { type: String, required: true, unique: true },
+    // Unique per OWNER (roadmap §61.3): the key value stays as-is, but two
+    // tenants may each hold a row with the same derived key.
+    key: { type: String, required: true },
     schema: { type: Number, default: 1 },
+
+    // Tenancy (roadmap §61.3): hub user id (`sub`). `account` is a sub-book inside.
+    ownerId: { type: String, default: null, index: true },
 
     source: { type: String, required: true }, // paper | mt5 | exchange | manual | replay | unknown
     account: { type: String, default: 'unknown' },
@@ -63,5 +68,7 @@ JournalSchema.index({ method: 1, regime: 1, entryTime: -1 })
 JournalSchema.index({ symbol: 1, tf: 1, entryTime: -1 })
 // Item 3 (preset drift) groups by the version stamp — same shape as runs/trades.
 JournalSchema.index({ engineVersion: 1, paramsHash: 1, entryTime: -1 })
+// Per-owner dedupe (D4 across tenants): the global `key_1` unique is dropped.
+JournalSchema.index({ ownerId: 1, key: 1 }, { unique: true })
 
 export const Journal = mongoose.models.journal || mongoose.model('journal', JournalSchema)

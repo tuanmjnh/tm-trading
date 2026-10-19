@@ -3,7 +3,7 @@
 Status: **canonical** — the single source of truth for the dashboard's visual tokens.
 
 Visual authority for `app/` (the Nuxt 4 dashboard). Functional authority stays with the
-roadmap (`docs/web-app/tm-trading-roadmap-v3.3.md` §57/§58); this document only defines how the
+roadmap (`docs/web-app/tm-trading-roadmap-v3.5.md` §57/§58); this document only defines how the
 already-built screens *look*, never what they *do*.
 
 Source: the Stitch template `private/stitch_tm_trading_ui_template/` ("Obsidian Apex").

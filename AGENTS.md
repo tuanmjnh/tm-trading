@@ -25,7 +25,7 @@ Mongoose are only required for the dashboard and the store layer.
 **Package manager is `npm`** (not pnpm). See `.npmrc` and "Environment gotchas" below.
 
 ```bash
-npm run pine:build          # assemble pine/parts* -> pine/dist (6 targets) + lint
+npm run pine:build          # assemble pine/parts* -> pine/dist (13 targets) + lint
 npm test               # smoke + engine + market + journal + preset-drift + stamp + risk
                        # + paper + drift + mt5 + db + services + ai + ai-review (14 suites)
 npm run verify         # pine:build + test  <- the gate; must stay green
@@ -78,7 +78,7 @@ app/              Nuxt dashboard:
   │   ├── utilities/      (text, icons, encode, random, editor)
   │   └── system/         (profile, docs, settings)
 server/           webhook.mjs (TradingView receiver)
-pine/             parts/ parts-vsa/ parts-sweep/ parts-xau/ parts-xau2/ shared/ dist/   (build inputs; dist is generated)
+pine/             parts/ parts-vsa/ parts-longkaco-vsa/ parts-sweep/ parts-xau/ parts-xau2/ shared/ dist/   (build inputs; dist is generated)
 tools/            build, smoke, errors, copy, pine-ref, typecheck, backup
 docs/             roadmap, architecture, data-model, time-rules, alert-schema, mt5-ipc,
                   method-league, vsa-wyckoff-method, vsa-optimization, app-inheritance
@@ -123,6 +123,7 @@ overfitting. Read `docs/indicator/vsa-wyckoff/vsa-optimization.md` before propos
   - Connects to TM Hub via `useHub()` (wrapping `tm-hub-client`) with `X-App-Id: tm-trading_8pmp33`.
   - Login/auth requests go directly to Hub (`POST /api/v1/auth/login`).
   - Configure via `.env`: `NUXT_PUBLIC_HUB_URL=http://localhost:4000`, `NUXT_PUBLIC_HUB_APP_ID=tm-trading_8pmp33`.
+    - **Note**: the committed `.env` currently points `NUXT_PUBLIC_HUB_URL` at the **deployed** hub (`https://tm-hub-app.vercel.app`) because the local hub is seeded with a different appId and rejects this app's login payload (`400 error.missingLoginFields`). See `docs/web-app/ui-test-findings.md` (F4/U4).
 - **Dynamic Menu Catalog**:
   - Navigation menu is fetched from TM Hub via `GET /api/v1/apps/:appId/routes` (`system_routes` table) filtered by `isVisible !== false`.
   - Route labels map to i18n keys (`nav.*`).

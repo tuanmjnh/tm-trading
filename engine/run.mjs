@@ -242,6 +242,8 @@ export async function runOne(o) {
     method: bt.method,
     preset: o.preset ?? null,
     sub1mUsed: !!sub1m,
+    // Tenancy (roadmap §61.3): a run belongs to the user who launched it.
+    ownerId: o.ownerId ?? null,
   }
 
   const saved = await saveRun(run, {

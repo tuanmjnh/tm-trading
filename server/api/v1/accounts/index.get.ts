@@ -8,8 +8,8 @@ import { listAccounts } from '../../../utils/accounts'
  * meta.mongo='down' (fail-soft, khong 500). `equity` chua co writer thi
  * latestEquity = null (khong bao gio gia su 0).
  */
-export default defineEventHandler(async () => {
-  const { items, total, mongo } = await listAccounts()
+export default defineEventHandler(async (event) => {
+  const { items, total, mongo } = await listAccounts(requireOwnerId(event))
   return {
     success: true,
     data: items,

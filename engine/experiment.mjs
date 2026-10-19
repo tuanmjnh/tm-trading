@@ -72,7 +72,7 @@ export function experimentIdFor({ proposalId, strategyVersionId, paramsHash } = 
  * The doc carries the evidence the AI cited so a reviewer can audit WHY the
  * change was proposed — a proposal without recorded evidence is rejected.
  */
-export function experimentFromProposal(proposal, { now = 0 } = {}) {
+export function experimentFromProposal(proposal, { now = 0, evidenceSetId = null, baselineVersionId = null } = {}) {
   if (!proposal || typeof proposal !== 'object') return null
   const id = experimentIdFor({
     proposalId: proposal.proposalId,
@@ -90,6 +90,14 @@ export function experimentFromProposal(proposal, { now = 0 } = {}) {
     experimentId: id,
     proposalId: String(proposal.proposalId ?? ''),
     strategyVersionId: proposal.strategyVersionId ?? null,
+    // §59.15 Slice E: keeps the AI conclusion attached to the frozen facts it
+    // came from, so a reviewer can re-open the exact evidence later.
+    evidenceSetId: evidenceSetId ?? proposal.evidenceSetId ?? null,
+    // §59.15 Slice E: the version this candidate must beat. Recorded at
+    // proposal time because the active pointer moves — comparing a candidate
+    // against "whatever is live now" is how a promotion looks like an
+    // improvement (D31).
+    baselineVersionId: baselineVersionId ?? proposal.baselineVersionId ?? null,
     hypothesis: String(proposal.hypothesis ?? ''),
     changes,
     evidence: Array.isArray(proposal.evidence) ? proposal.evidence : [],

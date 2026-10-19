@@ -14,6 +14,11 @@
 //  None of these functions PLACES an order — sizing/approval belongs to the risk
 //  gate (exec/risk.mjs); this only prices the margin an already-approved open
 //  position consumes (D7: gate authors quantity first).
+//
+//  Per-position leverage (v3 §17.1b): a position doc carrying `leverage`
+//  (ticket intent, persisted by the executor) overrides initialMarginPct with
+//  100/lev for ITS OWN margin + liq distance. Docs without it use the account
+//  model exactly as before — maintenance stays a flat account policy.
 // =============================================================================
 
 export const MARGIN_DEFAULTS = Object.freeze({
@@ -53,11 +58,31 @@ export function positionNotional(pos) {
   return round8(qty * entry)
 }
 
+/**
+ * Per-position leverage override (v3 §17.1b): the ticket's leverage intent,
+ * persisted on the position doc by the executor. Integer 1..125 (Binance
+ * bounds); anything else -> null = legacy account-level model applies, so
+ * old docs behave EXACTLY as before (D1: no silent recomputation).
+ */
+export function positionLeverage(pos) {
+  const lev = pos?.leverage
+  if (typeof lev !== 'number' || !Number.isInteger(lev) || lev < 1 || lev > 125) return null
+  return lev
+}
+
+/** Model with the position's leverage applied (initialMarginPct = 100/lev). */
+export function modelForPosition(pos, model = MARGIN_DEFAULTS) {
+  const m = { ...MARGIN_DEFAULTS, ...model }
+  const lev = positionLeverage(pos)
+  if (lev !== null) m.initialMarginPct = 100 / lev
+  return m
+}
+
 /** Margin a position LOCKS while open (isolated initial margin). */
 export function initialMarginFor(pos, model = MARGIN_DEFAULTS) {
   const notional = positionNotional(pos)
   if (notional === null) return null
-  const m = { ...MARGIN_DEFAULTS, ...model }
+  const m = modelForPosition(pos, model)
   return round8((notional * m.initialMarginPct) / 100)
 }
 

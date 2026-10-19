@@ -14,7 +14,9 @@ export const TOPICS = Object.freeze({
   QUOTE: 'market.quote',
   CANDLE: 'market.candle',
   BOOK: 'market.book',
-  STATUS: 'market.status'
+  STATUS: 'market.status',
+  /** Rolling 24h ticker (exchange-computed window, not derived locally). */
+  TICKER_24H: 'market.ticker24'
 })
 
 export const MARKET_KINDS = Object.freeze(['spot', 'futures', 'gold'])
@@ -86,6 +88,53 @@ export function quoteEvent(raw, ingest = defaultIngest()) {
   if (last !== undefined) ev.last = last
   if (raw.updateId !== undefined && raw.updateId !== null) ev.updateId = Number(raw.updateId)
   return ev
+}
+
+/**
+ * `market.ticker24` (§7 + D16). Rolling 24h window COMPUTED BY THE EXCHANGE
+ * (Binance `<symbol>@ticker` / `24hrTicker`) — the dashboard never derives
+ * 24h change/volume locally, it only displays this row (D1).
+ *
+ * `raw` = {symbol, lastPrice, openPrice, highPrice, lowPrice, baseVolume,
+ * quoteVolume, priceChange, priceChangePercent, trades, eventTime, source,
+ * market?}. Change fields are signed (may be negative); volumes/count >= 0.
+ */
+export function ticker24Event(raw, ingest = defaultIngest()) {
+  req(raw && typeof raw === 'object' && !Array.isArray(raw), 'ticker24 raw object required')
+  const source = String(raw.source || '')
+  const symbol = String(raw.symbol || '')
+  req(source, 'source required')
+  req(symbol, 'symbol required')
+  const market = raw.market ?? 'futures'
+  req(MARKET_KINDS.includes(market), `market must be one of ${MARKET_KINDS.join('|')}`)
+  const lastPrice = Number(raw.lastPrice)
+  const openPrice = Number(raw.openPrice)
+  const highPrice = Number(raw.highPrice)
+  const lowPrice = Number(raw.lowPrice)
+  for (const [k, v] of [['lastPrice', lastPrice], ['openPrice', openPrice], ['highPrice', highPrice], ['lowPrice', lowPrice]]) {
+    req(finite(v) && v > 0, `${k} must be > 0 (got ${raw[k]})`)
+  }
+  req(highPrice >= Math.max(openPrice, lastPrice) && lowPrice <= Math.min(openPrice, lastPrice), 'high/low must contain open/last')
+  const baseVolume = Number(raw.baseVolume)
+  const quoteVolume = Number(raw.quoteVolume)
+  for (const [k, v] of [['baseVolume', baseVolume], ['quoteVolume', quoteVolume]]) {
+    req(finite(v) && v >= 0, `${k} must be >= 0 (got ${raw[k]})`)
+  }
+  const priceChange = Number(raw.priceChange)
+  const priceChangePercent = Number(raw.priceChangePercent)
+  req(finite(priceChange), `priceChange must be a number (got ${raw.priceChange})`)
+  req(finite(priceChangePercent), `priceChangePercent must be a number (got ${raw.priceChangePercent})`)
+  const trades = Number(raw.trades)
+  req(finite(trades) && trades >= 0, `trades must be >= 0 (got ${raw.trades})`)
+  const eventTime = Number(raw.eventTime)
+  req(finite(eventTime), `eventTime required (got ${raw.eventTime})`)
+  const ingestTime = Number(ingest)
+  req(finite(ingestTime), 'ingestTime must be a number')
+  return {
+    type: TOPICS.TICKER_24H, source, symbol, market,
+    lastPrice, openPrice, highPrice, lowPrice, baseVolume, quoteVolume,
+    priceChange, priceChangePercent, trades, eventTime, ingestTime
+  }
 }
 
 /**

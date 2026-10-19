@@ -1,0 +1,100 @@
+// =============================================================================
+//  50_STRUCTURE — Market Structure, BOS, CHoCH, Liquidity Sweeps & Candlesticks
+// =============================================================================
+
+// --- 1. Swing Highs & Lows ----------------------------------------------------
+float fz_ms_ph = ta.pivothigh(high, fz_ms_swLen, fz_ms_swLen)
+float fz_ms_pl = ta.pivotlow(low, fz_ms_swLen, fz_ms_swLen)
+
+var float fz_swH = na
+var float fz_swL = na
+var int   fz_swHBar = na
+var int   fz_swLBar = na
+var float fz_prevSwH = na
+var float fz_prevSwL = na
+
+if not na(fz_ms_ph)
+    fz_prevSwH := fz_swH
+    fz_swH     := fz_ms_ph
+    fz_swHBar  := bar_index - fz_ms_swLen
+
+if not na(fz_ms_pl)
+    fz_prevSwL := fz_swL
+    fz_swL     := fz_ms_pl
+    fz_swLBar  := bar_index - fz_ms_swLen
+
+// --- 2. BOS & CHoCH Detection ------------------------------------------------
+bool fz_bosBull = not na(fz_swH) and close > fz_swH and close[1] <= fz_swH
+bool fz_bosBear = not na(fz_swL) and close < fz_swL and close[1] >= fz_swL
+
+// Market Structure Trend direction tracker
+var int fz_msTrend = 0 // 1 = Bullish, -1 = Bearish
+bool fz_chochBull = false
+bool fz_chochBear = false
+
+if fz_bosBull
+    if fz_msTrend == -1
+        fz_chochBull := true
+    fz_msTrend := 1
+
+if fz_bosBear
+    if fz_msTrend == 1
+        fz_chochBear := true
+    fz_msTrend := -1
+
+// --- 3. Liquidity Sweeps (Swing & PDH/PDL) -----------------------------------
+// Swing Sweeps
+bool fz_swpBullSw = fz_ms_sweepOn and not na(fz_swL) and low < fz_swL and close > fz_swL
+bool fz_swpBearSw = fz_ms_sweepOn and not na(fz_swH) and high > fz_swH and close < fz_swH
+
+// PDH / PDL Tracking
+bool fz_newDay = f_isNewDay()
+var float fz_curDayH = high
+var float fz_curDayL = low
+var float fz_pdh = na
+var float fz_pdl = na
+
+if fz_newDay
+    fz_pdh     := fz_curDayH
+    fz_pdl     := fz_curDayL
+    fz_curDayH := high
+    fz_curDayL := low
+else
+    fz_curDayH := math.max(fz_curDayH, high)
+    fz_curDayL := math.min(fz_curDayL, low)
+
+// PDH / PDL Sweeps
+bool fz_swpBullPd = fz_ms_pdOn and not na(fz_pdl) and low < fz_pdl and close > fz_pdl
+bool fz_swpBearPd = fz_ms_pdOn and not na(fz_pdh) and high > fz_pdh and close < fz_pdh
+
+bool fz_swpBull = fz_swpBullSw or fz_swpBullPd
+bool fz_swpBear = fz_swpBearSw or fz_swpBearPd
+
+// --- 4. Candlestick Confirmation Patterns ------------------------------------
+float fz_body     = math.abs(close - open)
+float fz_rng      = math.max(high - low, syminfo.mintick)
+float fz_upperWick = high - math.max(close, open)
+float fz_lowerWick = math.min(close, open) - low
+
+// Pinbar / Rejection: Long lower wick for Bull, long upper wick for Bear
+bool fz_pinBull = fz_lowerWick >= (2.0 * fz_body) and close >= (low + 0.5 * fz_rng)
+bool fz_pinBear = fz_upperWick >= (2.0 * fz_body) and close <= (high - 0.5 * fz_rng)
+
+// Engulfing Patterns
+bool fz_engulfBull = close > open and close[1] < open[1] and close >= open[1] and open <= close[1]
+bool fz_engulfBear = close < open and close[1] > open[1] and close <= open[1] and open >= close[1]
+
+// Momentum bar
+bool fz_momBull = close > open and fz_body >= (0.55 * fz_rng)
+bool fz_momBear = close < open and fz_body >= (0.55 * fz_rng)
+
+bool fz_candleBull = fz_pinBull or fz_engulfBull or fz_momBull
+bool fz_candleBear = fz_pinBear or fz_engulfBear or fz_momBear
+
+// --- 5. MTF Context / Higher Timeframe Bias -----------------------------------
+float fz_htfEma = na
+if fz_mtf_on
+    fz_htfEma := request.security(syminfo.tickerid, fz_mtf_tf, ta.ema(close, fz_mtf_len), barmerge.gaps_off, barmerge.lookahead_off)
+
+bool fz_htfBull = not fz_mtf_on or na(fz_htfEma) or close >= fz_htfEma
+bool fz_htfBear = not fz_mtf_on or na(fz_htfEma) or close <= fz_htfEma

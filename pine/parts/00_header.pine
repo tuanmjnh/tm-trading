@@ -1,8 +1,0 @@
-//@version=6
-{{DECL}}
-{{SHARED}}
-
-// =============================================================================
-//  TM TRADING - file sinh tu dong boi tools/build.mjs tu pine/parts/*.pine
-//  SUA O pine/parts/, KHONG sua truc tiep file nay.
-// =============================================================================

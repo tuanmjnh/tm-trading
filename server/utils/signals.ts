@@ -11,6 +11,11 @@ import { engineModel } from './engineModel'
 
 export interface ListSignalsQuery {
   limit: number
+  /**
+   * Tenancy (docs/web-app/user-tenancy-plan.md): hub user id (`sub`) that owns
+   * the alerts. Required — an unscoped read would leak another account's signals.
+   */
+  ownerId: string
   cursor?: string
   symbol?: string
   action?: string
@@ -70,7 +75,7 @@ export async function listSignals(q: ListSignalsQuery): Promise<ListSignalsResul
   const Alert = await engineModel('alert.mjs', 'Alert')
   if (!Alert) return { items: [], total: 0, mongo: 'down' }
 
-  const filter: Record<string, any> = {}
+  const filter: Record<string, any> = { ownerId: q.ownerId }
   if (q.symbol) filter.symbol = q.symbol
   if (q.action) filter.action = q.action
   if (q.side) filter.side = q.side

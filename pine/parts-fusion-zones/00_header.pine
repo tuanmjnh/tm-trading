@@ -1,0 +1,12 @@
+//@version=6
+{{DECL}}
+
+// =============================================================================
+//  TM FUSION ZONES (TM-FZ) — Trend Ribbon & Dynamic Zones Trading Engine
+//  Architecture: Pine Script v6 Modular Build System (tools/build.mjs)
+//  Version: 1.0.0 | Targets: fz / fz-strategy
+//  Components: Trend Ribbon, Dynamic Supply/Demand Zones, Market Structure,
+//              3 Entry Setups, Direction-Aware Scoring, Risk Gate, Dashboard
+// =============================================================================
+
+{{SHARED}}

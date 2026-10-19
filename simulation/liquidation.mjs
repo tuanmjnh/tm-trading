@@ -19,7 +19,7 @@
 //  it only prices the liquidation an observed mark demands.
 // =============================================================================
 
-import { MARGIN_DEFAULTS } from './margin.mjs'
+import { MARGIN_DEFAULTS, modelForPosition } from './margin.mjs'
 import { normalizeQuote } from './fill.mjs'
 import { closeFill } from './engine.mjs'
 
@@ -42,7 +42,9 @@ export function liquidationPrice(pos, model = MARGIN_DEFAULTS) {
   if (!(Number.isFinite(entry) && entry > 0)) return reject('BAD_ENTRY', 'position entryPrice must be > 0')
   if (!(Number.isFinite(qty) && qty > 0)) return reject('BAD_QTY', 'position qty must be > 0')
 
-  const m = { ...MARGIN_DEFAULTS, ...model }
+  // Per-position leverage widens/narrows the tolerated loss band (D1: docs
+  // without leverage fall back to the account model, byte-identical math).
+  const m = modelForPosition(pos, model)
   const spread = (Number(m.initialMarginPct) - Number(m.maintenanceMarginPct)) / 100
   const liqPrice = round8(entry * (1 - dir * spread)) // LONG below, SHORT above
   const notional = round8(qty * entry)

@@ -1,0 +1,30 @@
+// @part skip:pa-mtf
+// =============================================================================
+//  STRATEGY EXECUTION BRIDGE (Price Action MTF Backtest)
+//  Marker "@part skip:pa-mtf" => ban indicator Price Action MTF KHONG chua file nay.
+// =============================================================================
+
+pa_strat_on   = input.bool(true, "Bat giao dich tu dong (PA MTF Strategy)", group = "PA MTF · Strategy", display = display.data_window)
+pa_strat_dir  = input.string("Long + Short", "Chieu giao dich", options = ["Long + Short", "Long Only", "Short Only"], group = "PA MTF · Strategy", display = display.data_window)
+pa_strat_pct  = input.float(100.0, "Khoi luong (% equity)", minval = 1.0, maxval = 100.0, step = 5.0, group = "PA MTF · Strategy", display = display.data_window)
+
+bool pa_allowLong  = pa_strat_dir == "Long + Short" or pa_strat_dir == "Long Only"
+bool pa_allowShort = pa_strat_dir == "Long + Short" or pa_strat_dir == "Short Only"
+
+float pa_stratQty = pa_strat_pct / 100.0 * strategy.equity / close
+bool  pa_stratQtyOk = pa_stratQty > 0.0 and not na(close) and close > 0.0
+
+bool pa_stratLongEntry  = pa_strat_on and pa_stratQtyOk and pa_okBar and pa_signal and pa_dir == 1 and pa_allowLong and strategy.position_size == 0
+bool pa_stratShortEntry = pa_strat_on and pa_stratQtyOk and pa_okBar and pa_signal and pa_dir == -1 and pa_allowShort and strategy.position_size == 0
+
+if pa_stratLongEntry
+    strategy.entry("Long", strategy.long, qty = pa_stratQty, comment = "PA MTF LONG")
+
+if pa_stratShortEntry
+    strategy.entry("Short", strategy.short, qty = pa_stratQty, comment = "PA MTF SHORT")
+
+if pa_strat_on and strategy.position_size > 0 and not na(pa_posSl) and not na(pa_posTp2)
+    strategy.exit("Exit Long", from_entry = "Long", stop = pa_posSl, limit = pa_posTp2, comment_loss = "SL", comment_profit = "TP2")
+
+if pa_strat_on and strategy.position_size < 0 and not na(pa_posSl) and not na(pa_posTp2)
+    strategy.exit("Exit Short", from_entry = "Short", stop = pa_posSl, limit = pa_posTp2, comment_loss = "SL", comment_profit = "TP2")

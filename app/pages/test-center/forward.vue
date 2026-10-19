@@ -57,9 +57,27 @@ function selectAccount(id: string) {
   void load()
 }
 
-onMounted(() => { void load() })
+// Visibility-aware (API budget): a hidden tab pauses even an enabled
+// auto-refresh; showing again reloads immediately and resumes the cadence.
+const onVisibility = (): void => {
+  if (document.hidden) {
+    if (timer) {
+      clearInterval(timer)
+      timer = null
+    }
+  } else if (autoRefresh.value && !timer) {
+    void load()
+    timer = setInterval(() => { void load() }, 15000)
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('visibilitychange', onVisibility)
+  void load()
+})
 
 onUnmounted(() => {
+  document.removeEventListener('visibilitychange', onVisibility)
   if (timer) clearInterval(timer)
 })
 
@@ -68,7 +86,7 @@ watch(autoRefresh, (on) => {
     clearInterval(timer)
     timer = null
   }
-  if (on) timer = setInterval(() => { void load() }, 15000)
+  if (on && !document.hidden) timer = setInterval(() => { void load() }, 15000)
 })
 
 const columns = computed<GridColumn[]>(() => [
@@ -138,6 +156,25 @@ useHead({ title })
           size="sm"
           :loading="isLoading"
           @click="load"
+        />
+        <TestCenterRunModeBadge mode="LIVE_PAPER" />
+        <UButton
+          icon="i-lucide-flask-conical"
+          :label="t('testCenter.modes.BACKTEST')"
+          variant="ghost"
+          color="neutral"
+          size="sm"
+          to="/test-center/runs"
+          :ui="{ label: 'hidden lg:block' }"
+        />
+        <UButton
+          icon="i-lucide-history"
+          :label="t('testCenter.modes.REPLAY')"
+          variant="ghost"
+          color="neutral"
+          size="sm"
+          to="/test-center/replay"
+          :ui="{ label: 'hidden lg:block' }"
         />
       </div>
     </template>

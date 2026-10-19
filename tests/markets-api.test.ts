@@ -10,6 +10,7 @@ import {
   getOrderBook,
   getTrades,
   klineRowToRaw,
+  normalizeEndTime,
   normalizeInterval,
   normalizeLimit,
   normalizeMarket,
@@ -103,6 +104,16 @@ describe('normalizeInterval / limits', () => {
     assert.equal(statusOf(() => normalizeOrderbookLimit('200', 'futures')), 400)
     assert.equal(statusOf(() => normalizeOrderbookLimit('1000', 'futures')), 400)
     assert.equal(normalizeOrderbookLimit('1000', 'spot'), 1000)
+  })
+
+  test('endTime: optional epoch ms, integer-only, positive', () => {
+    assert.equal(normalizeEndTime(undefined), undefined) // absent -> no older-page bound
+    assert.equal(normalizeEndTime(''), undefined)
+    assert.equal(normalizeEndTime(' 1760000000000 '), 1_760_000_000_000)
+    assert.equal(statusOf(() => normalizeEndTime('abc')), 400)
+    assert.equal(statusOf(() => normalizeEndTime('-1')), 400) // no negative epochs
+    assert.equal(statusOf(() => normalizeEndTime('0')), 400)
+    assert.equal(statusOf(() => normalizeEndTime('1.5')), 400)
   })
 })
 
@@ -247,6 +258,32 @@ describe('getCandles', () => {
       fetchImpl: jsonFetch([mk1m(T0)], capture), now: NOW
     })
     assert.equal(new URL(capture.url!).pathname, '/api/v3/klines')
+  })
+
+  test('endTime pages OLDER bars: forwarded upstream, omitted when absent', async () => {
+    const withEnd: { url?: string } = {}
+    await getCandles({
+      symbol: 'BTCUSDT', market: 'futures', interval: '1h', limit: 300,
+      endTime: T0 - 1, fetchImpl: jsonFetch([mk1m(T0)], withEnd), now: NOW
+    })
+    assert.equal(new URL(withEnd.url!).searchParams.get('endTime'), String(T0 - 1))
+
+    const without: { url?: string } = {}
+    await getCandles({
+      symbol: 'BTCUSDT', market: 'futures', interval: '1h', limit: 300,
+      fetchImpl: jsonFetch([mk1m(T0)], without), now: NOW
+    })
+    assert.equal(new URL(without.url!).searchParams.get('endTime'), null)
+
+    // Composite intervals page their 1m base rows with the same bound.
+    const composite: { url?: string } = {}
+    await getCandles({
+      symbol: 'BTCUSDT', market: 'futures', interval: '4m', limit: 10,
+      endTime: T0 - 1, fetchImpl: jsonFetch([mk1m(T0)], composite), now: NOW
+    })
+    const cUrl = new URL(composite.url!)
+    assert.equal(cUrl.searchParams.get('interval'), '1m')
+    assert.equal(cUrl.searchParams.get('endTime'), String(T0 - 1))
   })
 
   test('4m composite: composed from 1m rows with canonical boundaries', async () => {

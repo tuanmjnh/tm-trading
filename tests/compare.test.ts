@@ -26,6 +26,7 @@ function detail(
 ): RunSeriesDetail {
   return {
     id: 'id',
+    mode: 'BACKTEST',
     engineVersion: '0.5.0',
     paramsHash: 'hash',
     symbol: 'BTCUSDT.P',

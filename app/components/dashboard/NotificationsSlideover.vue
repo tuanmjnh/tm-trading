@@ -26,10 +26,6 @@ const deletingId = ref('')
 const canManage = computed(() => auth.user.value?.permissions?.includes('*')
   || auth.user.value?.permissions?.includes('notifications.manage'))
 
-onMounted(() => {
-  if (auth.user.value) fetchNotify()
-})
-
 const columns = computed<GridColumn[]>(() => [
   { key: 'sender', label: t('common.name'), class: 'w-40' },
   { key: 'body', label: t('notifications.fieldBody') },

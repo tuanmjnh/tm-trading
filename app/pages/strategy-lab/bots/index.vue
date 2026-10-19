@@ -30,6 +30,10 @@ async function refresh() {
 
 onMounted(refresh)
 
+function openDetail(item: BotProfile) {
+  navigateTo(`/strategy-lab/bots/${encodeURIComponent(item._id)}`)
+}
+
 const statusColor = (s: string) =>
   s === 'enabled' ? 'success' : s === 'disabled' ? 'neutral' : s === 'archived' ? 'error' : 'warning'
 const statusLabel = (s: string) => t(`strategyLab.bots.statusLabels.${s}`)
@@ -132,6 +136,7 @@ useHead({ title })
           item-key="_id"
           storage-key="bot-profiles-view-mode"
           @refresh="refresh"
+          @click="openDetail"
         >
           <template #name="{ item }">
             <div class="flex flex-col min-w-0">

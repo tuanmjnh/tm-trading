@@ -66,15 +66,20 @@ watch(status, () => { void load() })
 onMounted(() => { void load() })
 // immediate: false would leave the timer paused (VueUse only resumes when
 // immediate is true) — the load() above covers the first paint instead.
-const { pause, resume } = useIntervalFn(() => { void load() }, 15_000)
+// Visibility-aware (API budget) + composed with the auth gate: a hidden tab
+// never overrides an auth halt, and re-auth never restarts a hidden timer.
+const { pause, resume } = useVisibleInterval(() => { void load() }, 15_000, {
+  canRun: () => !halted.value
+})
 
-// Resume polling once the user re-authenticates.
+// Resume polling once the user re-authenticates (unless the tab is hidden —
+// the visibility handler restarts it on show).
 const { isAuthenticated } = useAuth()
 watch(isAuthenticated, (authed) => {
   if (authed) {
     halted.value = false
-    resume()
     void load()
+    if (!document.hidden) resume()
   }
 })
 

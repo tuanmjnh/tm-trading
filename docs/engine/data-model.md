@@ -471,3 +471,94 @@ npm run ai:review            # SCAFFOLD (Phase 13 item 2): digest + prompt + pro
 Tests: `npm run test:journal` · `npm run test:preset-drift` · `npm run test:stamp`
 · `npm run test:ai-review`, all wired into `npm test`, no Mongo/network/API key
 required.
+
+---
+
+## 11. Phase V3.4 §59 — trading sessions & AI agent governance
+
+Two cross-cutting records arrived with §59. Both follow the same rules as the rest
+of the model layer: guarded by a **pure** module before every write (D25), keyed by
+one deterministic id (D3/D4), and additive — legacy documents without their fields
+behave exactly as before.
+
+| Collection | Model | Vai trò | Guard / index |
+|---|---|---|---|
+| `trading_sessions` | `TradingSession` | Một lần chạy live-paper/replay: version chiến lược, manifest dữ liệu, timeline sự kiện, khoá của mọi thứ nó sinh ra | `engine/session.mjs` (transition/appendEvent); `state+lastEventAt`, `accountId+createdAt` |
+| `ai_agents` | `AiAgent` | Agent được quản trị: cấp tự chủ, trạng thái vòng đời, version đang dùng, nhịp tim | `engine/agentPolicy.mjs`; `state+lastEventAt`, `accountId+createdAt` |
+| `ai_agent_versions` | `AiAgentVersion` | Cấu hình **bất biến**: model + system prompt + allowlist tool + snapshot policy, định danh bằng `hash` nội dung | `versionHash`/`verifyVersion`; duy nhất theo `{agentId, version}` |
+| `ai_agent_actions` | `AiAgentAction` | Sổ hành động **chỉ ghi thêm**: cả hành động được phép và bị chặn | unique `{agentId, idempotencyKey}` (D4); `agentId+at`, `status+at` |
+
+`orders`/`fills`/`positions` mang thêm `sessionId` (nullable, có index) trỏ về
+`trading_sessions` — thêm trường, không viết lại tài liệu cũ.
+
+Ba điểm hợp đồng đáng nhớ:
+
+- **Bất biến (immutable).** Một `ai_agent_versions` được đóng băng khi ghi; ngoại lệ
+  duy nhất được ghi rõ là khối `riskIntegration` (write-once, do
+  `riskIntegrationEdge()` canh, chỉ mở khoá A2 và không thể thay thế). Field hành vi
+  bị sửa sẽ làm `hash` không khớp → `VERSION_TAMPERED`.
+- **Cổng duy nhất (D7).** Hành động loại lệnh (`place-order`/`cancel-order`/
+  `close-position`) chỉ được authorize khi có `sessionId` + session **đang chạy** +
+  `idempotencyKey` + quyết định thật từ `exec/risk.mjs`. Không có nhánh nào đi vòng
+  qua gate.
+- **Kiểm toán cả khi từ chối (D12).** Hành động bị chặn vẫn được ghi vào
+  `ai_agent_actions` với `status: 'blocked'` + mã policy trước khi API trả 403 —
+  một từ chối im lặng là một lỗ hổng không nhìn thấy được.
+
+Tests: `npm run test:app` (suite `tests/aiAgents.test.ts`, thuần offline — không
+Mongo, không model, không mạng) · `tests/session.test.ts` cho Slice C.
+
+---
+
+## 12. Phase V3.5 §59.15 Slice E — research evidence sets
+
+Slices C–D made a run traceable and an agent governable. Slice E makes a claim
+**reproducible**: a frozen bundle of the facts a conclusion was drawn from, that a
+reviewer can re-open and prove unedited.
+
+| Collection | Model | Vai trò | Guard / index |
+|---|---|---|---|
+| `research_evidence_sets` | `EvidenceSet` | Gói bằng chứng **đóng băng** của một nguồn (phiên paper/replay, run backtest, dataset): giao dịch đã đóng, manifest, định danh dataset, hạn chế, thời điểm | `engine/evidence.mjs` (`buildEvidenceBundle` → `freezeEvidenceSet`); `_id = ev_<kind>_<sourceId>` (duy nhất theo định danh nguồn); index `kind+createdAt`, `strategyVersionId+createdAt`, `sessionId`, `hash` |
+
+Ba điểm hợp đồng đáng nhớ:
+
+- **Đóng băng một lần (D3/D4).** `evidenceSetIdFor()` suy id từ nguồn
+  (`ev_paper-session_ses_…`), nên đóng băng lại cùng nguồn **không** tạo phiên bản
+  thứ hai cho cùng một lượt chạy: endpoint trả về bộ đã có kèm `alreadyFrozen`, và
+  cờ `sourceChanged` khi nguồn đã đổi sau lúc đóng. 409 chỉ dành cho race thật sự
+  khi hai lần đóng băng ghi cùng lúc.
+- **Hash bao trọn nội dung, không bao thời gian (D1/D12).** `hash` (tiền tố
+  `evh1_`) phủ mọi trường có thể đổi kết luận — `trades`, `metrics`, `manifest`,
+  `counts`, `dataQuality`, `limitations`. `pointInTime` **không** vào hash: cùng dữ
+  kiện phải hash giống nhau, còn thời điểm đóng băng vẫn được ghi lại để kiểm toán.
+  `verifyEvidenceSet()` tính lại hash khi đọc — set bị sửa sau khi đóng báo
+  `SET_TAMPERED`, không bao giờ được tự chữa hay ẩn đi.
+- **Không nói quá mẫu (D12).** Dưới sàn (`MIN_TRADES_FOR_EVIDENCE`) thì
+  `metrics.sufficient = false` và bộ phải nêu lý do trong `limitations`; bộ vẫn
+  được liệt kê thay vì giấu đi, vì chính nó là lý do một giả thuyết bị từ chối.
+- **Bốn kind = bốn đường hydrate, không thứ nào rỗng im lặng.** `paper-session`/
+  `replay-session` đọc phiên + orders/fills/positions; `backtest-run` nhận **hai**
+  dạng id — ObjectId của Mongo (`runs`/`trades`, đường store) và **series id**
+  `engineVersion~symbol~tf~paramsHash` (đường `reports/*.ndjson`, tức đúng các dòng
+  trang Test Center đang hiển thị; NDJSON luôn được ghi, Mongo là tùy chọn) —
+  manifest của nó là stamp + bộ tham số đầy đủ; `dataset` đọc manifest giữ trữ
+  (`checksum`, `suspect`, `lastReconcile`) và ghi cảnh báo của chính nó. Kind lạ
+  bị từ chối `400 invalid_kind`, nguồn không tồn tại `404`. Không kind nào tuyên
+  bố một phiên nó không có: `sessionId: null` cho run và dataset.
+
+Liên kết (không tạo collection mới, chỉ thêm trường nullable):
+
+- `experiments.evidenceSetId` — tập bằng chứng mà giả thuyết ra từ đó;
+  `experiments.baselineVersionId` — phiên bản nền phải vượt, **đóng băng tại thời
+  điểm đề xuất** (con trỏ active đổi được, nên so với "đang live" là cách một
+  thăng cấp trông giống cải tiến — D31);
+-  `experiments.paperSessionIds` — các phiên kiểm chứng paper của ứng viên;
+  `research_evidence_sets.usedByExperimentIds` — danh sách dẫn chiếu **chỉ thêm**
+  (`$addToSet`), nằm ngoài hash nên việc dẫn chiếu không bao giờ sửa bằng chứng.
+- Đầu ghi duy nhất của một bộ là `POST /api/v1/research/evidence-sets`; đề xuất do
+  AI tạo **buộc** phải dẫn một bộ đã đóng băng đúng phiên bản chiến lược, nếu không
+  `createExperiment` từ chối trước khi ghi gì (`proposalEvidenceLink`).
+
+Tests: `npm run test:app` (suite `tests/evidence.test.ts`, thuần offline — không
+Mongo, không provider, không backtest) · `tests/research-ui.test.ts` khoá hợp đồng
+UI/i18n của trang bằng chứng.

@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     return { success: false, error: 'experiment id required', data: null, meta: { mongo: 'down' } }
   }
 
-  const data = await getExperimentResearch(id)
+  const data = await getExperimentResearch(id, {}, requireOwnerId(event))
   if (!data.experiment) {
     return { success: false, error: 'experiment not found or mongo down', data: null, meta: { mongo: data.mongo } }
   }

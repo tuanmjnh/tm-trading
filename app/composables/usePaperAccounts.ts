@@ -13,8 +13,23 @@ export interface PaperAccountSummary {
   currency: string
   mode: string
   initialBalance: number
+  /** Soft-removed: hidden from the switcher, skipped by the runtime. */
+  archived: boolean
   createdAt: string | null
   updatedAt: string
+}
+
+/** Body for create / patch (§61.17 Phase B account CRUD). */
+export interface PaperAccountPatch {
+  accountId?: string
+  archived?: boolean
+  currency?: string
+  initialBalance?: number
+}
+
+interface PaperAccountMutationResponse {
+  success: boolean
+  data: PaperAccountSummary
 }
 
 interface PaperAccountListResponse {
@@ -57,5 +72,28 @@ export const usePaperAccounts = () => {
     }
   }
 
-  return { accounts, account, riskStatus }
+  /** Create a new (empty) paper account. Server rejects duplicates with 409. */
+  async function create(patch: PaperAccountPatch & { accountId: string }): Promise<PaperAccountSummary> {
+    const res = await $fetch<PaperAccountMutationResponse>('/api/v1/paper/accounts', {
+      method: 'POST',
+      body: patch
+    })
+    return res.data
+  }
+
+  /** Rename / archive / adjust the seed of an account. */
+  async function update(accountId: string, patch: PaperAccountPatch): Promise<PaperAccountSummary> {
+    const res = await $fetch<PaperAccountMutationResponse>(`/api/v1/paper/accounts/${encodeURIComponent(accountId)}`, {
+      method: 'PATCH',
+      body: patch
+    })
+    return res.data
+  }
+
+  /** Remove an empty account (the server refuses one that still owns a book). */
+  async function remove(accountId: string): Promise<void> {
+    await $fetch(`/api/v1/paper/accounts/${encodeURIComponent(accountId)}`, { method: 'DELETE' })
+  }
+
+  return { accounts, account, riskStatus, create, update, remove }
 }

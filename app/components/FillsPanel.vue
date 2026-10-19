@@ -25,6 +25,8 @@ const error = ref('')
 const halted = ref(false)
 
 let timer: ReturnType<typeof setInterval> | null = null
+// 429 backoff: one full budget window of silence after a rate-limit hit.
+let notBefore = 0
 
 const stopPolling = (): void => {
   if (timer) clearInterval(timer)
@@ -33,13 +35,13 @@ const stopPolling = (): void => {
 
 const startPolling = (): void => {
   if (timer) return
-  timer = setInterval(() => void fetchFills(), 5000)
+  timer = setInterval(() => void fetchFills(), 10000)
 }
 
 const fetchFills = async (): Promise<void> => {
   // After an auth failure nothing can succeed until the user signs in again,
-  // so skip the call rather than emit a 401 every 5s.
-  if (halted.value) return
+  // so skip the call rather than emit a 401 every tick. Same for a 429.
+  if (halted.value || Date.now() < notBefore) return
   try {
     const res = await $fetch<FillsListResponse>('/api/v1/fills', {
       params: { limit: 12 }
@@ -56,6 +58,8 @@ const fetchFills = async (): Promise<void> => {
       stopPolling()
       error.value = t('trade.sessionExpired')
     }
+    const status = (err as { response?: { status?: unknown } })?.response?.status
+    if (status === 429) notBefore = Date.now() + 60_000
   }
 }
 
@@ -69,11 +73,27 @@ watch(isAuthenticated, (authed) => {
   }
 })
 
+// Budget guard: same 5s/60-req-min rationale as OrdersPanel — pause while
+// the tab is hidden, refetch on show.
+const onVisibility = (): void => {
+  if (document.hidden) {
+    stopPolling()
+  } else if (!halted.value) {
+    void fetchFills()
+    startPolling()
+  }
+}
+
 onMounted(() => {
+  document.addEventListener('visibilitychange', onVisibility)
+  if (document.hidden) return // first visible will fetch via onVisibility
   void fetchFills()
   startPolling()
 })
-onUnmounted(stopPolling)
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', onVisibility)
+  stopPolling()
+})
 </script>
 
 <template>

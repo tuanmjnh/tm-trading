@@ -19,11 +19,13 @@ const { title, description } = useAdminPageChrome({
 })
 const { viewMode } = useAdminGridView('orders-view-mode')
 const orders = usePaperOrders()
+const { account } = useAccountScope()
+const { version: workspaceVersion } = useTradingWorkspace()
+const { loading: isLoading, error: loadError, hasError, isStale, run } = useResourceState()
 
 const items = ref<PaperOrderItem[]>([])
 const meta = ref<PaperOrdersListResult['meta'] | null>(null)
 const mongoDown = ref(false)
-const isLoading = ref(false)
 const statusFilter = ref('')
 const symbolFilter = ref('')
 const cancelTarget = ref<PaperOrderItem | null>(null)
@@ -33,25 +35,74 @@ const cancelBusy = ref(false)
 const STATUSES = ['', 'riskChecked', 'pending', 'partiallyFilled', 'filled', 'cancelled', 'expired', 'rejected']
 
 async function refresh() {
-  isLoading.value = true
-  try {
-    const res = await orders.list({ status: statusFilter.value, symbol: symbolFilter.value.trim() })
+  await run(async () => {
+    const res = await orders.list({ status: statusFilter.value, symbol: symbolFilter.value.trim(), account: account.value ?? undefined })
     items.value = res.items
     meta.value = res.meta
     mongoDown.value = res.mongo === 'down'
-  } catch (err) {
-    items.value = []
-    notify.error(t('paperOrders.title'), getErrorMessage(err, key => t(key)))
-  } finally {
-    isLoading.value = false
-  }
+  })
+  if (hasError.value) notify.error(t('paperOrders.title'), getErrorMessage(loadError.value, key => t(key)))
 }
 onMounted(refresh)
 watch(statusFilter, refresh)
+watch(account, refresh)
+// §61.17 Phase C: a paper order (or its fill) changes the persisted state
+// everywhere — refetch when the workspace outbox says this view changed.
+watch(workspaceVersion('orders'), refresh)
 
 function askCancel(row: PaperOrderItem) {
   cancelTarget.value = row
   cancelReason.value = ''
+}
+
+// ── Panic sweep (D14): cancel every CANCELABLE paper order in one guarded pass.
+const panicOpen = ref(false)
+const panicBusy = ref(false)
+const cancelableCount = computed(() => items.value.filter(o => o.cancelable).length)
+
+async function doCancelAll() {
+  panicBusy.value = true
+  try {
+    const res = await orders.cancelAll({ by: 'terminal', reason: 'panic-cancel-all' })
+    notify.success(
+      t('paperOrders.cancelAll'),
+      t('paperOrders.cancelAllOk', { cancelled: res.data.meta.cancelled, skipped: res.data.meta.skipped })
+    )
+    panicOpen.value = false
+    await refresh()
+  } catch (err) {
+    notify.error(t('paperOrders.cancelAll'), getErrorMessage(err, key => t(key)))
+  } finally {
+    panicBusy.value = false
+  }
+}
+
+// ── CSV export: exactly the rows this page has loaded (never a server sweep).
+const exporting = ref(false)
+function exportCsv() {
+  if (!items.value.length) return
+  exporting.value = true
+  try {
+    const csv = toCsv(items.value, [
+      { key: 'clientOrderId', label: 'clientOrderId', value: o => o.clientOrderId || o.id },
+      { key: 'orderId', label: 'orderId', value: o => o.orderId },
+      { key: 'symbol', label: 'symbol', value: o => o.symbol },
+      { key: 'side', label: 'side', value: o => o.side },
+      { key: 'type', label: 'type', value: o => o.type },
+      { key: 'qty', label: 'qty', value: o => o.qty },
+      { key: 'price', label: 'price', value: o => o.price },
+      { key: 'fillPrice', label: 'fillPrice', value: o => o.fillPrice },
+      { key: 'filledQty', label: 'filledQty', value: o => o.filledQty },
+      { key: 'status', label: 'status', value: o => o.status },
+      { key: 'rejectReason', label: 'rejectReason', value: o => o.rejectReason },
+      { key: 'submittedAt', label: 'submittedAt', value: o => o.submittedAt },
+      { key: 'createdAt', label: 'createdAt', value: o => o.createdAt }
+    ])
+    downloadCsv(csvFilename('tm-trading-orders'), csv)
+    notify.success(t('common.export'), t('common.exportRows', { n: items.value.length }))
+  } finally {
+    exporting.value = false
+  }
 }
 
 async function doCancel() {
@@ -127,12 +178,32 @@ useHead({ title })
 
     <template #right>
       <div class="flex items-center gap-2">
+        <AccountSwitcher />
         <UBadge
           v-if="mongoDown"
           :label="t('paperOrders.mongoDown')"
           color="warning"
           variant="subtle"
           size="xs"
+        />
+        <UButton
+          icon="i-lucide-download"
+          :label="t('common.export')"
+          variant="soft"
+          color="neutral"
+          size="sm"
+          :disabled="!items.length"
+          :loading="exporting"
+          @click="exportCsv"
+        />
+        <UButton
+          icon="i-lucide-octagon-x"
+          :label="t('paperOrders.cancelAll')"
+          variant="soft"
+          color="error"
+          size="sm"
+          :disabled="!cancelableCount"
+          @click="panicOpen = true"
         />
         <UButton
           icon="i-lucide-refresh-cw"
@@ -174,6 +245,13 @@ useHead({ title })
 
     <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
       <MetricRibbon :items="metrics" cols="grid-cols-2 sm:grid-cols-3 xl:grid-cols-6" />
+
+      <SharedRefreshNotice
+        :stale="isStale"
+        :retrying="isLoading"
+        :message="t('common.staleData')"
+        @retry="refresh"
+      />
 
       <LazyGridList
         :items="items"
@@ -266,12 +344,38 @@ useHead({ title })
 
         <template #empty>
           <AdminEmptyState
+            v-if="hasError"
+            :title="t('common.loadErrorTitle')"
+            :description="t('common.loadErrorHint')"
+            icon="i-lucide-triangle-alert"
+            :actions="[{ label: t('common.retry'), icon: 'i-lucide-refresh-cw', color: 'warning', onClick: refresh }]"
+          />
+          <AdminEmptyState
+            v-else
             :title="t('paperOrders.empty')"
             :description="t('paperOrders.emptyHint')"
             icon="i-lucide-list-checks"
           />
         </template>
       </LazyGridList>
+
+      <!-- Panic sweep (D14-guarded, paper only): cancel every cancelable order. -->
+      <div
+        v-if="panicOpen"
+        class="rounded bg-default ring ring-error/50 p-3 flex flex-col gap-3"
+      >
+        <UAlert
+          color="error"
+          variant="subtle"
+          icon="i-lucide-octagon-x"
+          :title="t('paperOrders.cancelAllConfirm', { n: cancelableCount })"
+          :description="t('paperOrders.cancelAllHint')"
+          :actions="[
+            { label: t('paperOrders.confirmCancelAll'), color: 'error', variant: 'solid', loading: panicBusy, onClick: doCancelAll },
+            { label: t('common.cancel'), variant: 'ghost', color: 'neutral', onClick: () => { panicOpen = false } }
+          ]"
+        />
+      </div>
 
       <!-- Inline cancel confirm (executor-guarded server-side, D14) -->
       <div

@@ -6,6 +6,15 @@
 //
 //  Run:  npm run notify
 //  Test: npm test
+//
+//  ---------------------------------------------------------------------------
+//  LEGACY INBOUND (roadmap §61.17 Phase D — D5). Historic pre-engine signal
+//  intake from TradingView, kept for compatibility while existing alerts are
+//  preserved. New signals are produced natively (engine/signalEngine.mjs ->
+//  services/signalStore.mjs) and served by /api/v1/signals/native; nothing in
+//  that path imports this file. This receiver is NOT deprecated for deletion —
+//  it keeps `npm run notify` working — but it must not gain new dependents.
+//  ---------------------------------------------------------------------------
 // =============================================================================
 
 import { createServer } from 'node:http'
@@ -187,10 +196,19 @@ export function mongoDedupe() {
  * Map payload -> document `alerts`. Dat o day (khong phai trong model) vi day la
  * noi duy nhat biet payload webhook truyen len the nao.
  */
+// Tenancy (roadmap §61.3): the TradingView receiver has no hub JWT, so the
+// owner of the desk it feeds is configured out-of-band. null = legacy desk
+// (rows stay ownerless until an operator assigns them via the backfill).
+const webhookOwnerId = () => {
+  const v = process.env.WEBHOOK_OWNER_ID
+  return v == null || v === '' ? null : String(v)
+}
+
 export function toAlertDoc(o, source) {
   const num = (x) => (Number.isFinite(x) ? x : null)
   return {
     source,
+    ownerId: webhookOwnerId(),
     v: o.v,
     ts: new Date(o.ts), // D2: UTC ms - Mongo khong luu gio dia phuong
     symbol: o.symbol ?? null,
@@ -246,6 +264,7 @@ export function toSignalDoc(o, source, key) {
     ts: new Date(o.ts),
     symbol: o.symbol,
     tf: String(o.tf),
+    ownerId: webhookOwnerId(),
     type,
     price: num(o.price),
     method: 'vsa',

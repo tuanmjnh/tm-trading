@@ -1,0 +1,226 @@
+// =============================================================================
+//  L0 - CONFIG  (moi tinh nang v2 co toggle rieng - test duoc doc lap)
+// =============================================================================
+
+// General
+pa_confirmOnly = input.bool(true,  "Chi tin hieu nen da dong (no-repaint)", group = "PA MTF · Chung", display = display.data_window)
+pa_payloadMode = input.string("Full", "Webhook payload", options = ["Full", "Slim", "Off"], group = "PA MTF · Chung", display = display.data_window)
+
+// Market Structure (BOS / CHoCH / MSS / Retest / Fail / Cont / Pull)
+pa_ms_swLen      = input.int(5,    "Swing lookback (nen)", minval = 2, maxval = 20, group = "PA MTF · Market Structure", display = display.data_window)
+pa_ms_bosOn      = input.bool(true, "Hien thi BOS",                 group = "PA MTF · Market Structure", display = display.data_window)
+pa_ms_chochOn    = input.bool(true, "Hien thi CHoCH",               group = "PA MTF · Market Structure", display = display.data_window)
+pa_ms_mssOn      = input.bool(true, "Hien thi MSS (break + displ.)", group = "PA MTF · Market Structure", display = display.data_window)
+pa_ms_retestOn   = input.bool(true, "Phat hien Retest sau BOS",     group = "PA MTF · Market Structure", display = display.data_window)
+pa_ms_retestBars = input.int(10,    "Cua so retest (nen)", minval = 1, maxval = 100, group = "PA MTF · Market Structure", display = display.data_window)
+pa_ms_retestTol  = input.float(0.5, "Retest tolerance (x ATR)", minval = 0.0, step = 0.1, group = "PA MTF · Market Structure", display = display.data_window)
+pa_ms_failOn     = input.bool(true, "Phat hien Failed Breakout",    group = "PA MTF · Market Structure", display = display.data_window)
+pa_ms_failBars   = input.int(5,     "Cua so failed breakout (nen)", minval = 1, maxval = 50, group = "PA MTF · Market Structure", display = display.data_window)
+pa_ms_contOn     = input.bool(true, "Trend continuation (HH/LL)",   group = "PA MTF · Market Structure", display = display.data_window)
+pa_ms_pullOn     = input.bool(true, "Pullback ve EMA",              group = "PA MTF · Market Structure", display = display.data_window)
+
+// Liquidity & Market Location (PD/PW, Session HL, Eq, Sweep, Trendline)
+pa_liq_eqTol   = input.float(0.05, "Equal Hi/Lo tolerance (x ATR)", minval = 0.0, step = 0.01, group = "PA MTF · Liquidity", display = display.data_window)
+pa_liq_sweepOn = input.bool(true,  "Hien thi Liquidity Sweep",      group = "PA MTF · Liquidity", display = display.data_window)
+pa_liq_pdOn    = input.bool(true,  "Hien thi PDH / PDL",            group = "PA MTF · Liquidity", display = display.data_window)
+pa_liq_pwOn    = input.bool(false, "Hien thi PWH / PWL",            group = "PA MTF · Liquidity", display = display.data_window)
+pa_liq_sessOn  = input.bool(true,  "Hien thi Session High / Low",   group = "PA MTF · Liquidity", display = display.data_window)
+pa_liq_tlOn    = input.bool(true,  "Trendline 2 diem",              group = "PA MTF · Liquidity", display = display.data_window)
+pa_liq_tlTol   = input.float(0.25, "Trendline touch tolerance (x ATR)", minval = 0.05, step = 0.05, group = "PA MTF · Liquidity", display = display.data_window)
+pa_liq_tlMaxDev = input.float(10.0, "Trendline toi da xa gia (x ATR)", minval = 1.0, step = 1.0, group = "PA MTF · Liquidity", display = display.data_window)
+
+// S/R Zones
+pa_sr_left     = input.int(10,   "Zone pivot left",  minval = 2, maxval = 50,   group = "PA MTF · SR Zones", display = display.data_window)
+pa_sr_right    = input.int(10,   "Zone pivot right", minval = 2, maxval = 50,   group = "PA MTF · SR Zones", display = display.data_window)
+pa_sr_width    = input.float(0.5, "Zone width (x ATR)", minval = 0.05, step = 0.05, group = "PA MTF · SR Zones", display = display.data_window)
+pa_sr_maxZone  = input.int(8,    "Max zones", minval = 1, maxval = 30,          group = "PA MTF · SR Zones", display = display.data_window)
+pa_sr_showOn   = input.bool(true, "Hien thi S/R zones",                         group = "PA MTF · SR Zones", display = display.data_window)
+
+// FVG (Fair Value Gap) - rieng toggle, test duoc doc lap
+pa_fvg_showOn = input.bool(true,  "Hien thi FVG",                    group = "PA MTF · FVG", display = display.data_window)
+pa_fvg_minAtr = input.float(0.3,  "FVG toi thieu (x ATR)", minval = 0.05, step = 0.05, group = "PA MTF · FVG", display = display.data_window)
+pa_fvg_max    = input.int(20,     "FVG toi da", minval = 1, maxval = 50,        group = "PA MTF · FVG", display = display.data_window)
+pa_fvg_life   = input.int(100,    "FVG toi da (nen)", minval = 10, maxval = 500, group = "PA MTF · FVG", display = display.data_window)
+
+// Order Block - rieng toggle, test duoc doc lap
+pa_ob_showOn = input.bool(true, "Hien thi Order Block",             group = "PA MTF · Order Block", display = display.data_window)
+pa_ob_max    = input.int(20,    "Order Block toi da", minval = 1, maxval = 50,  group = "PA MTF · Order Block", display = display.data_window)
+
+// Candle Patterns
+pa_cp_pinRatio = input.float(2.0, "Pin bar ratio (wick/body)", minval = 1.0, step = 0.1, group = "PA MTF · Candle Patterns", display = display.data_window)
+pa_cp_engulf   = input.bool(true, "Engulfing",     group = "PA MTF · Candle Patterns", display = display.data_window)
+pa_cp_pin      = input.bool(true, "Pin Bar",       group = "PA MTF · Candle Patterns", display = display.data_window)
+pa_cp_disp     = input.bool(true, "Displacement",  group = "PA MTF · Candle Patterns", display = display.data_window)
+pa_cp_dispAtr  = input.float(1.5, "Displacement: body >= ATR x", minval = 0.5, step = 0.1, group = "PA MTF · Candle Patterns", display = display.data_window)
+pa_cp_rej      = input.bool(true, "Rejection Candle", group = "PA MTF · Candle Patterns", display = display.data_window)
+
+// -----------------------------------------------------------------------------
+//  B-P0-2 CANDLE MOI (method §3): Inside bar / Doji / 3 Soldiers-Crows
+//  Moi mau co toggle rieng; tat het => diem candle TRUNG ban cu (parts-xau2).
+// -----------------------------------------------------------------------------
+pa_cp_ibOn     = input.bool(true, "Inside bar (B-P0-2)", group = "PA MTF · Candle Patterns", display = display.data_window)
+pa_cp_dojiOn   = input.bool(true, "Doji (B-P0-2)", group = "PA MTF · Candle Patterns", display = display.data_window)
+pa_cp_dojiMax  = input.float(0.10, "Doji: than <= range x", minval = 0.01, maxval = 0.5, step = 0.01, group = "PA MTF · Candle Patterns", display = display.data_window)
+pa_cp_soldOn   = input.bool(true, "3 Soldiers / Crows (B-P0-2)", group = "PA MTF · Candle Patterns", display = display.data_window)
+pa_cp_strongBody = input.float(0.50, "3S/3C + Engulf: than >= range x", minval = 0.1, maxval = 0.95, step = 0.05, group = "PA MTF · Candle Patterns", display = display.data_window)
+
+// -----------------------------------------------------------------------------
+//  B-P1-1 VOLUME VETO (method §4.2 dong #1 - diem yeu lon nhat cua PA thuan)
+//  Pin/Engulf chi cong DIEM DAY khi bar do co volume >= nguong High (ratio).
+//  Nguong nay tach khoi pa_vol_rH de co the bat/tat ma khong doi bang bucket.
+// -----------------------------------------------------------------------------
+pa_cp_volVetoOn = input.bool(true, "Volume veto: pin/engulf can volume manh (B-P1-1)", group = "PA MTF · Candle Patterns", display = display.data_window)
+pa_cp_volVetoR  = input.float(1.2, "Volume veto: ratio toi thieu", minval = 0.5, step = 0.1, group = "PA MTF · Candle Patterns", display = display.data_window)
+
+// -----------------------------------------------------------------------------
+//  B-P1-4 ENGULFING STREAK (n10: "2 cay engulfing lien tiep -> winrate cao")
+//  Chi DEM va hien thi; cong diem nhe theo nguong - KHONG tu raise alert rieng
+//  (method §4.2 dong #2: chua co mau so thi khong duoc tin).
+// -----------------------------------------------------------------------------
+pa_cp_streakOn  = input.bool(true, "Dem chuoi engulfing (B-P1-4)", group = "PA MTF · Candle Patterns", display = display.data_window)
+pa_cp_streakMin = input.int(2, "Streak cong diem tu", minval = 2, maxval = 5, group = "PA MTF · Candle Patterns", display = display.data_window)
+pa_cp_streakAdd = input.float(0.5, "Streak cong them (diem)", minval = 0.0, maxval = 2.0, step = 0.1, group = "PA MTF · Candle Patterns", display = display.data_window)
+
+// Indicators - Trend (EMA stack)
+pa_emaFast = input.int(20,  "EMA fast",  minval = 2,  maxval = 500, group = "PA MTF · Indicators", display = display.data_window)
+pa_emaMid  = input.int(50,  "EMA mid",   minval = 5,  maxval = 500, group = "PA MTF · Indicators", display = display.data_window)
+pa_emaSlow = input.int(200, "EMA slow",  minval = 10, maxval = 500, group = "PA MTF · Indicators", display = display.data_window)
+
+// Indicators - Volatility / Momentum / Volume
+pa_atrLen     = input.int(14,    "ATR length",     minval = 1,  maxval = 200, group = "PA MTF · Indicators", display = display.data_window)
+pa_rsiLen     = input.int(14,    "RSI length",     minval = 2,  maxval = 200, group = "PA MTF · Indicators", display = display.data_window)
+pa_rsiOb      = input.float(70,  "RSI overbought", minval = 50, maxval = 99, group = "PA MTF · Indicators", display = display.data_window)
+pa_rsiOs      = input.float(30,  "RSI oversold",   minval = 1,  maxval = 50, group = "PA MTF · Indicators", display = display.data_window)
+pa_macdF      = input.int(12,    "MACD fast",   minval = 2, maxval = 200, group = "PA MTF · Indicators", display = display.data_window)
+pa_macdS      = input.int(26,    "MACD slow",   minval = 5, maxval = 200, group = "PA MTF · Indicators", display = display.data_window)
+pa_macdSigLen = input.int(9,     "MACD signal", minval = 1, maxval = 200, group = "PA MTF · Indicators", display = display.data_window)
+pa_dmiLen     = input.int(14,    "DMI / ADX length",      minval = 2, maxval = 200, group = "PA MTF · Indicators", display = display.data_window)
+pa_dmiSmooth  = input.int(14,    "ADX smoothing",         minval = 2, maxval = 200, group = "PA MTF · Indicators", display = display.data_window)
+pa_adxMin     = input.float(20,  "ADX nguong manh xu huong", minval = 0.0, maxval = 100.0, step = 1.0, group = "PA MTF · Indicators", display = display.data_window)
+pa_bbLen      = input.int(20,    "Bollinger length", minval = 2, maxval = 200, group = "PA MTF · Indicators", display = display.data_window)
+pa_bbMult     = input.float(2.0, "Bollinger mult",   minval = 0.5, step = 0.1, group = "PA MTF · Indicators", display = display.data_window)
+pa_rvLen      = input.int(20,    "RelVol window (nen)", minval = 2, maxval = 200, group = "PA MTF · Indicators", display = display.data_window)
+pa_rvMin      = input.float(1.2, "RelVol nguong",       minval = 0.5, step = 0.1, group = "PA MTF · Indicators", display = display.data_window)
+pa_obvLen     = input.int(20,    "OBV slope window (nen)", minval = 2, maxval = 200, group = "PA MTF · Indicators", display = display.data_window)
+
+// Volume - VSA/Wyckoff configuration (dong bo TM VSA Wyckoff)
+pa_vol_maLen  = input.int(20,    "Cua so Volume MA (Wilder RMA)", minval = 5, maxval = 100, group = "PA MTF · Volume VSA", display = display.data_window)
+pa_vol_showMA = input.bool(true, "Hien Volume MA", group = "PA MTF · Volume VSA", display = display.data_window)
+pa_vol_spikeR = input.float(2.2, "TIM - cot dot bien (ratio)", minval = 1.5, step = 0.1, group = "PA MTF · Volume VSA", display = display.data_window)
+pa_vol_rVH    = input.float(1.8, "VeryHigh (ratio)", minval = 1.0, step = 0.1, group = "PA MTF · Volume VSA", display = display.data_window)
+pa_vol_rH     = input.float(1.2, "High (ratio)",     minval = 0.8, step = 0.1, group = "PA MTF · Volume VSA", display = display.data_window)
+pa_vol_rN     = input.float(0.8, "Normal (ratio)",   minval = 0.4, step = 0.1, group = "PA MTF · Volume VSA", display = display.data_window)
+pa_vol_rL     = input.float(0.4, "Low (ratio)",      minval = 0.1, step = 0.1, group = "PA MTF · Volume VSA", display = display.data_window)
+pa_vol_purWin = input.int(20,    "Cua so dem cot TIM (dashboard)", minval = 5, maxval = 100, group = "PA MTF · Volume VSA", display = display.data_window)
+pa_vol_min    = input.float(0.0, "Volume toi thieu tuyet doi (0 = tat)", minval = 0.0, group = "PA MTF · Volume VSA", display = display.data_window)
+pa_vol_sessOn = input.bool(false, "Loc phien giao dich", group = "PA MTF · Volume VSA", display = display.data_window)
+pa_vol_sess   = input.session("0800-1600", "Phien Volume", group = "PA MTF · Volume VSA", display = display.data_window)
+// 2 nhom múi giờ (xem parts/10_config.pine): "của bạn" = loc phien 0800-1600; "NY" = nhan dien phien A/London/NY.
+// Ca 2 deu truyen tz tuong minh vao time(); doi chart TradingView sang UTC+7 chi doi hien thi, khong doi tinh toan.
+pa_vol_tz     = input.string("Asia/Ho_Chi_Minh", "Múi giờ phiên của bạn", options = ["Asia/Ho_Chi_Minh", "Asia/Singapore", "Asia/Tokyo", "Asia/Bangkok", "UTC", "Europe/London", "America/New_York", "America/Los_Angeles"], group = "PA MTF · Volume VSA", display = display.data_window)
+
+// MTF Context (v2 §4): Context TF (H4/D/W/M) + Setup TF (H1/M15), entry = chart TF
+pa_ctxTf     = input.timeframe("D",    "Context TF (H4/D/W/M)", options = ["240", "D", "W", "M"], group = "PA MTF · MTF Context", display = display.data_window)
+pa_ctxLen    = input.int(200, "Context EMA length", minval = 10, maxval = 500, group = "PA MTF · MTF Context", display = display.data_window)
+pa_setupTf   = input.timeframe("60",   "Setup TF (H1/M15)", options = ["15", "60"], group = "PA MTF · MTF Context", display = display.data_window)
+pa_setupLen  = input.int(50,  "Setup EMA length",   minval = 5, maxval = 500, group = "PA MTF · MTF Context", display = display.data_window)
+pa_htfFilter = input.bool(true, "Loc theo Setup TF", group = "PA MTF · MTF Context", display = display.data_window)
+pa_htfVetoOn = input.bool(true, "HTF VETO - chan lenh khi Context doi lap (khong cho LTF override)", group = "PA MTF · MTF Context", display = display.data_window)
+
+// Session
+pa_sessTz = input.string("America/New_York", "Múi giờ thị trường (NY)", options = ["America/New_York", "Europe/London", "Asia/Ho_Chi_Minh", "Asia/Tokyo", "UTC"], group = "PA MTF · Session", display = display.data_window)
+
+// Scoring weights (11 nhom, tong mac dinh = 100)
+pa_w_trend   = input.float(15, "W: Trend (EMA stack)",   minval = 0, step = 1, group = "PA MTF · Scoring Weights", display = display.data_window)
+pa_w_struct  = input.float(15, "W: Structure",           minval = 0, step = 1, group = "PA MTF · Scoring Weights", display = display.data_window)
+pa_w_liq     = input.float(12, "W: Liquidity (sweep/TL)", minval = 0, step = 1, group = "PA MTF · Scoring Weights", display = display.data_window)
+pa_w_loc     = input.float(8,  "W: Location (VWAP/day)", minval = 0, step = 1, group = "PA MTF · Scoring Weights", display = display.data_window)
+pa_w_sr      = input.float(10, "W: S/R + FVG + OB",      minval = 0, step = 1, group = "PA MTF · Scoring Weights", display = display.data_window)
+pa_w_candle  = input.float(10, "W: Candle",              minval = 0, step = 1, group = "PA MTF · Scoring Weights", display = display.data_window)
+pa_w_vol     = input.float(8,  "W: Volume",              minval = 0, step = 1, group = "PA MTF · Scoring Weights", display = display.data_window)
+pa_w_atr     = input.float(7,  "W: Volatility",          minval = 0, step = 1, group = "PA MTF · Scoring Weights", display = display.data_window)
+pa_w_mom     = input.float(7,  "W: Momentum",            minval = 0, step = 1, group = "PA MTF · Scoring Weights", display = display.data_window)
+pa_w_sess    = input.float(4,  "W: Session",             minval = 0, step = 1, group = "PA MTF · Scoring Weights", display = display.data_window)
+pa_w_mtf     = input.float(4,  "W: MTF alignment",       minval = 0, step = 1, group = "PA MTF · Scoring Weights", display = display.data_window)
+
+// Score thresholds
+pa_scr_noTrade = input.int(49, "Score <= NO TRADE", minval = 0, maxval = 99, group = "PA MTF · Score Thresholds", display = display.data_window)
+pa_scr_weak    = input.int(64, "Score <= WEAK",     minval = 1, maxval = 99, group = "PA MTF · Score Thresholds", display = display.data_window)
+pa_scr_setup   = input.int(74, "Score <= SETUP",    minval = 1, maxval = 99, group = "PA MTF · Score Thresholds", display = display.data_window)
+pa_scr_strong  = input.int(84, "Score <= STRONG",   minval = 1, maxval = 99, group = "PA MTF · Score Thresholds", display = display.data_window)
+
+// Risk / TP / SL
+pa_sl_atrMul = input.float(1.5, "SL = ATR x",        minval = 0.1, step = 0.1, group = "PA MTF · Risk", display = display.data_window)
+pa_sl_swing  = input.int(10,    "Swing lookback SL",  minval = 2, maxval = 100, group = "PA MTF · Risk", display = display.data_window)
+pa_sl_padAtr = input.float(0.2, "Dem sau swing (x ATR)", minval = 0, step = 0.05, group = "PA MTF · Risk", display = display.data_window)
+pa_sl_minAtr = input.float(0.5, "SL min (x ATR)",     minval = 0.1, step = 0.1, group = "PA MTF · Risk", display = display.data_window)
+pa_sl_maxAtr = input.float(3.0, "SL max (x ATR)",     minval = 0.5, step = 0.1, group = "PA MTF · Risk", display = display.data_window)
+pa_rr1       = input.float(1.0, "TP1 (R)",            minval = 0.1, step = 0.1, group = "PA MTF · Risk", display = display.data_window)
+pa_rr2       = input.float(2.0, "TP2 (R)",            minval = 0.1, step = 0.1, group = "PA MTF · Risk", display = display.data_window)
+pa_rr3       = input.float(3.0, "TP3 (R)",            minval = 0.1, step = 0.1, group = "PA MTF · Risk", display = display.data_window)
+pa_rrMin     = input.float(1.5, "RR toi thieu",       minval = 0, step = 0.1,  group = "PA MTF · Risk", display = display.data_window)
+pa_maxDay    = input.int(3,     "Lenh toi da / ngay",  minval = 1, group = "PA MTF · Risk", display = display.data_window)
+pa_coolBars  = input.int(10,    "Cooldown (nen)",      minval = 0, group = "PA MTF · Risk", display = display.data_window)
+
+// -----------------------------------------------------------------------------
+//  B-P1-3 TP MEASURED MOVE (method §3 bang cuoi + §4.2 dong #3)
+//  Muc tieu = do cao mo hinh / doan day truoc, chieu tu entry. Che do thu 3
+//  canh 'R' (mac dinh) va 'Pivot'. Do cao lay tu du lieu QUA KHU (khong repaint).
+// -----------------------------------------------------------------------------
+pa_tpMode    = input.string("Theo R", "Kieu TP", options = ["Theo R", "Measured move (B-P1-3)"], group = "PA MTF · Risk", display = display.data_window)
+pa_tpMmFallback = input.bool(true, "MM: du phong bang TP theo R khi thieu do cao mo hinh", group = "PA MTF · Risk", display = display.data_window)
+
+// -----------------------------------------------------------------------------
+//  B-P1-2 REGIME GATE (method §4.2 dong #7 - port tu parts-tm2/03)
+//  TRENDING : di tiep theo huong (HH/HL, LH/LL).
+//  RANGING  : chi giao dich tai BIEN (gan S/R), tranh giua range.
+//  CHOPPY   : khong vao lenh.
+// -----------------------------------------------------------------------------
+pa_regOn          = input.bool(true,  "Bat regime gate (B-P1-2)", group = "PA MTF · Regime", display = display.data_window)
+pa_regAdxTrend    = input.float(25.0, "ADX >= thi coi la TRENDING", minval = 5.0, maxval = 60.0, step = 1.0, group = "PA MTF · Regime", display = display.data_window)
+pa_regAdxChop     = input.float(18.0, "ADX <  thi coi la CHOPPY",   minval = 5.0, maxval = 60.0, step = 1.0, group = "PA MTF · Regime", display = display.data_window)
+pa_regBbwLen      = input.int(100,    "BBW percentile window",      minval = 20, maxval = 500, group = "PA MTF · Regime", display = display.data_window)
+pa_regBbwSqueeze  = input.float(20.0, "BBW percentile <= thi la squeeze", minval = 1.0, maxval = 60.0, step = 1.0, group = "PA MTF · Regime", display = display.data_window)
+pa_regRangeEdge   = input.float(0.35, "RANGING: chi vao khi trong bien S/R (x ATR)", minval = 0.0, maxval = 2.0, step = 0.05, group = "PA MTF · Regime", display = display.data_window)
+
+// -----------------------------------------------------------------------------
+//  B-P0-1 MAU HINH GIA (method §3): Double/Triple Top-Bottom + Vai dau vai
+//  Hop luu y quan trong nhat cua video n05: CHI PHAT khi PHA NECKLINE (cho xac
+//  nhan), khong doan truoc. Band ± pa_patBand x ATR de gom cac dinh/day "bang nhau".
+//  Vai dau vai: dau cao/thap hon 2 vai; 2 vai phai nam trong band.
+// -----------------------------------------------------------------------------
+pa_patOn       = input.bool(true, "Bat mau hinh gia (B-P0-1)", group = "PA MTF · Pattern", display = display.data_window)
+pa_patBand     = input.float(0.5, "Band dinh/day bang nhau (x ATR)", minval = 0.1, maxval = 3.0, step = 0.1, group = "PA MTF · Pattern", display = display.data_window)
+pa_patMaxBars  = input.int(200, "Cua so mau hinh (nen)", minval = 20, maxval = 1000, group = "PA MTF · Pattern", display = display.data_window)
+pa_patHsRatio  = input.float(1.2, "Vai dau vai: dau >= vai x", minval = 1.0, maxval = 3.0, step = 0.05, group = "PA MTF · Pattern", display = display.data_window)
+
+// -----------------------------------------------------------------------------
+//  B-P0-3 CONFLUENCE 0-3 (method n08 - 3 yeu to bat buoc hoi tu)
+//  (1) trend khung lon dung chieu | (2) gia tai level (S/R, PD/PW/Sess, trendline)
+//  (3) cau hieu xac nhan tren khung dang xem (pin/engulf/IB/3S-3C/pha mau hinh)
+//  ALERT `setup` (tradeable) CHI khi 3/3 - 2/3 chi la "cho them".
+// -----------------------------------------------------------------------------
+pa_cfOn        = input.bool(true, "Bat confluence 0-3 (B-P0-3)", group = "PA MTF · Confluence", display = display.data_window)
+pa_cfLevelTol  = input.float(0.5, "Level tolerance (x ATR)", minval = 0.1, maxval = 3.0, step = 0.1, group = "PA MTF · Confluence", display = display.data_window)
+pa_cfBars      = input.int(3, "So nen xac nhan con hieu luc", minval = 1, maxval = 20, group = "PA MTF · Confluence", display = display.data_window)
+pa_cfRequire3  = input.bool(true, "Chi phat alert setup khi 3/3", group = "PA MTF · Confluence", display = display.data_window)
+
+// Display (master switch chuan parts-xau/80_viz.pine)
+pa_showViz  = input.bool(true, "Tat toan bo hien thi (master)", group = "PA MTF · Display", display = display.data_window)
+pa_cBull    = input.color(color.new(#089981, 0), "Mau LONG",  group = "PA MTF · Display", inline = "clr", display = display.data_window)
+pa_cBear    = input.color(color.new(#f23645, 0), "Mau SHORT", group = "PA MTF · Display", inline = "clr", display = display.data_window)
+pa_showSig  = input.bool(true, "Nhan Entry (LONG/SHORT)", group = "PA MTF · Display", display = display.data_window)
+pa_showHit  = input.bool(true, "Nhan cham TP/SL",   group = "PA MTF · Display", display = display.data_window)
+pa_showZone = input.bool(true, "Ve vung SL/TP",     group = "PA MTF · Display", display = display.data_window)
+pa_zoneLen  = input.int(30, "Do dai vung (nen)", minval = 1, maxval = 300, group = "PA MTF · Display", display = display.data_window)
+pa_showEma  = input.bool(false, "EMA 20/50/200 tren gia", group = "PA MTF · Display", display = display.data_window)
+// Moi loai ve co checkbox rieng (truoc day gop trong pa_showLvl -> kho izol loi chart bi thu be)
+pa_showPd  = input.bool(true, "Duong PDH / PDL",    group = "PA MTF · Display", display = display.data_window)
+pa_showPw  = input.bool(false, "Duong PWH / PWL",    group = "PA MTF · Display", display = display.data_window)
+pa_showSess = input.bool(true, "Duong Session Hi / Lo", group = "PA MTF · Display", display = display.data_window)
+pa_showPriceZones = input.bool(true, "Zone S/R + FVG + OB", group = "PA MTF · Display", display = display.data_window)
+pa_showTl  = input.bool(true, "Trendline 2 diem",   group = "PA MTF · Display", display = display.data_window)
+pa_showVwap = input.bool(true, "VWAP tren gia", group = "PA MTF · Display", display = display.data_window)
+pa_showVol  = input.bool(true, "Histogram Volume", group = "PA MTF · Display", display = display.data_window)
+pa_showDash = input.bool(true, "Dashboard", group = "PA MTF · Display", display = display.data_window)
+pa_dashSize = input.string("Small", "Dash size", options = ["Tiny", "Small", "Normal"], group = "PA MTF · Display", display = display.data_window)

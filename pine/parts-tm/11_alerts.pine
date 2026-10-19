@@ -1,0 +1,72 @@
+// =============================================================================
+//  L10 - WEBHOOK JSON ALERTS & DEDUPLICATION (TM Indicator 2 - v2.1)
+// =============================================================================
+//  The payload is a versioned contract. `score` is the score of the side named
+//  by `score_side`; `long_score` / `short_score` are the independent 0-100
+//  values, so a downstream bot never has to infer direction from a signed score.
+// =============================================================================
+
+// Helper: Format JSON payload for webhook integration
+f_jsonTM2(string sigId, int dir, string ordType, float entry, float limPx, float sl, float t1, float t2, float t3, float posSize, float notional, float effLev, float liq, float netRR, float rr, string regName, string mode) =>
+    string tps = "[" + f_fmtPx(t1) + "," + f_fmtPx(t2) + "," + f_fmtPx(t3) + "]"
+    string liqStr = na(liq) ? "null" : f_fmtPx(liq)
+    string limStr = na(limPx) ? "null" : f_fmtPx(limPx)
+    string sideTxt = dir == 1 ? "LONG" : "SHORT"
+    string statusTxt = f_tmLiveStatus(tm_signal, tm_posStage, tm_noTradeReason)
+    string blockers = tm_blockMask == "" ? "" : tm_blockMask
+    string body = '{"sig_id":"' + sigId + '","version":"2.1.0","schema":"tm2.signal.v2.1","side":"' + sideTxt + '","order_type":"' + ordType + '","profile":"' + tm_assetMode + '","regime":"' + regName + '","mode":"' + mode + '","price":' + f_fmtPx(entry) + ',"limit_price":' + limStr + ',"sl":' + f_fmtPx(sl) + ',"tps":' + tps
+    body := body + ',"score":' + str.tostring(tm_score100) + ',"score_side":"' + (tm_dir == 1 ? "LONG" : tm_dir == -1 ? "SHORT" : sideTxt) + '","long_score":' + str.tostring(tm_longScore100) + ',"short_score":' + str.tostring(tm_shortScore100) + ',"score_gap":' + str.tostring(tm_scoreGap) + ',"score_version":"' + tm_scoreVersion + '","feature_set":"' + tm_scoreFeatureSet + '","score_meta":"' + tm_scoreMeta + '","quality":"' + tm_quality + '"'
+    body := body + ',"direction_code":"' + tm_directionCode + '","status":"' + statusTxt + '","top_block_reason":"' + tm_noTradeReason + '","blockers":"' + blockers + '"'
+    body := body + ',"eval_target":"' + tm_plan2.evalTarget + '","rr":' + str.tostring(rr, "#.##") + ',"net_rr":' + str.tostring(netRR, "#.##")
+    body := body + ',"atr":' + f_fmtPx(tm_atr) + ',"pos_size":' + str.tostring(posSize, "#.####") + ',"notional":' + str.tostring(notional, "#.##") + ',"eff_lev":' + str.tostring(effLev, "#.#") + ',"liq":' + liqStr + '}'
+    body
+
+f_jsonEventTM2(TMEvent e) =>
+    '{"kind":"' + e.kind + '","dir":"' + e.dir + '","ts":' + str.tostring(e.srcTime) + ',"bar":' + str.tostring(e.srcBar) + ',"tf":"' + e.tf + '","confirmed":' + (e.confirmed ? "true" : "false") + ',"level":' + f_fmtPx(e.level) + '}'
+
+tm_head2 = '{"project":"TM Indicator 2","version":"2.1.0","schema":"tm2.signal.v2.1","v":2.1,"ts":"' + f_ts() + '","exchange":"' + syminfo.prefix + '","symbol":"' + f_sym() + '","tf":"' + timeframe.period + '"'
+bool tm_doSend2 = tm_payloadMode != "Off"
+
+// @part skip:tm-strategy
+alertcondition(tm_evEntry and tm_posDir == 1,   "TM2 LONG ENTRY",       "TM2 LONG ENTRY {{ticker}} {{interval}}")
+alertcondition(tm_evEntry and tm_posDir == -1,  "TM2 SHORT ENTRY",      "TM2 SHORT ENTRY {{ticker}} {{interval}}")
+alertcondition(tm_evPending,                    "TM2 LIMIT PENDING",    "TM2 LIMIT PENDING {{ticker}} {{interval}}")
+alertcondition(tm_evFilled,                     "TM2 LIMIT FILLED",     "TM2 LIMIT FILLED {{ticker}} {{interval}}")
+alertcondition(tm_evBeMoved,                    "TM2 AUTO BREAK-EVEN",  "TM2 BE ACTIVATED {{ticker}}")
+alertcondition(tm_evTp > 0,                     "TM2 TAKE PROFIT",      "TM2 TP HIT {{ticker}}")
+alertcondition(tm_evSl,                         "TM2 STOP LOSS / EXIT", "TM2 EXIT {{ticker}}")
+alertcondition(tm_evDecay or tm_evTimeout,      "TM2 TIME EXIT",        "TM2 TIME EXIT {{ticker}}")
+// @part skip:none
+
+if tm_okBar and tm_doSend2 and tm_evEntry
+    alert(tm_head2 + ',"action":"ENTRY",' + f_jsonTM2(tm_posSigId, tm_posDir, tm_posType, tm_posEntry, tm_posLimit, tm_posSl, tm_posTp1, tm_posTp2, tm_posTp3, tm_plan2.posSize, tm_plan2.notional, tm_plan2.effLev, tm_plan2.liqPrice, tm_plan2.netRR, tm_plan2.evalRR, tm_regime.name, tm_posMode) + "}", alert.freq_once_per_bar)
+
+if tm_okBar and tm_doSend2 and tm_evPending
+    alert(tm_head2 + ',"action":"LIMIT_PENDING",' + f_jsonTM2(tm_posSigId, tm_posDir, tm_posType, tm_posEntry, tm_posLimit, tm_posSl, tm_posTp1, tm_posTp2, tm_posTp3, tm_plan2.posSize, tm_plan2.notional, tm_plan2.effLev, tm_plan2.liqPrice, tm_plan2.netRR, tm_plan2.evalRR, tm_regime.name, tm_posMode) + "}", alert.freq_once_per_bar)
+
+if tm_okBar and tm_doSend2 and tm_evFilled
+    alert(tm_head2 + ',"action":"LIMIT_FILLED","sig_id":"' + tm_posSigId + '","price":' + f_fmtPx(tm_posEntry) + ',"mode":"' + tm_posMode + '","status":"FILLED"}', alert.freq_once_per_bar)
+
+if tm_okBar and tm_doSend2 and tm_evBeMoved
+    alert(tm_head2 + ',"action":"AUTO_BREAKEVEN","sig_id":"' + tm_posSigId + '","new_sl":' + f_fmtPx(tm_posSl) + "}", alert.freq_once_per_bar)
+
+if tm_okBar and tm_doSend2 and tm_posStage >= TM2_STAGE_OPEN and tm_evTp > 0
+    alert(tm_head2 + ',"action":"TAKE_PROFIT","sig_id":"' + tm_posSigId + '","level":' + str.tostring(tm_evTp) + "}", alert.freq_once_per_bar)
+
+if tm_okBar and tm_doSend2 and tm_evSl
+    alert(tm_head2 + ',"action":"EXIT","reason":"' + (tm_exitReason == TM2_EXIT_BREAKEVEN ? "BREAKEVEN" : tm_exitReason == TM2_EXIT_TRAIL ? "TRAIL" : "STOP_LOSS") + '","sig_id":"' + tm_posSigId + '"}', alert.freq_once_per_bar)
+
+if tm_okBar and tm_doSend2 and (tm_evDecay or tm_evTimeout)
+    alert(tm_head2 + ',"action":"TIME_EXIT","reason":"' + (tm_evDecay ? "TIME_DECAY" : "TIMEOUT") + '","sig_id":"' + tm_posSigId + '"}', alert.freq_once_per_bar)
+
+if tm_okBar and tm_doSend2 and tm_evCancel
+    alert(tm_head2 + ',"action":"LIMIT_CANCEL","reason":"' + (tm_exitReason == TM2_CANCEL_MISSED ? "MISSED_MOVE" : "EXPIRED") + '","sig_id":"' + tm_posSigId + '"}', alert.freq_once_per_bar)
+
+// Structural events (BOS / CHoCH / Sweep)
+bool tm_evtNow2 = tm_okBar and tm_doSend2 and array.size(tm_evtBuf) > 0 and barstate.isconfirmed
+var int tm_lastEvtBar2 = -1
+if tm_evtNow2 and array.size(tm_evtBuf) > 0
+    TMEvent eTM2 = array.get(tm_evtBuf, array.size(tm_evtBuf) - 1)
+    if eTM2.srcBar != tm_lastEvtBar2
+        tm_lastEvtBar2 := eTM2.srcBar
+        alert(tm_head2 + ',"action":"EVENT",' + f_jsonEventTM2(eTM2) + "}", alert.freq_once_per_bar)

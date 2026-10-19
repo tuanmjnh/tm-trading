@@ -14,6 +14,8 @@ const AiProposalSchema = new mongoose.Schema(
   {
     _id: { type: String, required: true }, // proposalId
     proposalId: { type: String, required: true, index: true },
+    // Tenancy (roadmap §61.3): proposals are user-scoped.
+    ownerId: { type: String, default: null, index: true },
     strategyVersionId: { type: String, default: null, index: true },
     hypothesis: { type: String, required: true },
     changes: { type: mongoose.Schema.Types.Mixed, default: [] },

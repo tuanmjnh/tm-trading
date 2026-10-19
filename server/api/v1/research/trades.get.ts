@@ -20,6 +20,7 @@ export default defineEventHandler(async (event) => {
   const to = parseSince(query.to ? String(query.to) : undefined)
 
   const { items, total, stats, source, warnings, filters } = await listResearchTrades({
+    ownerId: requireOwnerId(event),
     limit,
     cursor,
     source: query.source ? String(query.source) : undefined,

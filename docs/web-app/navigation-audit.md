@@ -1,7 +1,7 @@
 # Navigation Audit — TM Trading V3.3 (§58.8)
 
 > First deliverable required by roadmap §58.8 before any menu refactor.
-> Authority: `docs/web-app/tm-trading-roadmap-v3.3.md` §57 (IA) and §58 (migration rules).
+> Authority: `docs/web-app/tm-trading-roadmap-v3.5.md` §57 (IA) and §58 (migration rules).
 > Status legend: **implemented** = page + working API/service; **partial** = API/service exists but no
 > page (or page without API); **planned** = no page and no API endpoint yet; **missing** = expected, nothing exists.
 
@@ -124,7 +124,7 @@ Inspected, not assumed:
 | `/paper` | Trading | implemented | `app/pages/trading/paper.vue` (account equity/risk/exposure/PnL + risk gate); APIs `/paper/accounts*`, `/risk/status` (2026-10-11) |
 | `/orders` | Trading | implemented | `app/pages/trading/orders.vue` (lifecycle + cancel guarded by `cancelable`); APIs `/orders/**` (2026-10-11) |
 | `/strategies` | Strategy Lab | implemented | `app/pages/strategy-lab/index.vue`; API `/strategies/**` (Slice 2) |
-| `/indicators` | Strategy Lab | implemented | `app/pages/strategy-lab/indicators.vue`; APIs `/indicators/**`, `/indicator-runs/**` (Slice 2) |
+| `/indicators` | Strategy Lab | implemented | `app/pages/strategy-lab/indicators/index.vue`; APIs `/indicators/**`, `/indicator-runs/**` (Slice 2) |
 | `/methods` | Strategy Lab | implemented | `app/pages/strategy-lab/methods.vue`; API `/methods/**` (Slice 2) |
 | `/bots`, `/bots/instances` | Strategy Lab | implemented | `app/pages/strategy-lab/bots/index.vue`, `bots/instances.vue`; APIs `/bots/profiles*`, `/bots/instances*` (Slice 2) |
 | `/lab/new` | Test Center | implemented | builder merged into `/test-center` (`app/pages/test-center/index.vue`; test-run contract via `/runs` POST) (Slice 3) |

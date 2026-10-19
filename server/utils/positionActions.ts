@@ -158,7 +158,7 @@ function klinesModule(): Promise<KlinesModule> {
 //  Shared: load the OPEN position or 404 / Mongo-down.
 // -----------------------------------------------------------------------------
 
-async function openPositionOr404(id: string): Promise<{ Position: any; pos: any }> {
+async function openPositionOr404(id: string, ownerId?: string): Promise<{ Position: any; pos: any }> {
   const Position = await engineModel('position.mjs', 'Position')
   if (!Position) {
     throw createError({ statusCode: 503, statusMessage: 'mongo_down', message: 'MongoDB unavailable — action not applied' })
@@ -167,7 +167,12 @@ async function openPositionOr404(id: string): Promise<{ Position: any; pos: any 
     throw createError({ statusCode: 404, statusMessage: 'not_found', message: `Position ${id} not found` })
   }
   try {
-    const pos = await Position.findOne({ _id: new Types.ObjectId(id), status: 'open' }).lean()
+    // Tenancy (docs/web-app/user-tenancy-plan.md): the owner is part of the
+    // lookup, so an id from another account reads as 404 — never as someone
+    // else's position.
+    const filter: Record<string, unknown> = { _id: new Types.ObjectId(id), status: 'open' }
+    if (ownerId) filter.ownerId = ownerId
+    const pos = await Position.findOne(filter).lean()
     if (!pos) {
       throw createError({ statusCode: 404, statusMessage: 'not_found', message: `Open position ${id} not found (already closed?)` })
     }
@@ -215,12 +220,12 @@ interface ModifyDecision {
   rr?: number
 }
 
-export async function modifyPositionAction(id: string, body: unknown) {
+export async function modifyPositionAction(id: string, body: unknown, ownerId?: string) {
   const v = validateModifyBody(body)
   if (!v.ok || !v.value) {
     throw createError({ statusCode: 400, statusMessage: 'invalid_patch', message: v.error ?? 'invalid patch' })
   }
-  const { Position, pos } = await openPositionOr404(id)
+  const { Position, pos } = await openPositionOr404(id, ownerId)
 
   const risk = await execRisk()
   const config = risk.loadRiskConfig()
@@ -265,7 +270,7 @@ export async function modifyPositionAction(id: string, body: unknown) {
  */
 function buildPartialChild(pos: any, slice: { qty: number; feeShare: number | null }, fill: any, exitTime: Date) {
   const keep: Record<string, unknown> = {}
-  for (const k of ['account', 'source', 'symbol', 'dir', 'entryPrice', 'entryTime', 'method', 'paramsHash', 'tf', 'stamp', 'stampUnknown']) {
+  for (const k of ['ownerId', 'account', 'source', 'symbol', 'dir', 'entryPrice', 'entryTime', 'method', 'paramsHash', 'tf', 'stamp', 'stampUnknown']) {
     if (k in pos) keep[k] = pos[k]
   }
   return {
@@ -289,13 +294,13 @@ function buildPartialChild(pos: any, slice: { qty: number; feeShare: number | nu
   }
 }
 
-export async function closePositionAction(id: string, body: unknown) {
+export async function closePositionAction(id: string, body: unknown, ownerId?: string) {
   const v = validateCloseBody(body)
   if (!v.ok || !v.value) {
     throw createError({ statusCode: 400, statusMessage: 'invalid_close', message: v.error ?? 'invalid close body' })
   }
   const target = v.value
-  const { Position, pos } = await openPositionOr404(id)
+  const { Position, pos } = await openPositionOr404(id, ownerId)
 
   const risk = await execRisk()
   const config = risk.loadRiskConfig()
@@ -349,7 +354,7 @@ export async function closePositionAction(id: string, body: unknown) {
     // same journey exec/paper.mjs gives every close.
     if (pos.signalKey) {
       const Alert = await engineModel('alert.mjs', 'Alert')
-      if (Alert) await Alert.updateOne({ alertKey: pos.signalKey }, { $set: { status: 'closed' } })
+      if (Alert) await Alert.updateOne({ alertKey: pos.signalKey, ownerId: pos.ownerId ?? null }, { $set: { status: 'closed' } })
     }
     return {
       success: true,

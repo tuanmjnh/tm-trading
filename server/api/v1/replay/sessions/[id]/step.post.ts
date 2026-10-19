@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'invalid_step', message: v.error ?? 'invalid step body' })
   }
   try {
-    return { success: true, data: await stepReplaySession(id, v.value.candles) }
+    return { success: true, data: await stepReplaySession(id, v.value.candles, requireOwnerId(event)) }
   } catch (err) {
     throw replayHttpError(err)
   }

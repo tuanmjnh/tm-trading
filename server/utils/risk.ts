@@ -88,7 +88,7 @@ export function toAccountDay(doc: any): RiskAccountDay {
   }
 }
 
-export async function loadRiskStatus(now: Date = new Date()): Promise<RiskStatusData> {
+export async function loadRiskStatus(now: Date = new Date(), ownerId?: string): Promise<RiskStatusData> {
   const day = utcDayNow(now)
   const drift = readDriftStatus() // doc FILE — doc duoc ca khi Mongo down
 
@@ -101,17 +101,21 @@ export async function loadRiskStatus(now: Date = new Date()): Promise<RiskStatus
   }
 
   try {
-    const today = await RiskState.find({ utcDay: day }).lean()
+    // Tenancy (docs/web-app/user-tenancy-plan.md): when an owner is given the
+    // day counters, the last-known halt and the open-position count are read
+    // from THEIR book only — the panel never shows another account's risk.
+    const scope = ownerId ? { ownerId } : {}
+    const today = await RiskState.find({ ...scope, utcDay: day }).lean()
     let accounts = today.map(toAccountDay)
 
     if (!accounts.length) {
       // Khong co ban ghi hom nay nhung kill-switch la ban vung (D7c): neu ban
       // ghi moi nhat van halted thi hien thi no de khong "tu mat" qua nua dem.
-      const latest = await RiskState.findOne({}).sort({ utcDay: -1, updatedAt: -1 }).lean()
+      const latest = await RiskState.findOne(scope).sort({ utcDay: -1, updatedAt: -1 }).lean()
       if (latest && latest.halted) accounts = [toAccountDay(latest)]
     }
 
-    const openPositions = await Position.countDocuments({ status: 'open' })
+    const openPositions = await Position.countDocuments({ ...scope, status: 'open' })
     return { day, accounts, openPositions, mongo: 'up', drift }
   } catch {
     // Mat ket noi giua chung -> fail-soft: khong 500, bao ro down.

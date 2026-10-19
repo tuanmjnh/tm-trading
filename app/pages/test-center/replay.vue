@@ -224,6 +224,29 @@ const trail = computed(() => [
     </template>
 
     <div class="flex flex-col w-full gap-3 pb-24 lg:pb-6">
+      <!-- Slice 3 — label this surface's run mode + cross-link the other two -->
+      <div class="flex items-center gap-2 flex-wrap shrink-0">
+        <TestCenterRunModeBadge mode="REPLAY" />
+        <UButton
+          icon="i-lucide-flask-conical"
+          :label="t('testCenter.modes.BACKTEST')"
+          variant="ghost"
+          color="neutral"
+          size="sm"
+          to="/test-center/runs"
+          :ui="{ label: 'hidden lg:block' }"
+        />
+        <UButton
+          icon="i-lucide-fast-forward"
+          :label="t('testCenter.modes.LIVE_PAPER')"
+          variant="ghost"
+          color="neutral"
+          size="sm"
+          to="/test-center/forward"
+          :ui="{ label: 'hidden lg:block' }"
+        />
+      </div>
+
       <!-- Session builder -->
       <div class="rounded bg-default ring ring-default p-3 flex flex-col gap-3" data-testid="replay-create-card">
         <div class="text-sm font-medium">{{ t('replay.sessionCard') }}</div>

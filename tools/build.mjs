@@ -19,80 +19,92 @@ const SHARED = join(ROOT, 'pine', 'shared')
 const DIST = join(ROOT, 'pine', 'dist')
 
 const TARGETS = {
-  indicator: {
-    file: 'TM Signals.pine',
-    dir: 'parts',
-    shared: ['common.pine'],
-    // Giu tren MOT dong: khai bao script la vi tri nhay parse, khong sua.
-    decl: `indicator("TM Signals", shorttitle = "TM·SIG", overlay = false, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)`,
-  },
-  strategy: {
-    file: 'TM Backtest.pine',
-    dir: 'parts',
-    shared: ['common.pine'],
-    decl: `strategy("TM Backtest", shorttitle = "TM·BT", overlay = true, pyramiding = 0, calc_on_order_fills = true, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 1, commission_type = strategy.commission.percent, commission_value = 0.05, slippage = 0)`,
-  },
-  vsa: {
-    file: 'TM VSA Wyckoff.pine',
-    dir: 'parts-vsa',
-    shared: ['common.pine', 'sess-inputs.pine'],
-    decl: `indicator("TM VSA Wyckoff", "TM VSA Wyckoff", overlay = false, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)`,
-  },
-  // Ban backtest cua VSA - CUNG nguon parts-vsa, chi khac khai bao strategy va
-  // 60_viz.pine bi cat (@part skip:vsa-strategy) vi do la phan ve rieng cua pane
-  // volume. Logic su kien (20/30/40) dung nguyen ven -> khong the lech voi ban
-  // indicator. Cau noi lenh nam o 50_strategy.pine (@part skip:vsa).
-  'vsa-strategy': {
-    file: 'TM VSA Backtest.pine',
-    dir: 'parts-vsa',
-    shared: ['common.pine', 'sess-inputs.pine'],
-    decl: `strategy("TM VSA Backtest", "TM VSA Backtest", overlay = true, pyramiding = 0, calc_on_order_fills = true, process_orders_on_close = true, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, commission_value = 0.05, slippage = 0)`,
-  },
-  // Phase 11 - Liquidity Sweep: quet thanh khoan (pivot swing kieu LuxAlgo) +
-  // rau tu choi + xac nhan volume VSA -> tin hieu dao chieu. overlay = false nen
-  // histogram volume nam o pane rieng (giong TM VSA Wyckoff); MOI hinh ve tren
-  // gia (level/box/nhan/Entry-SL-TP/dashboard) phai kem force_overlay = true.
-  sweep: {
-    file: 'TM Liquidity Sweep.pine',
-    dir: 'parts-sweep',
-    shared: ['common.pine', 'sess-inputs.pine'],
-    decl: `indicator("TM Liquidity Sweep", "TM Liquidity Sweep", overlay = false, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)`,
-  },
-  xau: {
-    file: 'TM XAU Signals.pine',
-    dir: 'parts-xau',
-    shared: ['common.pine', 'zones.pine'],
-    decl: `indicator("TM XAU Signals", shorttitle = "TM·XAU", overlay = false, dynamic_requests = true, max_boxes_count = 200, max_lines_count = 200, max_labels_count = 200)`,
-  },
-  // Phase 12 - XAU v2 (docs/indicator-XAU/master-prompt v2.md): event UDT co
-  // timestamp/tf/confirmed/level, MSS + retest + failed breakout, FVG + Order
-  // Block + trendline, indicator engine nhom theo chuc nang (MACD/DMI/BB/VWAP/
-  // OBV/RelVol), MTF Context + HTF VETO. overlay=false -> moi hinh ve tren gia
-  // phai kem force_overlay = true (giong parts-xau).
-  xau2: {
-    file: 'TM XAU Signals 2.pine',
-    dir: 'parts-xau2',
-    shared: ['common.pine', 'zones.pine'],
-    decl: `indicator("TM XAU Signals 2", shorttitle = "TM·XAU2", overlay = false, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)`,
-  },
-  // TM Indicator - Multi-Asset Futures Analysis System (TM_Indicator_Roadmap.md)
-  tm: {
-    file: 'TM Indicator.pine',
+  // TM Indicator 2 - Multi-Asset Futures Analysis System (parts-tm)
+  'tm-indicator': {
+    file: 'TM Indicator 2.pine',
     dir: 'parts-tm',
-    shared: ['common.pine', 'zones.pine'],
-    decl: `indicator("TM Indicator", shorttitle = "TM·IND", overlay = false, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 1000)`,
+    version: '2.1.0',
+    shared: ['common.pine', 'zones.pine', 'tm-signal-quality.pine'],
+    decl: `indicator("TM Indicator 2", shorttitle = "TM·IND2", overlay = false, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 1000)`,
   },
-  // TM Indicator Strategy Lab - Dedicated Backtest Engine (TM_Indicator_Roadmap.md Phase 5)
+  // TM Indicator Strategy Lab 2 - Next-Gen Strategy Engine (parts-tm)
   'tm-strategy': {
-    file: 'TM Indicator Strategy Lab.pine',
+    file: 'TM Indicator Strategy Lab 2.pine',
     dir: 'parts-tm',
+    version: '2.1.0',
+    shared: ['common.pine', 'zones.pine', 'tm-signal-quality.pine'],
+    decl: `strategy("TM Indicator Strategy Lab 2", shorttitle = "TM·LAB2", overlay = false, pyramiding = 0, calc_on_order_fills = true, process_orders_on_close = false, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 1000, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, commission_value = 0.06, slippage = 1)`,
+  },
+  // TM XAU Signals 2 (parts-xau)
+  'xau-indicator': {
+    file: 'TM XAU Signals 2.pine',
+    dir: 'parts-xau',
+    version: '2.0.0',
     shared: ['common.pine', 'zones.pine'],
-    decl: `strategy("TM Indicator Strategy Lab", shorttitle = "TM·LAB", overlay = false, pyramiding = 0, calc_on_order_fills = true, process_orders_on_close = false, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 1000, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, commission_value = 0.06, slippage = 1)`,
+    decl: `indicator("TM XAU Signals 2", shorttitle = "TM·XAU2", overlay = false, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 1000)`,
+  },
+  // LongKaco VSA (parts-longkaco-vsa)
+  'lk-vsa': {
+    file: 'LongKaco VSA.pine',
+    dir: 'parts-longkaco-vsa',
+    version: '1.0.0',
+    shared: ['common.pine', 'sess-inputs.pine'],
+    decl: `indicator("LongKaco VSA", shorttitle = "LK VSA", overlay = false, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 1000)`,
+  },
+  'lk-vsa-strategy': {
+    file: 'LongKaco VSA Backtest.pine',
+    dir: 'parts-longkaco-vsa',
+    version: '1.0.0',
+    shared: ['common.pine', 'sess-inputs.pine'],
+    decl: `strategy("LongKaco VSA Backtest", shorttitle = "LK VSA BT", overlay = true, pyramiding = 5, calc_on_order_fills = true, process_orders_on_close = true, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 1000, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, commission_value = 0.05, slippage = 0)`,
+  },
+  // Price Action MTF (parts-price-action-mtf)
+  'pa-mtf': {
+    file: 'Price Action MTF.pine',
+    dir: 'parts-price-action-mtf',
+    version: '1.0.0',
+    shared: ['common.pine', 'zones.pine'],
+    decl: `indicator("Price Action MTF", shorttitle = "PA MTF", overlay = false, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 1000)`,
+  },
+  'pa-mtf-strategy': {
+    file: 'Price Action MTF Backtest.pine',
+    dir: 'parts-price-action-mtf',
+    version: '1.0.0',
+    shared: ['common.pine', 'zones.pine'],
+    decl: `strategy("Price Action MTF Backtest", shorttitle = "PA MTF BT", overlay = true, pyramiding = 0, calc_on_order_fills = true, process_orders_on_close = true, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 1000, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, commission_value = 0.05, slippage = 0)`,
+  },
+  // TM Fusion Zones (parts-fusion-zones)
+  fz: {
+    file: 'TM Fusion Zones.pine',
+    dir: 'parts-fusion-zones',
+    version: '1.0.0',
+    shared: ['common.pine'],
+    decl: `indicator("TM Fusion Zones", shorttitle = "TM FZ", overlay = true, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 1000)`,
+  },
+  'fz-strategy': {
+    file: 'TM Fusion Zones Backtest.pine',
+    dir: 'parts-fusion-zones',
+    version: '1.0.0',
+    shared: ['common.pine'],
+    decl: `strategy("TM Fusion Zones Backtest", shorttitle = "TM FZ BT", overlay = true, pyramiding = 0, calc_on_order_fills = true, process_orders_on_close = true, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 1000, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, commission_value = 0.05, slippage = 0)`,
   },
 }
 
+const ALIASES = {
+  tm: 'tm-indicator',
+  tm2: 'tm-indicator',
+  'tm2-strategy': 'tm-strategy',
+  xau: 'xau-indicator',
+  xau2: 'xau-indicator',
+}
+
+export function resolveTarget(t) {
+  return ALIASES[t] || t
+}
+
 // --- doc part theo thu tu ten file (00_, 10_, 20_ ...) trong dir cua target ---
-function readParts(target) {
+function readParts(rawTarget) {
+  const target = resolveTarget(rawTarget)
   const dir = join(ROOT, 'pine', TARGETS[target].dir)
   return readdirSync(dir)
     .filter((f) => f.endsWith('.pine'))
@@ -101,7 +113,8 @@ function readParts(target) {
 }
 
 // --- noi dung shared cua target (chen qua marker {{SHARED}}) ---
-function sharedCode(target) {
+function sharedCode(rawTarget) {
+  const target = resolveTarget(rawTarget)
   return (TARGETS[target].shared ?? [])
     .map((f) => readFileSync(join(SHARED, f), 'utf8').replace(/\r\n/g, '\n'))
     .join('\n')
@@ -112,7 +125,8 @@ function sharedCode(target) {
 // de `errors.mjs` chi dung dung vi tri trong pine/parts/.
 // Ten target cho phep gach noi (vsa-strategy), neu khong `\w+` se chi bat duoc
 // phan truoc gach -> marker "skip:vsa-strategy" bi hieu nham thanh "skip:vsa".
-function filterMarkerLines(src, target) {
+function filterMarkerLines(src, rawTarget) {
+  const target = resolveTarget(rawTarget)
   const out = []
   let skipping = false
   let n = 0
@@ -120,7 +134,8 @@ function filterMarkerLines(src, target) {
     n++
     const m = line.match(/^\s*\/\/\s*@part\s+skip:([\w-]+)/)
     if (m) {
-      skipping = m[1] === target
+      const skipTarget = m[1]
+      skipping = skipTarget === target || skipTarget === rawTarget || resolveTarget(skipTarget) === target
       continue
     }
     if (!skipping) out.push({ t: line, n })
@@ -470,7 +485,8 @@ function subst(src, target) {
 //   3. replace(/\n{3,}/g, '\n\n')  -> nhom dong RONG lien tiep >= 2 giam con 1
 //      (truong hop o DAU chuoi: 3 dong tro len giam con 2 - khac biet nho cua regex).
 //   4. trimEnd() + '\n'.
-export function assemble(target) {
+export function assemble(rawTarget) {
+  const target = resolveTarget(rawTarget)
   const lines = []
   for (const p of readParts(target)) {
     for (const l of filterMarkerLines(subst(p.src, target), target)) {
@@ -483,9 +499,10 @@ export function assemble(target) {
     '',
     '// =============================================================================',
     '//  AUTO-GENERATED - DO NOT EDIT',
-    `//  Target: ${target}`,
-    '//  Source: pine/parts*/ + pine/shared/*.pine   ->   node tools/build.mjs',
-    `//  Built : ${new Date().toISOString()}`,
+    `//  Target : ${target}`,
+    `//  Version: ${TARGETS[target]?.version ?? '1.0.0'}`,
+    '//  Source : pine/parts*/ + pine/shared/*.pine   ->   node tools/build.mjs',
+    `//  Built  : ${new Date().toISOString()}`,
     '// =============================================================================',
   ].join('\n')
 
@@ -514,7 +531,8 @@ export function assemble(target) {
   return { code: kept.map((l) => l.t).join('\n') + '\n', origin: kept }
 }
 
-export function build(target) {
+export function build(rawTarget) {
+  const target = resolveTarget(rawTarget)
   const { code } = assemble(target)
   mkdirSync(DIST, { recursive: true })
   writeFileSync(join(DIST, TARGETS[target].file), code, 'utf8')

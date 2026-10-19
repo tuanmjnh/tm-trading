@@ -25,8 +25,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 503, statusMessage: 'mongo_down', message: 'MongoDB unavailable — cancel failed' })
   }
 
+  const ownerId = requireOwnerId(event)
   const key = id.includes('order_') || id.includes('co_') ? { clientOrderId: id } : { _id: id }
-  const order = await PaperOrder.findOne(key).lean().catch(() => null)
+  // Tenancy: the lookup is scoped, so another owner's id reads as "not found"
+  // instead of leaking a 409 that confirms the order exists.
+  const order = await PaperOrder.findOne({ ...key, ownerId }).lean().catch(() => null)
   if (!order) {
     throw createError({ statusCode: 404, statusMessage: 'order_not_found', message: `Order not found: ${id}` })
   }
@@ -34,6 +37,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 409, statusMessage: 'order_not_cancelable', message: 'Order has no alert to cancel' })
   }
 
-  const result = await cancelPaperOrder({ alertKey: String(order.alertKey), by, reason })
+  const result = await cancelPaperOrder({ alertKey: String(order.alertKey), ownerId, by, reason })
   return { success: true, data: result }
 })

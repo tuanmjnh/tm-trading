@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
       symbols: asStringArray(body?.symbols),
       timeframes: asStringArray(body?.timeframes),
       market: body?.market ? String(body.market) : undefined
-    })
+    }, {}, requireOwnerId(event))
     return { success: true, data }
   } catch (err) {
     throw researchHttpError(err)

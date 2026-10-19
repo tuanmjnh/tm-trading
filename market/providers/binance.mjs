@@ -15,7 +15,7 @@
 //  No network in unit tests: inject `WebSocketImpl` (see market/test.mjs).
 // =============================================================================
 
-import { TOPICS, tradeEvent, quoteEvent, candleEvent, defaultIngest } from '../events.mjs'
+import { TOPICS, tradeEvent, quoteEvent, candleEvent, ticker24Event, defaultIngest } from '../events.mjs'
 import { assertHooks } from './contract.mjs'
 
 export const DEFAULT_WS = Object.freeze({
@@ -27,12 +27,13 @@ export const DEFAULT_BACKOFF_MS = Object.freeze([500, 1000, 2000, 5000, 10000])
 
 /**
  * Stream keys for a symbol set (Binance combined streams are lowercase).
- * @param {{symbols?:string[], trades?:boolean, bookTicker?:boolean, klineInterval?:string|null, depth?:boolean, depthSpeed?:'100ms'|'1000ms'}} [opts]
+ * @param {{symbols?:string[], trades?:boolean, bookTicker?:boolean, ticker24?:boolean, klineInterval?:string|null, depth?:boolean, depthSpeed?:'100ms'|'1000ms'}} [opts]
  */
 export function buildStreams({
   symbols = ['BTCUSDT'],
   trades = true,
   bookTicker = true,
+  ticker24 = false,
   klineInterval = null,
   depth = false,
   depthSpeed = '100ms'
@@ -44,6 +45,9 @@ export function buildStreams({
     if (!sym) throw new Error('binance: empty symbol')
     if (trades) out.push(`${sym.toLowerCase()}@trade`)
     if (bookTicker) out.push(`${sym.toLowerCase()}@bookTicker`)
+    // Rolling 24h ticker (exchange-computed window for Band-1 telemetry).
+    // Opt-in: the plane enables it explicitly; library default stays lean.
+    if (ticker24) out.push(`${sym.toLowerCase()}@ticker`)
     if (klineInterval) out.push(`${sym.toLowerCase()}@kline_${klineInterval}`)
     if (depth) out.push(`${sym.toLowerCase()}@depth@${depthSpeed}`)
   }
@@ -125,6 +129,27 @@ export function normalizeMessage(raw, { source = 'binance', market = 'futures', 
     return { topic: TOPICS.QUOTE, event }
   }
 
+  // --- 24hrTicker (rolling 24h window; exchange-computed, never derived) ---
+  if (e === '24hrTicker' || stream.endsWith('@ticker')) {
+    const need = ['c', 'o', 'h', 'l', 'v', 'q', 'p', 'P', 'n']
+    if (!need.every((k) => Number.isFinite(num(data[k])))) return null
+    const event = ticker24Event({
+      source, market: kind,
+      symbol: String(data.s || stream.split('@')[0] || '').toUpperCase(),
+      lastPrice: data.c,
+      openPrice: data.o,
+      highPrice: data.h,
+      lowPrice: data.l,
+      baseVolume: data.v,
+      quoteVolume: data.q,
+      priceChange: data.p,
+      priceChangePercent: data.P,
+      trades: data.n,
+      eventTime: Number.isFinite(num(data.E)) ? num(data.E) : ingestTime
+    }, ingestTime)
+    return { topic: TOPICS.TICKER_24H, event }
+  }
+
   // --- depth diff (feeds orderbook store, §7 book companion) ---------------
   if (e === 'depthUpdate' || (stream.includes('@depth') && Array.isArray(data.b))) {
     const eventTime = Number.isFinite(num(data.E)) ? num(data.E) : ingestTime
@@ -171,6 +196,7 @@ export function normalizeMessage(raw, { source = 'binance', market = 'futures', 
  * @param {boolean} [opts.depth=false] subscribe depth diffs too
  * @param {boolean} [opts.trades=true]
  * @param {boolean} [opts.bookTicker=true]
+ * @param {boolean} [opts.ticker24=false] subscribe rolling-24h @ticker too
  * @param {string} [opts.base] override WS base url
  * @param {WebSocket} [opts.WebSocketImpl=globalThis.WebSocket]
  * @param {readonly number[]} [opts.backoffMs=DEFAULT_BACKOFF_MS]
@@ -185,6 +211,7 @@ export function createBinanceProvider({
   depth = false,
   trades = true,
   bookTicker = true,
+  ticker24 = false,
   base,
   WebSocketImpl,
   backoffMs = DEFAULT_BACKOFF_MS,
@@ -195,8 +222,17 @@ export function createBinanceProvider({
 } = {}) {
   if (!(market in DEFAULT_WS) && !base) throw new Error(`binance: market must be ${Object.keys(DEFAULT_WS).join('|')} (got ${market})`)
   const wsBase = base || DEFAULT_WS[market]
-  const streams = buildStreams({ symbols, trades, bookTicker, klineInterval, depth })
-  const url = buildUrl(wsBase, streams)
+  // Runtime-added symbols (TradingView-style search): folded into the stream
+  // set — live sockets get a SUBSCRIBE frame, reconnects bake them into the
+  // URL, so a resubscribe never drops them.
+  const extraSymbols = []
+  const currentStreams = () => buildStreams({
+    symbols: [...symbols, ...extraSymbols],
+    trades, bookTicker, ticker24, klineInterval, depth
+  })
+  const streams = currentStreams()
+  const currentUrl = () => buildUrl(wsBase, currentStreams())
+  const url = currentUrl()
   const WS = WebSocketImpl ?? globalThis.WebSocket
   if (typeof WS !== 'function') throw new Error('binance: no WebSocket implementation available (inject WebSocketImpl)')
 
@@ -274,7 +310,7 @@ export function createBinanceProvider({
     state = 'connecting'
     stats.opened++
     let sock
-    try { sock = new WS(url) } catch (err) {
+    try { sock = new WS(currentUrl()) } catch (err) {
       state = 'disconnected'
       emitStatus({ error: err instanceof Error ? err.message : String(err) })
       scheduleReconnect()
@@ -311,7 +347,7 @@ export function createBinanceProvider({
     markets: [market],
     market,
     url,
-    streams: () => [...streams],
+    streams: () => currentStreams(),
 
     connect(hooksIn) {
       assertHooks(hooksIn)
@@ -329,7 +365,36 @@ export function createBinanceProvider({
       if (hooks) emitStatus()
     },
 
-    status: () => ({ provider: source, market, state, attempt, url, streams: streams.length, stats: { ...stats } }),
+    /**
+     * Subscribe extra symbols at runtime (TradingView-style search): folded
+     * into the stream set — a live socket gets a SUBSCRIBE frame immediately,
+     * reconnects bake them into the URL. Returns the symbols actually added
+     * (uppercased, de-duplicated, format-validated).
+     */
+    subscribeMore(rawSymbols) {
+      const list = (Array.isArray(rawSymbols) ? rawSymbols : [rawSymbols])
+        .map((s) => String(s ?? '').trim().toUpperCase())
+        .filter((s) => /^[A-Z0-9]{5,20}$/.test(s))
+      const added = []
+      const wanted = []
+      for (const sym of new Set(list)) {
+        if ([...symbols.map((x) => String(x).toUpperCase()), ...extraSymbols].includes(sym)) continue
+        extraSymbols.push(sym)
+        added.push(sym)
+      }
+      if (added.length) {
+        const params = buildStreams({
+          symbols: added, trades, bookTicker, ticker24, klineInterval, depth
+        })
+        wanted.push(...params)
+        if (ws && state === 'connected') {
+          try { ws.send(JSON.stringify({ method: 'SUBSCRIBE', params: wanted, id: Date.now() })) } catch { /* reconnect covers it */ }
+        }
+      }
+      return added
+    },
+
+    status: () => ({ provider: source, market, state, attempt, url, streams: currentStreams().length, stats: { ...stats } }),
     stats: () => ({ ...stats })
   }
 }

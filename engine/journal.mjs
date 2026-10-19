@@ -207,6 +207,9 @@ export function normalizeEntry(raw = {}) {
   const entry = {
     schema: JOURNAL_SCHEMA_VERSION,
     key: raw.key ? String(raw.key) : journalKey(raw),
+    // Tenancy (roadmap §61.3): hub user id that owns the row; a projection must
+    // carry it through or a synced journal row would be owner-less.
+    ownerId: raw.ownerId !== undefined && raw.ownerId !== null && raw.ownerId !== '' ? String(raw.ownerId) : null,
     source: str(raw.source),
     account: str(raw.account),
     sourceId: raw.externalId !== undefined && raw.externalId !== null && raw.externalId !== ''
@@ -274,6 +277,7 @@ export function fromPosition(pos, opts = {}) {
   return normalizeEntry({
     source: pos.source,
     account: pos.account,
+    ownerId: pos.ownerId,
     externalId: pos.externalId,
     id: pos._id !== undefined && pos._id !== null ? String(pos._id) : pos.id,
     symbol: pos.symbol,
@@ -339,6 +343,7 @@ export function filterJournal(entries, f = {}) {
     if (f.regime && e.regime !== f.regime) return false
     if (f.result && e.result !== f.result) return false
     if (f.account && e.account !== f.account) return false
+    if (f.ownerId && e.ownerId !== f.ownerId) return false
     if (f.engineVersion && e.engineVersion !== f.engineVersion) return false
     if (f.paramsHash && e.paramsHash !== f.paramsHash) return false
     if (f.symbol && String(e.symbol).toUpperCase() !== String(f.symbol).toUpperCase()) return false
@@ -501,6 +506,7 @@ export function journalQuery(f = {}) {
   if (f.regime) q.regime = f.regime
   if (f.result) q.result = f.result
   if (f.account) q.account = f.account
+  if (f.ownerId) q.ownerId = f.ownerId
   if (f.engineVersion) q.engineVersion = f.engineVersion
   if (f.paramsHash) q.paramsHash = f.paramsHash
   if (f.symbol) q.symbol = String(f.symbol).toUpperCase()

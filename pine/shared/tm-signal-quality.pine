@@ -1,0 +1,95 @@
+// =============================================================================
+//  SHARED SIGNAL QUALITY PRIMITIVES - used by pine/parts-tm2 (TM Indicator 2)
+//  Every helper here is PURE: no reference to inputs or globals, because the
+//  SHARED block is inserted before 01_inputs_*.pine. This is the single source of
+//  truth for the v2.1 direction-aware scoring contract:
+//
+//    * direction and strength are separate values;
+//    * LONG and SHORT scores use the same 0..100 scale and the same thresholds;
+//    * a signed feature f in [-1, 1] contributes max(f, 0) to LONG and
+//      max(-f, 0) to SHORT, so the two sides are mathematically symmetric;
+//    * gate/risk failures are reason codes, never score compensation.
+// =============================================================================
+
+f_tmClamp(float v, float lo, float hi) =>
+    math.max(lo, math.min(hi, v))
+
+// Directional support of a signed feature: one side gets the magnitude, the
+// other gets 0. No sign flipping, no negative quality score.
+f_tmLongPart(float v) =>
+    math.max(v, 0.0)
+
+f_tmShortPart(float v) =>
+    math.max(-v, 0.0)
+
+// Aggregate one side to 0..100. `weighted` is the sum of w * directional part,
+// `totalWeight` the sum of all directional weights actually enabled.
+f_tmSideScore(float weighted, float totalWeight) =>
+    totalWeight > 0.0 ? math.round(100.0 * f_tmClamp(weighted / totalWeight, 0.0, 1.0)) : 0
+
+// 0 = NO TRADE, 1 = WEAK, 2 = SETUP, 3 = STRONG, 4 = A+
+f_tmScoreLevel(int score, int noTrade, int weak, int setup, int strong) =>
+    score <= noTrade ? 0 : score <= weak ? 1 : score <= setup ? 2 : score <= strong ? 3 : 4
+
+f_tmLevelName(int level) =>
+    switch level
+        1 => "WEAK"
+        2 => "SETUP"
+        3 => "STRONG"
+        4 => "A+"
+        => "NO TRADE"
+
+// Minimum required level from the quality input string.
+f_tmMinLevel(string quality) =>
+    switch quality
+        "WEAK" => 1
+        "SETUP" => 2
+        "STRONG" => 3
+        "A+" => 4
+        => 0
+
+// Lifecycle status for the dashboard. `stage` uses the TM2_* ints from
+// 02_types_and_state_defs.pine (0 IDLE, 1 PENDING_LIMIT, 2+ OPEN).
+f_tmLiveStatus(bool signal, int stage, string reason) =>
+    signal ? "SIGNAL" : stage == 1 ? "PENDING_LIMIT" : stage >= 2 ? "OPEN" : reason == "OK" ? "NO_SETUP" : reason == "WAIT_PULLBACK" ? "WAIT_PULLBACK" : reason == "WAIT_CONFIRMATION" ? "WAIT_CONFIRMATION" : reason == "NO_DIRECTION" ? "NO_DIRECTION" : reason == "AMBIGUOUS_SETUP" ? "AMBIGUOUS_SETUP" : "BLOCKED"
+
+// Short, readable label for the reason codes standardized in the v2.1 roadmap.
+f_tmReasonLabel(string code) =>
+    switch code
+        "OK" => "OK"
+        "NO_SETUP" => "No setup"
+        "NO_DIRECTION" => "No direction"
+        "AMBIGUOUS_SETUP" => "Ambiguous setup"
+        "WAIT_CONFIRMATION" => "Wait confirmation"
+        "WAIT_PULLBACK" => "Wait pullback"
+        "BLOCKED_SCORE_LONG" => "Blocked: score (LONG)"
+        "BLOCKED_SCORE_SHORT" => "Blocked: score (SHORT)"
+        "BLOCKED_MTF" => "Blocked: HTF"
+        "BLOCKED_REGIME" => "Blocked: regime"
+        "BLOCKED_LIQUIDITY" => "Blocked: liquidity"
+        "BLOCKED_OBSTACLE" => "Blocked: obstacle"
+        "BLOCKED_OVEREXTENSION" => "Blocked: overextension"
+        "BLOCKED_NO_ATR" => "Blocked: ATR"
+        "BLOCKED_BAD_SL" => "Blocked: SL"
+        "BLOCKED_BAD_TP" => "Blocked: TP"
+        "BLOCKED_RR" => "Blocked: RR (TP2)"
+        "BLOCKED_NET_RR" => "Blocked: net RR"
+        "BLOCKED_MAX_LEV" => "Blocked: max leverage"
+        "BLOCKED_LIQUIDATION_RISK" => "Blocked: liquidation"
+        "BLOCKED_COOLDOWN" => "Blocked: cooldown"
+        "BLOCKED_DAILY_LIMIT" => "Blocked: daily limit"
+        "BLOCKED_CIRCUIT_BREAKER" => "Blocked: circuit breaker"
+        "BLOCKED_POSITION_OPEN" => "Blocked: position open"
+        "BTC_DUMPING_VETO" => "Blocked: BTC dumping"
+        "BTC_PUMPING_VETO" => "Blocked: BTC pumping"
+        "MODE_DISABLED" => "Mode disabled"
+        "MODE_REGIME_MISMATCH" => "Mode: regime mismatch"
+        "MODE_INVALIDATED" => "Mode invalidated"
+        "MODE_A_PULLBACK" => "Mode A: trend pullback"
+        "MODE_B_SWEEP" => "Mode B: sweep reversal"
+        "MODE_C_RANGE" => "Mode C: range reversion"
+        => code
+
+// Accumulate blocker codes without duplicate separators.
+f_tmBlockers(string current, string add) =>
+    add == "" or add == "OK" ? current : current == "" ? add : current + "," + add

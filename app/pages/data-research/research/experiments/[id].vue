@@ -110,6 +110,31 @@ async function decide(accept: boolean) {
   }
 }
 
+// -------- launch the governed paper-validation session (§59.15 Slice E) --------
+// The candidate runs in its own live-paper session while the baseline stays
+// live; the SERVER refuses unless the experiment is in `paper_validation` and
+// the candidate is not already the active version (D31).
+const launching = ref(false)
+const launchedSessionId = ref<string | null>(null)
+
+async function launchPaperSession() {
+  launching.value = true
+  try {
+    const res = await api.launchPaperSession(experimentId.value, {
+      instruments: experiment.value?.recommendedTest?.symbols ?? [],
+      timeframes: experiment.value?.recommendedTest?.timeframes ?? [],
+      evidenceSetId: experiment.value?.evidenceSetId ?? null
+    })
+    launchedSessionId.value = String(res.session?.sessionId ?? '') || null
+    notify.success(t('research.launch.success'), launchedSessionId.value ?? undefined)
+    await load()
+  } catch (err) {
+    notify.error(t('research.launch.action'), getErrorMessage(err, key => t(key)))
+  } finally {
+    launching.value = false
+  }
+}
+
 // -------- formatting --------
 const fmtDate = (ts: number | null | undefined) => (ts ? new Date(ts).toISOString().replace('T', ' ').slice(0, 19) : '—')
 const fmtNum = (v: number | null | undefined, digits = 2) => (typeof v === 'number' && Number.isFinite(v) ? v.toFixed(digits) : '—')
@@ -220,9 +245,79 @@ useHead({ title })
               :loading="acting"
               @click="decide(false)"
             />
+            <UButton
+              v-if="atGate"
+              icon="i-lucide-radio"
+              :label="t('research.launch.action')"
+              color="warning"
+              variant="soft"
+              size="sm"
+              :loading="launching"
+              @click="launchPaperSession"
+            />
           </template>
           <span v-else class="text-xs text-dimmed">{{ t('research.actions.terminal') }}</span>
         </div>
+
+        <p class="text-[11px] text-dimmed mt-2">{{ t('research.launch.hint') }}</p>
+      </UCard>
+
+      <!-- Provenance: which facts and which baseline (§59.15 Slice E) -->
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-2">
+            <UIcon name="i-lucide-fingerprint" class="w-4 h-4 text-primary" />
+            <h3 class="font-semibold text-sm">{{ t('research.provenance.title') }}</h3>
+          </div>
+        </template>
+
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs">
+          <div class="flex items-start justify-between gap-3">
+            <dt class="text-muted">{{ t('research.provenance.candidate') }}</dt>
+            <dd class="font-mono text-[11px] text-highlighted text-right break-all">{{ experiment.strategyVersionId || '—' }}</dd>
+          </div>
+          <div class="flex items-start justify-between gap-3">
+            <dt class="text-muted">{{ t('research.provenance.baseline') }}</dt>
+            <dd class="font-mono text-[11px] text-right break-all" :class="experiment.baselineVersionId ? 'text-highlighted' : 'text-dimmed'">
+              {{ experiment.baselineVersionId || t('research.provenance.noBaseline') }}
+            </dd>
+          </div>
+          <div class="flex items-start justify-between gap-3">
+            <dt class="text-muted">{{ t('research.provenance.evidenceSet') }}</dt>
+            <dd class="text-right">
+              <UButton
+                v-if="experiment.evidenceSetId"
+                :label="experiment.evidenceSetId"
+                size="xs"
+                color="primary"
+                variant="soft"
+                icon="i-lucide-lock"
+                class="font-mono"
+                :to="`/data-research/research/evidence/${encodeURIComponent(experiment.evidenceSetId)}`"
+              />
+              <span v-else class="text-[11px] text-dimmed">{{ t('research.provenance.noEvidence') }}</span>
+            </dd>
+          </div>
+          <div class="flex items-start justify-between gap-3">
+            <dt class="text-muted">{{ t('research.provenance.paperSessions') }}</dt>
+            <dd class="flex flex-wrap gap-1 justify-end">
+              <UButton
+                v-for="sid in experiment.paperSessionIds ?? []"
+                :key="sid"
+                :label="sid"
+                size="xs"
+                color="info"
+                variant="soft"
+                icon="i-lucide-layers"
+                class="font-mono"
+                :to="`/sessions/${encodeURIComponent(sid)}`"
+              />
+              <span v-if="!(experiment.paperSessionIds ?? []).length" class="text-[11px] text-dimmed">
+                {{ t('research.provenance.noPaperSessions') }}
+              </span>
+            </dd>
+          </div>
+        </dl>
       </UCard>
 
       <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">

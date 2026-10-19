@@ -1,7 +1,10 @@
 import type {
   ArmRole,
+  EvidenceSet,
   Experiment,
   ExperimentResearch,
+  FreezeEvidenceInput,
+  PaperValidationLaunch,
   Proposal,
   StrategyResearch
 } from '~~/types/research'
@@ -118,5 +121,77 @@ export const useResearch = () => {
     return res.data
   }
 
-  return { proposals, strategy, experiments, experiment, createExperiment, runArm, move, decide }
+  // -------- Evidence sets (§59.15 Slice E) --------
+
+  /** Frozen evidence sets. Fail-soft: an unavailable store reads as "none yet". */
+  async function evidenceSets(options: { kind?: string; sessionId?: string; strategyVersionId?: string; limit?: number } = {}): Promise<EvidenceSet[]> {
+    try {
+      const res = await $fetch<{ success: boolean; data: EvidenceSet[] }>('/api/v1/research/evidence-sets', {
+        params: {
+          kind: options.kind || undefined,
+          sessionId: options.sessionId || undefined,
+          strategyVersionId: options.strategyVersionId || undefined,
+          limit: options.limit ?? 50
+        }
+      })
+      return res.data ?? []
+    } catch {
+      return []
+    }
+  }
+
+  /** One set with its integrity + sufficiency verdicts computed on read. */
+  async function evidenceSet(id: string): Promise<EvidenceSet | null> {
+    try {
+      const res = await $fetch<{ success: boolean; data: EvidenceSet | null }>(
+        `/api/v1/research/evidence-sets/${encodeURIComponent(id)}`
+      )
+      return res.data ?? null
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Freeze the evidence of one source. A repeat freeze returns the set that
+   * already exists rather than forking a second version of the same run (D3).
+   */
+  async function freezeEvidence(input: FreezeEvidenceInput): Promise<EvidenceSet> {
+    const res = await $fetch<{ success: boolean; data?: EvidenceSet; error?: string }>(
+      '/api/v1/research/evidence-sets',
+      { method: 'POST', body: input }
+    )
+    if (!res.success || !res.data) throw new Error(res.error || 'freeze-failed')
+    return res.data
+  }
+
+  /**
+   * Launch the governed paper-validation session for a candidate. The SERVER
+   * decides whether the experiment may be validated (it must be in
+   * `paper_validation` and the candidate must not already be live — D31), so
+   * this can only report the refusal, never bypass it.
+   */
+  async function launchPaperSession(id: string, input: Record<string, unknown> = {}): Promise<PaperValidationLaunch> {
+    const res = await $fetch<{ success: boolean; data?: PaperValidationLaunch; error?: string }>(
+      `/api/v1/research/experiments/${encodeURIComponent(id)}/paper-session`,
+      { method: 'POST', body: input }
+    )
+    if (!res.success || !res.data) throw new Error(res.error || 'paper-session-failed')
+    return res.data
+  }
+
+  return {
+    proposals,
+    strategy,
+    experiments,
+    experiment,
+    createExperiment,
+    runArm,
+    move,
+    decide,
+    evidenceSets,
+    evidenceSet,
+    freezeEvidence,
+    launchPaperSession
+  }
 }

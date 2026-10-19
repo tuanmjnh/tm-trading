@@ -52,6 +52,8 @@ export interface Proposal {
   evidence: ProposalEvidence[]
   risks: string[]
   recommendedTest: RecommendedTest
+  /** §59.15 Slice E — the frozen set this hypothesis was derived from. */
+  evidenceSetId?: string | null
   schemaVersion?: string
   status?: string
   generation?: unknown
@@ -116,6 +118,12 @@ export interface Experiment {
   experimentId?: string
   proposalId?: string
   strategyVersionId?: string | null
+  /** §59.15 Slice E — the frozen evidence set the hypothesis came from. */
+  evidenceSetId?: string | null
+  /** §59.15 Slice E — the version this candidate must beat (frozen at proposal time). */
+  baselineVersionId?: string | null
+  /** §59.15 Slice E — paper-validation sessions launched for this candidate. */
+  paperSessionIds?: string[]
   hypothesis?: string
   changes?: ProposalChange[]
   evidence?: ProposalEvidence[]
@@ -145,6 +153,120 @@ export interface StrategyResearch {
   experiments: Experiment[]
   proposals: Proposal[]
   mongo: 'up' | 'down'
+}
+
+// -----------------------------------------------------------------------------
+//  Research Evidence Sets (§59.15 Slice E)
+// -----------------------------------------------------------------------------
+
+/** The four sources an evidence set can freeze. A session is not a run. */
+export type EvidenceKind = 'paper-session' | 'replay-session' | 'backtest-run' | 'dataset'
+
+/** Session states whose evidence is reproducible — a live session is still moving. */
+export type EvidenceSealedState = 'completed' | 'failed' | 'halted'
+
+/** One closed trade inside a frozen set; an unmeasured value stays null (D12). */
+export interface EvidenceTrade {
+  key: string
+  symbol: string
+  dir: 1 | -1 | null
+  qty: number | null
+  entryPrice: number | null
+  exitPrice: number | null
+  entryTime: number | null
+  exitTime: number | null
+  pnlAbs: number | null
+  fees: number | null
+  exitReason: string | null
+  strategyVersionId: string | null
+  sessionId: string | null
+  rMultiple: number | null
+  paramsHash: string | null
+  engineVersion: string | null
+}
+
+/** Sample-size honest outcome block — `sufficient` gates any claim (D12). */
+export interface EvidenceMetrics {
+  trades: number
+  wins: number
+  losses: number
+  winRate: number | null
+  netPnlAbs: number | null
+  expectancyR: number | null
+  totalR: number | null
+  rMeasured: number
+  pnlMeasured: number
+  minTrades: number
+  sufficient: boolean
+}
+
+/** Hash re-verification verdict, computed on read (never stored). */
+export interface EvidenceIntegrity {
+  ok: boolean
+  code: string | null
+}
+
+/** May this set support a conclusion yet? */
+export interface EvidenceSufficiency {
+  sufficient: boolean
+  trades: number
+  minTrades: number
+  reasons: string[]
+}
+
+/**
+ * A frozen evidence set. `hash` covers every field that could change a
+ * conclusion; `usedByExperimentIds` is the append-only citation list and lives
+ * outside it. `alreadyFrozen`/`sourceChanged` are added by the freeze endpoint.
+ */
+export interface EvidenceSet {
+  _id: string
+  setId: string
+  kind: EvidenceKind
+  sourceId: string
+  sessionId: string | null
+  state: string | null
+  sealed: boolean
+  accountId: string | null
+  strategyVersionId: string | null
+  instruments: string[]
+  timeframes: string[]
+  manifest: Record<string, unknown> | null
+  counts: { orders: number; fills: number; trades: number }
+  keys?: Record<string, string[]>
+  trades?: EvidenceTrade[]
+  metrics: EvidenceMetrics
+  dataQuality: { state: string; datasets: string[] }
+  limitations: string[]
+  pointInTime: { frozenAt: number; sessionStartedAt: number | null; sessionStoppedAt: number | null }
+  hash: string
+  frozen: boolean
+  immutable?: boolean
+  schemaVersion: string
+  usedByExperimentIds?: string[]
+  createdBy?: string | null
+  createdAt?: number | null
+  // freeze-endpoint extras
+  alreadyFrozen?: boolean
+  sourceChanged?: boolean
+  // read-endpoint extras
+  integrity?: EvidenceIntegrity
+  sufficiency?: EvidenceSufficiency
+}
+
+/** Freeze request body. */
+export interface FreezeEvidenceInput {
+  kind?: EvidenceKind
+  sourceId: string
+  notes?: string[]
+  createdBy?: string | null
+}
+
+/** Result of launching a governed paper-validation session (§59.15 Slice E). */
+export interface PaperValidationLaunch {
+  session: Record<string, unknown> & { sessionId?: string }
+  experimentId: string
+  candidateVersionId: string
 }
 
 /** GET /research/experiments/:id — experiment + comparison + acceptance. */

@@ -17,7 +17,7 @@ import { startTestRun, testRunHttpError } from '~~/server/utils/testRuns'
 export default defineEventHandler(async (event) => {
   const body = await readBody(event).catch(() => null)
   try {
-    return { success: true, data: await startTestRun(body) }
+    return { success: true, data: await startTestRun(body, {}, requireOwnerId(event)) }
   } catch (err) {
     throw testRunHttpError(err)
   }

@@ -80,8 +80,15 @@ export async function enrichPosition(
   const marginUsed = margin.initialMarginFor(item, m)
   if (marginUsed !== null) out.marginUsed = marginUsed
 
-  const lev = margin.leverageOf(m)
-  if (lev.ok) out.leverage = lev.leverage
+  // Per-position intent wins for display (v3 §17.1b); legacy docs fall back
+  // to the account model — the same rule initialMarginFor applies above.
+  const plev = margin.positionLeverage(item)
+  if (plev !== null) {
+    out.leverage = plev
+  } else {
+    const lev = margin.leverageOf(m)
+    if (lev.ok) out.leverage = lev.leverage
+  }
 
   return out
 }

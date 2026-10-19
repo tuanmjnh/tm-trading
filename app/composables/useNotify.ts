@@ -20,43 +20,48 @@ interface HubNotificationItem {
   created_at: string
 }
 
-export const useNotify = () => {
+// useNotify() is consumed by ~48 components (most only for the toast helpers).
+// The notification FEED lives in `useNotifyFeed()` — shared app-wide through
+// useState — while the toast helpers stay in `useNotify()`. The split lets the
+// lifecycle run from a client plugin (`plugins/notify.client.ts`, U3) without
+// dragging `useToast()` (which `inject()`s) into a plugin scope.
+const notifyIcons: Record<string, string> = {
+  order: 'i-lucide-shopping-cart',
+  inventory: 'i-lucide-package',
+  payment: 'i-lucide-credit-card',
+  system: 'i-lucide-settings',
+  security: 'i-lucide-shield-alert',
+  user: 'i-lucide-user',
+  default: 'i-lucide-bell'
+}
+
+const notifyColors: Record<string, 'neutral' | 'primary' | 'error' | 'success' | 'warning' | 'info'> = {
+  low: 'neutral',
+  normal: 'primary',
+  high: 'error'
+}
+
+const getNotifyIcon = (type: string): string => notifyIcons[type] || notifyIcons.default!
+const getNotifyColor = (priority: string) =>
+  notifyColors[priority] || 'primary'
+
+const PAGE_SIZE = 20
+
+// Collapse concurrent feed resets (the plugin's boot fetch and the auth watcher
+// can fire together) into a single hub request. Module-scoped so every
+// `useNotifyFeed()` caller shares one in-flight promise.
+let notifyInFlight: Promise<NotificationItem[]> | null = null
+
+export const useNotifyFeed = () => {
   const auth = useAuth()
   const { hubFetch, appId } = useHub()
-  // Capture once during setup — useToast() uses inject() and must not be
-  // called later from async handlers (loses currentInstance → Vue warn).
-  const toast = useToast()
 
-  const getNotifyIcon = (type: string): string => {
-    const icons: Record<string, string> = {
-      order: 'i-lucide-shopping-cart',
-      inventory: 'i-lucide-package',
-      payment: 'i-lucide-credit-card',
-      system: 'i-lucide-settings',
-      security: 'i-lucide-shield-alert',
-      user: 'i-lucide-user',
-      default: 'i-lucide-bell'
-    }
-    return (icons[type] || icons.default) as string
-  }
-
-  const getNotifyColor = (priority: string): 'neutral' | 'primary' | 'error' | 'success' | 'warning' | 'info' => {
-    const colors: Record<string, 'neutral' | 'primary' | 'error' | 'success' | 'warning' | 'info'> = {
-      low: 'neutral',
-      normal: 'primary',
-      high: 'error'
-    }
-    return colors[priority] || 'primary'
-  }
-
-  const notify = ref<NotificationItem[]>([])
+  const notify = useState<NotificationItem[]>('notify:items', () => [])
   const unreadCount = computed(() => notify.value.filter(n => n.unread).length)
-  const isLoading = ref(false)
-  const isLoadingMore = ref(false)
-  const nextCursor = ref<string | null>(null)
-  const hasMore = ref(true)
-
-  const PAGE_SIZE = 20
+  const isLoading = useState<boolean>('notify:loading', () => false)
+  const isLoadingMore = useState<boolean>('notify:loadingMore', () => false)
+  const nextCursor = useState<string | null>('notify:nextCursor', () => null)
+  const hasMore = useState<boolean>('notify:hasMore', () => true)
 
   const mapItems = (list: HubNotificationItem[]): NotificationItem[] => list.map(n => ({
     id: n.id,
@@ -68,14 +73,7 @@ export const useNotify = () => {
     sender: { name: n.title, avatar: n.icon }
   }))
 
-  const fetchNotify = async (reset = true) => {
-    if (!auth.user.value) return []
-    if (!reset) {
-      if (isLoadingMore.value || !hasMore.value) return notify.value
-      isLoadingMore.value = true
-    } else {
-      isLoading.value = true
-    }
+  const runFetch = async (reset: boolean): Promise<NotificationItem[]> => {
     try {
       const query: Record<string, string> = { limit: String(PAGE_SIZE) }
       if (!reset && nextCursor.value) query.cursor = nextCursor.value
@@ -98,7 +96,21 @@ export const useNotify = () => {
     } finally {
       isLoading.value = false
       isLoadingMore.value = false
+      notifyInFlight = null
     }
+  }
+
+  const fetchNotify = (reset = true): Promise<NotificationItem[]> => {
+    if (!auth.user.value) return Promise.resolve([])
+    if (!reset) {
+      if (isLoadingMore.value || !hasMore.value) return Promise.resolve(notify.value)
+      isLoadingMore.value = true
+      return runFetch(false)
+    }
+    if (notifyInFlight) return notifyInFlight
+    isLoading.value = true
+    notifyInFlight = runFetch(true)
+    return notifyInFlight
   }
 
   const loadMoreNotify = () => fetchNotify(false)
@@ -157,6 +169,32 @@ export const useNotify = () => {
     }
   }
 
+  const refresh = async () => {
+    await fetchNotify()
+  }
+
+  return {
+    notify,
+    unreadCount,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    nextCursor,
+    fetchNotify,
+    loadMoreNotify,
+    markAsRead,
+    markAllAsRead,
+    deleteNotify,
+    refresh
+  }
+}
+
+export const useNotify = () => {
+  const feed = useNotifyFeed()
+  // Capture once during setup — useToast() uses inject() and must not be
+  // called later from async handlers (loses currentInstance → Vue warn).
+  const toast = useToast()
+
   const showToast = (notification: NotificationItem) => {
     toast.add({
       title: notification.sender?.name || 'System',
@@ -183,40 +221,8 @@ export const useNotify = () => {
     toast.add({ title, description, icon: 'i-lucide-info', color: 'info', duration: 4000 })
   }
 
-  const refresh = async () => {
-    await fetchNotify()
-  }
-
-  // Setup auto-fetch if mounted
-  if (import.meta.client) {
-    onMounted(() => {
-      if (auth.user.value) {
-        fetchNotify()
-      }
-    })
-  }
-
-  watch(() => auth.user.value, (newUser) => {
-    if (newUser) {
-      refresh()
-    } else {
-      notify.value = []
-    }
-  })
-
   return {
-    notify,
-    unreadCount,
-    isLoading,
-    isLoadingMore,
-    hasMore,
-    nextCursor,
-    fetchNotify,
-    loadMoreNotify,
-    markAsRead,
-    markAllAsRead,
-    deleteNotify,
-    refresh,
+    ...feed,
     showToast,
     getNotifyIcon,
     getNotifyColor,

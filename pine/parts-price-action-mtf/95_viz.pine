@@ -1,0 +1,186 @@
+// =============================================================================
+//  L11 - VISUALIZATION  (chuuan parts-xau/80_viz.pine)
+//  - Master switch pa_showViz gate MOI diem ve
+//  - table.clear moi bar cuoi; key gray-10 / value silver / bg trong suot
+//  - Dashboard 2 x 23, dong Session (London/NY...) bat buoc
+// =============================================================================
+
+// Entry markers
+plotshape(pa_showViz and pa_showSig and pa_evEntry and pa_posDir == 1,  title = "LONG",  style = shape.triangleup,   location = location.belowbar, color = pa_cBull, size = size.small, text = "L", textcolor = pa_cBull, force_overlay = true)
+plotshape(pa_showViz and pa_showSig and pa_evEntry and pa_posDir == -1, title = "SHORT", style = shape.triangledown, location = location.abovebar, color = pa_cBear, size = size.small, text = "S", textcolor = pa_cBear, force_overlay = true)
+
+// TP/SL hit labels
+if pa_showViz and pa_showHit and pa_evTp == 1
+    label.new(bar_index, pa_posTp1, "TP1+", style = label.style_label_left, color = color.new(pa_cBull, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if pa_showViz and pa_showHit and pa_evTp == 2
+    label.new(bar_index, pa_posTp2, "TP2+", style = label.style_label_left, color = color.new(pa_cBull, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if pa_showViz and pa_showHit and pa_evTp == 3
+    label.new(bar_index, pa_posTp3, "TP3+", style = label.style_label_left, color = color.new(pa_cBull, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if pa_showViz and pa_showHit and pa_evSl
+    label.new(bar_index, pa_posSl,  "SL-",  style = label.style_label_left, color = color.new(pa_cBear, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+
+// Active position zone boxes
+var box  pa_bxSl    = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(color.gray, 60),  bgcolor = color.new(color.gray, 88),  force_overlay = true)
+var box  pa_bxTp1   = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(pa_cBull, 50),   bgcolor = color.new(pa_cBull, 90),   force_overlay = true)
+var box  pa_bxTp2   = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(pa_cBull, 60),   bgcolor = color.new(pa_cBull, 93),   force_overlay = true)
+var box  pa_bxTp3   = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(pa_cBull, 70),   bgcolor = color.new(pa_cBull, 95),   force_overlay = true)
+var line pa_lnEntry = line.new(bar_index, 0.0, bar_index + 1, 0.0, color = color.new(color.silver, 30), style = line.style_dashed, force_overlay = true)
+var label pa_lbInfo = label.new(bar_index, 0.0, "", style = label.style_label_left, color = color.new(color.gray, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+
+int   pa_right = pa_posDir != 0 and not na(pa_posBar) ? pa_posBar + pa_zoneLen : bar_index + 1
+color pa_base  = pa_posDir == 1 ? pa_cBull : pa_cBear
+
+if pa_showViz and pa_showZone and pa_posDir != 0 and not na(pa_posBar)
+    int safePosBar = math.max(bar_index - 300, pa_posBar)
+    box.set_lefttop(pa_bxSl,  safePosBar, math.max(pa_posEntry, pa_posSl))
+    box.set_rightbottom(pa_bxSl, pa_right, math.min(pa_posEntry, pa_posSl))
+    box.set_lefttop(pa_bxTp1, safePosBar, math.max(pa_posEntry, pa_posTp1))
+    box.set_rightbottom(pa_bxTp1, pa_right, math.min(pa_posEntry, pa_posTp1))
+    box.set_lefttop(pa_bxTp2, safePosBar, math.max(pa_posEntry, pa_posTp2))
+    box.set_rightbottom(pa_bxTp2, pa_right, math.min(pa_posEntry, pa_posTp2))
+    box.set_lefttop(pa_bxTp3, safePosBar, math.max(pa_posEntry, pa_posTp3))
+    box.set_rightbottom(pa_bxTp3, pa_right, math.min(pa_posEntry, pa_posTp3))
+    line.set_xy1(pa_lnEntry, safePosBar, pa_posEntry)
+    line.set_xy2(pa_lnEntry, pa_right,  pa_posEntry)
+    label.set_xy(pa_lbInfo, pa_right, pa_posTp3)
+    string posLabel = (pa_posDir == 1 ? "LONG" : "SHORT") + "\nE " + f_fmtPx(pa_posEntry) + "\nSL " + f_fmtPx(pa_posSl) + "\nTP3 " + f_fmtPx(pa_posTp3)
+    label.set_text(pa_lbInfo, posLabel)
+    label.set_color(pa_lbInfo, color.new(pa_base, 10))
+else
+    box.set_lefttop(pa_bxSl,  bar_index, na)
+    box.set_rightbottom(pa_bxSl,  bar_index, na)
+    box.set_lefttop(pa_bxTp1, bar_index, na)
+    box.set_rightbottom(pa_bxTp1, bar_index, na)
+    box.set_lefttop(pa_bxTp2, bar_index, na)
+    box.set_rightbottom(pa_bxTp2, bar_index, na)
+    box.set_lefttop(pa_bxTp3, bar_index, na)
+    box.set_rightbottom(pa_bxTp3, bar_index, na)
+    line.set_xy1(pa_lnEntry, bar_index, na)
+    line.set_xy2(pa_lnEntry, bar_index + 1, na)
+    label.set_xy(pa_lbInfo, bar_index, na)
+    label.set_text(pa_lbInfo, "")
+
+// EMA 20/50/200 tren gia (overlay)
+plot(pa_showViz and pa_showEma ? pa_emaF : na, "EMA fast", color = color.new(color.teal, 0),   linewidth = 1, force_overlay = true)
+plot(pa_showViz and pa_showEma ? pa_emaM : na, "EMA mid",  color = color.new(color.orange, 0), linewidth = 1, force_overlay = true)
+plot(pa_showViz and pa_showEma ? pa_emaS : na, "EMA slow", color = color.new(color.red, 20),   linewidth = 1, force_overlay = true)
+
+// VWAP (overlay)
+plot(pa_showViz and pa_showVwap and pa_vwapOk ? pa_vwap : na, "VWAP", color = color.new(#b388ff, 0), linewidth = 1, style = plot.style_linebr, force_overlay = true)
+
+// @part skip:pa-mtf-strategy
+// Volume pane - VSA 6 bucket + MA
+pa_volCol = f_vsaColor(pa_vol, pa_volMA, pa_vol_spikeR, pa_vol_rVH, pa_vol_rH, pa_vol_rN, pa_vol_rL)
+plot(pa_showViz and pa_showVol ? pa_vol : na,   "Volume",    color = pa_volCol, style = plot.style_columns, format = format.volume)
+plot(pa_showViz and pa_vol_showMA ? pa_volMA : na, "Volume MA", color = color.new(color.green, 0), linewidth = 1, format = format.volume)
+// @part end
+
+// =============================================================================
+//  DASHBOARD  (2 x 27)
+// =============================================================================
+
+var table pa_tbl = na
+if pa_showViz and pa_showDash and na(pa_tbl)
+    pa_tbl := table.new(position.top_right, 2, 27, border_width = 1, border_color = color.new(color.gray, 70), force_overlay = true)
+
+pa_font = pa_dashSize == "Tiny" ? size.tiny : pa_dashSize == "Small" ? size.small : size.normal
+
+if not na(pa_tbl) and barstate.islast
+    color kC = color.new(color.gray, 10)
+    color vC = color.silver
+    color bg = color.new(color.black, 100)
+    table.clear(pa_tbl, 0, 0, 1, 26)
+
+    table.cell(pa_tbl, 0,  0, "PRICE ACTION MTF  " + syminfo.ticker, text_color = color.orange, text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1,  0, timeframe.period + "m",       text_color = vC,           text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    color sCol = pa_score100 <= pa_scr_noTrade ? color.gray : pa_dir == 1 ? pa_cBull : pa_cBear
+    table.cell(pa_tbl, 0,  1, "Score",                      text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1,  1, str.tostring(pa_score100) + " / " + pa_quality, text_color = sCol, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0,  2, "Huong",                      text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1,  2, pa_dir == 1 ? "LONG" : pa_dir == -1 ? "SHORT" : "-", text_color = pa_dir == 1 ? pa_cBull : pa_dir == -1 ? pa_cBear : color.gray, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0,  3, "Structure",                  text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1,  3, pa_trend == 1 ? "Bullish" : pa_trend == -1 ? "Bearish" : "Ranging", text_color = pa_trend == 1 ? pa_cBull : pa_trend == -1 ? pa_cBear : color.gray, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    string structEvt = pa_bosUp or pa_bosDown ? "BOS" : pa_chochUp or pa_chochDown ? "CHoCH" : pa_mssUp or pa_mssDown ? "MSS" : "-"
+    table.cell(pa_tbl, 0,  4, "BOS / CHoCH / MSS",          text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1,  4, structEvt, text_color = (pa_bosUp or pa_chochUp or pa_mssUp) ? pa_cBull : (pa_bosDown or pa_chochDown or pa_mssDown) ? pa_cBear : color.gray, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0,  5, "Retest / Fail",              text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1,  5, pa_retestBull or pa_retestBear ? "RETEST" : pa_failBull or pa_failBear ? "FAILBRK" : "-", text_color = pa_retestBull or pa_failBear ? pa_cBull : pa_retestBear or pa_failBull ? pa_cBear : color.gray, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0,  6, "Event moi nhat",             text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    string pa_evtTxt = "-"
+    color pa_evtCol = color.gray
+    if array.size(pa_evtBuf) > 0
+        PaEvent pa_lastEvt = array.get(pa_evtBuf, array.size(pa_evtBuf) - 1)
+        pa_evtTxt := pa_lastEvt.kind + " " + (pa_lastEvt.dir == "bull" ? "+" : "-") + (pa_lastEvt.confirmed ? "" : "?")
+        pa_evtCol := pa_lastEvt.dir == "bull" ? pa_cBull : pa_cBear
+    table.cell(pa_tbl, 1,  6, pa_evtTxt, text_color = pa_evtCol, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0,  7, "Context TF (" + pa_ctxTf + ")", text_color = kC, text_size = pa_font, text_halign = text.align_left, bgcolor = bg)
+    table.cell(pa_tbl, 1,  7, pa_htfVeto ? "VETO" : pa_ctxDir == 1 ? "Bull" : pa_ctxDir == -1 ? "Bear" : "-", text_color = pa_htfVeto ? color.red : pa_ctxDir == 1 ? pa_cBull : pa_ctxDir == -1 ? pa_cBear : color.gray, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0,  8, "Setup TF (" + pa_setupTf + ")", text_color = kC, text_size = pa_font, text_halign = text.align_left, bgcolor = bg)
+    table.cell(pa_tbl, 1,  8, pa_setupDir == 1 ? "Bull" : pa_setupDir == -1 ? "Bear" : "-", text_color = pa_setupDir == 1 ? pa_cBull : pa_setupDir == -1 ? pa_cBear : color.gray, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0,  9, "Liquidity",                  text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1,  9, pa_sweepBull ? "Sweep+" : pa_sweepBear ? "Sweep-" : "-", text_color = pa_sweepBull ? pa_cBull : pa_sweepBear ? pa_cBear : color.gray, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0, 10, "PDH / PDL",                  text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1, 10, f_fmtPx(pa_pdh) + " / " + f_fmtPx(pa_pdl), text_color = vC, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0, 11, "PWH / PWL",                  text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1, 11, f_fmtPx(pa_pwh) + " / " + f_fmtPx(pa_pwl), text_color = vC, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0, 12, "Sess Hi / Lo",               text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1, 12, (na(pa_sessHi) ? "-" : f_fmtPx(pa_sessHi)) + " / " + (na(pa_sessLo) ? "-" : f_fmtPx(pa_sessLo)), text_color = vC, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0, 13, "Trendline touch",            text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1, 13, str.tostring(pa_tlLoTouch) + " up / " + str.tostring(pa_tlHiTouch) + " dn", text_color = vC, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    string cpLabel = pa_dispBullV ? "Displacement+" : pa_dispBearV ? "Displacement-" : pa_bullEng ? "Engulf+" : pa_bearEng ? "Engulf-" : pa_bullPin ? "Pin+" : pa_bearPin ? "Pin-" : pa_bullRej ? "Rej+" : pa_bearRej ? "Rej-" : "-"
+    table.cell(pa_tbl, 0, 14, "Candle",                     text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1, 14, cpLabel, text_color = pa_cpScore > 0 ? pa_cBull : pa_cpScore < 0 ? pa_cBear : color.gray, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0, 15, "Volume / Bucket",            text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1, 15, str.tostring(pa_volRatio, "#.##") + "x / " + pa_volBucket, text_color = pa_isTim ? color.purple : vC, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0, 16, "RelVol / OBV",               text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1, 16, str.tostring(pa_relVol, "#.##") + "x / " + (pa_obvSlope > 0 ? "+" : pa_obvSlope < 0 ? "-" : "0"), text_color = pa_obvScore > 0 ? pa_cBull : pa_obvScore < 0 ? pa_cBear : vC, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0, 17, "RSI / MACD",                 text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1, 17, str.tostring(pa_rsi, "#.#") + " / " + str.tostring(pa_macdHist, format.mintick), text_color = pa_rsi < pa_rsiOs ? pa_cBull : pa_rsi > pa_rsiOb ? pa_cBear : vC, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0, 18, "ADX / DMI",                  text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1, 18, str.tostring(pa_adx, "#.#") + " / " + (pa_diPlus > pa_diMinus ? "+" : "-"), text_color = pa_adx >= pa_adxMin ? color.purple : vC, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0, 19, "ATR% / BBW",                 text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1, 19, str.tostring(pa_atrPct, "#.##") + "% / " + str.tostring(pa_bbWidth, "#.##") + (pa_bbExpand ? " Exp" : " Ctr"), text_color = vC, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0, 20, "VWAP / Vi tri ngay",         text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1, 20, (pa_vwapOk ? f_fmtPx(pa_vwap) : "-") + " / " + str.tostring(f_clamp(pa_dayRange, -1.0, 1.0), "+#.##;-#.##"), text_color = pa_vwapScore > 0 ? pa_cBull : pa_vwapScore < 0 ? pa_cBear : vC, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0, 21, "Session",                    text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1, 21, pa_sessName, text_color = pa_sessOverlap ? color.orange : pa_sessNy ? color.yellow : vC, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0, 22, "Vi the / ngay / W-L",        text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    string posTxt = (pa_posDir == 1 ? "LONG" : pa_posDir == -1 ? "SHORT" : "-") + " / " + str.tostring(pa_dayCount) + "/" + str.tostring(pa_maxDay) + " / " + str.tostring(pa_statWins) + "-" + str.tostring(pa_statLosses)
+    table.cell(pa_tbl, 1, 22, posTxt, text_color = pa_posDir == 1 ? pa_cBull : pa_posDir == -1 ? pa_cBear : vC, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0, 23, "Hop tu (Confluence)",        text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    color cfCol = pa_confluenceScore == 3 ? color.green : pa_confluenceScore == 2 ? color.orange : color.gray
+    table.cell(pa_tbl, 1, 23, str.tostring(pa_confluenceScore) + " / 3", text_color = cfCol, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0, 24, "Regime",                     text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    color regCol = pa_regime == "TRENDING" ? color.teal : pa_regime == "RANGING" ? color.yellow : color.red
+    table.cell(pa_tbl, 1, 24, pa_regime + (pa_isSqueeze ? " [SQZ]" : ""), text_color = regCol, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0, 25, "Engulf streak",              text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1, 25, str.tostring(pa_engulfStreak) + (pa_streakBonus > 0 ? " (+" + str.tostring(pa_streakBonus, "#.#") + ")" : ""), text_color = pa_engulfStreak >= 2 ? color.purple : vC, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+
+    table.cell(pa_tbl, 0, 26, "TP Mode / Pattern",          text_color = kC,   text_size = pa_font, text_halign = text.align_left,  bgcolor = bg)
+    table.cell(pa_tbl, 1, 26, (pa_tpMode == "Theo R" ? "R" : "MM") + " / " + pa_patKind, text_color = vC, text_size = pa_font, text_halign = text.align_right, bgcolor = bg)
+

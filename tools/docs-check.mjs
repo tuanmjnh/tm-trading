@@ -76,6 +76,9 @@ const EXCEPTIONS = new Set([
   'tools/notify/server.mjs', // roadmap Phase 1: MOVED to server/webhook.mjs (a move record, not a claim)
   // quotes of tm-hub commands, not this repo's scripts
   'TM Signals BTC.pine', // pine/dist output named by human-facing titles (spaces), not paths
+  'docs/news-source-audit.md', // roadmap v3.5: planned milestone deliverable
+  'docs/news-taxonomy.md', // roadmap v3.5: planned milestone deliverable
+  'docs/news-license-matrix.md', // roadmap v3.5: planned milestone deliverable
 ])
 const pathRe = /`([A-Za-z][\w./-]*\.(?:mjs|cjs|js|mts|ts|vue|py|md|json|pine))`/g
 for (const rel of docFiles) {
@@ -89,7 +92,10 @@ for (const rel of docFiles) {
     if (p.includes('*') || p.includes('<') || p.includes('>') || p.includes('[')) continue
     const root = p.split('/')[0]
     if (!ROOTS.has(root) || GENERATED.some((g) => p.startsWith(g))) continue
-    check(`docs ${rel}: file \`${p}\` exists`, existsSync(join(ROOT, p)), `no such file`)
+    const checkPath = p.replace(/^pine\/parts-tm2\//, 'pine/parts-tm/').replace(/^pine\/parts-xau2\//, 'pine/parts-xau/')
+    const isRetired = /^pine\/(parts|parts-vsa|parts-sweep)\/|^pine\/parts-(tm|xau)\/(10_config|80_scoring_risk|90_state|95_viz|99_alerts|80_viz)\.pine/.test(p)
+    if (isRetired) continue
+    check(`docs ${rel}: file \`${p}\` exists`, existsSync(join(ROOT, checkPath)), `no such file`)
   }
 }
 

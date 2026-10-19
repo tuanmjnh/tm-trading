@@ -5,6 +5,9 @@ import mongoose from 'mongoose'
 
 const EquitySchema = new mongoose.Schema(
   {
+    // Tenancy (roadmap §61.3): the equity snapshot belongs to the desk owner.
+    ownerId: { type: String, default: null, index: true },
+
     account: { type: String, required: true },
     ts: { type: Date, required: true },
 

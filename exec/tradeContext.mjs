@@ -58,6 +58,8 @@ export function tradeContextRecord({ position, close, venue = null, now } = {}) 
     tradeContextId,
     tradeId,
     accountId: position.account ?? null,
+    // Tenancy (roadmap §61.3): the trade context belongs to the position owner.
+    ownerId: position.ownerId ?? null,
 
     // --- §26.6 identity: never guessed --------------------------------------
     strategyVersionId: position.strategyVersionId ?? null, // §29: from the position, written at open time (null = never declared — stays honest)

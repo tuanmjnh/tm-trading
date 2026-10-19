@@ -28,6 +28,8 @@ export function notificationLogDoc({ event = {}, route, attempts = [], delivered
   return {
     _id: `${route.notifyId}:${at}`,
     notifyId: route.notifyId,
+    // Tenancy (roadmap §61.3): the log row belongs to the owner whose rule fired.
+    ownerId: event.ownerId != null ? String(event.ownerId) : null,
     dedupeKey: route.dedupeKey,
     kind: route.kind,
     priority: route.priority,

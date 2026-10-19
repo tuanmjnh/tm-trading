@@ -12,6 +12,8 @@ const StrategyVersionSchema = new mongoose.Schema(
     strategyVersionId: { type: String, required: true, index: true },
     strategyId: { type: String, required: true, index: true },
     version: { type: String, required: true },
+    // Tenancy (roadmap §61.3): strategy versions are user-scoped.
+    ownerId: { type: String, default: null, index: true },
 
     engineVersion: { type: String, default: null },
     paramsHash: { type: String, required: true, index: true },

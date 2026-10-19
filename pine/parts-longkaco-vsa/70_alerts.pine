@@ -1,0 +1,13 @@
+// =============================================================================
+//  LAYER 7 - ALERTS : 1 dieu kien = 1 loai canh bao, message ASCII + ten tuy bien
+//  A-P0-1: them canh bao "LK VSA NO SWEEP" (setup bi loai vi thieu bar sweep)
+//  A-P1-3: them canh bao "LK VSA CLX-E" (climax tai vung TP -> canh chot)
+// =============================================================================
+alertcondition(tm_sigSV, "LK VSA SV", "LK VSA SV · {{ticker}} · {{interval}} · dung lai")
+alertcondition(tm_sigBC, "LK VSA BC", "LK VSA BC · {{ticker}} · {{interval}} · muc dot bien")
+alertcondition(tm_sigSTl, "LK VSA ST LONG", "LK VSA ST LONG · {{ticker}} · {{interval}} · test mua")
+alertcondition(tm_sigSTs, "LK VSA ST SHORT", "LK VSA ST SHORT · {{ticker}} · {{interval}} · test ban")
+alertcondition(tm_sigNS, "LK VSA NS", "LK VSA NS · {{ticker}} · {{interval}} · noc thap")
+alertcondition(tm_sigND, "LK VSA ND", "LK VSA ND · {{ticker}} · {{interval}} · noc cao")
+alertcondition(tm_noSweep, "LK VSA NO SWEEP", "LK VSA NO SWEEP · {{ticker}} · {{interval}} · retest du dieu kien nhung THIEU bar sweep truoc do")
+alertcondition(tm_clxE, "LK VSA CLX-E", "LK VSA CLX-E · {{ticker}} · {{interval}} · volume dot bien tai vung TP - xem xet CHOT")

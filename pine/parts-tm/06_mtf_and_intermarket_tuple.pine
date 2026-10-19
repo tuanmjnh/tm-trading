@@ -1,0 +1,67 @@
+// =============================================================================
+//  L5 - MTF CONTEXT, TUPLE SECURITY & INTER-MARKET INTELLIGENCE (v2.0)
+// =============================================================================
+
+// --- 1. Timeframe Hierarchy Validation ---------------------------------------
+int tm_secChart = timeframe.in_seconds(timeframe.period)
+int tm_secSetup = timeframe.in_seconds(tm_setupTf)
+int tm_secCtx   = timeframe.in_seconds(tm_ctxTf)
+bool tm_tfHierarchyOk = tm_secChart <= tm_secSetup and tm_secSetup <= tm_secCtx
+
+// --- 2. Tuple MTF Requests (Strictly <= 5 calls, non-repainting) --------------
+// Request 1: Context TF Tuple (H1/H4/D)
+[tm_ctxClose, tm_ctxHigh, tm_ctxLow, tm_ctxEmaF, tm_ctxRsi] = request.security(syminfo.tickerid, tm_ctxTf, [close[1], high[1], low[1], ta.ema(close, tm_ctxLen)[1], ta.rsi(close, 14)[1]], lookahead = barmerge.lookahead_on, gaps = barmerge.gaps_off)
+int tm_ctxDir = tm_tfHierarchyOk and not na(tm_ctxClose) and not na(tm_ctxEmaF) ? (tm_ctxClose > tm_ctxEmaF ? 1 : tm_ctxClose < tm_ctxEmaF ? -1 : 0) : 0
+
+// Request 2: Setup TF Tuple (M15/H1)
+[tm_setupClose, tm_setupHigh, tm_setupLow, tm_setupEmaF, tm_setupRsi] = request.security(syminfo.tickerid, tm_setupTf, [close[1], high[1], low[1], ta.ema(close, tm_setupLen)[1], ta.rsi(close, 14)[1]], lookahead = barmerge.lookahead_on, gaps = barmerge.gaps_off)
+int tm_setupDir = tm_tfHierarchyOk and not na(tm_setupClose) and not na(tm_setupEmaF) ? (tm_setupClose > tm_setupEmaF ? 1 : tm_setupClose < tm_setupEmaF ? -1 : 0) : 0
+
+// Combined MTF Alignment Bias [-1.0 to +1.0]
+float tm_gMtfBias = tm_tfHierarchyOk ? (float(tm_ctxDir) + float(tm_setupDir)) / 2.0 : 0.0
+
+// Request 3: Daily High/Low Tuple (PDH / PDL)
+[tm_pdh, tm_pdl] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead = barmerge.lookahead_on, gaps = barmerge.gaps_off)
+float tm_dayRange = not na(tm_pdh) and not na(tm_pdl) and tm_pdh > tm_pdl ? (close - tm_pdl) / (tm_pdh - tm_pdl) * 2.0 - 1.0 : 0.0
+
+// Request 4: Weekly High/Low Tuple (PWH / PWL)
+[tm_pwh, tm_pwl] = request.security(syminfo.tickerid, "W", [high[1], low[1]], lookahead = barmerge.lookahead_on, gaps = barmerge.gaps_off)
+
+// Liquidity Sweep Detection (v1 Parity)
+bool tm_sweepBull = (tm_liq_pdOn and low < tm_pdl and close > tm_pdl) or (tm_liq_pwOn and low < tm_pwl and close > tm_pwl) or (tm_liq_sessOn and not na(tm_sessLo) and low < tm_sessLo and close > tm_sessLo) or (tm_eqLo and low[tm_ms_swLen] < tm_prevLow and close > tm_prevLow)
+bool tm_sweepBear = (tm_liq_pdOn and high > tm_pdh and close < tm_pdh) or (tm_liq_pwOn and high > tm_pwh and close < tm_pwh) or (tm_liq_sessOn and not na(tm_sessHi) and high > tm_sessHi and close < tm_sessHi) or (tm_eqHi and high[tm_ms_swLen] > tm_prevHigh and close < tm_prevHigh)
+
+// Sweep memory for the v2.1 Mode B (Liquidity Sweep Reversal) confirmation
+// window. Storing the swept extreme lets Mode B invalidate itself instead of
+// triangulating a level from PDH/PDL that may have changed since the sweep.
+var int   tm_lastSweepBullBar = -1
+var int   tm_lastSweepBearBar = -1
+var float tm_lastSweepBullPx  = na
+var float tm_lastSweepBearPx  = na
+
+if tm_sweepBull
+    tm_lastSweepBullBar := bar_index
+    tm_lastSweepBullPx  := low
+    f_pushEvent("SWEEP", "bull", bar_index, time, barstate.isconfirmed, math.max(tm_pdl, nz(tm_sessLo, tm_pdl)))
+if tm_sweepBear
+    tm_lastSweepBearBar := bar_index
+    tm_lastSweepBearPx  := high
+    f_pushEvent("SWEEP", "bear", bar_index, time, barstate.isconfirmed, math.min(tm_pdh, nz(tm_sessHi, tm_pdh)))
+
+// --- 3. BTC Leader Filter for ETH / Altcoin (Request 5) ----------------------
+bool tm_isBtcSelf = str.contains(syminfo.ticker, "BTC") or syminfo.ticker == "BTCUSDT" or syminfo.ticker == "BTCUSDT.P"
+bool tm_needBtcLeader = tm_btcLeaderOn and not tm_isBtcSelf and (tm_assetMode == "ETH" or tm_assetMode == "Liquid Altcoin" or tm_assetMode == "High-Risk Altcoin" or tm_assetMode == "Auto")
+
+[btcClose, btcEmaF, btcRsi, btcAtr] = request.security(tm_btcTicker, timeframe.period, [close[1], ta.ema(close, 20)[1], ta.rsi(close, 14)[1], ta.atr(14)[1]], lookahead = barmerge.lookahead_on, gaps = barmerge.gaps_off)
+
+bool btcDumping = tm_needBtcLeader and not na(btcClose) and not na(btcEmaF) and not na(btcAtr) and (btcClose < btcEmaF - tm_btcImpulseAtr * btcAtr or btcRsi < 32.0)
+bool btcPumping = tm_needBtcLeader and not na(btcClose) and not na(btcEmaF) and not na(btcAtr) and (btcClose > btcEmaF + tm_btcImpulseAtr * btcAtr or btcRsi > 68.0)
+
+// BTC Gate: Altcoin LONG bị chặn nếu BTC đang xả mạnh; Altcoin SHORT bị chặn nếu BTC đang bơm mạnh
+bool tm_btcLongOk  = not tm_needBtcLeader or not btcDumping
+bool tm_btcShortOk = not tm_needBtcLeader or not btcPumping
+
+// --- 4. Weekend Low-Liquidity Filter (Crypto) --------------------------------
+bool tm_isWeekend = dayofweek == dayofweek.saturday or dayofweek == dayofweek.sunday
+bool tm_isCrypto = syminfo.type == "crypto" or tm_assetMode == "BTC" or tm_assetMode == "ETH" or tm_assetMode == "Liquid Altcoin" or tm_assetMode == "High-Risk Altcoin" or str.contains(syminfo.ticker, "USDT")
+bool tm_weekendBlocked = tm_weekendFilter and tm_isCrypto and tm_isWeekend and (tm_volRatio < 0.8 or tm_atrPct < 0.6)

@@ -36,13 +36,18 @@ function toAccount(row: any, eq: { equity: number | null; ts: string | null }): 
   }
 }
 
-export async function listAccounts(): Promise<AccountsResult> {
+/**
+ * Tenancy (docs/web-app/user-tenancy-plan.md): `ownerId` is the hub user id and
+ * is mandatory — the aggregation only ever sees the caller's own positions.
+ */
+export async function listAccounts(ownerId: string): Promise<AccountsResult> {
   const Position = await engineModel('position.mjs', 'Position')
   if (!Position) return { items: [], total: 0, mongo: 'down' }
   const Equity = await engineModel('equity.mjs', 'Equity')
 
   try {
     const rows = await Position.aggregate([
+      { $match: { ownerId } },
       {
         $group: {
           _id: '$account',
@@ -69,6 +74,7 @@ export async function listAccounts(): Promise<AccountsResult> {
     if (Equity) {
       try {
         const eq = await Equity.aggregate([
+          { $match: { ownerId } },
           { $sort: { ts: -1 } },
           { $group: { _id: '$account', latest: { $first: '$$ROOT' } } }
         ])

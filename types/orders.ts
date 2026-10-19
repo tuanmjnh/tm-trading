@@ -39,6 +39,10 @@ export interface PaperOrderItem {
   expiredAt: string | null
   fillPrice: number | null
   filledQty: number
+  /** v3 §17.1b per-order leverage intent (null = legacy/account-level). */
+  leverage: number | null
+  /** Slice C: trading session this order belongs to (null = pre-session). */
+  sessionId: string | null
   fee: number | null
   slippageBps: number | null
   createdAt: string

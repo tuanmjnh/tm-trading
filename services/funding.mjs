@@ -68,13 +68,15 @@ export async function runFunding({ fetchImpl, now = new Date(), th = DEFAULT_ALE
   const Intel = await getIntel()
   const mongo = Intel ? 'up' : 'down'
   let alerted = 0
+  // Declared OUTSIDE the Intel block: the summary below reports it even when
+  // Mongo is down (hoisting it inside would make the return a ReferenceError).
+  let feedWrote = 0
   if (Intel) {
     const ts = now.getTime()
     // §23.3 P1 raw funding/OI feed: one row per settlement period per symbol
     // (D3/D4 key feed:funding:<sym>:<nextFundingTime>), MERGE mode refreshes the
     // latest observed mark price / OI for the period. Rows that have no OI
     // observation stay null there (honest — OI is fetched for a subset).
-    let feedWrote = 0
     const feedRecorder = createFeedRecorder({ model: await getMarketFeed(), datasetModel: await getDataset(), kind: 'funding', source: 'binance:fapi', retentionDays: 90 })
     for (const r of rows) {
       const oi = oiBySym.get(r.symbol)

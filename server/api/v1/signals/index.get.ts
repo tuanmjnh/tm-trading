@@ -17,7 +17,15 @@ export default defineEventHandler(async (event) => {
   const side = query.side ? String(query.side) : undefined
   const since = query.since ? String(query.since) : undefined
 
-  const { items, total, mongo } = await listSignals({ limit, cursor, symbol, action, side, since })
+  const { items, total, mongo } = await listSignals({
+    limit,
+    ownerId: requireOwnerId(event),
+    cursor,
+    symbol,
+    action,
+    side,
+    since
+  })
   const { data, nextCursor } = cursorPage(items, limit, (item) => item.id)
 
   return {

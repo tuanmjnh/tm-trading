@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const { by = 'terminal', reason = 'manual' } = body ?? {}
 
-  const r = await cancelPaperOrder({ alertKey: orderId, by, reason })
+  const r = await cancelPaperOrder({ alertKey: orderId, ownerId: requireOwnerId(event), by, reason })
 
   if (!r.success) return { success: false, error: 'CANCEL_FAILED', message: `Failed to cancel: ${r.alertStatus}` }
 

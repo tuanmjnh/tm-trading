@@ -23,7 +23,7 @@ const {
  * Record a validated AI proposal in `ai_proposals` ($setOnInsert, D4).
  * Proposals are DATA (D7) — this write changes no preset and no risk state.
  */
-export async function persistAiProposal(proposal, { generation = null } = {}) {
+export async function persistAiProposal(proposal, { generation = null, ownerId = /** @type {string | null} */ (null) } = {}) {
   const AiProposal = await getAiProposal()
   if (!AiProposal || !proposal) return { ok: false, code: 'MONGO_DOWN' }
   const doc = {
@@ -37,6 +37,8 @@ export async function persistAiProposal(proposal, { generation = null } = {}) {
     recommendedTest: proposal.recommendedTest ?? {},
     generation,
     status: 'new',
+    // Tenancy (roadmap §61.3): proposals belong to the user who recorded them.
+    ownerId,
   }
   try {
     await AiProposal.updateOne({ _id: doc._id }, { $setOnInsert: doc }, { upsert: true })
@@ -47,11 +49,13 @@ export async function persistAiProposal(proposal, { generation = null } = {}) {
 }
 
 /** Persist a fresh proposal as a `proposed` experiment ($setOnInsert, D4). */
-export async function persistProposal(proposal, { now = Date.now() } = {}) {
+export async function persistProposal(proposal, { now = Date.now(), evidenceSetId = null, baselineVersionId = null, ownerId = /** @type {string | null} */ (null) } = {}) {
   const Experiment = await getExperiment()
   if (!Experiment) return { ok: false, code: 'MONGO_DOWN', exp: null }
-  const doc = experimentFromProposal(proposal, { now })
+  const doc = experimentFromProposal(proposal, { now, evidenceSetId, baselineVersionId })
   if (!doc) return { ok: false, code: 'EXP_NOT_A_DOC', exp: null }
+  // Tenancy (roadmap §61.3): the experiment belongs to the recording user.
+  doc.ownerId = ownerId
   try {
     await Experiment.updateOne(
       { _id: doc._id },
@@ -65,11 +69,12 @@ export async function persistProposal(proposal, { now = Date.now() } = {}) {
 }
 
 /** Read an experiment by id. null = Mongo down or not found. */
-export async function getExperimentById(id) {
+export async function getExperimentById(id, { ownerId = /** @type {string | null} */ (null) } = {}) {
   const Experiment = await getExperiment()
   if (!Experiment) return null
   try {
-    return await Experiment.findOne({ _id: id }).lean()
+    const filter = ownerId ? { _id: id, ownerId } : { _id: id }
+    return await Experiment.findOne(filter).lean()
   } catch {
     return null
   }
@@ -79,15 +84,16 @@ export async function getExperimentById(id) {
  * Move an experiment to a new state, persisting the doc atomically with the
  * transition. `at` defaults to now.
  */
-export async function moveExperiment(id, to, { at = Date.now(), data = null } = {}) {
-  const current = await getExperimentById(id)
+export async function moveExperiment(id, to, { at = Date.now(), data = null, ownerId = /** @type {string | null} */ (null) } = {}) {
+  const current = await getExperimentById(id, { ownerId })
   if (!current) return { ok: false, code: 'EXP_NOT_FOUND', exp: null }
   const res = transition(current, to, { at, data })
   if (!res.ok) return res
   const Experiment = await getExperiment()
   if (!Experiment) return { ok: false, code: 'MONGO_DOWN', exp: null }
   try {
-    await Experiment.updateOne({ _id: id }, { $set: { status: to, arms: res.exp.arms, history: res.exp.history } })
+    const filter = ownerId ? { _id: id, ownerId } : { _id: id }
+    await Experiment.updateOne(filter, { $set: { status: to, arms: res.exp.arms, history: res.exp.history } })
     return { ok: true, code: 'OK', exp: res.exp }
   } catch (e) {
     return { ok: false, code: `EXP_WRITE:${e?.message ?? 'err'}`, exp: null }
@@ -100,11 +106,11 @@ export async function moveExperiment(id, to, { at = Date.now(), data = null } = 
  * recommendedTest symbols/timeframes when present (the candidate's own test
  * plan), falling back to the supplied defaults.
  */
-export async function runArm({ experimentId, role, params, method = 'vsa', symbols, timeframes, market = 'fapi', runOne, now = Date.now() }) {
+export async function runArm({ experimentId, role, params, method = 'vsa', symbols, timeframes, market = 'fapi', runOne, now = Date.now(), ownerId = /** @type {string | null} */ (null) }) {
   const Experiment = await getExperiment()
   const ExpRun = await getExperimentRun()
   if (!Experiment || !ExpRun) return { ok: false, code: 'MONGO_DOWN' }
-  const exp = await getExperimentById(experimentId)
+  const exp = await getExperimentById(experimentId, { ownerId })
   if (!exp) return { ok: false, code: 'EXP_NOT_FOUND' }
 
   const rec = exp.recommendedTest ?? {}
@@ -154,9 +160,11 @@ export async function runArm({ experimentId, role, params, method = 'vsa', symbo
     symbols: syms, timeframes: tfs,
     runIds: runs.map((r) => r.runId).filter(Boolean),
     recordedAt: now,
+    // Tenancy (roadmap §61.3): the arm run inherits the experiment's owner.
+    ownerId,
   }
   try {
-    await ExpRun.updateOne({ _id: id }, { $setOnInsert: doc }, { upsert: true })
+    await ExpRun.updateOne({ _id: id, ...(ownerId ? { ownerId } : {}) }, { $setOnInsert: doc }, { upsert: true })
   } catch (e) {
     return { ok: false, code: `EXP_WRITE:${e?.message ?? 'err'}` }
   }
@@ -166,7 +174,7 @@ export async function runArm({ experimentId, role, params, method = 'vsa', symbo
   const folded = withArm(exp, role, { summary })
   const arms = folded.ok ? folded.exp.arms : exp.arms
   try {
-    await Experiment.updateOne({ _id: experimentId }, { $set: { arms } })
+    await Experiment.updateOne({ _id: experimentId, ...(ownerId ? { ownerId } : {}) }, { $set: { arms } })
   } catch { /* arms fold is best-effort */ }
 
   return { ok: true, code: 'OK', summary, runIds: doc.runIds }
@@ -176,24 +184,24 @@ export async function runArm({ experimentId, role, params, method = 'vsa', symbo
  * Accept or reject an experiment. Accept requires the §28.3 gate to pass; the
  * gate is re-computed on the persisted arms, so a stale doc cannot sneak in.
  */
-export async function decide({ experimentId, accept, opts = {}, at = Date.now() }) {
-  const exp = await getExperimentById(experimentId)
+export async function decide({ experimentId, accept, opts = {}, at = Date.now(), ownerId = /** @type {string | null} */ (null) }) {
+  const exp = await getExperimentById(experimentId, { ownerId })
   if (!exp) return { ok: false, code: 'EXP_NOT_FOUND' }
   if (accept) {
     const rep = acceptanceReport(exp, opts)
     if (!rep.ok) return { ok: false, code: 'EXP_GATE_FAILED', gates: rep.gates, exp: null }
-    return moveExperiment(experimentId, 'accepted', { at, data: { acceptance: rep.gates } })
+    return moveExperiment(experimentId, 'accepted', { at, data: { acceptance: rep.gates }, ownerId })
   }
-  return moveExperiment(experimentId, 'rejected', { at })
+  return moveExperiment(experimentId, 'rejected', { at, ownerId })
 }
 
 /** Hydrate an experiment doc with its recorded arm runs, if any. */
-export async function withArmRuns(exp) {
+export async function withArmRuns(exp, { ownerId = /** @type {string | null} */ (null) } = {}) {
   if (!exp) return exp
   const ExpRun = await getExperimentRun()
   if (!ExpRun) return exp
   try {
-    const rows = await ExpRun.find({ experimentId: exp._id }).lean()
+    const rows = await ExpRun.find({ experimentId: exp._id, ...(ownerId ? { ownerId } : {}) }).lean()
     const arms = { ...(exp.arms ?? {}) }
     for (const r of rows) arms[r.role] = { ...(arms[r.role] ?? {}), run: r }
     return { ...exp, arms }
@@ -203,8 +211,8 @@ export async function withArmRuns(exp) {
 }
 
 /** Compare + gate report for the console (npm run experiment:report). */
-export async function report(experimentId, opts = {}) {
-  const exp = await withArmRuns(await getExperimentById(experimentId))
+export async function report(experimentId, opts = {}, { ownerId = /** @type {string | null} */ (null) } = {}) {
+  const exp = await withArmRuns(await getExperimentById(experimentId, { ownerId }), { ownerId })
   if (!exp) return { ok: false, code: 'EXP_NOT_FOUND' }
   const arms = Object.values(exp.arms ?? {}).map((a) => ({
     name: a.name ?? a.role,

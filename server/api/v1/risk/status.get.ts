@@ -7,9 +7,9 @@ import { loadRiskStatus } from '../../../utils/risk'
  * `risk_state` + `positions` cua engine (D1), khong tinh lai. Mongo khong ket
  * noi duoc tra 200 + data.mongo='down' (fail-soft, khong 500).
  */
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (event) => {
   return {
     success: true,
-    data: await loadRiskStatus()
+    data: await loadRiskStatus(new Date(), requireOwnerId(event))
   }
 })

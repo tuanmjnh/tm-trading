@@ -17,6 +17,8 @@ const TradeContextSchema = new mongoose.Schema(
     tradeContextId: { type: String, required: true, index: true },
     tradeId: { type: String, required: true },
     accountId: { type: String, default: null },
+    // Tenancy (roadmap §61.3): the AI trade dataset is user-scoped.
+    ownerId: { type: String, default: null, index: true },
 
     strategyVersionId: { type: String, default: null },
     method: { type: String, default: null },

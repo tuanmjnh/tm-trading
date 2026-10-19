@@ -215,10 +215,11 @@ export function createFeedRecorder({ model = null, datasetModel = null, kind, so
                 retentionDays,
                 compression: 'none',
                 checksum: null, // null until an offline reconcile exists (§24)
-                startTs: doc.eventTime,
-                endTs: doc.eventTime,
-                count: 0,
               },
+              // startTs/endTs/count are set ONLY here: repeating a path in
+              // $setOnInsert and $min/$max/$inc makes Mongo reject the whole
+              // update ("would create a conflict at 'startTs'") — $min/$max/$inc
+              // create the fields on insert anyway.
               $min: { startTs: doc.eventTime },
               $max: { endTs: doc.eventTime },
               $inc: { count: 1 },

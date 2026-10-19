@@ -1,0 +1,36 @@
+// =============================================================================
+//  99_ALERTS — Webhook JSON Payload Contract, Alertconditions & Dispatch
+// =============================================================================
+
+// Webhook JSON Formatter
+f_jsonFz(string side, float entryPx, float slPx, float t1, float t2, float t3, int scr, string stp, string reg, float atrVal) =>
+    string tps = "[" + f_fmtPx(t1) + "," + f_fmtPx(t2) + "," + f_fmtPx(t3) + "]"
+    '{\"side\":\"' + side + '\",\"price\":' + f_fmtPx(entryPx) + ',\"sl\":' + f_fmtPx(slPx) + ',\"tps\":' + tps + ',\"score\":' + str.tostring(scr) + ',\"setup\":\"' + stp + '\",\"regime\":\"' + reg + '\",\"atr\":' + f_fmtPx(atrVal) + '}'
+
+string fz_alertHeader = '{\"v\":1,\"version\":\"1.0.0\",\"schema\":\"fz.signal.v1.0\",\"ts\":\"' + f_ts() + '\",\"symbol\":\"' + f_sym() + '\",\"tf\":\"' + timeframe.period + '\"'
+bool   fz_canAlert    = fz_payloadMode != "Off" and fz_isConfirmed
+
+// Alert Conditions for TradingView UI
+alertcondition(fz_signalLong,  "TM FZ LONG",        "TM FZ LONG {{ticker}} {{interval}}")
+alertcondition(fz_signalShort, "TM FZ SHORT",       "TM FZ SHORT {{ticker}} {{interval}}")
+alertcondition(fz_hitTp1,      "TM FZ TAKE PROFIT", "TM FZ TP1 Hit {{ticker}}")
+alertcondition(fz_hitTp2,      "TM FZ TP2 HIT",     "TM FZ TP2 Hit {{ticker}}")
+alertcondition(fz_hitSl,       "TM FZ STOP LOSS",   "TM FZ SL Hit {{ticker}}")
+
+// Dynamic Webhook Alert Dispatch
+if fz_canAlert and fz_signalLong
+    string body = f_jsonFz("LONG", close, fz_slLong, fz_tp1Long, fz_tp2Long, fz_tp3Long, int(longScore), longSetupType, fz_regime, fz_atrSafe)
+    alert(fz_alertHeader + ',\"action\":\"ENTRY\",' + body + "}", alert.freq_once_per_bar)
+
+if fz_canAlert and fz_signalShort
+    string body = f_jsonFz("SHORT", close, fz_slShort, fz_tp1Short, fz_tp2Short, fz_tp3Short, int(shortScore), shortSetupType, fz_regime, fz_atrSafe)
+    alert(fz_alertHeader + ',\"action\":\"ENTRY\",' + body + "}", alert.freq_once_per_bar)
+
+if fz_canAlert and fz_hitTp1
+    alert(fz_alertHeader + ',\"action\":\"TAKE_PROFIT\",\"level\":1}', alert.freq_once_per_bar)
+
+if fz_canAlert and fz_hitTp2
+    alert(fz_alertHeader + ',\"action\":\"TAKE_PROFIT\",\"level\":2}', alert.freq_once_per_bar)
+
+if fz_canAlert and fz_hitSl
+    alert(fz_alertHeader + ',\"action\":\"STOP_LOSS\"}', alert.freq_once_per_bar)

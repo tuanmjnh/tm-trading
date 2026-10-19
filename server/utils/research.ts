@@ -10,6 +10,7 @@ import {
   strategyProfileModel,
   strategyVersionModel
 } from './engineModel'
+import { citeEvidenceSet, requireProposalEvidence } from './evidenceSets'
 
 // =============================================================================
 //  RESEARCH API SERVICE (§30.7) — read/mutate layer for the AI research workspace.
@@ -122,7 +123,7 @@ export interface StrategyResearchDeps {
   proposalModel?: typeof aiProposalModel
 }
 
-export async function getStrategyResearch(id: string, deps: StrategyResearchDeps = {}): Promise<StrategyResearch> {
+export async function getStrategyResearch(id: string, deps: StrategyResearchDeps = {}, ownerId?: string | null): Promise<StrategyResearch> {
   const human = String(id ?? '').trim()
   const empty: StrategyResearch = { profile: null, versions: [], experiments: [], proposals: [], mongo: 'down' }
   if (!human) return empty
@@ -131,18 +132,19 @@ export async function getStrategyResearch(id: string, deps: StrategyResearchDeps
   const Version = await (deps.versionModel ?? strategyVersionModel)()
   if (!Profile || !Version) return empty
 
+  const own = ownerId ? { ownerId } : {}
   try {
-    const profile = await Profile.findOne({ _id: human }).lean()
-    const versions = await Version.find({ strategyId: human }).sort({ createdAt: -1 }).lean()
+    const profile = await Profile.findOne({ _id: human, ...own }).lean()
+    const versions = await Version.find({ strategyId: human, ...own }).sort({ createdAt: -1 }).lean()
     const versionIds = versions.map((v: Record<string, unknown>) => v._id)
 
     const Experiment = await (deps.experimentModel ?? experimentModel)()
     const AiProposal = await (deps.proposalModel ?? aiProposalModel)()
     const experiments = Experiment && versionIds.length
-      ? await Experiment.find({ strategyVersionId: { $in: versionIds } }).sort({ createdAt: -1 }).lean()
+      ? await Experiment.find({ strategyVersionId: { $in: versionIds }, ...own }).sort({ createdAt: -1 }).lean()
       : []
     const proposals = AiProposal && versionIds.length
-      ? await AiProposal.find({ strategyVersionId: { $in: versionIds } }).sort({ createdAt: -1 }).lean()
+      ? await AiProposal.find({ strategyVersionId: { $in: versionIds }, ...own }).sort({ createdAt: -1 }).lean()
       : []
 
     return { profile: profile ?? null, versions, experiments, proposals, mongo: 'up' }
@@ -164,10 +166,11 @@ export interface ListProposalsDeps {
   model?: typeof aiProposalModel
 }
 
-export async function listProposals(q: ListProposalsQuery, deps: ListProposalsDeps = {}): Promise<{ rows: Record<string, unknown>[]; mongo: 'up' | 'down' }> {
+export async function listProposals(q: ListProposalsQuery, deps: ListProposalsDeps = {}, ownerId?: string | null): Promise<{ rows: Record<string, unknown>[]; mongo: 'up' | 'down' }> {
   const AiProposal = await (deps.model ?? aiProposalModel)()
   if (!AiProposal) return { rows: [], mongo: 'down' }
   const filter: Record<string, unknown> = {}
+  if (ownerId) filter.ownerId = ownerId
   if (q.status) filter.status = q.status
   try {
     const rows = await AiProposal.find(filter).sort({ createdAt: -1 }).limit(q.limit).lean()
@@ -186,21 +189,90 @@ export async function listProposals(q: ListProposalsQuery, deps: ListProposalsDe
 export interface CreateExperimentDeps {
   proposal?: ProposalModule
   service?: ExperimentService
+  /** Active strategy pointer — the baseline a candidate must beat (§59.15 Slice E). */
+  profileModel?: () => Promise<{ findOne: (q: Record<string, unknown>) => { lean: () => Promise<Record<string, unknown> | null> } } | null>
+  /** §59.15 Slice E: evidence-link hooks (tests inject; production uses the real service). */
+  evidence?: {
+    require?: typeof requireProposalEvidence
+    cite?: typeof citeEvidenceSet
+    /** Resolve the recorded proposal row — it is the only place `generation` lives. */
+    proposalRow?: (proposalId: string) => Promise<Record<string, unknown> | null>
+  }
 }
 
-export async function createExperiment(body: unknown, deps: CreateExperimentDeps = {}): Promise<Record<string, unknown>> {
+/**
+ * The version the active strategy profile currently points at (null when there
+ * is no active profile, or when the store cannot answer).
+ */
+async function resolveActiveVersion(deps: CreateExperimentDeps, ownerId?: string | null): Promise<string | null> {
+  try {
+    const load = deps.profileModel ?? strategyProfileModel
+    const Profile = await load()
+    if (!Profile) return null
+    const active = await Profile.findOne({ status: 'active', ...(ownerId ? { ownerId } : {}) }).lean().catch(() => null)
+    const version = active ? String(active.strategyVersionId ?? '').trim() : ''
+    return version || null
+  } catch {
+    return null
+  }
+}
+
+export async function createExperiment(body: unknown, deps: CreateExperimentDeps = {}, ownerId?: string | null): Promise<Record<string, unknown>> {
   const proposal = deps.proposal ?? await proposalModule()
   const v = proposal.validateProposal(body)
   if (!v.ok || !v.proposal) {
     throw new ResearchError(`invalid proposal: ${(v.errors ?? []).join(', ')}`, 400, 'invalid_proposal')
   }
 
+  // §59.15 Slice E — AI OUTPUT LINKS TO EVIDENCE.
+  // A proposal the AI generated must cite a frozen, hash-intact evidence set
+  // describing the same strategy version; otherwise the experiment is not
+  // reproducible and the request is refused before anything is written.
+  // Hand-written proposals may omit the link (the workflow decides whether that
+  // is acceptable), and the check is deliberately skipped when the store is down
+  // — persistProposal fails with MONGO_DOWN in that case anyway.
+  const raw = (body && typeof body === 'object' && !Array.isArray(body) ? body : {}) as Record<string, unknown>
+  const cited = typeof raw.evidenceSetId === 'string' && raw.evidenceSetId.trim() ? raw.evidenceSetId.trim() : null
+  const loadProposalRow = deps.evidence?.proposalRow ?? (async (proposalId: string) => {
+    const AiProposal = await aiProposalModel()
+    if (!AiProposal || !proposalId) return null
+    return await AiProposal.findOne({ $or: [{ _id: proposalId }, { proposalId }], ...(ownerId ? { ownerId } : {}) }).lean().catch(() => null) as Record<string, unknown> | null
+  })
+  const proposalId = String((v.proposal as unknown as Record<string, unknown>).proposalId ?? '')
+  const recorded = await loadProposalRow(proposalId)
+  const aiGenerated = !!raw.generation || !!recorded?.generation
+  const require_ = deps.evidence?.require ?? requireProposalEvidence
+  const link = await require_(v.proposal as unknown as Record<string, unknown>, { evidenceSetId: cited, aiGenerated })
+
   const service = deps.service ?? await experimentService()
-  const res = await service.persistProposal(v.proposal)
+
+  // §59.15 Slice E — which version must the candidate BEAT? Read the active
+  // pointer once, here, and freeze it into the experiment. Fail-soft: an
+  // unreachable profile store leaves the baseline null, which the UI shows as
+  // "baseline not recorded" — it never blocks an experiment, and it never
+  // guesses the live pointer at decision time.
+  const baselineVersionId = await resolveActiveVersion(deps, ownerId)
+
+  const res = await service.persistProposal(
+    v.proposal,
+    { evidenceSetId: link.evidenceSetId, baselineVersionId, ownerId } as never
+  ) as {
+    ok: boolean
+    code?: string
+    exp?: Record<string, unknown> | null
+  }
   if (!res.ok) {
     // Mongo down is the only expected failure here (validated proposal).
     throw new ResearchError(res.code ?? 'experiment write failed', 503, res.code === 'MONGO_DOWN' ? 'mongo_down' : 'experiment_failed')
   }
+
+  // Back-reference so the UI can answer "which experiments used this evidence".
+  const experimentId = res.exp ? String(res.exp.experimentId ?? res.exp._id ?? '') : ''
+  if (link.evidenceSetId && experimentId) {
+    const cite = deps.evidence?.cite ?? citeEvidenceSet
+    await cite(link.evidenceSetId, experimentId)
+  }
+
   return res.exp as unknown as Record<string, unknown>
 }
 
@@ -220,11 +292,11 @@ export interface ExperimentResearchDeps {
   service?: ExperimentService
 }
 
-export async function getExperimentResearch(id: string, deps: ExperimentResearchDeps = {}): Promise<ExperimentResearch> {
+export async function getExperimentResearch(id: string, deps: ExperimentResearchDeps = {}, ownerId?: string | null): Promise<ExperimentResearch> {
   const human = String(id ?? '').trim()
   if (!human) return { experiment: null, comparison: null, acceptance: null, mongo: 'down' }
   const service = deps.service ?? await experimentService()
-  const rep = await service.report(human)
+  const rep = await service.report(human, {}, { ownerId: ownerId ?? null })
   if (!rep.ok) return { experiment: null, comparison: null, acceptance: null, mongo: 'down' }
   return {
     experiment: rep.experiment as unknown as Record<string, unknown>,
@@ -256,7 +328,7 @@ export interface RunArmDeps {
   experimentModule?: ExperimentModule
 }
 
-export async function runExperimentArm(id: string, input: RunArmInput, deps: RunArmDeps = {}): Promise<Record<string, unknown>> {
+export async function runExperimentArm(id: string, input: RunArmInput, deps: RunArmDeps = {}, ownerId?: string | null): Promise<Record<string, unknown>> {
   const human = String(id ?? '').trim()
   if (!human) throw new ResearchError('experiment id required', 400, 'invalid_id')
 
@@ -280,7 +352,8 @@ export async function runExperimentArm(id: string, input: RunArmInput, deps: Run
     symbols: input.symbols,
     timeframes: input.timeframes,
     market: input.market ?? 'fapi',
-    runOne
+    runOne,
+    ownerId: ownerId ?? null
   })
 
   if (!res.ok) {
@@ -307,10 +380,11 @@ export interface ListExperimentsDeps {
   model?: typeof experimentModel
 }
 
-export async function listExperiments(q: ListExperimentsQuery, deps: ListExperimentsDeps = {}): Promise<{ rows: Record<string, unknown>[]; mongo: 'up' | 'down' }> {
+export async function listExperiments(q: ListExperimentsQuery, deps: ListExperimentsDeps = {}, ownerId?: string | null): Promise<{ rows: Record<string, unknown>[]; mongo: 'up' | 'down' }> {
   const Experiment = await (deps.model ?? experimentModel)()
   if (!Experiment) return { rows: [], mongo: 'down' }
   const filter: Record<string, unknown> = {}
+  if (ownerId) filter.ownerId = ownerId
   if (q.status) filter.status = q.status
   try {
     const rows = await Experiment.find(filter).sort({ createdAt: -1 }).limit(q.limit).lean()
@@ -331,14 +405,14 @@ export interface MoveExperimentDeps {
   service?: ExperimentService
 }
 
-export async function moveExperimentResearch(id: string, to: string, deps: MoveExperimentDeps = {}): Promise<Record<string, unknown>> {
+export async function moveExperimentResearch(id: string, to: string, deps: MoveExperimentDeps = {}, ownerId?: string | null): Promise<Record<string, unknown>> {
   const human = String(id ?? '').trim()
   if (!human) throw new ResearchError('experiment id required', 400, 'invalid_id')
   const state = String(to ?? '').trim()
   if (!state) throw new ResearchError('target state required', 400, 'invalid_state')
 
   const service = deps.service ?? await experimentService()
-  const res = await service.moveExperiment(human, state)
+  const res = await service.moveExperiment(human, state, { ownerId: ownerId ?? null })
   if (!res.ok) throw experimentWriteError(String(res.code ?? 'experiment_failed'))
   return res.exp as unknown as Record<string, unknown>
 }
@@ -360,12 +434,12 @@ export interface DecideExperimentOptions {
   ddSlackPct?: number
 }
 
-export async function decideExperiment(id: string, accept: boolean, opts: DecideExperimentOptions = {}, deps: DecideExperimentDeps = {}): Promise<Record<string, unknown>> {
+export async function decideExperiment(id: string, accept: boolean, opts: DecideExperimentOptions = {}, deps: DecideExperimentDeps = {}, ownerId?: string | null): Promise<Record<string, unknown>> {
   const human = String(id ?? '').trim()
   if (!human) throw new ResearchError('experiment id required', 400, 'invalid_id')
 
   const service = deps.service ?? await experimentService()
-  const res = await service.decide({ experimentId: human, accept, opts })
+  const res = await service.decide({ experimentId: human, accept, opts, ...(ownerId ? { ownerId } : {}) })
   if (!res.ok) throw experimentWriteError(String(res.code ?? 'experiment_failed'))
   return res.exp as unknown as Record<string, unknown>
 }

@@ -1,0 +1,118 @@
+// =============================================================================
+//  L4 - ZONES  (v2 §3): S/R zones + FVG + Order Block
+//  Moi vung co toggle rieng, ve lai toan bo tren bar cuoi (chuon ve object).
+// =============================================================================
+
+// --- S/R zones (pivot-based, ATR width, merge, max limit) -----------------------
+// SrZone + f_addZone / f_nearSupport / f_nearResistance - shared (pine/shared/zones.pine)
+// (ban truoc do goi `PaSrZone` / `pa_srZones` - da gop vao shared)
+if not na(ta.pivothigh(high, pa_sr_left, pa_sr_right))
+    f_addZone(sr_zones, high[pa_sr_right], -1, pa_atr, pa_sr_width, pa_sr_maxZone)
+if not na(ta.pivotlow(low, pa_sr_left, pa_sr_right))
+    f_addZone(sr_zones, low[pa_sr_right],  1, pa_atr, pa_sr_width, pa_sr_maxZone)
+
+// --- FVG (Fair Value Gap): 3 nen, giua nen 0 va nen 2 co khoang tre ------------
+type PaFvg
+    float top
+    float bot
+    int   srcBar
+    int   dir     // 1=gap len (bull), -1=gap xuong (bear)
+    bool  dead
+
+var array<PaFvg> pa_fvgs = array.new<PaFvg>()
+
+bool pa_fvgBull = low > high[2] and (low - high[2]) >= pa_fvg_minAtr * pa_atr
+bool pa_fvgBear = high < low[2] and (low[2] - high) >= pa_fvg_minAtr * pa_atr
+if pa_fvgBull
+    array.push(pa_fvgs, PaFvg.new(low, high[2], bar_index, 1, false))
+if pa_fvgBear
+    array.push(pa_fvgs, PaFvg.new(low[2], high, bar_index, -1, false))
+if array.size(pa_fvgs) > pa_fvg_max
+    array.shift(pa_fvgs)
+// FVG bi lap (gia quay lai day gap) -> dead, khong ve nua
+for g in pa_fvgs
+    if bar_index - g.srcBar > pa_fvg_life
+        g.dead := true
+    if g.dir == 1 and close < g.bot
+        g.dead := true
+    if g.dir == -1 and close > g.top
+        g.dead := true
+
+// --- Order Block: nen truoc do dieu kien displacement (gia di manh 1 chieu) -----
+type PaOb
+    float top
+    float bot
+    int   srcBar
+    int   dir     // 1=OB chu nghiep (nen bear truoc, gia di len), -1=OB ban
+    bool  dead
+
+var array<PaOb> pa_obs = array.new<PaOb>()
+
+bool pa_obBull = pa_dispBull and close[1] < open[1]
+bool pa_obBear = pa_dispBear and close[1] > open[1]
+if pa_obBull
+    array.push(pa_obs, PaOb.new(open[1] > close[1] ? open[1] : close[1], open[1] < close[1] ? open[1] : close[1], bar_index - 1, 1, false))
+if pa_obBear
+    array.push(pa_obs, PaOb.new(open[1] > close[1] ? open[1] : close[1], open[1] < close[1] ? open[1] : close[1], bar_index - 1, -1, false))
+if array.size(pa_obs) > pa_ob_max
+    array.shift(pa_obs)
+// OB bi pha (close di qua phia xa vung) hoac qua cu (> 200 bars) -> dead
+for o in pa_obs
+    if bar_index - o.srcBar > 200
+        o.dead := true
+    if o.dir == 1 and close < o.bot
+        o.dead := true
+    if o.dir == -1 and close > o.top
+        o.dead := true
+
+// --- Ve toan bo vung tren bar cuoi (checkbox rieng pa_showPriceZones) ----------
+var array<box> pa_zoneBoxes = array.new<box>()
+
+if barstate.islast and pa_showViz and pa_showPriceZones
+    for bx in pa_zoneBoxes
+        box.delete(bx)
+    array.clear(pa_zoneBoxes)
+    if pa_sr_showOn
+        for z in sr_zones
+            if z.side == 1 and close < z.bot
+                z.broken := true
+            if z.side == -1 and close > z.top
+                z.broken := true
+            if not z.broken
+                color zC  = z.side == 1 ? color.new(pa_cBull, 82) : color.new(pa_cBear, 82)
+                color zBC = z.side == 1 ? color.new(pa_cBull, 40) : color.new(pa_cBear, 40)
+                int leftSr = math.max(bar_index - 50, 0)
+                array.push(pa_zoneBoxes, box.new(leftSr, z.top, bar_index + pa_zoneLen, z.bot, border_color = zBC, bgcolor = zC, force_overlay = true))
+    if pa_fvg_showOn
+        for g in pa_fvgs
+            if not g.dead and (bar_index - g.srcBar <= 300)
+                color gC = g.dir == 1 ? color.new(pa_cBull, 88) : color.new(pa_cBear, 88)
+                color gB = g.dir == 1 ? color.new(pa_cBull, 55) : color.new(pa_cBear, 55)
+                int leftFvg = math.max(bar_index - 300, g.srcBar)
+                array.push(pa_zoneBoxes, box.new(leftFvg, g.top, g.srcBar + pa_fvg_life, g.bot, border_color = gB, bgcolor = gC, force_overlay = true))
+    if pa_ob_showOn
+        for o in pa_obs
+            if not o.dead and (bar_index - o.srcBar <= 300)
+                color oC = o.dir == 1 ? color.new(#f5c542, 85) : color.new(#ff8b3d, 85)
+                color oB = o.dir == 1 ? color.new(#f5c542, 50) : color.new(#ff8b3d, 50)
+                int leftOb = math.max(bar_index - 300, o.srcBar)
+                array.push(pa_zoneBoxes, box.new(leftOb, o.top, o.srcBar + pa_zoneLen, o.bot, border_color = oB, bgcolor = oC, force_overlay = true))
+else if array.size(pa_zoneBoxes) > 0
+    // Tat checkbox -> xoa het box (khong de do do tren chart)
+    for bx in pa_zoneBoxes
+        box.delete(bx)
+    array.clear(pa_zoneBoxes)
+
+// Gan vung FVG/OB gan nhat -> bo loc S/R (doc lap, co toggle rieng)
+bool pa_nearFvgBull = false
+bool pa_nearFvgBear = false
+for g in pa_fvgs
+    if not g.dead and low >= g.bot - pa_atr * 0.3 and low <= g.top + pa_atr * 0.3
+        pa_nearFvgBull := true
+    if not g.dead and high >= g.bot - pa_atr * 0.3 and high <= g.top + pa_atr * 0.3
+        pa_nearFvgBear := true
+for o in pa_obs
+    if not o.dead and o.dir == 1 and low >= o.bot - pa_atr * 0.3 and low <= o.top + pa_atr * 0.3
+        pa_nearFvgBull := true
+    if not o.dead and o.dir == -1 and high >= o.bot - pa_atr * 0.3 and high <= o.top + pa_atr * 0.3
+        pa_nearFvgBear := true

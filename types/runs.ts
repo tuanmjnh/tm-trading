@@ -53,6 +53,12 @@ export interface RunSummary {
 /** Mot "series" = mot bo tham so tren dung symbol x TF (xem khoa o dau file). */
 export interface RunSeries {
   id: string
+  /**
+   * Run mode (Slice 3 manifest). reports/*.ndjson only ever holds engine
+   * backtests — replay sessions and live-paper accounts are separate stores
+   * with their own pages — so the projection stamps this constant (D1).
+   */
+  mode: 'BACKTEST'
   engineVersion: string
   paramsHash: string
   symbol: string

@@ -38,6 +38,7 @@ export default defineEventHandler(async (event) => {
 
   const { createVersion } = await strategyService()
   const r = await createVersion({
+    ownerId: requireOwnerId(event),
     strategyId,
     version,
     paramsHash,

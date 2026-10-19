@@ -38,6 +38,7 @@
 //  CLI:  node exec/risk.mjs status | halt [reason] [--close] | resume [reason]
 // =============================================================================
 import { appendNdjson } from '../engine/store.mjs'
+import { deskHalt, haltSession } from '../engine/session.mjs'
 import { buildPositionDoc, liveStamp } from '../engine/stamp.mjs'
 import { validateModify, partialCloseQty } from '../simulation/engine.mjs'
 import { loadEnv, ROOT } from './env.mjs'
@@ -63,6 +64,9 @@ export const RISK_DEFAULTS = Object.freeze({
   exposurePct: 500, // per-symbol combined notional as % of equity (5x = matches maxLeverage, binds when same-symbol positions stack) — RISK_EXPOSURE_PCT
   minRR: 1.5, // sanity: reward(last TP) / risk(SL) — RISK_MIN_RR
   closeOnHalt: false, // D7c policy: keep open positions (SL/TP protect)
+  // Tenancy (roadmap §61.3): not a risk knob — the multi-tenant orchestration
+  // sets it per account; null = legacy single-desk rows.
+  ownerId: null,
 })
 
 export const KELLY_MIN_N = 20 // sample size before Kelly is allowed to act
@@ -96,6 +100,10 @@ export function loadRiskConfig(env = process.env) {
       cfg[field] = raw
     }
   }
+  // Tenancy (roadmap §61.3): ownerId is NOT an env concept — the multi-tenant
+  // orchestration sets it per account before a cycle. Bare/CLI configs keep null
+  // (legacy single-desk rows), which is exactly what a legacy account's rows use.
+  cfg.ownerId = null
   return cfg
 }
 
@@ -408,13 +416,13 @@ async function getModels() {
   const db = await import('../engine/db.mjs')
   const conn = await db.connectMongo() // fail-soft: null when unavailable
   if (!conn) return null
-  const { RiskState, Position, PaperAccount } = await import('../engine/models/index.mjs')
+  const { RiskState, Position, PaperAccount, TradingSession } = await import('../engine/models/index.mjs')
   try {
     await RiskState.syncIndexes()
   } catch {
     // index already there or not creatable — insert still works
   }
-  models = { RiskState, Position, PaperAccount }
+  models = { RiskState, Position, PaperAccount, TradingSession }
   return models
 }
 
@@ -440,7 +448,7 @@ async function accountBase(config) {
   const m = await getModels()
   if (!m?.PaperAccount) return null
   try {
-    const seed = await m.PaperAccount.findOne({ accountId: config.account }).lean()
+    const seed = await m.PaperAccount.findOne({ accountId: config.account, ownerId: config.ownerId ?? null }).lean()
     return Number.isFinite(Number(seed?.initialBalance)) && Number(seed?.initialBalance) > 0 ? Number(seed.initialBalance) : null
   } catch {
     return null
@@ -460,7 +468,7 @@ export async function equityNow(config) {
   const m = await getModels()
   if (!m) return config.equity
   const [agg] = await m.Position.aggregate([
-    { $match: { account: config.account, status: 'closed' } },
+    { $match: { account: config.account, ownerId: config.ownerId ?? null, status: 'closed' } },
     { $group: { _id: null, sum: { $sum: '$pnlAbs' } } },
   ])
   const base = (await accountBase(config)) ?? config.equity
@@ -472,7 +480,7 @@ export async function loadWinStats(config) {
   const m = await getModels()
   if (!m) return null
   const rows = await m.Position.aggregate([
-    { $match: { account: config.account, status: 'closed', pnlAbs: { $ne: null } } },
+    { $match: { account: config.account, ownerId: config.ownerId ?? null, status: 'closed', pnlAbs: { $ne: null } } },
     { $sort: { entryTime: -1 } },
     { $limit: 100 },
     { $group: { _id: null, n: { $sum: 1 }, wins: { $sum: { $cond: [{ $gt: ['$pnlAbs', 0] }, 1, 0] } }, winSum: { $sum: { $cond: [{ $gt: ['$pnlAbs', 0] }, '$pnlAbs', 0] } }, lossSum: { $sum: { $cond: [{ $lt: ['$pnlAbs', 0] }, { $abs: '$pnlAbs' }, 0] } }, losses: { $sum: { $cond: [{ $lt: ['$pnlAbs', 0] }, 1, 0] } } } },
@@ -505,12 +513,13 @@ export async function loadSnapshot(config) {
       balance: resolvedBalance(null, config.equity), winStats: null, mongoDown: true,
     }
   }
+  const own = config.ownerId ?? null
   const [todayRow, latest] = await Promise.all([
-    m.RiskState.findOne({ account: config.account, utcDay: today }).lean(),
-    m.RiskState.findOne({ account: config.account }).sort({ utcDay: -1 }).lean(),
+    m.RiskState.findOne({ account: config.account, ownerId: own, utcDay: today }).lean(),
+    m.RiskState.findOne({ account: config.account, ownerId: own }).sort({ utcDay: -1 }).lean(),
   ])
   const [open, equity, winStats] = await Promise.all([
-    m.Position.find({ account: config.account, status: 'open' }).lean(),
+    m.Position.find({ account: config.account, ownerId: own, status: 'open' }).lean(),
     equityNow(config),
     loadWinStats(config),
   ])
@@ -580,20 +589,21 @@ export async function checkPartialClose(pos, target, config = loadRiskConfig()) 
  *        recordOpen's `_models`, so a test can drive the WHOLE write path
  *        without a database)
  */
-export async function ensureTodayRow(account, extra = {}, _models = null) {
+export async function ensureTodayRow(account, extra = {}, _models = null, ownerId = null) {
   const m = _models ?? await getModels()
   if (!m) return null
+  const own = ownerId ?? null
   const today = utcDayToday()
-  const existing = await m.RiskState.findOne({ account, utcDay: today }).lean()
+  const existing = await m.RiskState.findOne({ account, ownerId: own, utcDay: today }).lean()
   if (existing) return existing
-  const latest = await m.RiskState.findOne({ account }).sort({ utcDay: -1 }).lean()
+  const latest = await m.RiskState.findOne({ account, ownerId: own }).sort({ utcDay: -1 }).lean()
   const inherit = latest && latest.halted && latest.haltReason !== 'daily_loss_cap'
     ? { halted: true, haltReason: latest.haltReason, haltedAt: latest.haltedAt }
     : {}
   try {
-    return await m.RiskState.create({ account, utcDay: today, ...inherit, ...extra })
+    return await m.RiskState.create({ account, ownerId: own, utcDay: today, ...inherit, ...extra })
   } catch (e) {
-    if (e?.code === 11000) return m.RiskState.findOne({ account, utcDay: today }).lean() // lost the race, still fine
+    if (e?.code === 11000) return m.RiskState.findOne({ account, ownerId: own, utcDay: today }).lean() // lost the race, still fine
     throw e
   }
 }
@@ -619,6 +629,8 @@ export async function ensureTodayRow(account, extra = {}, _models = null) {
  * @param {number|null} [$fees]                MEASURED entry fee of the fill (Phase 7P)
  * @param {'market'|'limit'|'stop'|null} [$orderType]  how the entry filled (Phase 7P)
  * @param {number|null} [$slippage]            adverse bps applied at the fill (Phase 7P)
+ * @param {number|null} [$leverage]            v3 §17.1b per-position leverage intent (null = legacy)
+ * @param {string|null} [$sessionId]           Slice C trading session (null = pre-session)
  */
 export async function recordOpen({
   config = loadRiskConfig(), symbol, qty, dir, entryPrice, sl, tps,
@@ -626,7 +638,7 @@ export async function recordOpen({
   strategyVersionId = null,
   stamp = null, auditFile = RISK_FILE, _models = null,
   fees = null, orderType = null, slippage = null,
-  fidelity = null,
+  fidelity = null, leverage = null, sessionId = null,
 } = {}) {
   const m = _models ?? await getModels()
   if (!m) return { opened: false, mongoDown: true }
@@ -634,6 +646,8 @@ export async function recordOpen({
   // rejected open is better than a position that lies about its configuration.
   const doc = buildPositionDoc({
     account: config.account,
+    // Tenancy (roadmap §61.3): the position belongs to the desk owner.
+    ownerId: config.ownerId ?? null,
     source,
     externalId,
     symbol,
@@ -650,13 +664,15 @@ export async function recordOpen({
     orderType,
     slippage,
     fidelity,
+    leverage,
+    sessionId,
     stamp: stamp ?? liveStamp(),
   })
   const pos = await m.Position.create(doc)
   // Injected models flow through too, or the test would reach the real DB here.
-  await ensureTodayRow(config.account, {}, _models) // create today's row if missing (inherits kill-switch)
+  await ensureTodayRow(config.account, {}, _models, config.ownerId ?? null) // create today's row if missing (inherits kill-switch)
   await m.RiskState.updateOne(
-    { account: config.account, utcDay: utcDayToday() },
+    { account: config.account, ownerId: config.ownerId ?? null, utcDay: utcDayToday() },
     { $inc: { tradesOpened: 1 } },
     { upsert: true },
   )
@@ -697,8 +713,8 @@ export async function recordOpen({
 export async function recordClose({ config = loadRiskConfig(), symbol, pnlAbs, pnlPctOnEquity, win, equity, reason = 'unknown' } = {}) {
   const m = await getModels()
   if (!m) return { closed: false, mongoDown: true }
-  await ensureTodayRow(config.account)
-  const row = await m.RiskState.findOne({ account: config.account, utcDay: utcDayToday() })
+  await ensureTodayRow(config.account, {}, null, config.ownerId ?? null)
+  const row = await m.RiskState.findOne({ account: config.account, ownerId: config.ownerId ?? null, utcDay: utcDayToday() })
   row.realizedPnlAbs += pnlAbs
   row.realizedPnlPct += pnlPctOnEquity
   row.tradesClosed += 1
@@ -717,42 +733,115 @@ export async function recordClose({ config = loadRiskConfig(), symbol, pnlAbs, p
 }
 
 /**
+ * G8.1 / §59.15 "kill-switch integration": halt the RECORD, not only the feed.
+ * The gate already refuses every new order, but a session document that keeps
+ * saying `running` is a split-brain an operator will misread (`/sessions` and
+ * the halt disagree). This drives the pure `haltSession` guard over the live
+ * sessions of one account.
+ *
+ * Scope rules:
+ * - Only DESK-WIDE halts touch sessions. `daily_loss_cap` is day-scoped and
+ *   `halted` is a terminal session state, so capping a day must not end a
+ *   session for good (the executor's per-cycle check makes the same call).
+ * - Only states with a legal edge to `halted` are loaded (`running`/`paused`).
+ * - Fail-soft per session: a refused/racy write is COUNTED and audited, never
+ *   thrown — the desk is already frozen, undoing the halt would be worse.
+ *
+ * @returns {Promise<{halted:string[], skipped:string[]}>}
+ */
+export async function haltOpenSessions(m, account, reason, now = Date.now(), ownerId = null) {
+  const out = { halted: [], skipped: [] }
+  const desk = deskHalt({ halted: true, haltReason: reason })
+  if (!desk.deskWide) return out
+  const Session = m?.TradingSession
+  if (!Session?.find) return out
+  let live = []
+  try {
+    live = await Session.find({ accountId: String(account), ownerId: ownerId ?? null, state: { $in: ['running', 'paused'] } }).lean()
+  } catch {
+    return out
+  }
+  for (const doc of live) {
+    const res = haltSession(doc, { at: now, reason: desk.reason })
+    if (!res.ok) {
+      out.skipped.push(`${doc.sessionId}:${res.code}`)
+      continue
+    }
+    try {
+      // Conditional on the state we read: a concurrent transition wins and the
+      // halt is reported as skipped instead of overwriting a newer record.
+      const r = await Session.updateOne(
+        { _id: doc._id, state: doc.state },
+        {
+          $set: {
+            state: res.doc.state,
+            lastEventAt: res.doc.lastEventAt,
+            stoppedAt: res.doc.stoppedAt,
+            timeline: res.doc.timeline,
+            timelineDropped: res.doc.timelineDropped,
+          },
+        },
+      )
+      if (r?.modifiedCount) out.halted.push(doc.sessionId)
+      else out.skipped.push(`${doc.sessionId}:RACE`)
+    } catch {
+      out.skipped.push(`${doc.sessionId}:WRITE_FAILED`)
+    }
+  }
+  return out
+}
+
+/**
  * D7c: emergency halt. Blocks every new order (incl. paper/scanner/AI) until
  * resume(). Open positions: stay open by default (their SL/TP still protect);
  * { closePositions: true } forces the caller to flatten them (see paper.mjs).
+ *
+ * A desk-wide halt also moves every live session to `halted` (G8.1) so the
+ * risk record and the session record tell the same story immediately — even
+ * when the paper executor happens not to be running. Sessions are terminal, so
+ * resume() does NOT reopen them: the operator starts a new session.
+ *
+ * `_models`/`now` are test-only injections (same pattern as ensureTodayRow).
  */
-export async function halt(reason = 'manual', { config = loadRiskConfig(), closePositions = false, by = 'cli' } = {}) {
-  const m = await getModels()
+export async function halt(reason = 'manual', { config = loadRiskConfig(), closePositions = false, by = 'cli', _models = null, now = Date.now(), auditFile = RISK_FILE } = {}) {
+  const m = _models ?? await getModels()
   if (!m) return { halted: false, mongoDown: true }
-  await ensureTodayRow(config.account)
-  const row = await m.RiskState.findOne({ account: config.account, utcDay: utcDayToday() })
+  await ensureTodayRow(config.account, {}, m, config.ownerId ?? null)
+  const row = await m.RiskState.findOne({ account: config.account, ownerId: config.ownerId ?? null, utcDay: utcDayToday() })
   row.halted = true
   row.haltReason = reason
-  row.haltedAt = new Date()
+  row.haltedAt = new Date(now)
   await row.save()
   let flattened = 0
   if (closePositions) {
-    const open = await m.Position.find({ account: config.account, status: 'open' }).lean()
+    const open = await m.Position.find({ account: config.account, ownerId: config.ownerId ?? null, status: 'open' }).lean()
     flattened = open.length
   }
-  auditLog('halt', { account: config.account, reason, by, closePositions, openPositions: flattened })
-  return { halted: true, reason, closePositions, openPositions: flattened }
+  const sessions = await haltOpenSessions(m, config.account, reason, now, config.ownerId ?? null)
+  auditLog('halt', {
+    account: config.account, reason, by, closePositions, openPositions: flattened,
+    sessionsHalted: sessions.halted, sessionsSkipped: sessions.skipped,
+  }, auditFile)
+  return { halted: true, reason, closePositions, openPositions: flattened, sessionsHalted: sessions.halted, sessionsSkipped: sessions.skipped }
 }
 
 /** Resume after kill-switch / drift / manual halt (operator action only). */
 export async function resume(reason = 'manual', { config = loadRiskConfig(), by = 'cli' } = {}) {
   const m = await getModels()
   if (!m) return { resumed: false, mongoDown: true }
-  const row = await ensureTodayRow(config.account)
+  const row = await ensureTodayRow(config.account, {}, null, config.ownerId ?? null)
   if (!row.halted && !row.haltReason) {
     auditLog('resume_noop', { account: config.account, by })
     return { resumed: true, noop: true }
   }
-  const doc = await m.RiskState.findOne({ account: config.account, utcDay: utcDayToday() })
+  const doc = await m.RiskState.findOne({ account: config.account, ownerId: config.ownerId ?? null, utcDay: utcDayToday() })
   doc.halted = false
   doc.haltReason = ''
   doc.haltedAt = null
   await doc.save()
+  // Sessions halted by the kill-switch are TERMINAL by contract: resume only
+  // unfreezes the gate. Reopening a halted session would rewrite history, so
+  // the operator starts a new session (D30: the old one stays as evidence).
   auditLog('resume', { account: config.account, reason, by })
   return { resumed: true, reason }
 }

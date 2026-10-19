@@ -1,0 +1,128 @@
+// =============================================================================
+//  70_SCORING_RISK — Direction-Aware Scoring, Risk Gate, SL/TP & Eligibility
+// =============================================================================
+
+// --- 1. Direction-Aware Setup Quality Scoring (0 to 100) ---------------------
+// Long Scoring Factors
+float fz_l_trendFact = fz_rb_strongBull ? 1.0 : fz_rb_bull ? 0.75 : 0.0
+float fz_l_zoneFact  = fz_inDemandZone ? 1.0 : fz_priceInRibbonLong ? 0.70 : 0.0
+float fz_l_structFact = fz_chochBull ? 1.0 : fz_swpBull ? 0.90 : fz_bosBull ? 0.75 : 0.0
+float fz_l_candleFact = (fz_engulfBull or fz_pinBull) ? 1.0 : fz_candleBull ? 0.70 : 0.0
+float fz_l_mtfFact    = fz_htfBull ? 1.0 : 0.0
+
+float fz_longRawScore = (fz_l_trendFact * fz_w_trend) + (fz_l_zoneFact * fz_w_zone) + (fz_l_structFact * fz_w_struct) + (fz_l_candleFact * fz_w_candle) + (fz_l_mtfFact * fz_w_mtf)
+
+// Short Scoring Factors
+float fz_s_trendFact = fz_rb_strongBear ? 1.0 : fz_rb_bear ? 0.75 : 0.0
+float fz_s_zoneFact  = fz_inSupplyZone ? 1.0 : fz_priceInRibbonShort ? 0.70 : 0.0
+float fz_s_structFact = fz_chochBear ? 1.0 : fz_swpBear ? 0.90 : fz_bosBear ? 0.75 : 0.0
+float fz_s_candleFact = (fz_engulfBear or fz_pinBear) ? 1.0 : fz_candleBear ? 0.70 : 0.0
+float fz_s_mtfFact    = fz_htfBear ? 1.0 : 0.0
+
+float fz_shortRawScore = (fz_s_trendFact * fz_w_trend) + (fz_s_zoneFact * fz_w_zone) + (fz_s_structFact * fz_w_struct) + (fz_s_candleFact * fz_w_candle) + (fz_s_mtfFact * fz_w_mtf)
+
+float fz_sumWeights = fz_w_trend + fz_w_zone + fz_w_struct + fz_w_candle + fz_w_mtf
+float longScore     = fz_sumWeights > 0 ? math.round((fz_longRawScore / fz_sumWeights) * 100.0) : 0.0
+float shortScore    = fz_sumWeights > 0 ? math.round((fz_shortRawScore / fz_sumWeights) * 100.0) : 0.0
+
+// --- 2. Risk Calculation (Entry, SL, TP1, TP2, TP3) ---------------------------
+var int lastSignalBar = -999
+
+// Cooldown Gate
+bool fz_coolOk = (bar_index - lastSignalBar) >= fz_coolBars
+
+// Long SL & TP
+float fz_rawSlLong = not na(fz_demandZoneBot) ? fz_demandZoneBot : not na(fz_swL) ? fz_swL : (close - fz_sl_atrMul * fz_atrSafe)
+float fz_slLong = fz_sl_mode == "Zone / Swing" ? fz_rawSlLong - (fz_sl_padAtr * fz_atrSafe * fz_assetVolMult) : close - (fz_sl_atrMul * fz_atrSafe * fz_assetVolMult)
+float fz_riskDistLong = close - fz_slLong
+fz_riskDistLong := f_clamp(fz_riskDistLong, fz_sl_minAtr * fz_atrSafe, fz_sl_maxAtr * fz_atrSafe)
+fz_slLong := close - fz_riskDistLong
+
+float fz_oppZoneLong = fz_tp_mode == "Opposing Zone / RR" ? f_nearestOpposingZoneLevel(true, close) : na
+float fz_tp1Long = close + (fz_riskDistLong * fz_rr1)
+float fz_tp2Long = close + (fz_riskDistLong * fz_rr2)
+float fz_tp3Long = close + (fz_riskDistLong * fz_rr3)
+
+if not na(fz_oppZoneLong) and fz_oppZoneLong > (close + fz_riskDistLong * 0.8)
+    fz_tp1Long := math.min(close + (fz_riskDistLong * fz_rr1), fz_oppZoneLong)
+    fz_tp2Long := fz_oppZoneLong
+    fz_tp3Long := fz_oppZoneLong + (fz_riskDistLong * 1.0)
+
+// Short SL & TP
+float fz_rawSlShort = not na(fz_supplyZoneTop) ? fz_supplyZoneTop : not na(fz_swH) ? fz_swH : (close + fz_sl_atrMul * fz_atrSafe)
+float fz_slShort = fz_sl_mode == "Zone / Swing" ? fz_rawSlShort + (fz_sl_padAtr * fz_atrSafe * fz_assetVolMult) : close + (fz_sl_atrMul * fz_atrSafe * fz_assetVolMult)
+float fz_riskDistShort = fz_slShort - close
+fz_riskDistShort := f_clamp(fz_riskDistShort, fz_sl_minAtr * fz_atrSafe, fz_sl_maxAtr * fz_atrSafe)
+fz_slShort := close + fz_riskDistShort
+
+float fz_oppZoneShort = fz_tp_mode == "Opposing Zone / RR" ? f_nearestOpposingZoneLevel(false, close) : na
+float fz_tp1Short = close - (fz_riskDistShort * fz_rr1)
+float fz_tp2Short = close - (fz_riskDistShort * fz_rr2)
+float fz_tp3Short = close - (fz_riskDistShort * fz_rr3)
+
+if not na(fz_oppZoneShort) and fz_oppZoneShort < (close - fz_riskDistShort * 0.8)
+    fz_tp1Short := math.max(close - (fz_riskDistShort * fz_rr1), fz_oppZoneShort)
+    fz_tp2Short := fz_oppZoneShort
+    fz_tp3Short := fz_oppZoneShort - (fz_riskDistShort * 1.0)
+
+// --- 3. Obstacle Gate & RR Gate ----------------------------------------------
+string longBlockReason  = ""
+string shortBlockReason = ""
+
+// Obstacle checks
+if fz_obstacleGate
+    float distToSupply = f_nearestOpposingZoneDistance(true, close)
+    if distToSupply < (fz_tp1Long - close) * 0.92
+        longBlockReason := "Opposing Supply < TP1"
+
+    float distToDemand = f_nearestOpposingZoneDistance(false, close)
+    if distToDemand < (close - fz_tp1Short) * 0.92
+        shortBlockReason := "Opposing Demand < TP1"
+
+// RR Gate
+if fz_rr2 < fz_rrMin
+    if longBlockReason == ""
+        longBlockReason := "RR2 < Min RR"
+    if shortBlockReason == ""
+        shortBlockReason := "RR2 < Min RR"
+
+// Cooldown Gate
+if not fz_coolOk
+    if longBlockReason == ""
+        longBlockReason := "Cooldown Active"
+    if shortBlockReason == ""
+        shortBlockReason := "Cooldown Active"
+
+// Conflicting Signal Score Margin Gate
+if longSetupDetected and shortSetupDetected
+    if math.abs(longScore - shortScore) < fz_scoreMargin
+        if longBlockReason == ""
+            longBlockReason := "Score Margin Low"
+        if shortBlockReason == ""
+            shortBlockReason := "Score Margin Low"
+
+// Score Threshold Gate
+if longScore <= fz_scr_noTrade and longBlockReason == ""
+    longBlockReason := "Score <= NoTrade"
+
+if shortScore <= fz_scr_noTrade and shortBlockReason == ""
+    shortBlockReason := "Score <= NoTrade"
+
+// --- 4. Final Eligibility & Signal Decision -----------------------------------
+bool longEligible  = longSetupDetected and (longScore > fz_scr_noTrade) and (longBlockReason == "") and fz_isConfirmed
+bool shortEligible = shortSetupDetected and (shortScore > fz_scr_noTrade) and (shortBlockReason == "") and fz_isConfirmed
+
+// Mutual exclusivity: if both pass, higher score wins
+if longEligible and shortEligible
+    if longScore >= shortScore
+        shortEligible    := false
+        shortBlockReason := "Long Score Won"
+    else
+        longEligible    := false
+        longBlockReason := "Short Score Won"
+
+bool fz_signalLong  = longEligible
+bool fz_signalShort = shortEligible
+
+if fz_signalLong or fz_signalShort
+    lastSignalBar := bar_index

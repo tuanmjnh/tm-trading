@@ -209,6 +209,55 @@ export const TOOLS = Object.freeze({
       return { method, symbol, tf, bars: bars.length, summary }
     },
   },
+
+  newsEvidence: {
+    description: 'Bounded news evidence packet for one market group/symbols/horizon (V3.5 §60.10): ranked clustered events + headlines with IDs, source tiers, corroboration, timestamps and canonical URLs, plus degraded/excluded accounting. A news-based suggestion MUST cite these evidence IDs and state counter-evidence. Read-only.',
+    parameters: {
+      type: 'object',
+      properties: {
+        group: { type: 'string', default: 'crypto' },
+        symbols: { type: 'string', description: 'comma-separated base assets, e.g. BTC,ETH' },
+        horizon: { type: 'string', enum: ['short_term', 'swing', 'long_term'], default: 'short_term' },
+        lookbackHours: { type: 'integer', minimum: 1, maximum: 720, default: 72 },
+        budget: { type: 'integer', minimum: 1, maximum: 30, default: 12 },
+      },
+    },
+    handler: async (p = {}, deps = {}) => {
+      const { buildEvidencePacket } = await import('../engine/newsPacket.mjs')
+      const group = String(p.group || 'crypto')
+      const symbols = String(p.symbols || '').split(',').map((s) => s.trim().toUpperCase()).filter(Boolean)
+      const horizon = String(p.horizon || 'short_term')
+      const lookbackHours = clampInt(p.lookbackHours, 1, 720, 72)
+      const budget = clampInt(p.budget, 1, 30, 12)
+      const mg = deps.mongo !== undefined ? deps.mongo : await connectMongo()
+      if (!mg) return { mongo: 'down', packet: null }
+      const { NewsItem } = deps.NewsItem ? { NewsItem: deps.NewsItem } : await import('../engine/models/newsItem.mjs')
+      const { MarketEvent } = deps.MarketEvent ? { MarketEvent: deps.MarketEvent } : await import('../engine/models/marketEvent.mjs')
+      const { NewsSource } = deps.NewsSource ? { NewsSource: deps.NewsSource } : await import('../engine/models/newsSource.mjs')
+      const since = new Date(Date.now() - lookbackHours * 3600 * 1000)
+      const [items, events, sources] = await Promise.all([
+        NewsItem.find({ marketGroup: group, ingestedAt: { $gte: since } }).sort({ ingestedAt: -1 }).limit(200).lean(),
+        MarketEvent.find({ marketGroup: group, lastSeenAt: { $gte: since } }).sort({ lastSeenAt: -1 }).limit(100).lean(),
+        NewsSource.find({}).lean(),
+      ])
+      const states = {}
+      for (const s of sources) states[s.sourceId || s._id] = s.health?.state || 'unknown'
+      const packet = buildEvidencePacket({
+        events: events.map((e) => ({
+          id: String(e._id), title: e.title, status: e.status, dirs: e.corroboration?.dirs || [],
+          corroboration: e.corroboration?.status, sourceIds: e.corroboration?.sourceIds || [],
+          entities: e.entities || [], firstSeenAt: e.firstSeenAt,
+        })),
+        items: items.map((i) => ({
+          id: String(i._id), title: i.title, url: i.originUrl || i.url, dir: i.dir, level: i.level,
+          tags: i.tags || [], sourceId: i.sourceId, firstSeenAt: i.firstSeenAt, publishedAt: i.publishedAt,
+        })),
+        query: { group, symbols, horizon, lookbackHours, budget },
+        health: { states, missingProviders: [] },
+      })
+      return { mongo: 'up', packet }
+    },
+  },
 })
 
 /** The entire tool surface — locked by ai/test.mjs (guardrail). */

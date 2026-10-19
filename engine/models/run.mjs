@@ -18,6 +18,7 @@ const RunSchema = new mongoose.Schema(
 
     // --- pham vi ---
     method: { type: String, default: 'vsa' },
+    ownerId: { type: String, default: null, index: true }, // tenancy (roadmap §61.3): runs are user-scoped
     symbol: { type: String, required: true },
     tf: { type: String, required: true },
     market: { type: String, enum: ['fapi', 'spot'], default: 'fapi' },

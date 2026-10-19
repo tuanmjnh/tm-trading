@@ -15,6 +15,8 @@ const SnapshotSchema = new mongoose.Schema(
   {
     _id: { type: String, required: true }, // `snap:${alertKey}`
     snapshotId: { type: String, required: true },
+    // Tenancy (roadmap §61.3): the decision snapshot belongs to the desk owner.
+    ownerId: { type: String, default: null, index: true },
     snapshotHash: { type: String, required: true }, // sha256 of context
     kind: { type: String, required: true }, // 'entry-decision' | ...
 

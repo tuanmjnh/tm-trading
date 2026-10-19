@@ -26,6 +26,11 @@ function engineJournal(): Promise<EngineJournal> {
 
 export interface ListJournalQuery {
   limit: number
+  /**
+   * Tenancy (docs/web-app/user-tenancy-plan.md): hub user id (`sub`) that owns
+   * the journal rows. Required — an unscoped read would leak another tenant.
+   */
+  ownerId: string
   cursor?: string
   source?: string
   method?: string
@@ -59,6 +64,9 @@ export async function listJournal(q: ListJournalQuery): Promise<ListJournalResul
     const v = q[k]
     if (v) filters[k] = v
   }
+  // ownerId is not a user-chosen display filter: it is the tenant boundary, so
+  // it is passed to the engine query but kept out of the echoed `filters`.
+  const engineFilters: Record<string, string> = { ...filters, ownerId: q.ownerId }
 
   // engine/journal.mjs is plain JS: cast its load() result to the shape we use
   // (source is only ever 'mongo' | 'ndjson' — see loadJournal()).
@@ -72,7 +80,7 @@ export async function listJournal(q: ListJournalQuery): Promise<ListJournalResul
   const warnings: string[] = []
   try {
     const mod = await engineJournal()
-    raw = (await mod.loadJournal({ filters, mongo: 'auto' })) as unknown as LoadedJournal
+    raw = (await mod.loadJournal({ filters: engineFilters, mongo: 'auto' })) as unknown as LoadedJournal
   } catch (err) {
     warnings.push(`journal load failed: ${(err as Error)?.message || String(err)}`)
   }

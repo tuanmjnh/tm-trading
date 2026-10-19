@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const data = await moveExperimentResearch(id, to)
+    const data = await moveExperimentResearch(id, to, {}, requireOwnerId(event))
     return { success: true, data }
   } catch (err) {
     throw researchHttpError(err)

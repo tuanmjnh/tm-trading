@@ -1,0 +1,110 @@
+// =============================================================================
+//  80_STATE — Trade Lifecycle State Machine, TP/SL Hit Detection & Statistics
+// =============================================================================
+
+// --- 1. Position State Variables ---------------------------------------------
+var int    fz_posSide   = 0     // 0 = flat, 1 = long, -1 = short
+var int    fz_posBar    = na
+var float  fz_posEntry  = na
+var float  fz_posSl     = na
+var float  fz_posTp1    = na
+var float  fz_posTp2    = na
+var float  fz_posTp3    = na
+var bool   fz_posTp1Hit = false
+var bool   fz_posTp2Hit = false
+var bool   fz_posTp3Hit = false
+var int    fz_posScore  = 0
+var string fz_posSetup  = ""
+
+// Statistics Counters
+var int fz_cntSignals = 0
+var int fz_cntWins    = 0
+var int fz_cntLosses  = 0
+var int fz_cntLongs   = 0
+var int fz_cntShorts  = 0
+
+// Current Bar Event Flags
+bool fz_hitTp1 = false
+bool fz_hitTp2 = false
+bool fz_hitTp3 = false
+bool fz_hitSl  = false
+
+// --- 2. Check Exits / Targets for Active Position -----------------------------
+if fz_posSide == 1 // Active Long
+    if not fz_posTp1Hit and high >= fz_posTp1
+        fz_posTp1Hit := true
+        fz_hitTp1    := true
+
+    if not fz_posTp2Hit and high >= fz_posTp2
+        fz_posTp2Hit := true
+        fz_hitTp2    := true
+
+    if not fz_posTp3Hit and high >= fz_posTp3
+        fz_posTp3Hit := true
+        fz_hitTp3    := true
+        fz_posSide   := 0
+        fz_cntWins   += 1
+
+    if low <= fz_posSl and fz_posSide != 0
+        fz_hitSl   := true
+        fz_posSide := 0
+        if fz_posTp1Hit
+            fz_cntWins += 1
+        else
+            fz_cntLosses += 1
+
+else if fz_posSide == -1 // Active Short
+    if not fz_posTp1Hit and low <= fz_posTp1
+        fz_posTp1Hit := true
+        fz_hitTp1    := true
+
+    if not fz_posTp2Hit and low <= fz_posTp2
+        fz_posTp2Hit := true
+        fz_hitTp2    := true
+
+    if not fz_posTp3Hit and low <= fz_posTp3
+        fz_posTp3Hit := true
+        fz_hitTp3    := true
+        fz_posSide   := 0
+        fz_cntWins   += 1
+
+    if high >= fz_posSl and fz_posSide != 0
+        fz_hitSl   := true
+        fz_posSide := 0
+        if fz_posTp1Hit
+            fz_cntWins += 1
+        else
+            fz_cntLosses += 1
+
+// --- 3. New Signal Adoption --------------------------------------------------
+if fz_signalLong
+    fz_posSide   := 1
+    fz_posBar    := bar_index
+    fz_posEntry  := close
+    fz_posSl     := fz_slLong
+    fz_posTp1    := fz_tp1Long
+    fz_posTp2    := fz_tp2Long
+    fz_posTp3    := fz_tp3Long
+    fz_posTp1Hit := false
+    fz_posTp2Hit := false
+    fz_posTp3Hit := false
+    fz_posScore  := int(longScore)
+    fz_posSetup  := longSetupType
+    fz_cntSignals += 1
+    fz_cntLongs   += 1
+
+else if fz_signalShort
+    fz_posSide   := -1
+    fz_posBar    := bar_index
+    fz_posEntry  := close
+    fz_posSl     := fz_slShort
+    fz_posTp1    := fz_tp1Short
+    fz_posTp2    := fz_tp2Short
+    fz_posTp3    := fz_tp3Short
+    fz_posTp1Hit := false
+    fz_posTp2Hit := false
+    fz_posTp3Hit := false
+    fz_posScore  := int(shortScore)
+    fz_posSetup  := shortSetupType
+    fz_cntSignals += 1
+    fz_cntShorts  += 1

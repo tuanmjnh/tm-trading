@@ -1,0 +1,30 @@
+// @part skip:fz
+// =============================================================================
+//  90_STRATEGY_EXEC — Strategy Execution Bridge for TM Fusion Zones Backtest
+//  Marker "// @part skip:fz" ensures this file is only built into fz-strategy.
+// =============================================================================
+
+fz_strat_on   = input.bool(true, "Bat giao dich tu dong (FZ Strategy)", group = "FZ · Strategy", display = display.data_window)
+fz_strat_dir  = input.string("Long + Short", "Chieu giao dich", options = ["Long + Short", "Long Only", "Short Only"], group = "FZ · Strategy", display = display.data_window)
+fz_strat_pct  = input.float(100.0, "Khoi luong (% equity)", minval = 1.0, maxval = 100.0, step = 5.0, group = "FZ · Strategy", display = display.data_window)
+
+bool fz_allowLong  = fz_strat_dir == "Long + Short" or fz_strat_dir == "Long Only"
+bool fz_allowShort = fz_strat_dir == "Long + Short" or fz_strat_dir == "Short Only"
+
+float fz_stratQty = fz_strat_pct / 100.0 * strategy.equity / close
+bool  fz_stratQtyOk = fz_stratQty > 0.0 and not na(close) and close > 0.0
+
+bool fz_stratLongEntry  = fz_strat_on and fz_stratQtyOk and fz_signalLong and fz_allowLong and strategy.position_size == 0
+bool fz_stratShortEntry = fz_strat_on and fz_stratQtyOk and fz_signalShort and fz_allowShort and strategy.position_size == 0
+
+if fz_stratLongEntry
+    strategy.entry("Long", strategy.long, qty = fz_stratQty, comment = "FZ LONG")
+
+if fz_stratShortEntry
+    strategy.entry("Short", strategy.short, qty = fz_stratQty, comment = "FZ SHORT")
+
+if fz_strat_on and strategy.position_size > 0 and not na(fz_posSl) and not na(fz_posTp2)
+    strategy.exit("Exit Long", from_entry = "Long", stop = fz_posSl, limit = fz_posTp2, comment_loss = "SL", comment_profit = "TP2")
+
+if fz_strat_on and strategy.position_size < 0 and not na(fz_posSl) and not na(fz_posTp2)
+    strategy.exit("Exit Short", from_entry = "Short", stop = fz_posSl, limit = fz_posTp2, comment_loss = "SL", comment_profit = "TP2")

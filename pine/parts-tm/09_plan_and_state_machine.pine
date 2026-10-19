@@ -1,0 +1,433 @@
+// =============================================================================
+//  L8 - PLAN BUILDER & DYNAMIC STATE MACHINE (v2.1)
+// =============================================================================
+//  v2.1 changes:
+//    * RR gate names the target it evaluates (TP2) in the plan, dashboard and
+//      alert payload, and emits BLOCKED_RR / BLOCKED_NET_RR codes.
+//    * Every rejection is a standardized reason code; the full blocker set is
+//      kept separately so the Advanced dashboard/alert can show all causes.
+//    * Entry modes (A/B/C) are an independent gate: confidence cannot bypass
+//      an inactive mode, and a mode cannot bypass risk.
+//    * Lifecycle counters distinguish candidate -> eligible -> pending ->
+//      filled -> closed, so a blocked setup is never reported as a trade.
+// =============================================================================
+
+// --- 1. Comprehensive Trade Plan Builder -------------------------------------
+f_buildTMPlan2(int dir) =>
+    float a     = tm_atr
+    bool  atrOk = not na(a) and a > 0.0
+    bool  dirOk = dir == 1 or dir == -1
+
+    // Determine Entry Type (Market vs Pullback Limit)
+    string ordType = "MARKET"
+    if tm_entryMode == "Pullback Limit (Strict)"
+        ordType := "LIMIT"
+    else if tm_entryMode == "Auto (Adaptive)"
+        if tm_isOverextended
+            ordType := "LIMIT"
+        else
+            ordType := "MARKET"
+
+    // Limit Price Selection
+    float limPx = na
+    if dir == 1
+        limPx := tm_limitSource == "50% FVG" and not na(tm_nearFvgBullPx) ? tm_nearFvgBullPx : tm_limitSource == "Order Block Edge" and not na(tm_nearObBullPx) ? tm_nearObBullPx : tm_emaF
+        // Safety: a buy limit must sit at or below the current close
+        limPx := math.min(limPx, close - syminfo.mintick)
+    else if dir == -1
+        limPx := tm_limitSource == "50% FVG" and not na(tm_nearFvgBearPx) ? tm_nearFvgBearPx : tm_limitSource == "Order Block Edge" and not na(tm_nearObBearPx) ? tm_nearObBearPx : tm_emaF
+        // Safety: a sell limit must sit at or above the current close
+        limPx := math.max(limPx, close + syminfo.mintick)
+
+    float entryPx = ordType == "LIMIT" ? limPx : close
+
+    // SL Distance & Anchoring
+    float pad   = a * tm_sl_padAtr
+    float swing = dir == 1 ? nz(tm_swingLo, low) : nz(tm_swingHi, high)
+    float sDist = dir == 1 ? (entryPx - swing) + pad : (swing - entryPx) + pad
+    float aDist = a * tm_sl_atrMul
+    float base  = (aDist + sDist) * 0.5
+    float dist  = f_clamp(nz(base, aDist), a * tm_sl_minAtr, a * tm_sl_maxAtr)
+
+    float slPx = entryPx - dir * dist
+    float risk = dist
+
+    // Targets: TP1 (partial + auto-BE), TP2 (standard, evaluated vs minRR), TP3 (runner)
+    float r1  = tm_rr1
+    float r2  = math.max(tm_rr2, r1 + 0.5)
+    float r3  = math.max(tm_rr3, r2 + 1.0)
+    float tp1 = entryPx + dir * r1 * risk
+    float tp2 = entryPx + dir * r2 * risk
+    float tp3 = entryPx + dir * r3 * risk
+
+    // RR gate is evaluated at TP2, never at TP1 (partial target).
+    float evalRR = r2
+    bool  rrOk   = tm_rrMin <= 0.0 or evalRR >= tm_rrMin
+    bool  slOk   = dist > 0.0 and not na(slPx) and (dir == 1 ? slPx < entryPx : slPx > entryPx)
+    bool  tpOk   = not na(tp1) and not na(tp2) and not na(tp3) and (dir == 1 ? (entryPx < tp1 and tp1 < tp2 and tp2 < tp3) : (entryPx > tp1 and tp1 > tp2 and tp2 > tp3))
+
+    // Futures Position Sizing & Margin
+    float riskUsd   = tm_risk_equity * (tm_risk_pct / 100.0)
+    float posSize   = dist > 0.0 ? riskUsd / dist : 0.0
+    float notional  = posSize * entryPx
+    float effLev    = tm_risk_equity > 0.0 ? notional / tm_risk_equity : 0.0
+    float marginReq = tm_risk_maxLev > 0.0 ? notional / tm_risk_maxLev : notional
+
+    // Estimated Liquidation Price
+    float levForLiq = math.max(effLev, 1.0)
+    float liqLong   = entryPx * math.max(0.0, 1.0 - (1.0 / levForLiq) + tm_risk_mmr)
+    float liqShort  = entryPx * (1.0 + (1.0 / levForLiq) - tm_risk_mmr)
+    float liqPrice  = dir == 1 ? liqLong : dir == -1 ? liqShort : na
+
+    bool  liqOk     = not tm_gate_risk or (dir == 1 ? slPx > liqPrice : slPx < liqPrice)
+    bool  levOk     = not tm_gate_risk or tm_risk_maxLev <= 0.0 or effLev <= (tm_risk_maxLev * 1.05)
+
+    // Friction & Net RR
+    float feeSlipUsd = notional * (tm_risk_feeSlipPct / 100.0)
+    float netProfit  = (evalRR * riskUsd) - feeSlipUsd
+    float netRisk    = riskUsd + feeSlipUsd
+    float netRR      = netRisk > 0.0 ? netProfit / netRisk : evalRR
+    // Net RR is compared against the SAME minimum target, after fees/slippage.
+    // (v2.0 used minRR * 0.70, which hid the cost of the trade.)
+    bool  netRrOk    = tm_rrMin <= 0.0 or netRR >= tm_rrMin
+
+    // Standardized plan reason codes (v2.1 section 11.3).
+    string rsn = not atrOk ? "BLOCKED_NO_ATR" : not dirOk ? "NO_DIRECTION" : not slOk ? "BLOCKED_BAD_SL" : not tpOk ? "BLOCKED_BAD_TP" : not rrOk ? "BLOCKED_RR" : not levOk ? "BLOCKED_MAX_LEV" : not liqOk ? "BLOCKED_LIQUIDATION_RISK" : not netRrOk ? "BLOCKED_NET_RR" : "VALID"
+    bool  valid = atrOk and dirOk and slOk and tpOk and rrOk and levOk and liqOk and netRrOk
+
+    TMPlan2.new(valid, dir, ordType, entryPx, limPx, slPx, tp1, tp2, tp3, risk, evalRR, posSize, notional, effLev, marginReq, liqPrice, netRR, "TP2", rsn)
+
+tm_plan2 = f_buildTMPlan2(tm_dir)
+
+// --- 2. Persistent State & Counters ------------------------------------------
+var int    tm_posStage    = TM2_STAGE_IDLE
+var int    tm_posDir      = 0
+var string tm_posType     = "MARKET"
+var string tm_posMode     = ""
+var float  tm_posEntry    = na
+var float  tm_posLimit    = na
+var float  tm_posSl       = na
+var float  tm_posTp1      = na
+var float  tm_posTp2      = na
+var float  tm_posTp3      = na
+var float  tm_posRisk     = na
+var int    tm_posBars     = 0
+var int    tm_posBar      = na
+var float  tm_posMaxFavR  = 0.0
+var string tm_posSigId    = ""
+var bool   tm_needReset   = false
+var int    tm_exitReason  = TM2_EXIT_NONE
+
+var int tm_dayCount     = 0
+var int tm_barsSince    = 999999
+var int tm_consecLosses = 0
+tm_barsSince += 1
+
+if f_isNewDay()
+    tm_dayCount     := 0
+    tm_consecLosses := 0
+
+// Performance Tracking (separates TP1 hit rate from net win rate)
+var int   tm_statTotalTrades    = 0
+var int   tm_statTp1Hits        = 0
+var int   tm_statNetWins        = 0
+var int   tm_statBeSaves        = 0
+var int   tm_statFullLosses     = 0
+var int   tm_statTimeouts       = 0
+var int   tm_statTimeDecays     = 0
+var float tm_statRealizedRSum   = 0.0
+
+// Lifecycle funnel counters (v2.1 section 13.1)
+var int tm_statCandidates = 0
+var int tm_statEligible   = 0
+var int tm_statPendingN   = 0
+var int tm_statFilledN    = 0
+var int tm_statClosedN    = 0
+var bool tm_prevCandidate = false
+var bool tm_prevEligible  = false
+
+// --- 3. Gate Status & Eligibility --------------------------------------------
+tm_gateStatus = f_evaluateGates(tm_dir)
+
+bool tm_okBar     = tm_confirmOnly ? barstate.isconfirmed : true
+bool tm_okCool    = tm_barsSince >= tm_coolBars
+bool tm_okDay     = tm_dayCount < tm_maxDay
+bool tm_okDir     = tm_dir != 0
+bool tm_okCircuit = not tm_gate_circuit or tm_consecLosses < tm_risk_maxLosses
+bool tm_okPosition = tm_posStage == TM2_STAGE_IDLE
+
+bool tm_tradeEligible = tm_okDir and tm_okQuality and tm_gateStatus.allPassed and tm_modeGateOk and tm_okCool and tm_okDay and tm_okCircuit and tm_okPosition
+bool tm_riskEligible  = tm_plan2.valid
+bool tm_signal        = tm_okBar and tm_tradeEligible and tm_riskEligible
+
+// Aggregated blocker mask for the Advanced dashboard + alert payload.
+string tm_blockMask = ""
+if tm_scoreBlockCode != "OK"
+    tm_blockMask := f_tmBlockers(tm_blockMask, tm_scoreBlockCode)
+if not tm_gateStatus.allPassed
+    tm_blockMask := f_tmBlockers(tm_blockMask, tm_gateStatus.blockMask)
+if not tm_modeGateOk
+    tm_blockMask := f_tmBlockers(tm_blockMask, tm_modeReason)
+if not tm_okCool
+    tm_blockMask := f_tmBlockers(tm_blockMask, "BLOCKED_COOLDOWN")
+if not tm_okDay
+    tm_blockMask := f_tmBlockers(tm_blockMask, "BLOCKED_DAILY_LIMIT")
+if not tm_okCircuit
+    tm_blockMask := f_tmBlockers(tm_blockMask, "BLOCKED_CIRCUIT_BREAKER")
+if not tm_okPosition
+    tm_blockMask := f_tmBlockers(tm_blockMask, "BLOCKED_POSITION_OPEN")
+if tm_dir != 0 and not tm_riskEligible
+    tm_blockMask := f_tmBlockers(tm_blockMask, tm_plan2.reason)
+
+// Stable priority order for the compact "Top Block Reason" row.
+string tm_noTradeReason = tm_scoreBlockCode != "OK" ? tm_scoreBlockCode : not tm_gateStatus.regimeOk ? "BLOCKED_REGIME" : not tm_gateStatus.mtfOk ? "BLOCKED_MTF" : not tm_gateStatus.btcOk ? (tm_dir == 1 ? "BTC_DUMPING_VETO" : "BTC_PUMPING_VETO") : not tm_gateStatus.obstacleOk ? "BLOCKED_OBSTACLE" : not tm_gateStatus.overextOk ? "BLOCKED_OVEREXTENSION" : not tm_modeGateOk ? tm_modeReason : not tm_okCool ? "BLOCKED_COOLDOWN" : not tm_okDay ? "BLOCKED_DAILY_LIMIT" : not tm_okCircuit ? "BLOCKED_CIRCUIT_BREAKER" : not tm_okPosition ? "BLOCKED_POSITION_OPEN" : not tm_riskEligible ? tm_plan2.reason : "OK"
+
+// Candidate = a direction with enough side strength to be worth a plan.
+// Eligible = candidate that survived every gate (still not necessarily filled).
+bool tm_candidateNow = tm_okBar and tm_scoreBlockCode == "OK" and tm_okDir
+if tm_candidateNow and not tm_prevCandidate
+    tm_statCandidates += 1
+tm_prevCandidate := tm_candidateNow
+
+bool tm_eligibleNow = tm_okBar and tm_tradeEligible and tm_riskEligible
+if tm_eligibleNow and not tm_prevEligible
+    tm_statEligible += 1
+tm_prevEligible := tm_eligibleNow
+
+// --- 4. Event Flags for Visuals & Alerts -------------------------------------
+var bool tm_evEntry    = false
+var bool tm_evPending  = false
+var bool tm_evFilled   = false
+var bool tm_evCancel   = false
+var int  tm_evTp       = 0
+var bool tm_evSl       = false
+var bool tm_evBeMoved  = false
+var bool tm_evTrail    = false
+var bool tm_evTimeout  = false
+var bool tm_evDecay    = false
+var bool tm_evClose    = false
+
+tm_evEntry   := false
+tm_evPending := false
+tm_evFilled  := false
+tm_evCancel  := false
+tm_evTp      := 0
+tm_evSl      := false
+tm_evBeMoved := false
+tm_evTrail   := false
+tm_evTimeout := false
+tm_evDecay   := false
+tm_evClose   := false
+
+// --- 5. Dynamic State Machine ------------------------------------------------
+// 1. Deferred reset from the previous bar (keeps the exit label readable).
+if tm_needReset
+    tm_needReset  := false
+    tm_posStage   := TM2_STAGE_IDLE
+    tm_posDir     := 0
+    tm_posType    := "MARKET"
+    tm_posMode    := ""
+    tm_posEntry   := na
+    tm_posLimit   := na
+    tm_posSl      := na
+    tm_posTp1     := na
+    tm_posTp2     := na
+    tm_posTp3     := na
+    tm_posRisk    := na
+    tm_posBars    := 0
+    tm_posBar     := na
+    tm_posMaxFavR := 0.0
+    tm_exitReason := TM2_EXIT_NONE
+
+// 2. Manage PENDING_LIMIT orders
+if tm_posStage == TM2_STAGE_PENDING_LIMIT
+    tm_posBars += 1
+    bool isUp = tm_posDir == 1
+    bool filled = isUp ? low <= tm_posLimit : high >= tm_posLimit
+    bool reachedTp1Early = isUp ? high >= tm_posTp1 : low <= tm_posTp1
+
+    if filled
+        tm_posStage := TM2_STAGE_OPEN
+        tm_posEntry := tm_posLimit
+        tm_posBar   := bar_index
+        tm_posBars  := 0
+        tm_evFilled := true
+        tm_statFilledN += 1
+    else if tm_limitCancelOnTp1 and reachedTp1Early
+        // Missed move: price reached TP1 before filling the limit.
+        tm_exitReason := TM2_CANCEL_MISSED
+        tm_evCancel   := true
+        tm_needReset  := true
+    else if tm_posBars >= tm_limitCancelBars
+        // Expired limit order after K bars.
+        tm_exitReason := TM2_CANCEL_TIMEOUT
+        tm_evCancel   := true
+        tm_needReset  := true
+
+// 3. Manage Active OPEN Position (TP1 BE, TP2 trail, time-decay, timeout)
+if tm_posStage >= TM2_STAGE_OPEN
+    tm_posBars += 1
+    bool  isUp = tm_posDir == 1
+    float curFavR = isUp ? (high - tm_posEntry) / tm_posRisk : (tm_posEntry - low) / tm_posRisk
+    tm_posMaxFavR := math.max(tm_posMaxFavR, curFavR)
+
+    float t1 = tm_posStage < TM2_STAGE_TP1_BE ? tm_posTp1 : na
+    float t2 = tm_posStage < TM2_STAGE_TP2_TRAIL ? tm_posTp2 : na
+    float t3 = tm_posTp3
+
+    // A limit that fills on this bar may have filled AFTER the high/low that
+    // touched a target. Without intrabar data, counting a TP on the fill bar is
+    // optimistic, so targets are only evaluated from the next bar onward. A stop
+    // on the fill bar is still honored (worst-case assumption).
+    bool tm_fillBar = tm_posBar == bar_index
+    bool hitSl = isUp ? low <= tm_posSl : high >= tm_posSl
+    bool hit1  = not tm_fillBar and not na(t1) and (isUp ? high >= t1 : low <= t1)
+    bool hit2  = not tm_fillBar and not na(t2) and (isUp ? high >= t2 : low <= t2)
+    bool hit3  = not tm_fillBar and not na(t3) and (isUp ? high >= t3 : low <= t3)
+    bool hitAnyTp = hit1 or hit2 or hit3
+
+    // TP1 hit rate counts a trade once, only when TP1 was genuinely reachable
+    // and the conservative SL-first rule did not fire on the same bar.
+    if hitAnyTp and tm_posStage == TM2_STAGE_OPEN and not hitSl
+        tm_statTp1Hits += 1
+
+    bool closed = false
+    float realizedTradeR = 0.0
+
+    // Conservative execution: if a bar hits both SL and TP, SL takes precedence.
+    if hitSl and hitAnyTp
+        closed := true
+        tm_evSl := true
+        tm_evClose := true
+        if tm_posStage == TM2_STAGE_OPEN
+            tm_exitReason := TM2_EXIT_SL
+            realizedTradeR := -1.0
+            tm_statFullLosses += 1
+            tm_consecLosses   += 1
+        else if tm_posStage == TM2_STAGE_TP1_BE
+            tm_exitReason := TM2_EXIT_BREAKEVEN
+            // 40% at TP1 + 60% at BE (0R) minus roundtrip fee buffer
+            realizedTradeR := 0.40 * tm_rr1 - (tm_risk_feeSlipPct * 2.0 / 100.0)
+            tm_statBeSaves += 1
+            tm_statNetWins += 1
+            tm_consecLosses := 0
+        else
+            tm_exitReason := TM2_EXIT_TRAIL
+            realizedTradeR := 0.40 * tm_rr1 + 0.40 * tm_rr2 - (tm_risk_feeSlipPct * 2.0 / 100.0)
+            tm_statNetWins += 1
+            tm_consecLosses := 0
+    else if hitSl
+        closed := true
+        tm_evSl := true
+        tm_evClose := true
+        if tm_posStage == TM2_STAGE_OPEN
+            tm_exitReason := TM2_EXIT_SL
+            realizedTradeR := -1.0
+            tm_statFullLosses += 1
+            tm_consecLosses   += 1
+        else if tm_posStage == TM2_STAGE_TP1_BE
+            tm_exitReason := TM2_EXIT_BREAKEVEN
+            realizedTradeR := 0.40 * tm_rr1 - (tm_risk_feeSlipPct * 2.0 / 100.0)
+            tm_statBeSaves += 1
+            tm_statNetWins += 1
+            tm_consecLosses := 0
+        else
+            tm_exitReason := TM2_EXIT_TRAIL
+            realizedTradeR := 0.40 * tm_rr1 + 0.40 * tm_rr2 - (tm_risk_feeSlipPct * 2.0 / 100.0)
+            tm_statNetWins += 1
+            tm_consecLosses := 0
+    else if hit3
+        closed := true
+        tm_evTp := 3
+        tm_evClose := true
+        tm_exitReason := TM2_EXIT_TP3
+        realizedTradeR := 0.40 * tm_rr1 + 0.40 * tm_rr2 + 0.20 * tm_rr3
+        tm_statNetWins += 1
+        tm_consecLosses := 0
+    else if hit2
+        tm_evTp := 2
+        tm_posStage := TM2_STAGE_TP2_TRAIL
+        // Lock TP1 as the structural base for the trail
+        tm_posSl := tm_posTp1
+        tm_evTrail := true
+    else if hit1
+        tm_evTp := 1
+        tm_posStage := TM2_STAGE_TP1_BE
+        // Auto Break-Even: move SL to entry +/- fee buffer
+        if tm_autoBeOn
+            tm_posSl := tm_posEntry + tm_posDir * tm_atr * tm_beOffsetAtr
+            tm_evBeMoved := true
+
+    // Dynamic trailing stop in TP2 stage
+    if not closed and tm_posStage == TM2_STAGE_TP2_TRAIL and tm_trailOn
+        float trailLvl = isUp ? high[1] - tm_trailDistAtr * tm_atr : low[1] + tm_trailDistAtr * tm_atr
+        tm_posSl := isUp ? math.max(tm_posSl, trailLvl) : math.min(tm_posSl, trailLvl)
+
+    // Time-Decay / Stagnation exit
+    if not closed and tm_timeDecayOn and tm_posStage == TM2_STAGE_OPEN and tm_posBars >= tm_stagnantBars
+        if tm_posMaxFavR < 0.3 and tm_regime.adx < tm_regimeAdxTrending
+            closed := true
+            tm_evDecay := true
+            tm_evClose := true
+            tm_exitReason := TM2_EXIT_TIMEDECAY
+            tm_statTimeDecays += 1
+            realizedTradeR := (close - tm_posEntry) * tm_posDir / tm_posRisk
+            if realizedTradeR > 0
+                tm_statNetWins += 1
+                tm_consecLosses := 0
+            else
+                tm_consecLosses += 1
+
+    // Max-hold timeout
+    if not closed and tm_posBars >= tm_maxHoldBars
+        closed := true
+        tm_evTimeout := true
+        tm_evClose := true
+        tm_exitReason := TM2_EXIT_TIMEOUT
+        tm_statTimeouts += 1
+        realizedTradeR := (close - tm_posEntry) * tm_posDir / tm_posRisk
+        if realizedTradeR > 0
+            tm_statNetWins += 1
+            tm_consecLosses := 0
+        else
+            tm_consecLosses += 1
+
+    if closed
+        tm_statTotalTrades += 1
+        tm_statClosedN += 1
+        tm_statRealizedRSum += realizedTradeR
+        tm_needReset := true
+
+// 4. Open a new position (one position at a time)
+if tm_okBar and tm_signal and tm_posStage == TM2_STAGE_IDLE
+    tm_posDir    := tm_plan2.dir
+    tm_posType   := tm_plan2.orderType
+    tm_posMode   := tm_activeMode
+    tm_posEntry  := tm_plan2.entry
+    tm_posLimit  := tm_plan2.limitPrice
+    tm_posSl     := tm_plan2.sl
+    tm_posTp1    := tm_plan2.tp1
+    tm_posTp2    := tm_plan2.tp2
+    tm_posTp3    := tm_plan2.tp3
+    tm_posRisk   := tm_plan2.risk
+    tm_posBars   := 0
+    tm_posBar    := bar_index
+    tm_posMaxFavR:= 0.0
+    tm_posSigId  := "TM2_" + syminfo.ticker + "_" + timeframe.period + "_" + str.tostring(time) + "_" + (tm_plan2.dir == 1 ? "L" : "S")
+    tm_dayCount  += 1
+    tm_barsSince := 0
+    tm_exitReason:= TM2_EXIT_NONE
+
+    if tm_plan2.orderType == "LIMIT"
+        tm_posStage := TM2_STAGE_PENDING_LIMIT
+        tm_evPending := true
+        tm_statPendingN += 1
+    else
+        tm_posStage := TM2_STAGE_OPEN
+        tm_evEntry  := true
+        tm_statFilledN += 1
+
+// --- 6. Realized Statistics ---------------------------------------------------
+float tm_tp1HitRate = tm_statTotalTrades > 0 ? (float(tm_statTp1Hits) / float(tm_statTotalTrades)) * 100.0 : 0.0
+float tm_netWinrate = tm_statTotalTrades > 0 ? (float(tm_statNetWins) / float(tm_statTotalTrades)) * 100.0 : 0.0
+float tm_avgRealizedR = tm_statTotalTrades > 0 ? tm_statRealizedRSum / float(tm_statTotalTrades) : 0.0

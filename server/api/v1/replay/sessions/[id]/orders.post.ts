@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
   }
   const body = await readBody(event).catch(() => undefined)
   try {
-    return { success: true, data: await placeReplayOrder(id, body) }
+    return { success: true, data: await placeReplayOrder(id, body, requireOwnerId(event)) }
   } catch (err) {
     throw replayHttpError(err)
   }

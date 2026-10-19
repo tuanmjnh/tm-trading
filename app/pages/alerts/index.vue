@@ -13,6 +13,7 @@ import { getErrorMessage } from '~/shared/utils/errors'
 //  and /alerts/inbox), never a second pipeline here.
 // =============================================================================
 const { t } = useI18n()
+const route = useRoute()
 const notify = useNotify()
 const api = useAlertRules()
 
@@ -38,7 +39,28 @@ async function refresh() {
     isLoading.value = false
   }
 }
-onMounted(refresh)
+
+// Deep link from other modules (e.g. a signal row): /alerts?create=1&symbol=BTCUSDT
+// opens the editor prefilled. The query is consumed once, then stripped so a
+// reload or back-navigation does not silently reopen the form.
+function applyDeepLink(): boolean {
+  const q = route.query
+  if (!q.create && !q.symbol) return false
+  openCreate()
+  const rawSymbols = typeof q.symbol === 'string' ? q.symbol.trim().toUpperCase() : ''
+  if (rawSymbols) {
+    form.value.symbols = rawSymbols
+    if (!form.value.name) form.value.name = rawSymbols
+  }
+  if (typeof q.name === 'string' && q.name.trim()) form.value.name = q.name.trim().slice(0, 120)
+  void navigateTo({ path: route.path, replace: true })
+  return true
+}
+
+onMounted(async () => {
+  await refresh()
+  applyDeepLink()
+})
 
 const filtered = computed(() => {
   if (statusFilter.value === 'enabled') return rows.value.filter((r) => r.enabled)

@@ -16,7 +16,9 @@ export default defineEventHandler(async (event) => {
   const Position = await engineModel('position.mjs', 'Position')
   if (!Position) return { success: false, error: 'mongo down' }
 
-  const pos = await Position.findOne({ _id: positionId }).lean()
+  // Tenancy (docs/web-app/user-tenancy-plan.md): only the owner may close/see it.
+  const ownerId = requireOwnerId(event)
+  const pos = await Position.findOne({ _id: positionId, ownerId }).lean()
   if (!pos) return { success: false, error: 'position not found' }
   if (pos.status !== 'open') return { success: false, error: 'position not open' }
 
@@ -29,9 +31,10 @@ export default defineEventHandler(async (event) => {
   const Alert = await engineModel('alert.mjs', 'Alert')
   if (!Alert) return { success: false, error: 'mongo down' }
 
-  const alertKey = `manual_close_${pos.symbol}_${positionId}_${Date.now()}`
+  const alertKey = `manual_close_${ownerId}_${pos.symbol}_${positionId}_${Date.now()}`
   const alertDoc = {
     alertKey,
+    ownerId,
     action: 'TIME_CLOSE',
     symbol: pos.symbol,
     price,

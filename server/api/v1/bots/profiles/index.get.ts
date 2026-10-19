@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
   if (!BotProfile) return { success: true, data: [], meta: { count: 0, mongo: 'down' } }
 
   try {
-    const filter: Record<string, unknown> = {}
+    const filter: Record<string, unknown> = { ownerId: requireOwnerId(event) }
     if (status) filter.status = status
     if (mode) filter.mode = mode
     let rows = await BotProfile.find(filter).sort({ createdAt: -1 }).limit(limit).lean()

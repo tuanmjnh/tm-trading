@@ -5,6 +5,8 @@ export interface PaperFillItem {
   fillId: string
   orderId: string
   alertKey: string | null
+  /** Slice C: trading session this fill belongs to (null = pre-session). */
+  sessionId: string | null
   account: string
   source: string
   symbol: string

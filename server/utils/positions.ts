@@ -10,11 +10,17 @@ import { engineModel } from './engineModel'
 
 export interface ListPositionsQuery {
   limit: number
+  /**
+   * Tenancy (docs/web-app/user-tenancy-plan.md): hub user id (`sub`) that owns
+   * the positions. Required — an unscoped read would leak another account's book.
+   */
+  ownerId: string
   cursor?: string
   status?: string
   symbol?: string
   source?: string
   account?: string
+  sessionId?: string
 }
 
 export interface ListPositionsResult {
@@ -60,6 +66,8 @@ function toItem(p: any): PositionItem {
     tf: p.tf == null ? null : String(p.tf),
     exitReason: p.exitReason == null ? null : String(p.exitReason),
     fees: num(p.fees),
+    leverage: Number.isInteger(p.leverage) ? p.leverage : null,
+    sessionId: p.sessionId == null ? null : String(p.sessionId),
     stampKind: String(p.stamp?.kind ?? (p.stampUnknown ? 'unknown' : 'unknown')),
     stampParamsHash: p.stamp?.paramsHash == null ? null : String(p.stamp.paramsHash),
     stampEngineVersion: p.stamp?.engineVersion == null ? null : String(p.stamp.engineVersion),
@@ -71,11 +79,12 @@ export async function listPositions(q: ListPositionsQuery): Promise<ListPosition
   const Position = await engineModel('position.mjs', 'Position')
   if (!Position) return { items: [], total: 0, open: 0, closed: 0, realizedPnlAbs: null, mongo: 'down' }
 
-  const filter: Record<string, any> = {}
+  const filter: Record<string, any> = { ownerId: q.ownerId }
   if (q.status) filter.status = q.status
   if (q.symbol) filter.symbol = q.symbol.toUpperCase()
   if (q.source) filter.source = q.source
   if (q.account) filter.account = q.account
+  if (q.sessionId) filter.sessionId = q.sessionId
   if (q.cursor) {
     if (!Types.ObjectId.isValid(q.cursor)) {
       throw createError({ statusCode: 400, statusMessage: 'error.invalidCursor', message: 'cursor khong phai id hop le' })
@@ -94,12 +103,14 @@ export async function listPositions(q: ListPositionsQuery): Promise<ListPosition
       .lean()
     const total = await Position.countDocuments(countFilter)
 
-    // Header stats are global (not per filter): open / closed / realized.
+    // Header stats are per owner but not per filter — the owner scope is never
+    // dropped (only the caller's own book is counted).
+    const scope = { ownerId: q.ownerId }
     const [open, closed, pnlAgg] = await Promise.all([
-      Position.countDocuments({ status: 'open' }),
-      Position.countDocuments({ status: 'closed' }),
+      Position.countDocuments({ ...scope, status: 'open' }),
+      Position.countDocuments({ ...scope, status: 'closed' }),
       Position.aggregate([
-        { $match: { status: 'closed', pnlAbs: { $ne: null } } },
+        { $match: { ...scope, status: 'closed', pnlAbs: { $ne: null } } },
         { $group: { _id: null, sum: { $sum: '$pnlAbs' }, n: { $sum: 1 } } }
       ])
     ])

@@ -271,11 +271,13 @@ export async function runLiquidation({ fetchImpl, now = new Date(), send = sendT
   const Intel = await getIntel()
   const mongo = Intel ? 'up' : 'down'
   let alerted = 0
+  // Declared OUTSIDE the Intel block: the summary below reports it even when
+  // Mongo is down (hoisting it inside would make the return a ReferenceError).
+  let feedWrote = 0
   if (Intel) {
     // §23.3 P1 raw liquidation feed: mirror the file ledger into market_feed as
     // immutable facts (D4 key feed:liquidation:<sym>:<ts>:<price>:<qty>) so the
     // events are queryable. Idempotent — overlapping read windows skip dupes.
-    let feedWrote = 0
     const feedRecorder = createFeedRecorder({ model: await getMarketFeed(), datasetModel: await getDataset(), kind: 'liquidation', source: 'binance:fapi', retentionDays: LIQUIDATION_RETENTION_DAYS })
     for (const e of events) {
       const out = await feedRecorder.record(liquidationFeedDoc({

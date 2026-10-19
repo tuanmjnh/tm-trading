@@ -15,6 +15,8 @@ const NotificationLogSchema = new mongoose.Schema(
   {
     _id: { type: String, required: true }, // `${notifyId}:${at}`
     notifyId: { type: String, required: true }, // hash identity
+    // Tenancy (roadmap §61.3): notification history is user-scoped.
+    ownerId: { type: String, default: null, index: true },
     dedupeKey: { type: String, default: null },
     kind: { type: String, required: true }, // market|signal|risk|order|position|service
     priority: { type: String, required: true }, // critical|important|normal|info

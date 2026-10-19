@@ -13,6 +13,8 @@ const IndicatorRunSchema = new mongoose.Schema(
   {
     // --- identity (D1) ---
     indicatorId: { type: String, required: true, index: true },
+    // Tenancy (roadmap §61.3): indicator runs are append-only user computations.
+    ownerId: { type: String, default: null, index: true },
     version: { type: String, required: true }, // indicator def.version used
     schemaVersion: { type: String, default: INDICATOR_RUN_SCHEMA_VERSION },
 

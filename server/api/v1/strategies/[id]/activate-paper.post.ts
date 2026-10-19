@@ -17,18 +17,20 @@ export default defineEventHandler(async (event) => {
 
   if (!strategyVersionId) return { success: false, error: 'strategyVersionId required' }
 
+  const ownerId = requireOwnerId(event)
+
   // Verify version exists and is paper-ready
   const Version = await strategyVersionModel()
   if (!Version) return { success: false, error: 'mongo down', meta: { mongo: 'down' } }
 
-  const ver = await Version.findOne({ _id: strategyVersionId }).lean()
+  const ver = await Version.findOne({ _id: strategyVersionId, ownerId }).lean()
   if (!ver) return { success: false, error: 'version not found' }
   if (ver.status !== 'paper' && ver.status !== 'stable_paper') {
     return { success: false, error: `version status ${ver.status} cannot be activated (must be paper or stable_paper)` }
   }
 
   const { activatePaper } = await strategyService()
-  const r = await activatePaper({ profileId, strategyVersionId, by }) as ActivatePaperResult
+  const r = await activatePaper({ profileId, strategyVersionId, by, ownerId }) as ActivatePaperResult
   if (!r.ok) return { success: false, error: r.code, detail: r.detail ?? null }
 
   return { success: true, data: { profileId: r.profileId, strategyVersionId: r.strategyVersionId } }

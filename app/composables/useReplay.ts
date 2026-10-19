@@ -16,6 +16,20 @@ import type {
 // =============================================================================
 
 export const useReplay = () => {
+  /**
+   * Active in-memory replay sessions, newest first (Slice B). Fail-soft —
+   * sessions die with the server process, so an empty list is normal after
+   * a restart, never an error page.
+   */
+  async function list(): Promise<ReplaySummary[]> {
+    try {
+      const res = await $fetch<{ success: boolean; data: ReplaySummary[] }>('/api/v1/replay/sessions')
+      return res.data ?? []
+    } catch {
+      return []
+    }
+  }
+
   async function create(input: ReplayCreateInput = {}): Promise<ReplaySummary> {
     const res = await $fetch<ReplaySummaryResponse>('/api/v1/replay/sessions', {
       method: 'POST',
@@ -73,5 +87,5 @@ export const useReplay = () => {
     return res.data
   }
 
-  return { create, read, play, pause, step, placeOrder }
+  return { create, read, play, pause, step, placeOrder, list }
 }

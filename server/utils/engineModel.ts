@@ -149,6 +149,24 @@ export function strategyVersionModel(): Promise<AnyModel | null> {
 }
 
 // -----------------------------------------------------------------------------
+//  Trading workspace outbox (§61.17 Phase C) — services/workspaceStore.mjs.
+//  Same dynamic-import-from-cwd reason: Nitro computes the relative depth out of
+//  `server/` incorrectly, so resolve from process.cwd() instead of importing.
+// -----------------------------------------------------------------------------
+
+type WorkspaceStoreModule = typeof import('../../services/workspaceStore.mjs')
+
+let workspaceStorePromise: Promise<WorkspaceStoreModule> | null = null
+
+export function workspaceStore(): Promise<WorkspaceStoreModule> {
+  if (!workspaceStorePromise) {
+    const file = pathToFileURL(join(process.cwd(), 'services', 'workspaceStore.mjs')).href
+    workspaceStorePromise = import(/* @vite-ignore */ file) as Promise<WorkspaceStoreModule>
+  }
+  return workspaceStorePromise
+}
+
+// -----------------------------------------------------------------------------
 //  Bot contracts (§57.4 G/H, §58.6): Bot Profile != Bot Instance. Both are
 //  read-only in the dashboard for now — the supervisor owns lifecycle writes.
 // -----------------------------------------------------------------------------
@@ -175,6 +193,37 @@ export function experimentRunModel(): Promise<AnyModel | null> {
 
 export function aiProposalModel(): Promise<AnyModel | null> {
   return engineModel('aiProposal.mjs', 'AiProposal')
+}
+
+export function tradingSessionModel(): Promise<AnyModel | null> {
+  return engineModel('session.mjs', 'TradingSession')
+}
+
+// -----------------------------------------------------------------------------
+//  AI agent governance models (§59.15 Slice D) — registry, immutable versions
+//  and the append-only action ledger. Policy lives in engine/agentPolicy.mjs;
+//  these resolvers only hand the store its models.
+// -----------------------------------------------------------------------------
+
+export function aiAgentModel(): Promise<AnyModel | null> {
+  return engineModel('aiAgent.mjs', 'AiAgent')
+}
+
+export function aiAgentVersionModel(): Promise<AnyModel | null> {
+  return engineModel('aiAgentVersion.mjs', 'AiAgentVersion')
+}
+
+export function aiAgentActionModel(): Promise<AnyModel | null> {
+  return engineModel('aiAgentAction.mjs', 'AiAgentAction')
+}
+
+// -----------------------------------------------------------------------------
+//  Research evidence sets (§59.11 / §59.15 Slice E) — frozen, hash-verified
+//  bundles of the facts a conclusion was drawn from.
+// -----------------------------------------------------------------------------
+
+export function evidenceSetModel(): Promise<AnyModel | null> {
+  return engineModel('evidenceSet.mjs', 'EvidenceSet')
 }
 
 // -----------------------------------------------------------------------------

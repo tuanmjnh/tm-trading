@@ -31,6 +31,9 @@ export interface TicketBody {
    *  risk gate sizes/verifies (D7/D21) — these only ride the raw payload. */
   qty?: unknown
   riskPct?: unknown
+  /** v3 §17.1b leverage intent: isolated-margin multiplier for the position.
+   *  Optional; the risk gate still caps notional independently (D7). */
+  leverage?: unknown
 }
 
 export interface TicketValidation {
@@ -100,6 +103,15 @@ export function validateTicket(o: unknown): TicketValidation {
   if (hasRiskPct) {
     const p = b.riskPct as unknown
     if (typeof p !== 'number' || !Number.isFinite(p) || !(p > 0 && p <= 100)) return err(`riskPct must be in (0, 100] (got ${String(b.riskPct)})`)
+  }
+
+  // v3 §17.1b: integer 1..125 (Binance bounds). Absent = legacy behavior.
+  // Present-but-crazy never reaches the gate — rejected here with its value.
+  if (b.leverage !== undefined && b.leverage !== null) {
+    const l = b.leverage as unknown
+    if (typeof l !== 'number' || !Number.isInteger(l) || l < 1 || l > 125) {
+      return err(`leverage must be an integer 1..125 (got ${String(b.leverage)})`)
+    }
   }
 
   return { ok: true }

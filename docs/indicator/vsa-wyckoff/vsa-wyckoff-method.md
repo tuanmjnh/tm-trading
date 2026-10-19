@@ -224,23 +224,24 @@ Thực tế trong ảnh:
 
 ## 8. Chỉ báo đã triển khai — `TM VSA Wyckoff` (Pine v6)
 
-> **Đã build, smoke PASS 158/0.** Cài: `npm run pine:copy:vsa` → Pine Editor → `Ctrl+V` → **Add to chart**.
+> **Đã build, smoke PASS 296/0** (toàn bộ 11 target, `npm run pine:test`). Cài: `npm run pine:copy:vsa` → Pine Editor → `Ctrl+V` → **Add to chart**.
 > ⚠️ **Sửa 2026-10-01** (xem [vsa-optimization.md](./vsa-optimization.md)): Entry là lệnh **limit**
 > nên auto-close nay **chỉ xét TP/SL sau khi entry đã khớp** (`tm_lvlFill`); cùng bar vừa khớp vừa
 > xuyên SL → tính SL. Dashboard thêm dòng **Phi/R** + **slBuf tối thiểu** — ràng buộc toán học:
 > `fee_R = phí_round-trip / (slBuf × ATR%)`, và **`slBuf = 0.5` là bất khả thi trên 5m/15m**.
+> **Mặc định nay là Market + TP theo R** (§8.2, §8.4) — mô hình limit-at-extreme cũ còn là tùy chọn A/B.
 > Cột TÍM (ratio ≥ `tm_i_rP` = 2.2× MA Wilder) là **gate bắt buộc**: SV/BC chỉ được phát khi có cột TIM.
 > Kinh nghiệm `TM Signals`: mọi creation vẽ **phải** gắn `force_overlay = true` (có 9 chỗ);
 > histogram/MA là pane của chính indicator nên KHÔNG cần `display.pane`; chạy `npm run verify` trước khi dán.
 
 ### 8.1 Cấu trúc (đã có thật)
 
-- `indicator("TM VSA Wyckoff", "TM VSA Wyckoff", overlay = false, dynamic_requests = true, max_* = 500)` — 397 dòng dist.
+- `indicator("TM VSA Wyckoff", "TM VSA Wyckoff", overlay = false, dynamic_requests = true, max_* = 500)` — 550 dòng dist.
 - Nguồn: `pine/parts-vsa/` — `00_header, 10_inputs, 20_volume, 30_levels, 40_events, 50_strategy, 60_viz, 70_alerts`; **không đụng** `pine/parts/` của TM.
 - Dùng chung `pine/shared/common.pine` (marker `{{SHARED}}`): `f_sessionOk` (loc phiên XAU/XAG), `f_vsaColor` / `f_vsaName` (6 bucket) — `TM Signals` cũng dùng lại 2 hàm này.
 - Target `vsa` trong `tools/build.mjs` (`dir: parts-vsa`); scripts: `npm run pine:vsa`, `npm run pine:copy:vsa`.
 
-### 8.1b Bản twin backtest — `TM VSA Backtest` (263 dòng)
+### 8.1b Bản twin backtest — `TM VSA Backtest` (445 dòng)
 
 Cùng một nguồn `parts-vsa`, chỉ khác **khai báo `strategy(...)`** và bị cắt phần vẽ:
 
@@ -264,6 +265,12 @@ Cùng một nguồn `parts-vsa`, chỉ khác **khai báo `strategy(...)`** và b
 | `tm_i_rVH / rH / rN / rL` | 1.8 / 1.2 / 0.8 / 0.4 | màu bối cảnh, không gate tín hiệu |
 | `tm_i_run` | 5 | momentum: `close` so với `close[run]` |
 | `tm_i_testR` | 1.2 | ngưỡng nhận ST (ratio < ngưỡng; luôn giữ < TIM) |
+| `tm_i_retestT` / `tm_i_atrLen` | 1.0 × ATR / 14 | bán kính test lại quanh giá SV/BC; độ dài ATR |
+| `tm_i_entryMode` (**Kieu vao lenh**) | **Market (xac nhan ST)** | vào tại `close` bar ST — mọi tín hiệu thành lệnh; tùy chọn `Limit (cuc tri SV/BC)` = mô hình cũ (đo được 64–72% setup không bao giờ khớp) |
+| `tm_i_tpMode` (**Kieu dat TP**) | **Theo R (co dinh)** | `TP = rrFb × R` — R so sánh được giữa các lệnh; tùy chọn `Pivot doi dien` = hành vi cũ |
+| `tm_i_signalMode` (**Chien luoc**) | VSA dao chieu | `VSA loc + Wyckoff` = VSA chỉ lọc vùng, vào lệnh theo sự kiện Wyckoff (`tm_i_wyckoffEvent`: Spring/SOS/LPS, mặc định LPS) |
+| `tm_i_feePct` / `tm_i_feeMaxR` | 0.05% / 0.15R | phí taker 1 chiều & ngưỡng cảnh báo `fee_R` (dòng **Phi/R** trên dashboard) |
+| `tm_i_btOn` / `tm_i_btPct` | true / 100% | **chỉ có ở bản strategy** `TM VSA Backtest`: bật vào lệnh theo ST, % equity |
 | `tm_i_lvTol` / `tm_i_lvFresh` | 0.5 × ATR / 60 nến | bề rộng + hiệu lực vùng H/T |
 | `tm_i_pivLen` | 20 | auto level qua `ta.pivotlow/high` |
 | `tm_i_volMin` | 0 (tắt) | volume tuyệt đối tối thiểu — cho alt coin thanh khoản thấp |
@@ -279,17 +286,17 @@ Cùng một nguồn `parts-vsa`, chỉ khác **khai báo `strategy(...)`** và b
 2. **Nhãn trên giá** (`plotshape`, `force_overlay = true`): SV (tím ▲), BC (đỏ ▼), ST LONG/SHORT, NS/ND (kim cương).
 3. **Đường H/T dashed** vàng, anchor tại bar pivot, tạo lại mỗi tick cuối (xóa cũ trước khi vẽ).
 4. **Đường Entry/SL/TP** tự động (`tm_i_lvlOn`), cập nhật khi có ST — anchor từ bar ST đến bar cuối, tạo lại mỗi tick cuối:
-   - **Entry** (trắng, liền) = cực trị nến SV (long) / BC (short) — đúng vị trí "limit tại level" của §6;
-   - **SL** (đỏ, dashed) = cực trị ± `tm_i_slBuf` × ATR(14) — đúng quy tắc §6;
-   - **TP** (xanh lá, dashed) = pivot đối diện nếu RR ≥ 1 ("zone đối diện kế tiếp"), ngược lại fallback `tm_i_rrFb` × R;
+   - **Entry** (trắng, liền) = `close` bar ST khi chế độ **Market** (mặc định) / cực trị nến SV (long) · BC (short) khi chọn **Limit** — đúng vị trí "limit tại level" của §6;
+   - **SL** (đỏ, dashed) = cực trị ± `tm_i_slBuf` × ATR(14) — đúng quy tắc §6, **giữ nguyên ở cả 2 chế độ**;
+   - **TP** (xanh lá, dashed) = `tm_i_rrFb` × R khi chọn **Theo R** (mặc định, `rrFb = 2.0` → 2R) / pivot đối diện nếu RR ≥ 1 khi chọn **Pivot**;
    - nhãn `Entry`/`SL`/`TP` tại **bar cuối, kèm giá trị** (đọc được số chính xác cạnh trục giá) — **mỗi loại đúng 1 nhãn**;
    - cây nến vào lệnh = **bar ST** (đã có nhãn `ST` trên giá) — *không* vẽ thêm nhãn `Entry` thứ hai tại đó để tránh trùng/chồng label;
    - **tự đóng setup**: theo dõi từng bar sau ST — giá chạm TP hoặc SL (ưu tiên SL nếu cùng 1 bar) → xóa 3 đường, chỉ còn nhãn `TP`/`SL` (xanh/đỏ) tại **bar chạm** để xem lại kết quả;
    - setup ST mới hơn thay thế setup cũ (chỉ giữ 1 setup gần nhất); tắt bằng `tm_i_lvlOn`.
-5. **Dashboard** 2×9 (`force_overlay`): Che do, TF, Volume ratio (tím nếu ≥ 2.2), Bucket, số cột TIM/20, sự kiện gần nhất + tuổi, EoM, phiên, TIM gần nhất.
+5. **Dashboard** 2×13 (`force_overlay`): Che do, TF, Volume ratio (tím nếu ≥ 2.2), Bucket, số cột TIM/20, sự kiện gần nhất + tuổi, EoM, Session, TIM gần nhất, Phi/R, slBuf tối thiểu, Vao lenh/TP (Market/Limit · R/Pivot), Chien luoc.
 6. **Alerts** 6 loại: `VSA SV`, `VSA BC`, `VSA ST LONG`, `VSA ST SHORT`, `VSA NS`, `VSA ND`.
 
-Chú thích từng dòng dashboard (2 cột × 9 dòng, góc phải trên chart):
+Chú thích từng dòng dashboard (2 cột × 13 dòng, góc phải trên chart):
 
 | Dòng | Ý nghĩa |
 |---|---|
@@ -300,8 +307,12 @@ Chú thích từng dòng dashboard (2 cột × 9 dòng, góc phải trên chart)
 | **Cot TIM/20** | số cột tím trong 20 bar gần nhất |
 | **Su kien gan nhat** | sự kiện VSA gần nhất + số bar đã qua (vd `ST 62 bar`) |
 | **EoM** | `Yes (n)` = trạng thái Ease of Movement liên tiếp n bar (n ≥ 3) → quy tắc **GIỮ**; `No` = chưa có |
-| **Phien** | phiên giao dịch: `Tat` (tắt session) / `Trong phien` / `Ngoai phien` |
+| **Session** | phiên giao dịch: `Tat` (tắt session) / `Trong phien` / `Ngoai phien` |
 | **TIM gan nhat** | số bar tính từ cột tím gần nhất; `chua co` = chưa có cột tím nào |
+| **Phi/R** | phí round-trip quy ra R của setup hiện tại — đỏ `QUA CAO` khi > `tm_i_feeMaxR` (0.15) |
+| **slBuf toi thieu** | slBuf tối thiểu để phí ≤ ngưỡng — so với slBuf đang đặt |
+| **Vao lenh / TP** | mô hình đang dùng: `Market/Limit` · `R/Pivot` |
+| **Chien luoc** | `VSA dao chieu` hoặc `Wyckoff: Spring/SOS/LPS` |
 
 ### 8.4 So với spec v1 — khác biệt có chủ đích
 
@@ -314,7 +325,8 @@ Chú thích từng dòng dashboard (2 cột × 9 dòng, góc phải trên chart)
 | EoM | sự kiện riêng | trạng thái dashboard `tm_eomRun ≥ 3` (ratio < 0.8 + \|Δclose\| ≥ 0.5×ATR) → quy tắc **GIỮ** lệnh |
 | CLX-E | alert exit | **chưa có** — cần vị thế/TP zone → v1.1 kèm strategy twin |
 | Level tay | mode manual | v1 chỉ auto pivot (vẽ tay để TradingView, như trong ảnh) |
-| Entry/SL/TP | checklist tính tay | **auto**: Entry = cực trị SV/BC, SL = ± `tm_i_slBuf`×ATR, TP = pivot đối diện (RR≥1) hoặc `tm_i_rrFb`×R — 3 đường + 3 nhãn giá tại bar cuối (mỗi loại 1 nhãn), **tự đóng khi chạm TP/SL** (nhãn kết quả tại bar chạm) |
+| Entry/SL/TP | checklist tính tay | **auto**: Entry = `close` bar ST (Market, mặc định) hoặc cực trị SV/BC (Limit), SL = ± `tm_i_slBuf`×ATR, TP = `rrFb`×R (Theo R, mặc định) hoặc pivot đối diện — 3 đường + 3 nhãn giá tại bar cuối (mỗi loại 1 nhãn), **tự đóng khi chạm TP/SL** (nhãn kết quả tại bar chạm) |
+| Mô hình vào lệnh | limit tại cực trị | §5c: Market+R thắng 28–41% vs limit 0–6%; **7/9 cấu hình không vượt baseline ngẫu nhiên** (§5f) — mặc định đổi sang Market+R nhưng lợi thế **chưa được chứng minh** |
 
 Quy tắc chống repaint: mọi tín hiệu đi qua `tm_okBar = tm_confirmOnly ? barstate.isconfirmed : true`.
 

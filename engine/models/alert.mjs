@@ -9,8 +9,13 @@ import mongoose from 'mongoose'
 
 const AlertSchema = new mongoose.Schema(
   {
-    // Khoa khu trung - sinh boi engine/keys.mjs (xem D3/D4)
-    alertKey: { type: String, required: true, unique: true },
+    // Khoa khu trung - sinh boi engine/keys.mjs (xem D3/D4). Unique theo OWNER
+    // (roadmap §61.3): hai tenant co the co cung alertKey ma khong duoc chan nhau.
+    alertKey: { type: String, required: true },
+
+    // Tenancy (docs/web-app/user-tenancy-plan.md): hub user id (`sub`) that owns
+    // the row. Never an `account` — an account is a sub-book inside one owner.
+    ownerId: { type: String, default: null, index: true },
 
     source: { type: String, default: 'tradingview' },
     v: { type: Number, default: 1 },
@@ -53,5 +58,7 @@ const AlertSchema = new mongoose.Schema(
 
 AlertSchema.index({ symbol: 1, ts: -1 })
 AlertSchema.index({ action: 1, ts: -1 })
+// Per-owner dedupe (D4 across tenants): the global `alertKey_1` unique is dropped.
+AlertSchema.index({ ownerId: 1, alertKey: 1 }, { unique: true })
 
 export const Alert = mongoose.models.alerts || mongoose.model('alerts', AlertSchema)

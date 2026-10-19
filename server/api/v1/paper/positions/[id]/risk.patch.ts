@@ -15,7 +15,9 @@ export default defineEventHandler(async (event) => {
   const Position = await engineModel('position.mjs', 'Position')
   if (!Position) return { success: false, error: 'mongo down' }
 
-  const pos = await Position.findOne({ _id: positionId, status: 'open' }).lean()
+  // Tenancy (docs/web-app/user-tenancy-plan.md): a position belongs to one owner.
+  const ownerId = requireOwnerId(event)
+  const pos = await Position.findOne({ _id: positionId, ownerId, status: 'open' }).lean()
   if (!pos) return { success: false, error: 'position not found or not open' }
 
   const update: any = {}
@@ -24,7 +26,7 @@ export default defineEventHandler(async (event) => {
 
   if (Object.keys(update).length === 0) return { success: false, error: 'no changes provided' }
 
-  await Position.updateOne({ _id: positionId }, { $set: { ...update, updatedAt: new Date() } })
+  await Position.updateOne({ _id: positionId, ownerId }, { $set: { ...update, updatedAt: new Date() } })
 
   return { success: true, data: { positionId, sl: update.sl ?? pos.sl, tps: update.tps ?? pos.tps } }
 })

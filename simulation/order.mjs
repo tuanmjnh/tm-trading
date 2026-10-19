@@ -58,11 +58,17 @@ export function createPaperOrder(intent, meta = {}) {
     clientOrderId: intent.clientOrderId,
     alertKey: intent.alertKey ?? null,
     accountId: intent.account ?? null,
+    // Tenancy (roadmap §61.3): the order belongs to the desk owner.
+    ownerId: intent.ownerId == null ? null : String(intent.ownerId),
     source: intent.source ?? 'paper',
     symbol: intent.symbol,
     side: intent.side === 'SELL' ? 'SELL' : 'BUY',
     type,
     qty: intent.qty,
+    // v3 §17.1b: per-order leverage intent (null = legacy/account-level).
+    leverage: Number.isInteger(intent.leverage) ? intent.leverage : null,
+    // Slice C: trading session this order belongs to (null = pre-session).
+    sessionId: intent.sessionId == null ? null : String(intent.sessionId),
     // limit/stop reference level; market orders carry the signal price for audit.
     price: intent.price ?? null,
     sl: intent.sl ?? null,

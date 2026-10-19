@@ -13,7 +13,7 @@
 import { connectMongo, disconnectMongo, mongoStatus } from './db.mjs'
 import { alertKey, clientOrderId } from './keys.mjs'
 import { runStamp } from './version.mjs'
-import { Run, Trade, Alert, Signal, Position, RiskState, Equity } from './models/index.mjs'
+import { Run, Trade, Alert, Signal, Position, RiskState, Equity, TradingDomainEvent } from './models/index.mjs'
 import mongoose from 'mongoose'
 
 const DB_NAME = 'tm-trading-test'
@@ -222,20 +222,26 @@ section('6. Index da duoc tao dung nhu data-model.md')
 
 // syncIndexes() TRUOC khi doc: mongoose build index bat dong bo, doc ngay se thay
 // trang thai nua voi (da dinh mot lan: index symbol+tf+createdAt chua kip tao).
-for (const M of [Run, Trade, Alert, Signal, Position, RiskState, Equity]) {
+for (const M of [Run, Trade, Alert, Signal, Position, RiskState, Equity, TradingDomainEvent]) {
   await M.syncIndexes()
 }
 
 const idx = async (M) => (await M.collection.indexes()).map((i) => Object.keys(i.key).join('+') + (i.unique ? ' [unique]' : ''))
 const alertIdx = await idx(Alert)
-check('alerts co unique index tren alertKey', alertIdx.some((s) => s.startsWith('alertKey') && s.includes('[unique]')), alertIdx.join(' | '))
+check('alerts co unique index tren ownerId+alertKey', alertIdx.some((s) => s === 'ownerId+alertKey [unique]'), alertIdx.join(' | '))
 const runIdx = await idx(Run)
 check('runs co index symbol+tf+createdAt', runIdx.some((s) => s === 'symbol+tf+createdAt'), runIdx.join(' | '))
 check('runs co index paramsHash+engineVersion', runIdx.some((s) => s === 'paramsHash+engineVersion'), runIdx.join(' | '))
 const rsIdx = await idx(RiskState)
-check('risk_state co unique index account+utcDay', rsIdx.some((s) => s === 'account+utcDay [unique]'), rsIdx.join(' | '))
+check('risk_state co unique index ownerId+account+utcDay', rsIdx.some((s) => s === 'ownerId+account+utcDay [unique]'), rsIdx.join(' | '))
 const posIdx = await idx(Position)
 check('positions co unique sparse externalId', posIdx.some((s) => s.includes('externalId') && s.includes('[unique]')), posIdx.join(' | '))
+const tdeIdx = await idx(TradingDomainEvent)
+check('trading_domain_events co index ownerId+status+emittedAt', tdeIdx.some((s) => s === 'ownerId+status+emittedAt'), tdeIdx.join(' | '))
+check('trading_domain_events ownerId duoc danh index', tdeIdx.some((s) => s === 'ownerId'), tdeIdx.join(' | '))
+const sigIdx = await idx(Signal)
+check('signals has a partial unique index on ownerId+signalKey (Phase D)', sigIdx.some((s) => s === 'ownerId+signalKey [unique]'), sigIdx.join(' | '))
+check('signals index makes attribution.strategyVersion queryable', sigIdx.some((s) => s === 'attribution.strategyVersion'), sigIdx.join(' | '))
 
 // =============================================================================
 section('7. D4 — dedupe bang alerts unique index (thay cho Map trong RAM)')
@@ -334,6 +340,156 @@ section('8. D2 — thoi gian: UTC ms, khong gio dia phuong')
   const s = withStamp({ symbol: 'BTCUSDT', tf: '15', params: { rP: 2.2 } })
   check('store.createdAt la ISO Z (D2)', typeof s.createdAt.toISOString() === 'string' && s.createdAt.toISOString().endsWith('Z'), s.createdAt.toISOString())
 }
+
+// =============================================================================
+section('9. Phase C — outbox su kien trading (idempotent, khong mat khi restart)')
+
+// Outbox §61.17 Phase C: moi su kien trading duoc ghi BEN VUNG va IDEMPOTENT
+// (id tat dinh), de view nao cung hoi phuc duoc sau refresh/restart.
+const ws = await import('../services/workspaceStore.mjs')
+const tde = await import('../engine/tradingDomainEvents.mjs')
+
+const EV_OWNER = 'owner-phasec'
+const EV_AT = Date.parse('2026-10-19T10:00:00Z')
+const built = tde.tradingDomainEvent({ type: 'order.filled', entityId: 'ord-1', ownerId: EV_OWNER, accountId: 'paper', at: EV_AT })
+
+check('emit lan dau -> true', (await ws.emitTradingEvent({ type: 'order.filled', entityId: 'ord-1', ownerId: EV_OWNER, accountId: 'paper', at: EV_AT })) !== null)
+check('emit CUNG su kien -> khong nhan doi', (await TradingDomainEvent.countDocuments({ _id: built._id })) === 1)
+
+// Emit lai (retry / restart) -> van 1 dong, KHONG reset trang thai giao hang
+await ws.markDelivered([built._id])
+await ws.emitTradingEvent({ type: 'order.filled', entityId: 'ord-1', ownerId: EV_OWNER, accountId: 'paper', at: EV_AT })
+const redelivered = await TradingDomainEvent.findById(built._id).lean()
+check('emit lai KHONG reset trang thai da giao (idempotent that)', redelivered?.status === 'delivered', `status=${redelivered?.status}`)
+
+// Tenancy: pending chi tra ve chu so huu
+await ws.emitTradingEvent({ type: 'position.opened', entityId: 'pos-1', ownerId: 'owner-other', at: EV_AT })
+check('pendingForOwner chi tra ve su kien cua minh', (await ws.pendingForOwner('owner-other')).length === 1)
+check('owner khac khong thay su kien (tenancy)', (await ws.pendingForOwner('owner-nobody')).length === 0)
+
+// viewKeysFor: tap view can lam moi
+const pendingOther = await ws.pendingForOwner('owner-other')
+check('viewsForEvents dung view cua su kien', JSON.stringify(ws.viewsForEvents(pendingOther)) === JSON.stringify(['positions', 'accounts']))
+
+// markFailed -> dead-letter/reporting dem dung
+await ws.markFailed('tde_khong_ton_tai', { error: 'probe' })
+await ws.emitTradingEvent({ type: 'signal.received', entityId: 'sig-1', ownerId: 'owner-other', at: EV_AT })
+const failed = await ws.markFailed((await ws.pendingForOwner('owner-other')).find((e) => e.type === 'signal.received')._id, { error: 'boom' })
+check('markFailed -> true', failed === true)
+const stats = await ws.outboxStats('owner-other')
+check('outboxStats dem pending/failed dung', stats.pending === 1 && stats.failed === 1, JSON.stringify(stats))
+
+// Ack chi ap dung cho chu so huu (tenancy §61.3): mot caller khong the danh dau
+// da giao su kien cua nguoi khac.
+await ws.emitTradingEvent({ type: 'order.created', entityId: 'ord-ack', ownerId: 'owner-a', at: EV_AT })
+const ackEvent = await TradingDomainEvent.findOne({ 'entityRef.id': 'ord-ack' }).lean()
+check('markDeliveredForOwner bo qua event cua nguoi khac', (await ws.markDeliveredForOwner('owner-b', [ackEvent._id])) === 0)
+check('markDeliveredForOwner ack event cua chinh minh', (await ws.markDeliveredForOwner('owner-a', [ackEvent._id])) === 1)
+
+// Mongoose chan su kien thieu ownerId (tenancy §61.3)
+let badOwner = null
+try { await TradingDomainEvent.create({ ...built, _id: 'tde_x', eventId: 'tde_x', ownerId: undefined }) } catch (e) { badOwner = e }
+check('trading_domain_events chan ban ghi thieu ownerId', badOwner !== null)
+
+// Acceptance (§61.17 Phase C): ONE manual paper order produces the canonical
+// event set (account -> order -> fill -> position) for a single owner. Every
+// relevant view is invalidated, the batch is acknowledged, and the rows stay
+// durable in Mongo — so a restart replays nothing and loses nothing.
+const ACC_OWNER = 'owner-accept'
+const ACC_T = Date.parse('2026-10-19T11:00:00Z')
+for (const input of [
+  { type: 'account.created', entityId: 'acc-1', accountId: 'acc-1' },
+  { type: 'order.created', entityId: 'ord-9', accountId: 'acc-1' },
+  { type: 'fill.recorded', entityId: 'fill-9', accountId: 'acc-1' },
+  { type: 'order.filled', entityId: 'ord-9', accountId: 'acc-1' },
+  { type: 'position.opened', entityId: 'pos-9', accountId: 'acc-1' }
+]) {
+  await ws.emitTradingEvent({ ...input, ownerId: ACC_OWNER, at: ACC_T })
+}
+const accPending = await ws.pendingForOwner(ACC_OWNER)
+check('one paper order emits the full canonical event set', accPending.length === 5, `n=${accPending.length}`)
+const accViews = ws.viewsForEvents(accPending)
+check(
+  'a single order invalidates orders + positions + accounts',
+  ['orders', 'positions', 'accounts'].every((v) => accViews.includes(v)),
+  accViews.join(',')
+)
+check('ack the batch -> 5 delivered', (await ws.markDeliveredForOwner(ACC_OWNER, accPending.map((e) => e._id))) === 5)
+check('after ack the owner has no pending events', (await ws.pendingForOwner(ACC_OWNER)).length === 0)
+check('rows stay durable after ack (restart loses nothing)', (await TradingDomainEvent.countDocuments({ ownerId: ACC_OWNER })) === 5)
+
+// =============================================================================
+section('10. Phase D — native signal engine persists attributed signals idempotently')
+
+// Acceptance (§61.17 Phase D): a controlled fixture deterministically produces a
+// signal whose method/indicator/strategy version is QUERYABLE, and duplicate
+// events do NOT duplicate the signal. This runs the real store against Mongo.
+const sigEngine = await import('../engine/signalEngine.mjs')
+const sigStore = await import('../services/signalStore.mjs')
+
+// Same loose thresholds as engine/test.mjs so the SV -> ST LONG path is the only
+// thing the fixture exercises (VSA arithmetic is pinned there, not here).
+const PD_LOOSE = { len: 5, pivLen: 3, lvFresh: 1000, lvTol: 1000, retestT: 1000, run: 5, atrLen: 5, entryMode: 'limit', tpMode: 'pivot' }
+function pdBars() {
+  const closes = []
+  for (let i = 0; i < 16; i++) closes.push(110 - i)
+  for (const c of [97, 99, 98.5, 97.8, 97.2, 96.4, 96.5, 96.8]) closes.push(c)
+  const volumes = new Array(closes.length).fill(100)
+  volumes[22] = 600
+  const wick = 0.5
+  const baseTime = Date.UTC(2026, 0, 5, 0, 0, 0)
+  return closes.map((c, i) => {
+    const o = i === 0 ? c : closes[i - 1]
+    const up = c >= o
+    return { time: baseTime + i * 300000, open: o, high: up ? c + wick : o, low: up ? o : c - wick, close: c, volume: volumes[i] ?? 100 }
+  })
+}
+
+const PD_OWNER = 'owner-phased'
+const pdBarset = pdBars()
+const pdInput = { bars: pdBarset, method: 'vsa', params: PD_LOOSE, symbol: 'XAUUSD', tf: '5m', ownerId: PD_OWNER }
+const pdDocs = sigEngine.generateSignals(pdInput)
+check(
+  'a controlled fixture deterministically produces signals',
+  pdDocs.length === 2 && pdDocs[0].type === 'SV' && pdDocs[1].type === 'ST LONG',
+  pdDocs.map((d) => d.type).join(','),
+)
+check(
+  'every signal carries traceable method/strategy/engine attribution',
+  pdDocs.every(
+    (d) => d.attribution?.method && d.attribution?.methodVersion && d.attribution?.strategyVersion && d.attribution?.engineVersion && /^[0-9a-f]{64}$/.test(d.attribution?.paramsHash),
+  ),
+)
+
+check('publishSignals stores the new signals', (await sigStore.publishSignals(pdDocs)) === 2)
+check('signals row count matches the fixture', (await Signal.countDocuments({ ownerId: PD_OWNER })) === 2)
+
+// Re-generate + re-publish the SAME events (replay/retry) -> still 2 rows.
+await sigStore.publishSignals(sigEngine.generateSignals(pdInput))
+check('duplicate events do not duplicate the signal', (await Signal.countDocuments({ ownerId: PD_OWNER })) === 2)
+
+// A second plain insert with the same key is refused by the unique index.
+let pdDup = null
+try { await Signal.create({ ...pdDocs[0] }) } catch (e) { pdDup = e }
+check('unique index blocks a second row with the same (ownerId, signalKey)', pdDup?.code === 11000, `code=${pdDup?.code}`)
+
+// Version is queryable from the stored rows.
+const byStrategy = await sigStore.findSignalsByAttribution(PD_OWNER, { strategyVersion: pdDocs[0].attribution.strategyVersion })
+check('signal version is queryable by strategyVersion', byStrategy.length === 2, `n=${byStrategy.length}`)
+const byHash = await sigStore.findSignalsByAttribution(PD_OWNER, { paramsHash: pdDocs[0].attribution.paramsHash })
+check('signal version is queryable by paramsHash', byHash.length === 2, `n=${byHash.length}`)
+const byKey = await sigStore.findSignalByKey(PD_OWNER, pdDocs[1].signalKey)
+check('signal is retrievable by its durable key', byKey?.type === 'ST LONG')
+
+// Tenancy: the SAME fixture for another owner is a distinct signal set.
+const PD_OTHER = 'owner-phased-other'
+await sigStore.publishSignals(sigEngine.generateSignals({ ...pdInput, ownerId: PD_OTHER }))
+check('another owner keeps its own signal rows (tenancy)', (await Signal.countDocuments({ ownerId: PD_OTHER })) === 2)
+check('the first owner is unaffected by the second', (await Signal.countDocuments({ ownerId: PD_OWNER })) === 2)
+
+// Legacy webhook rows (no signalKey) must still write under the partial index.
+const pdLegacy = await Signal.create({ ts: new Date(1), symbol: 'ETHUSDT', tf: '15', type: 'SV' })
+check('legacy signal without a signalKey still writes (partial index)', !!pdLegacy._id)
 
 // =============================================================================
 await db.dropDatabase() // khong de lai rac

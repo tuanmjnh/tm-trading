@@ -5,6 +5,10 @@ import mongoose from 'mongoose'
 
 const RiskStateSchema = new mongoose.Schema(
   {
+    // Tenancy (docs/web-app/user-tenancy-plan.md): hub user id (`sub`) that owns
+    // the row. Counters are per owner AND per account.
+    ownerId: { type: String, default: null, index: true },
+
     account: { type: String, required: true },
 
     // 'YYYY-MM-DD' theo UTC (roadmap D2: moi thu luu UTC). Dung string thay vi Date
@@ -25,7 +29,8 @@ const RiskStateSchema = new mongoose.Schema(
   { timestamps: true, collection: 'risk_state' },
 )
 
-// Mot ban ghi cho moi (account, ngay UTC) - upsert theo khoa nay
-RiskStateSchema.index({ account: 1, utcDay: 1 }, { unique: true })
+// Mot ban ghi cho moi (owner, account, ngay UTC) - upsert theo khoa nay.
+// ownerId trong khoa (roadmap §61.3): bo dem daily-loss la cua tung tenant.
+RiskStateSchema.index({ ownerId: 1, account: 1, utcDay: 1 }, { unique: true })
 
 export const RiskState = mongoose.models.risk_state || mongoose.model('risk_state', RiskStateSchema)

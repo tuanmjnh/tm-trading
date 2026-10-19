@@ -1,0 +1,72 @@
+// =============================================================================
+//  L1 - CORE UTILITIES  (ATR/ATR%, Volume VSA, RelVol, OBV, EMA, pivots, session)
+// =============================================================================
+
+// f_clamp / f_fmtPx / f_isNewDay - shared (pine/shared/common.pine)
+// --- Volatility ---------------------------------------------------------------
+pa_atr    = ta.atr(pa_atrLen)
+pa_atrPct = pa_atr / close * 100.0
+
+// --- Volume engine (VSA buckets, RelVol, TIM) ---------------------------------
+pa_vol   = nz(volume)
+pa_volMA = ta.rma(pa_vol, pa_vol_maLen)
+pa_volSessOk = not pa_vol_sessOn or f_sessionOk(pa_vol_sess, pa_vol_tz)
+pa_volEvtOk  = (pa_vol_min <= 0.0 or pa_vol >= pa_vol_min) and pa_volSessOk
+pa_volRatio  = not na(pa_volMA) and pa_volMA > 0.0 ? pa_vol / pa_volMA : 0.0
+pa_volBucket = f_vsaName(pa_vol, pa_volMA, pa_vol_spikeR, pa_vol_rVH, pa_vol_rH, pa_vol_rN, pa_vol_rL)
+pa_isTimRaw  = not na(pa_volMA) and pa_volMA > 0.0 and pa_vol >= pa_volMA * pa_vol_spikeR
+pa_isTim     = pa_isTimRaw and pa_volEvtOk
+pa_timCount  = math.sum(pa_isTim ? 1.0 : 0.0, pa_vol_purWin)
+
+// RelVolume (volume hien tai / TB volume cua so) - v2 §2
+pa_volSma20 = ta.sma(pa_vol, pa_rvLen)
+pa_relVol   = not na(pa_volSma20) and pa_volSma20 > 0.0 ? pa_vol / pa_volSma20 : 0.0
+
+// OBV (On-Balance Volume) - v2 §2, tinh thu cong vi ta.obv KHONG co trong Pine v6
+var float pa_obv = 0.0
+pa_obv := pa_obv + (close > close[1] ? pa_vol : close < close[1] ? -pa_vol : 0.0)
+// OBV slope via an array window - NOT series[offset]. A deep unbounded offset
+// trips RE10143 ("historical offset beyond the buffer's limit", e.g. 341 > 340)
+// on late/realtime bars; the array always carries exactly the needed history.
+var array<float> pa_obvHist    = array.new<float>()
+var int          pa_obvHistBar = -1
+if pa_obvHistBar != bar_index
+    array.push(pa_obvHist, pa_obv)
+    pa_obvHistBar := bar_index
+while array.size(pa_obvHist) > pa_obvLen + 2
+    array.shift(pa_obvHist)
+int   pa_obvLag  = array.size(pa_obvHist) - 1 - pa_obvLen
+float pa_obvPrev = na
+if pa_obvLag >= 0
+    pa_obvPrev := array.get(pa_obvHist, pa_obvLag)
+pa_obvSlope = pa_obv - nz(pa_obvPrev)
+
+// --- Trend stack (EMA 20/50/200) - v2 §2 ---------------------------------------
+pa_emaF = ta.ema(close, pa_emaFast)
+pa_emaM = ta.ema(close, pa_emaMid)
+pa_emaS = ta.ema(close, pa_emaSlow)
+pa_emaStackBull = pa_emaF > pa_emaM and pa_emaM > pa_emaS
+pa_emaStackBear = pa_emaF < pa_emaM and pa_emaM < pa_emaS
+
+// --- Candle metrics (dung chung cho candle + displacement + OB) ----------------
+pa_body    = math.abs(close - open)
+pa_range   = math.max(high - low, syminfo.mintick)
+pa_hiWick  = high - math.max(close, open)
+pa_loWick  = math.min(close, open) - low
+pa_bullBar = close > open
+pa_bearBar = close < open
+pa_dispBull = pa_body >= pa_cp_dispAtr * pa_atr and pa_hiWick < pa_body * 0.3
+pa_dispBear = pa_body >= pa_cp_dispAtr * pa_atr and pa_loWick < pa_body * 0.3
+
+// --- Pivots / swing extremes ---------------------------------------------------
+pa_pivH = ta.pivothigh(high, pa_ms_swLen, pa_ms_swLen)
+pa_pivL = ta.pivotlow(low,   pa_ms_swLen, pa_ms_swLen)
+pa_swingLo = ta.lowest(low,  pa_sl_swing)
+pa_swingHi = ta.highest(high, pa_sl_swing)
+
+// --- Session engine (Asia / London / NY / Overlap) - shared f_sess* (common.pine) ---
+pa_sessAsia    = f_sessAsia(pa_sessTz)
+pa_sessLondon  = f_sessLondon(pa_sessTz)
+pa_sessNy      = f_sessNy(pa_sessTz)
+pa_sessOverlap = pa_sessLondon and pa_sessNy
+pa_sessScore   = pa_sessOverlap ? 1.0 : pa_sessNy ? 0.8 : pa_sessLondon ? 0.6 : pa_sessAsia ? 0.2 : 0.0

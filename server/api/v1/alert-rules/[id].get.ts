@@ -7,7 +7,7 @@ import { getAlertRuleById } from '../../../utils/alertRules'
  */
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id') ?? ''
-  const rule = await getAlertRuleById(id)
+  const rule = await getAlertRuleById(id, requireOwnerId(event))
   if (!rule) {
     throw createError({ statusCode: 404, statusMessage: 'not_found', message: `alert rule not found: ${id}` })
   }

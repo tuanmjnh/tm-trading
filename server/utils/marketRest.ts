@@ -293,6 +293,21 @@ export function normalizeOrderbookLimit(raw: string | undefined, market: MarketK
   return n
 }
 
+/**
+ * Optional exclusive upper bound for candles (epoch ms, exchange time) — the
+ * chart uses it to page OLDER bars when the user drags past the oldest loaded
+ * one. Binance klines accept endTime natively, so one page costs one upstream
+ * call (or one composed 1m window for the 4m/10m composites).
+ */
+export function normalizeEndTime(raw: string | undefined): number | undefined {
+  if (raw === undefined || raw === '') return undefined
+  const s = String(raw).trim()
+  if (!/^\d+$/.test(s)) throw badRequest(`endTime must be an integer epoch in ms (got "${String(raw)}")`)
+  const n = Number(s)
+  if (!Number.isSafeInteger(n) || n <= 0) throw badRequest(`endTime must be a positive epoch in ms (got ${s})`)
+  return n
+}
+
 // ---------------------------------------------------------------------------
 // Row normalizers (pure — validate upstream shapes, emit event "raw" objects)
 // ---------------------------------------------------------------------------
@@ -463,6 +478,8 @@ export async function getCandles(o: {
   market: MarketKind
   interval: string
   limit: number
+  /** Exclusive upper bound (epoch ms) — pages bars OLDER than this instant. */
+  endTime?: number
   fetchImpl?: FetchLike
   now?: number
   ingest?: number
@@ -477,7 +494,8 @@ export async function getCandles(o: {
   const url = buildKlinesUrl(o.market, {
     symbol: o.symbol,
     interval: baseInterval,
-    limit: String(fetchLimit)
+    limit: String(fetchLimit),
+    ...(o.endTime !== undefined ? { endTime: String(Math.floor(o.endTime)) } : {})
   })
   const payload = await fetchJson(url, o.fetchImpl)
   assertUpstream(Array.isArray(payload), 'klines payload must be an array')

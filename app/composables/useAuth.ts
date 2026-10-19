@@ -47,15 +47,37 @@ interface HubMeData {
   updatedAt?: string
 }
 
+// F9/U5 — proactive access-token refresh.
+// Nuxt binds the auto-imported `$fetch` to `globalThis.$fetch` at module-eval
+// time, before any plugin runs, so the fetch interceptor in `auth.client.ts`
+// never reaches the ~86 local `/api/v1` call sites. Keeping the token fresh
+// with a timer removes the mid-session expiry window without touching a single
+// call site. The timer id is module-scoped so repeated `useAuth()` calls share
+// one schedule.
+let proactiveRefreshTimer: ReturnType<typeof setTimeout> | null = null
+
+// Remaining lifetime (seconds) of a JWT access token, from its `exp` claim.
+function tokenRemainingSeconds(token: string): number | null {
+  if (!import.meta.client) return null
+  try {
+    const payload = token.split('.')[1]
+    if (!payload) return null
+    const json = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')))
+    if (typeof json?.exp !== 'number') return null
+    return json.exp - Math.floor(Date.now() / 1000)
+  } catch {
+    return null
+  }
+}
+
 export const useAuth = () => {
   const user = useState<AuthUser | null>('auth:user', () => null)
   const accessToken = useState<string | null>('auth:accessToken', () => null)
   const refreshToken = useState<string | null>('auth:refreshToken', () => null)
   const loading = useState('auth:loading', () => false)
 
-  const config = useRuntimeConfig()
-  const hubUrl = (config.public.hubUrl as string) || 'http://localhost:4000'
-  const appId = (config.public.hubAppId as string) || 'tm-trading'
+  // Single resolution shared with useHub() — never a private localhost fallback.
+  const { hubUrl, appId } = useHubEndpoint()
 
   const isAuthenticated = computed(() => !!user.value)
   const can = (module: string, action: string) => {
@@ -117,6 +139,8 @@ export const useAuth = () => {
 
     cookieAccess.value = data.accessToken
     cookieRefresh.value = data.refreshToken
+
+    scheduleProactiveRefresh(data.expiresIn)
 
     return {
       accessToken: data.accessToken,
@@ -250,6 +274,8 @@ export const useAuth = () => {
       cookieAccess.value = data.accessToken
       cookieRefresh.value = data.refreshToken
 
+      scheduleProactiveRefresh(data.expiresIn)
+
       return {
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
@@ -295,6 +321,10 @@ export const useAuth = () => {
   async function refresh(): Promise<boolean> {
     if (refreshPromise) return refreshPromise
 
+    // F2/U1 — a Hub rate-limit window (set by this or a previous reload) is a
+    // hard "do not call" signal: skip the request instead of adding to the burst.
+    if (hubRateLimitRemainingMs() > 0) return false
+
     refreshPromise = (async () => {
       const rToken = refreshToken.value || useCookie('refreshToken').value
       if (!rToken) return false
@@ -309,10 +339,17 @@ export const useAuth = () => {
           body: JSON.stringify({ refreshToken: rToken, appId })
         })
 
+        if (res.status === 429) {
+          noteHubRateLimit(res.headers.get('retry-after'))
+          return false
+        }
+
         if (!res.ok) return false
 
         const json = await res.json()
         if (!json.success || !json.data) return false
+
+        clearHubRateLimit()
 
         const data = json.data
         accessToken.value = data.accessToken
@@ -327,6 +364,8 @@ export const useAuth = () => {
         // Refresh user info
         await fetchUser()
 
+        scheduleProactiveRefresh(data.expiresIn)
+
         return true
       } catch {
         return false
@@ -336,6 +375,45 @@ export const useAuth = () => {
     })()
 
     return refreshPromise
+  }
+
+  // Arm the single shared refresh timer. On a throttled attempt (429) it retries
+  // once the Hub window closes instead of silently dropping the session.
+  function armRefreshTimer(delayMs: number): void {
+    if (!import.meta.client) return
+    if (proactiveRefreshTimer) {
+      clearTimeout(proactiveRefreshTimer)
+      proactiveRefreshTimer = null
+    }
+    proactiveRefreshTimer = setTimeout(async () => {
+      proactiveRefreshTimer = null
+      const ok = await refresh().catch(() => false)
+      const wait = hubRateLimitRemainingMs()
+      if (!ok && wait > 0) armRefreshTimer(Math.max(wait, 10_000) + 1_000)
+    }, delayMs)
+  }
+
+  // Schedule a refresh shortly before the access token expires. Lead time is
+  // 15% of TTL clamped to [30s, 120s]; guard against very short TTLs.
+  function scheduleProactiveRefresh(expiresIn: number): void {
+    if (!import.meta.client) return
+    if (proactiveRefreshTimer) {
+      clearTimeout(proactiveRefreshTimer)
+      proactiveRefreshTimer = null
+    }
+    if (!Number.isFinite(expiresIn) || expiresIn <= 0) return
+
+    const leadSec = Math.min(120, Math.max(30, Math.floor(expiresIn * 0.15)))
+    const delayMs = Math.max(5_000, (expiresIn - leadSec) * 1000)
+
+    armRefreshTimer(delayMs)
+  }
+
+  function clearProactiveRefresh(): void {
+    if (proactiveRefreshTimer) {
+      clearTimeout(proactiveRefreshTimer)
+      proactiveRefreshTimer = null
+    }
   }
 
   async function logout(): Promise<void> {
@@ -354,6 +432,7 @@ export const useAuth = () => {
     } catch {
       // Ignore logout errors
     } finally {
+      clearProactiveRefresh()
       user.value = null
       accessToken.value = null
       refreshToken.value = null
@@ -400,6 +479,10 @@ export const useAuth = () => {
         createdAt: data.createdAt || new Date().toISOString(),
         updatedAt: data.updatedAt || new Date().toISOString()
       }
+
+      // Returning user boot: token came from the cookie, so schedule from its exp.
+      const remaining = tokenRemainingSeconds(token)
+      if (remaining != null) scheduleProactiveRefresh(remaining)
     } catch {
       const success = await refresh()
       if (!success) {
@@ -421,6 +504,7 @@ export const useAuth = () => {
     const cookieRefresh = useCookie('refreshToken', { maxAge: 604800, path: '/', sameSite: 'lax' })
     cookieAccess.value = tokens.accessToken
     cookieRefresh.value = tokens.refreshToken
+    scheduleProactiveRefresh(tokens.expiresIn)
   }
 
   return {

@@ -36,7 +36,11 @@ export default defineEventHandler(async (event) => {
   }
 
   const ts = new Date()
-  const doc = buildTicketAlert(body as Record<string, unknown>, ts)
+  // Tenancy (docs/web-app/user-tenancy-plan.md): the alert belongs to the
+  // authenticated hub user. `ownerId` rides the doc so the dedupe key is
+  // owner-scoped (two accounts may place an identical order in the same second).
+  const ownerId = requireOwnerId(event)
+  const doc = { ...buildTicketAlert(body as Record<string, unknown>, ts), ownerId }
   const { alertKey } = await engineKeys()
   const key = alertKey(doc as unknown as Record<string, unknown>, 'manual')
 

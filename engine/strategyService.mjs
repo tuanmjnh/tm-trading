@@ -22,22 +22,26 @@ const {
 } = core
 
 /** Read a strategy version by id. null = Mongo down or not found. */
-export async function getVersion(id) {
+export async function getVersion(id, ownerId = null) {
   const M = await getStrategyVersion()
   if (!M) return null
   try {
-    return await M.findOne({ _id: id }).lean()
+    const filter = { _id: id }
+    if (ownerId) filter.ownerId = ownerId
+    return await M.findOne(filter).lean()
   } catch {
     return null
   }
 }
 
 /** List versions for a strategy (all statuses). */
-export async function listVersions(strategyId, { limit = 50 } = {}) {
+export async function listVersions(strategyId, { limit = 50, ownerId = null } = {}) {
   const M = await getStrategyVersion()
   if (!M) return []
   try {
-    return await M.find({ strategyId }).sort({ createdAt: -1 }).limit(limit).lean()
+    const filter = { strategyId }
+    if (ownerId) filter.ownerId = ownerId
+    return await M.find(filter).sort({ createdAt: -1 }).limit(limit).lean()
   } catch {
     return []
   }
@@ -53,7 +57,9 @@ export async function createVersion(input) {
   if (!M) return { ok: false, code: 'MONGO_DOWN', version: null }
   const doc = strategyVersionRecord(input)
   if (!doc) return { ok: false, code: 'SV_BAD_INPUT', version: null }
-  const existing = await getVersion(doc._id)
+  // Tenancy (roadmap §61.3): the version inherits the creating owner.
+  doc.ownerId = input.ownerId ?? null
+  const existing = await getVersion(doc._id, input.ownerId ?? null)
   if (existing) {
     const g = assertUnchanged(existing, doc)
     if (!g.ok) return g
@@ -68,9 +74,9 @@ export async function createVersion(input) {
 }
 
 /** Promote a version along the §29 chain (evidence-gated, pure core decides). */
-export async function promoteVersion(id, to, { evidence = {}, by = null } = {}) {
+export async function promoteVersion(id, to, { evidence = {}, by = null, ownerId = null } = {}) {
   const M = await getStrategyVersion()
-  const cur = await getVersion(id)
+  const cur = await getVersion(id, ownerId)
   if (!M || !cur) return { ok: false, code: 'SV_NOT_FOUND', version: null }
   const res = transitionVersion(cur, to, { evidence, by, at: Date.now() })
   if (!res.ok) return res
@@ -80,7 +86,7 @@ export async function promoteVersion(id, to, { evidence = {}, by = null } = {}) 
   if (res.version.acceptedExperimentId !== cur.acceptedExperimentId) patch.acceptedExperimentId = res.version.acceptedExperimentId
   if (res.version.paperTrades !== cur.paperTrades) patch.paperTrades = res.version.paperTrades
   try {
-    await M.updateOne({ _id: id }, { $set: patch })
+    await M.updateOne({ _id: id, ...(ownerId ? { ownerId } : {}) }, { $set: patch })
     return { ok: true, code: 'OK', version: res.version }
   } catch (e) {
     return { ok: false, code: `SV_WRITE:${e?.message ?? 'err'}`, version: null }
@@ -122,25 +128,26 @@ export async function planNewVersion({ strategyVersionId, changes = [], bump = '
  * and it points at an immutable version, so the live behavior is exactly the
  * published, measured configuration (D1).
  *
- * @param {{ profileId?: string, strategyVersionId?: string, by?: string | null }} [opts]
+ * @param {{ profileId?: string, strategyVersionId?: string, by?: string | null, ownerId?: string | null }} [opts]
  */
-export async function activatePaper({ profileId, strategyVersionId, by = null } = {}) {
+export async function activatePaper({ profileId, strategyVersionId, by = null, ownerId = null } = {}) {
   const P = await getStrategyProfile()
   const V = await getStrategyVersion()
   if (!P || !V) return { ok: false, code: 'MONGO_DOWN' }
-  const ver = await V.findOne({ _id: strategyVersionId }).lean()
+  const own = ownerId ? { ownerId } : {}
+  const ver = await V.findOne({ _id: strategyVersionId, ...own }).lean()
   if (!ver) return { ok: false, code: 'SV_NOT_FOUND' }
   if (ver.status !== 'paper' && ver.status !== 'stable_paper') {
     return { ok: false, code: `SV_NOT_PAPER_READY:${ver.status}`, detail: 'only paper/stable_paper versions may go live' }
   }
-  const prof = await P.findOne({ _id: profileId }).lean()
+  const prof = await P.findOne({ _id: profileId, ...own }).lean()
   if (!prof) return { ok: false, code: 'PROFILE_NOT_FOUND' }
   const history = [
     ...(Array.isArray(prof.history) ? prof.history : []),
     { from: prof.strategyVersionId ?? null, to: strategyVersionId, at: +new Date(), by },
   ]
   try {
-    await P.updateOne({ _id: profileId }, { $set: { strategyVersionId, status: 'active', history } })
+    await P.updateOne({ _id: profileId, ...own }, { $set: { strategyVersionId, status: 'active', history } })
     return { ok: true, code: 'OK', profileId, strategyVersionId }
   } catch (e) {
     return { ok: false, code: `SV_WRITE:${e?.message ?? 'err'}` }
@@ -153,11 +160,13 @@ export async function activatePaper({ profileId, strategyVersionId, by = null } 
  * `trade_context` with the version that actually produced the trade (D1).
  * null = no live version declared (never guessed).
  */
-export async function resolveLiveVersion({ instrument = null, timeframe = null } = {}) {
+export async function resolveLiveVersion({ instrument = null, timeframe = null, ownerId = null } = {}) {
   const P = await getStrategyProfile()
   if (!P) return null
   try {
-    const prof = await P.findOne({ status: 'active', strategyVersionId: { $ne: null } }).lean()
+    const filter = { status: 'active', strategyVersionId: { $ne: null } }
+    if (ownerId) filter.ownerId = ownerId
+    const prof = await P.findOne(filter).lean()
     if (!prof) return null
     if (instrument && Array.isArray(prof.instruments) && prof.instruments.length && !prof.instruments.includes(instrument)) return null
     if (timeframe && Array.isArray(prof.timeframes) && prof.timeframes.length && !prof.timeframes.includes(timeframe)) return null

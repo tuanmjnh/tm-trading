@@ -58,7 +58,11 @@ export function buildFillRecord(i) {
     fillId: String(i.fillId ?? `fill_${Math.random().toString(36).slice(2, 10)}`),
     orderId: String(i.orderId ?? ''),
     alertKey: i.alertKey == null ? null : String(i.alertKey),
+    // Slice C: trading session this fill belongs to (additive, nullable).
+    sessionId: i.sessionId == null ? null : String(i.sessionId),
     accountId: String(i.accountId ?? 'default'),
+    // Tenancy (roadmap §61.3): the fill belongs to the desk owner.
+    ownerId: i.ownerId == null ? null : String(i.ownerId),
     source: String(i.source ?? 'paper'),
     symbol: String(i.symbol ?? ''),
     side: i.side === 'SELL' ? 'SELL' : 'BUY',

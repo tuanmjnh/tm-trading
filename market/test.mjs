@@ -15,10 +15,10 @@
 // =============================================================================
 
 import {
-  TOPICS, tradeEvent, quoteEvent, candleEvent,
+  TOPICS, tradeEvent, quoteEvent, ticker24Event, candleEvent,
   createTradingClock, tfToMs, alignDown, closeTimeOf,
   createCandleBuilder, createAggregator,
-  createQuoteStore, createOrderbookStore, createEventBus, createMonitor,
+  createQuoteStore, createTicker24Store, createTicker24Poll, createOrderbookStore, createEventBus, createMonitor,
   assertProvider, assertHooks,
   createBinanceProvider, buildStreams, buildUrl, normalizeMessage,
   createMarketPlane, createDepthSync
@@ -753,6 +753,190 @@ check('upsertedIds extracts the newly-inserted _ids from a bulkWrite result',
   check('stop() unsubscribes — no more candles are recorded',
     rec.stats().buffered === 0 && rec.stats().written === 3)
   check('DEFAULT_RETENTION_DAYS is a sane declaration', DEFAULT_RETENTION_DAYS === 90)
+}
+
+// =============================================================================
+section('15. Rolling-24h ticker — event, provider normalize, store, plane route')
+
+{
+  const ING = 1_000_000
+  const ctx = { source: 'binance', market: 'futures', ingest: () => ING }
+  const tk = ticker24Event({
+    source: 'binance', market: 'futures', symbol: 'BTCUSDT',
+    lastPrice: 82975.2, openPrice: 80100, highPrice: 83100, lowPrice: 79900,
+    baseVolume: 48219.5, quoteVolume: 3999884123.1, priceChange: 2875.2,
+    priceChangePercent: 3.59, trades: 1234567, eventTime: 999
+  }, ING)
+  check('ticker24 event carries the exchange window + D16 stamps',
+    tk.type === TOPICS.TICKER_24H && tk.priceChangePercent === 3.59 && tk.eventTime === 999 && tk.ingestTime === ING)
+  check('ticker24 rejects an inconsistent high/low window',
+    (() => { try { ticker24Event({ ...tk, highPrice: 1 }, ING); return false } catch { return true } })())
+
+  const raw24 = { stream: 'btcusdt@ticker', data: { e: '24hrTicker', E: 1001, s: 'BTCUSDT', c: '82975.20', o: '80100.00', h: '83100.00', l: '79900.00', v: '48219.5', q: '3999884123.1', p: '2875.20', P: '3.590', n: 1234567 } }
+  const norm = normalizeMessage(raw24, ctx)
+  check('24hrTicker -> market.ticker24 with mapped fields',
+    norm.topic === TOPICS.TICKER_24H && norm.event.symbol === 'BTCUSDT' && norm.event.lastPrice === 82975.2 && norm.event.baseVolume === 48219.5 && norm.event.eventTime === 1001)
+  check('24hrTicker with a non-numeric close is ignored (no fake row)',
+    normalizeMessage({ stream: 'btcusdt@ticker', data: { e: '24hrTicker', E: 1, s: 'BTCUSDT', c: 'NaN', o: '1', h: '2', l: '0.5', v: '1', q: '1', p: '0', P: '0', n: 1 } }, ctx) === null)
+
+  const sDefault = buildStreams({ symbols: ['BTCUSDT'] })
+  check('ticker stream is opt-in (default URL stays lean)',
+    !sDefault.some((s) => s.endsWith('@ticker')))
+  const sTick = buildStreams({ symbols: ['BTCUSDT'], ticker24: true })
+  check('ticker24:true adds one @ticker stream per symbol',
+    sTick.filter((s) => s.endsWith('@ticker')).length === 1 && sTick.includes('btcusdt@ticker'))
+
+  const store = createTicker24Store()
+  check('store accepts the first window', store.apply(tk) === true && store.get('BTCUSDT').priceChangePercent === 3.59)
+  check('store rejects a stale replay (eventTime walks back)',
+    store.apply({ ...tk, eventTime: 998 }) === false && store.stats().stale === 1 && store.get('BTCUSDT').eventTime === 999)
+  check('store merges partial updates onto the stored row',
+    store.apply({ symbol: 'BTCUSDT', eventTime: 1000, lastPrice: 83000 }) === true && store.get('BTCUSDT').lastPrice === 83000 && store.get('BTCUSDT').baseVolume === 48219.5)
+
+  const seen = []
+  const bus = createEventBus()
+  bus.on(TOPICS.TICKER_24H, (ev) => seen.push(ev))
+  const plane = createMarketPlane({ symbols: ['BTCUSDT'], timeframes: ['1m'], source: 'trades', provider: null, bus })
+  plane.route(tk, TOPICS.TICKER_24H)
+  check('plane routes ticker24 to the store and the bus',
+    seen.length === 1 && plane.ticker24Store.get('BTCUSDT').lastPrice === 82975.2)
+}
+
+// =============================================================================
+section('17. Runtime subscribe — provider SUBSCRIBE + plane.addSymbol')
+
+{
+  const created = []
+  const sent = []
+  class FakeWS {
+    constructor(url) { this.url = url; this.readyState = 0; created.push(this) }
+    send(data) { sent.push(data) }
+    close() { this.readyState = 3; if (this.onclose) this.onclose() }
+  }
+  const timers = []
+  const setT = (fn, ms) => { const h = { fn, ms, cancelled: false }; timers.push(h); return h }
+  const clearT = (h) => { if (h) h.cancelled = true }
+
+  const p = createBinanceProvider({
+    market: 'fapi', symbols: ['BTCUSDT'],
+    WebSocketImpl: FakeWS, setTimeoutFn: setT, clearTimeoutFn: clearT, ingest: fixedIngest
+  })
+  p.connect({ onEvent: () => {}, onStatus: () => {} })
+  const added = p.subscribeMore(['ethusdt', 'ETHUSDT', 'xx', 'BTCUSDT', ''])
+  check('subscribeMore uppercases, dedupes, drops invalid + already-served',
+    JSON.stringify(added) === JSON.stringify(['ETHUSDT']))
+  check('streams() grows with runtime symbols',
+    p.streams().includes('ethusdt@trade') && p.streams().includes('ethusdt@bookTicker'))
+  check('no SUBSCRIBE frame before open', sent.length === 0)
+
+  created[0].onopen()
+  const added2 = p.subscribeMore(['solusdt'])
+  check('SUBSCRIBE frame sent on a live socket with the new streams', sent.length === 1 && (() => {
+    try {
+      const f = JSON.parse(sent[0])
+      return f.method === 'SUBSCRIBE' && f.params.includes('solusdt@trade') && f.params.includes('solusdt@bookTicker')
+    } catch { return false }
+  })())
+  check('streams() accumulates every runtime symbol',
+    p.streams().includes('solusdt@trade') && p.streams().includes('ethusdt@trade'))
+
+  created[0].onclose() // drop -> reconnect must bake runtime symbols into the URL
+  timers[0].fn()
+  check('reconnect URL carries runtime symbols (never dropped)',
+    created.length === 2 && created[1].url.includes('ethusdt@trade') && created[1].url.includes('solusdt@trade'))
+}
+
+{
+  const bus = createEventBus()
+  const seen = []
+  bus.on(TOPICS.TRADE, (ev) => seen.push(ev))
+  const plane = createMarketPlane({ symbols: ['BTCUSDT'], timeframes: ['1m'], source: 'trades', provider: null, bus })
+  check('addSymbol serves a new symbol (builders + listing)',
+    plane.addSymbol('ethusdt') === true && plane.symbols.includes('ETHUSDT'))
+  check('addSymbol is idempotent', plane.addSymbol('ETHUSDT') === false)
+  check('addSymbol rejects garbage without throwing',
+    plane.addSymbol('!!!') === false && plane.addSymbol('') === false && plane.symbols.length === 2)
+  plane.route(
+    tradeEvent({ source: 't', symbol: 'ETHUSDT', price: 100, eventTime: Date.now() }, Date.now()),
+    TOPICS.TRADE
+  )
+  check('new symbol flows through builders + bus',
+    seen.length === 1 && seen[0].symbol === 'ETHUSDT')
+}
+
+// =============================================================================
+section('16. REST 24h ticker poller — same window when the WS stream is silent')
+
+{
+  const body = {
+    symbol: 'BTCUSDT', lastPrice: '82055.50', openPrice: '83524.90',
+    highPrice: '84117.60', lowPrice: '81850.00', volume: '145611.603',
+    quoteVolume: '12106855958.51', priceChange: '-1469.40',
+    priceChangePercent: '-1.759', count: 3031121, closeTime: 1791988522742
+  }
+  const okFetch = async (url) => {
+    if (!String(url).includes('/fapi/v1/ticker/24hr?symbol=BTCUSDT')) throw new Error(`unexpected url ${url}`)
+    return { ok: true, json: async () => ({ ...body }) }
+  }
+  const routed = []
+  const poll = createTicker24Poll({
+    symbols: ['BTCUSDT'], market: 'fapi',
+    route: (ev, topic) => routed.push([ev, topic]),
+    fetchImpl: okFetch, ingest: () => 1791988600000
+  })
+  await poll.pollOnce()
+  check('REST 24hr row routes as market.ticker24 with mapped fields',
+    routed.length === 1 && routed[0][1] === TOPICS.TICKER_24H &&
+    routed[0][0].symbol === 'BTCUSDT' && routed[0][0].lastPrice === 82055.5 &&
+    routed[0][0].baseVolume === 145611.603 && routed[0][0].priceChangePercent === -1.759 &&
+    routed[0][0].eventTime === 1791988522742 && routed[0][0].market === 'futures',
+    JSON.stringify(routed[0]?.[0]))
+  check('poller stats count the sweep', poll.stats().polls === 1 && poll.stats().routed === 1 && poll.stats().failures === 0)
+
+  const routed2 = []
+  const badFetch = async () => ({ ok: true, json: async () => ({ symbol: 'BTCUSDT' }) })
+  const bad = createTicker24Poll({ symbols: ['BTCUSDT'], route: (ev, t) => routed2.push(ev), fetchImpl: badFetch })
+  await bad.pollOnce()
+  check('a malformed REST row fails soft (counted, never routed)',
+    routed2.length === 0 && bad.stats().failures === 1)
+
+  const routed3 = []
+  const downFetch = async () => { throw new Error('net down') }
+  const down = createTicker24Poll({ symbols: ['BTCUSDT'], route: (ev, t) => routed3.push(ev), fetchImpl: downFetch })
+  await down.pollOnce()
+  check('a fetch outage fails soft (counted, never routed)',
+    routed3.length === 0 && down.stats().failures === 1)
+
+  let cleared = null
+  const withTimer = createTicker24Poll({
+    symbols: ['BTCUSDT'], route: () => {}, fetchImpl: okFetch, intervalMs: 1000,
+    setIntervalFn: (fn, ms) => ({ fn, ms }),
+    clearIntervalFn: (id) => { cleared = id }
+  })
+  withTimer.start()
+  await sleep(25)
+  withTimer.stop()
+  check('start() sweeps immediately and stop() clears the interval',
+    withTimer.stats().polls === 1 && cleared !== null)
+
+  // D34: a fresh WS ticker pauses the REST poll (own routed rows excluded).
+  const seenWs = []
+  const busWs = createEventBus()
+  busWs.on(TOPICS.TICKER_24H, (ev) => seenWs.push(ev))
+  const routedWs = []
+  const defer = createTicker24Poll({
+    symbols: ['BTCUSDT'],
+    bus: busWs,
+    route: (ev, t) => { routedWs.push(ev); busWs.emit(t, ev) },
+    fetchImpl: okFetch,
+    intervalMs: 30_000
+  })
+  await defer.pollOnce()
+  check('first sweep routes (no WS yet)', routedWs.length === 1)
+  busWs.emit(TOPICS.TICKER_24H, { type: TOPICS.TICKER_24H, symbol: 'BTCUSDT', source: 'binance' })
+  await defer.pollOnce()
+  check('fresh WS frame pauses the REST poll for that symbol',
+    routedWs.length === 1 && defer.stats().wsYielded === 1)
 }
 
 finish()

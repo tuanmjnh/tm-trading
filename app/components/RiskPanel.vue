@@ -46,7 +46,8 @@ async function load(): Promise<void> {
 }
 
 onMounted(() => { void load() })
-useIntervalFn(() => { void load() }, 30_000, { immediate: false })
+// Visibility-aware (API budget): pauses while the tab is hidden.
+useVisibleInterval(() => { void load() }, 30_000, { immediate: false })
 
 /** D7c: ANY account halted means the desk is blocked (halt is a hard stop). */
 const halted = computed(() => data.value?.accounts.some((a) => a.halted) ?? false)

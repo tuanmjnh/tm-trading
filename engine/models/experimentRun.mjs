@@ -12,6 +12,8 @@ const ExperimentRunSchema = new mongoose.Schema(
   {
     _id: { type: String, required: true }, // `${experimentId}:${role}`
     experimentId: { type: String, required: true, index: true },
+    // Tenancy (roadmap §61.3): inherited from the owning experiment.
+    ownerId: { type: String, default: null, index: true },
     role: { type: String, enum: ARM_NAMES, required: true },
 
     config: { type: mongoose.Schema.Types.Mixed, default: {} },

@@ -83,7 +83,7 @@ export interface StartTestRunDeps {
 
 const MARKETS = ['fapi', 'spot'] as const
 
-export async function startTestRun(body: unknown, deps: StartTestRunDeps = {}): Promise<TestRunResult> {
+export async function startTestRun(body: unknown, deps: StartTestRunDeps = {}, ownerId?: string | null): Promise<TestRunResult> {
   const b = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>
 
   const symbolRaw = String(b.symbol ?? '').trim()
@@ -137,6 +137,8 @@ export async function startTestRun(body: unknown, deps: StartTestRunDeps = {}): 
       preset: b.preset ? String(b.preset) : null,
       limit,
       refresh: b.refresh === true,
+      // Tenancy (roadmap §61.3): the engine stamps the run with the caller's id.
+      ownerId: ownerId ?? null,
       dataDir: process.env.DATA_DIR || join(process.cwd(), 'data')
     })) as Record<string, unknown>
   } catch (err) {

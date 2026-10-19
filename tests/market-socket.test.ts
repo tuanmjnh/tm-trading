@@ -41,6 +41,7 @@ function fakePlane(overrides: Partial<MarketPlane> = {}): MarketPlane & {
     symbols: ['BTCUSDT'],
     timeframes: ['1m', '4m', '10m'],
     quoteStore: { all: () => [{ symbol: 'BTCUSDT', bid: 100, ask: 101, eventTime: 1 }], size: () => 1 },
+    ticker24Store: { all: () => [{ symbol: 'BTCUSDT', lastPrice: 101, priceChangePercent: 1, eventTime: 1 }], size: () => 1 },
     orderbookStore: { symbols: () => ['BTCUSDT'], get: () => null },
     monitor: { status: () => ({ latency: { samples: 0, p50: null, p95: null, max: null } }) },
     provider: null,
@@ -72,6 +73,7 @@ describe('buildHello — snapshot of the plane on open', () => {
     assert.deepEqual(hello.symbols, ['BTCUSDT'])
     assert.deepEqual(hello.timeframes, ['1m', '4m', '10m'])
     assert.deepEqual(hello.quotes, [{ symbol: 'BTCUSDT', bid: 100, ask: 101, eventTime: 1 }])
+    assert.deepEqual(hello.ticker24, [{ symbol: 'BTCUSDT', lastPrice: 101, priceChangePercent: 1, eventTime: 1 }])
     assert.deepEqual(hello.bookSymbols, ['BTCUSDT'])
     assert.equal(hello.provider, null)
     assert.equal(typeof (hello.monitor as { latency: unknown }).latency, 'object')
@@ -181,5 +183,43 @@ describe('handleClientMessage — tiny request/response protocol', () => {
     assert.equal(parsed.type, 'error')
     assert.equal(parsed.error, 'unknown-type')
     assert.equal(parsed.got, 'subscribe-everything')
+  })
+
+  test('subscribe serves valid symbols, dedupes, drops garbage', () => {
+    const added: string[] = []
+    const plane = fakePlane()
+    ;(plane as unknown as { addSymbol: (s: string) => boolean }).addSymbol = (s) => {
+      added.push(s)
+      return true
+    }
+    const parsed = JSON.parse(handleClientMessage(plane, JSON.stringify({ type: 'subscribe', symbols: ['ethusdt', 'xx', 'ETHUSDT'] }))!)
+    assert.deepEqual(parsed, { type: 'subscribed', symbols: ['ETHUSDT'] })
+    assert.deepEqual(added, ['ETHUSDT'])
+  })
+
+  test('subscribe rejects empty/invalid lists without touching the plane', () => {
+    let calls = 0
+    const plane = fakePlane()
+    ;(plane as unknown as { addSymbol: (s: string) => boolean }).addSymbol = () => {
+      calls++
+      return true
+    }
+    assert.equal(JSON.parse(handleClientMessage(plane, '{"type":"subscribe","symbols":[]}')!).error, 'bad-symbols')
+    assert.equal(JSON.parse(handleClientMessage(plane, '{"type":"subscribe"}')!).error, 'bad-symbols')
+    assert.equal(calls, 0)
+  })
+
+  test('subscribe without plane support reports unsupported', () => {
+    const parsed = JSON.parse(handleClientMessage(fakePlane(), JSON.stringify({ type: 'subscribe', symbols: ['ETHUSDT'] }))!)
+    assert.equal(parsed.error, 'unsupported')
+  })
+
+  test('subscribe caps the total symbol budget', () => {
+    const plane = fakePlane({ symbols: Array.from({ length: 28 }, (_, i) => `SYM${i}`) })
+    ;(plane as unknown as { addSymbol: (s: string) => boolean }).addSymbol = () => true
+    const parsed = JSON.parse(
+      handleClientMessage(plane, JSON.stringify({ type: 'subscribe', symbols: ['AAA01', 'BBB02', 'CCC03'] }))!
+    )
+    assert.equal(parsed.error, 'too-many-symbols')
   })
 })

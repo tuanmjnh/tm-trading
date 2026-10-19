@@ -14,7 +14,9 @@ import { RULE_EVENT_KINDS, RULE_LEVELS, RULE_DIRS, RULE_PRIORITIES } from '../al
 
 const AlertRuleSchema = new mongoose.Schema(
   {
-    ruleKey: { type: String, required: true, unique: true },
+    ruleKey: { type: String, required: true },
+    // Tenancy (roadmap §61.3): alert rules are user-scoped.
+    ownerId: { type: String, default: null, index: true },
     name: { type: String, required: true, trim: true, maxlength: 80 },
     enabled: { type: Boolean, default: true },
     kind: { type: String, required: true, enum: RULE_EVENT_KINDS, default: 'news' },
@@ -37,5 +39,7 @@ const AlertRuleSchema = new mongoose.Schema(
 )
 
 AlertRuleSchema.index({ enabled: 1 })
+// Per-owner rule identity: the global `ruleKey_1` unique is dropped.
+AlertRuleSchema.index({ ownerId: 1, ruleKey: 1 }, { unique: true })
 
 export const AlertRule = mongoose.models.alert_rules || mongoose.model('alert_rules', AlertRuleSchema)

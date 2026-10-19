@@ -1,0 +1,52 @@
+// =============================================================================
+//  60_SETUPS — 3 Modular Entry Setups (Trend Pullback, Sweep, Range Reversion)
+// =============================================================================
+
+// --- 1. Setup 1: Trend Pullback ----------------------------------------------
+// Long Pullback: Bullish trend context + price retesting Ribbon/Zone + Bullish candle
+bool fz_s1_long = fz_setup_pullback and fz_trendLongOk and fz_htfBull and (fz_priceInRibbonLong or fz_inDemandZone) and fz_candleBull and (close >= fz_rb_bot)
+
+// Short Pullback: Bearish trend context + price retesting Ribbon/Zone + Bearish candle
+bool fz_s1_short = fz_setup_pullback and fz_trendShortOk and fz_htfBear and (fz_priceInRibbonShort or fz_inSupplyZone) and fz_candleBear and (close <= fz_rb_top)
+
+// --- 2. Setup 2: Liquidity Sweep Reversal ------------------------------------
+int fz_barsSinceBullSweep = ta.barssince(fz_swpBull)
+int fz_barsSinceBearSweep = ta.barssince(fz_swpBear)
+
+bool fz_sweepLongWindow  = not na(fz_barsSinceBullSweep) and fz_barsSinceBullSweep <= fz_sweep_confBars
+bool fz_sweepShortWindow = not na(fz_barsSinceBearSweep) and fz_barsSinceBearSweep <= fz_sweep_confBars
+
+bool fz_s2_long = fz_setup_sweep and fz_sweepLongWindow and (fz_swpBull or fz_candleBull) and (close > open or fz_pinBull)
+bool fz_s2_short = fz_setup_sweep and fz_sweepShortWindow and (fz_swpBear or fz_candleBear) and (close < open or fz_pinBear)
+
+// --- 3. Setup 3: Range Mean-Reversion ----------------------------------------
+bool fz_s3_long = fz_setup_range and fz_isRanging and fz_inDemandZone and fz_candleBull
+bool fz_s3_short = fz_setup_range and fz_isRanging and fz_inSupplyZone and fz_candleBear
+
+// --- 4. Independent Long / Short Setup Consolidation --------------------------
+bool   longSetupDetected  = false
+string longSetupType      = "None"
+bool   shortSetupDetected = false
+string shortSetupType     = "None"
+
+// Long Setup Priority
+if fz_s2_long
+    longSetupDetected := true
+    longSetupType     := "Sweep Rev"
+else if fz_s1_long
+    longSetupDetected := true
+    longSetupType     := "Pullback"
+else if fz_s3_long
+    longSetupDetected := true
+    longSetupType     := "Range Rev"
+
+// Short Setup Priority
+if fz_s2_short
+    shortSetupDetected := true
+    shortSetupType     := "Sweep Rev"
+else if fz_s1_short
+    shortSetupDetected := true
+    shortSetupType     := "Pullback"
+else if fz_s3_short
+    shortSetupDetected := true
+    shortSetupType     := "Range Rev"

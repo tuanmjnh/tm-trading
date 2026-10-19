@@ -3,35 +3,41 @@
 {{SHARED}}
 
 // =============================================================================
-//  TM INDICATOR  -  v1.0.0 (Phase 1 Correctness Patch)
-//  Multi-Asset Futures Analysis System
-//  Upgraded from TM XAU Signals 2 baseline under TM_Indicator_Roadmap.md
+//  TM INDICATOR 2 & STRATEGY LAB 2  -  v2.1.0
+//  Next-Gen Multi-Asset Quantitative Trading & Analysis System
+//  Architecture: Modular Build (tools/build.mjs) -> pine/dist/
 //
-//  Layer structure:
-//    L0  CONFIG       - inputs, toggles, weights, filters (independent testing)
-//    L1  CORE         - ATR/ATR%, Volume VSA (Wilder RMA), RelVol, OBV, EMA stack,
-//                       displacement, pivots, session detection
-//    L2  MARKET STR   - Swing, HH/HL/LH/LL, BOS, CHoCH, MSS, Retest,
-//                       Failed Breakout, Continuation, Pullback -> UDT TMEvent
-//    L3  LIQUIDITY    - PDH/PDL, PWH/PWL, Session Hi/Lo, Equal Hi/Lo, Sweep,
-//                       Trendline 2-point (slope/touch/break)
-//    L4  ZONES        - S/R zones + FVG + Order Block (independent toggles)
-//    L5  CANDLE       - Pin, Engulfing, Displacement, Rejection -> score [-1, +1]
-//    L6  INDICATORS   - Grouped by function: Trend / Momentum(RSI+MACD+DMI) /
-//                       Volatility(ATR%+BBW) / Volume(RelVol+OBV+VSA) / Location(VWAP+DayRange)
-//    L7  MTF CONTEXT  - Context TF + Setup TF; entry = chart TF
-//                       Tuple request.security [1] + lookahead_on (no-repaint)
-//                       HTF Close vs HTF EMA consistency; MTF hierarchy check
-//    L8  SCORING      - 0-100, 11 groups (total weight 100, no correlated double-counting)
-//    L9  RISK         - Entry/SL/TP plan + gate (P0 RR fix with target RR selection)
-//    L10 STATE        - Position lifecycle: open -> manage -> close -> deferred reset
-//                       (P0 state machine fix: proper timeout exit & realized R calculation)
-//    L11 VIZ          - Visuals master switch, clean table dashboard, force_overlay on price
-//    L12 ALERTS       - Webhook JSON: ENTRY, TAKE_PROFIT, STOP_LOSS, TIMEOUT, EVENT
+//  Key Architectural Pillars (Roadmap v2):
+//    1. Dynamic Trade Management: Auto Break-Even @ TP1, Trailing Stop @ TP2,
+//       Time-Decay / Stagnation Exit.
+//    2. Smart Entry Execution: Market on Confirm vs Pullback Limit Entry
+//       (50% FVG / Order Block Edge / EMA Fast) with auto-cancellation after K bars.
+//    3. Market Regime Classifier: Real-time detection of TRENDING, RANGING,
+//       and CHOPPY / SQUEEZE with dynamic regime-adaptive scoring weights.
+//    4. Room-to-Left / HTF Obstacle Gate: Checks distance to opposing structural
+//       barriers (S/R, OB) before entry; blocks trades if Obstacle < TP1.
+//    5. Anti-Overextension Gate: Detects price exhaustion (Extension > Max ATR
+//       or Candle Spread > 2.5x ATR) and forces pullback limit entry.
+//    6. Inter-Market & Session Intelligence: BTC Leader Filter for ETH/Altcoins,
+//       Crypto Weekend Low-Liquidity Filter, and MTF Hierarchy validation.
+//    7. Pine v6 Tuple MTF & Memory Optimization: Zero-repaint tuple requests,
+//       strictly capped under 5 request.security() calls, with drawing GC.
 //
-//  Correctness Principles:
-//    - Preserved frozen baseline in pine/parts-xau2/
-//    - Verified RR calculation for LONG & SHORT
-//    - Non-repainting closed-bar MTF policy
-//    - Deterministic state machine (each trade closed exactly once)
+//  v2.1 additions (validation-first, no performance claim without OOS data):
+//    8. Direction-aware scoring: independent LONG/SHORT 0..100 side scores from
+//       the same weights, a minimum side score and a direction margin. The old
+//       signed quality score blocked SHORT by construction and is gone.
+//    9. Entry modes by market state: A Trend Pullback, B Liquidity Sweep
+//       Reversal, C Range Mean-Reversion (opt-in), each with activation,
+//       confirmation, invalidation and expiry.
+//   10. Reason-code telemetry: every blocker emits a standardized code, the
+//       dashboard shows the top reason plus the full blocker mask, and alerts
+//       carry the scores/side/status/mode that produced the signal.
+//   11. Dashboard Compact (default) / Advanced modes + lifecycle funnel
+//       (candidate -> eligible -> pending -> filled -> closed).
+//
+//  Verification Standard:
+//    - TP1 Hit Rate (%) and Net Trade Winrate (%) separated on the dashboard.
+//    - WINRATE IS NOT A CLAIM: any improvement needs the ablation/walk-forward
+//      protocol and an out-of-sample report (docs/indicator/tm-indicator-2/).
 // =============================================================================

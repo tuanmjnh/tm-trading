@@ -20,5 +20,5 @@ export default defineEventHandler(async (event) => {
   }
   // A bodyless POST is a legitimate full close — never let readBody throw on it.
   const body = await readBody(event).catch(() => undefined)
-  return await closePositionAction(id, body)
+  return await closePositionAction(id, body, requireOwnerId(event))
 })

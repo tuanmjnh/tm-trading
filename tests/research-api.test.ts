@@ -155,19 +155,50 @@ describe('createExperiment', () => {
 
   it('writes the experiment through persistProposal and returns the doc', async () => {
     let saved: Record<string, unknown> | null = null
+    let opts: Row | null = null
     const service = {
-      persistProposal: async (p: Record<string, unknown>) => {
+      persistProposal: async (p: Record<string, unknown>, o: Row) => {
         saved = p
+        opts = o
         return { ok: true, code: 'OK', exp: { _id: 'exp:p1', status: 'proposed', ...p } }
       }
     }
     const doc = await createExperiment(
       { proposalId: 'p1', hypothesis: 'edge', changes: [], evidence: [], risks: [], recommendedTest: {} },
-      { service: service as never }
+      { service: service as never, profileModel: nullLoader }
     )
     assert.equal(doc._id, 'exp:p1')
     assert.equal(doc.status, 'proposed')
     assert.equal((saved as unknown as Row).proposalId, 'p1')
+    // §59.15 Slice E: no active profile -> baseline is honestly null, not guessed.
+    assert.equal((opts as unknown as Row).baselineVersionId, null)
+  })
+
+  it('freezes the ACTIVE pointer into the experiment as the baseline', async () => {
+    let opts: Row | null = null
+    const service = {
+      persistProposal: async (p: Record<string, unknown>, o: Row) => {
+        opts = o
+        return { ok: true, code: 'OK', exp: { _id: 'exp:p1', status: 'proposed', ...p } }
+      }
+    }
+    await createExperiment(
+      { proposalId: 'p1', hypothesis: 'edge', strategyVersionId: 'tm-vsa@2.0.0' },
+      {
+        service: service as never,
+        profileModel: asLoader(modelStub({ one: { _id: 'prof_1', status: 'active', strategyVersionId: 'tm-vsa@1.4.0' } }))
+      }
+    )
+    assert.equal((opts as unknown as Row).baselineVersionId, 'tm-vsa@1.4.0')
+  })
+
+  it('an unreachable profile store never blocks the experiment', async () => {
+    const service = { persistProposal: async (p: Record<string, unknown>) => ({ ok: true, code: 'OK', exp: { _id: 'exp:p1', ...p } }) }
+    const doc = await createExperiment(
+      { proposalId: 'p1', hypothesis: 'edge' },
+      { service: service as never, profileModel: (async () => { throw new Error('mongo down') }) as never }
+    )
+    assert.equal(doc._id, 'exp:p1')
   })
 
   it('propagates Mongo down as 503 mongo_down', async () => {
@@ -175,7 +206,7 @@ describe('createExperiment', () => {
     await assert.rejects(
       createExperiment(
         { proposalId: 'p1', hypothesis: 'edge' },
-        { service: service as never }
+        { service: service as never, profileModel: nullLoader }
       ),
       (e: unknown) => {
         const r = e as ResearchError

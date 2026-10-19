@@ -109,7 +109,7 @@ const metrics = computed<MetricItem[]>(() => {
   return [
     { key: 'instruments', label: t('marketExplorer.metrics.instruments'), value: String(stats.value.total), icon: 'i-lucide-database', tone: 'primary' },
     { key: 'active', label: t('marketExplorer.metrics.active'), value: String(stats.value.active), icon: 'i-lucide-circle-check', tone: 'success' },
-    { key: 'venues', label: t('marketExplorer.metrics.venues'), value: String(providerIds.value.size), icon: 'i-lucide-hub', tone: 'info' },
+    { key: 'venues', label: t('marketExplorer.metrics.venues'), value: String(providerIds.value.size), icon: 'i-lucide-component', tone: 'info' },
     { key: 'providersUp', label: t('marketExplorer.metrics.providersUp'), value: sourceHealth.value.length ? `${up}/${sourceHealth.value.length}` : '—', icon: 'i-lucide-activity', tone: up > 0 && up === sourceHealth.value.length ? 'success' : 'warning' }
   ]
 })
@@ -142,45 +142,23 @@ useHead({ title })
     </template>
 
     <template #right>
-      <UButton
-        icon="i-lucide-refresh-cw"
-        variant="soft"
-        color="neutral"
-        size="sm"
-        :loading="isLoading"
-        @click="refresh"
-      />
+      <UButton icon="i-lucide-refresh-cw" variant="soft" color="neutral" size="sm" :loading="isLoading"
+        @click="refresh" />
     </template>
 
     <template #toolbar>
       <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
-        <UButton
-          v-for="ty in TYPES"
-          :key="ty || 'all-types'"
-          :label="ty ? t(`marketExplorer.typeLabels.${ty}`) : t('marketExplorer.allTypes')"
-          size="xs"
-          :color="typeFilter === ty ? 'primary' : 'neutral'"
-          :variant="typeFilter === ty ? 'soft' : 'ghost'"
-          @click="typeFilter = ty"
-        />
+        <UButton v-for="ty in TYPES" :key="ty || 'all-types'"
+          :label="ty ? t(`marketExplorer.typeLabels.${ty}`) : t('marketExplorer.allTypes')" size="xs"
+          :color="typeFilter === ty ? 'primary' : 'neutral'" :variant="typeFilter === ty ? 'soft' : 'ghost'"
+          @click="typeFilter = ty" />
         <USeparator orientation="vertical" class="h-4" />
-        <UButton
-          v-for="st in STATUSES"
-          :key="st || 'all-statuses'"
-          :label="st ? t(`marketExplorer.statusLabels.${st}`) : t('marketExplorer.allStatuses')"
-          size="xs"
-          :color="statusFilter === st ? 'primary' : 'neutral'"
-          :variant="statusFilter === st ? 'soft' : 'ghost'"
-          @click="statusFilter = st"
-        />
-        <UInput
-          v-model="search"
-          :placeholder="t('marketExplorer.search')"
-          icon="i-lucide-search"
-          size="xs"
-          class="w-52"
-          :aria-label="t('marketExplorer.search')"
-        />
+        <UButton v-for="st in STATUSES" :key="st || 'all-statuses'"
+          :label="st ? t(`marketExplorer.statusLabels.${st}`) : t('marketExplorer.allStatuses')" size="xs"
+          :color="statusFilter === st ? 'primary' : 'neutral'" :variant="statusFilter === st ? 'soft' : 'ghost'"
+          @click="statusFilter = st" />
+        <UInput v-model="search" :placeholder="t('marketExplorer.search')" icon="i-lucide-search" size="xs" class="w-52"
+          :aria-label="t('marketExplorer.search')" />
       </div>
     </template>
 
@@ -190,16 +168,8 @@ useHead({ title })
 
     <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-3">
       <MetricRibbon :items="metrics" />
-      <LazyGridList
-        :items="filtered"
-        :columns="columns"
-        :loading="isLoading"
-        :can-load-more="false"
-        v-model:view-mode="viewMode"
-        item-key="id"
-        storage-key="markets-explorer-view-mode"
-        @refresh="refresh"
-      >
+      <LazyGridList :items="filtered" :columns="columns" :loading="isLoading" :can-load-more="false"
+        v-model:view-mode="viewMode" item-key="id" storage-key="markets-explorer-view-mode" @refresh="refresh">
         <template #symbol="{ item }">
           <div class="flex flex-col">
             <span class="text-xs font-semibold text-highlighted font-mono">{{ item.symbol }}</span>
@@ -212,7 +182,8 @@ useHead({ title })
         </template>
 
         <template #type="{ item }">
-          <UBadge :label="t(`marketExplorer.typeLabels.${item.type}`)" :color="typeColor(item.type)" variant="subtle" size="xs" />
+          <UBadge :label="t(`marketExplorer.typeLabels.${item.type}`)" :color="typeColor(item.type)" variant="subtle"
+            size="xs" />
         </template>
 
         <template #pair="{ item }">
@@ -221,13 +192,9 @@ useHead({ title })
 
         <template #venues="{ item }">
           <div class="flex flex-wrap gap-1.5">
-            <UBadge
-              v-for="v in item.venues"
-              :key="`${item.id}-${v.venue}`"
+            <UBadge v-for="v in item.venues" :key="`${item.id}-${v.venue}`"
               :color="venueHealth(v.venue) === 'up' ? 'success' : venueHealth(v.venue) === 'down' ? 'error' : 'neutral'"
-              variant="subtle"
-              size="xs"
-            >
+              variant="subtle" size="xs">
               <span class="flex items-center gap-1.5">
                 <span class="size-1.5 rounded-full" :class="venueDotClass[venueHealth(v.venue)]" />
                 {{ v.venue }}
@@ -237,30 +204,21 @@ useHead({ title })
         </template>
 
         <template #availability="{ item }">
-          <span
-            v-if="availability(item).total"
-            class="text-[11px] font-mono"
-            :class="availability(item).up === availability(item).total ? 'text-success' : availability(item).up ? 'text-warning' : 'text-error'"
-          >{{ availability(item).up }}/{{ availability(item).total }}</span>
+          <span v-if="availability(item).total" class="text-[11px] font-mono"
+            :class="availability(item).up === availability(item).total ? 'text-success' : availability(item).up ? 'text-warning' : 'text-error'">{{
+              availability(item).up }}/{{ availability(item).total }}</span>
           <span v-else class="text-[11px] text-dimmed">{{ t('marketExplorer.noProvider') }}</span>
         </template>
 
         <template #status="{ item }">
-          <UBadge :label="t(`marketExplorer.statusLabels.${item.status}`)" :color="statusColor(item.status)" variant="subtle" size="xs" />
+          <UBadge :label="t(`marketExplorer.statusLabels.${item.status}`)" :color="statusColor(item.status)"
+            variant="subtle" size="xs" />
         </template>
 
         <template #actions="{ item }">
-          <UButton
-            icon="i-lucide-panel-top-open"
-            size="xs"
-            variant="ghost"
-            color="primary"
-            :to="tradeTarget(item)"
-            :disabled="!item.engineSymbol"
-            :title="t('marketExplorer.openTerminal')"
-            :aria-label="t('marketExplorer.openTerminal')"
-            :ui="{ label: 'hidden' }"
-          />
+          <UButton icon="i-lucide-panel-top-open" size="xs" variant="ghost" color="primary" :to="tradeTarget(item)"
+            :disabled="!item.engineSymbol" :title="t('marketExplorer.openTerminal')"
+            :aria-label="t('marketExplorer.openTerminal')" :ui="{ label: 'hidden' }" />
         </template>
 
         <template #mobile-content="{ item }">
@@ -268,38 +226,25 @@ useHead({ title })
             <div class="flex items-center justify-between gap-2">
               <span class="text-xs font-semibold text-highlighted font-mono">{{ item.symbol }}</span>
               <div class="flex items-center gap-1.5">
-                <UBadge :label="t(`marketExplorer.typeLabels.${item.type}`)" :color="typeColor(item.type)" variant="subtle" size="xs" />
-                <UBadge :label="t(`marketExplorer.statusLabels.${item.status}`)" :color="statusColor(item.status)" variant="subtle" size="xs" />
+                <UBadge :label="t(`marketExplorer.typeLabels.${item.type}`)" :color="typeColor(item.type)"
+                  variant="subtle" size="xs" />
+                <UBadge :label="t(`marketExplorer.statusLabels.${item.status}`)" :color="statusColor(item.status)"
+                  variant="subtle" size="xs" />
               </div>
             </div>
             <div class="flex flex-wrap gap-1.5">
-              <UBadge
-                v-for="v in item.venues"
-                :key="`m-${item.id}-${v.venue}`"
-                :label="`${v.venue} · ${v.native}`"
+              <UBadge v-for="v in item.venues" :key="`m-${item.id}-${v.venue}`" :label="`${v.venue} · ${v.native}`"
                 :color="venueHealth(v.venue) === 'up' ? 'success' : venueHealth(v.venue) === 'down' ? 'error' : 'neutral'"
-                variant="subtle"
-                size="xs"
-              />
+                variant="subtle" size="xs" />
             </div>
-            <UButton
-              v-if="item.engineSymbol"
-              icon="i-lucide-panel-top-open"
-              :label="t('marketExplorer.openTerminal')"
-              size="xs"
-              variant="soft"
-              color="primary"
-              :to="tradeTarget(item)"
-            />
+            <UButton v-if="item.engineSymbol" icon="i-lucide-panel-top-open" :label="t('marketExplorer.openTerminal')"
+              size="xs" variant="soft" color="primary" :to="tradeTarget(item)" />
           </div>
         </template>
 
         <template #empty>
-          <AdminEmptyState
-            :title="t('marketExplorer.empty')"
-            :description="t('marketExplorer.emptyHint')"
-            icon="i-lucide-telescope"
-          />
+          <AdminEmptyState :title="t('marketExplorer.empty')" :description="t('marketExplorer.emptyHint')"
+            icon="i-lucide-telescope" />
         </template>
       </LazyGridList>
     </div>

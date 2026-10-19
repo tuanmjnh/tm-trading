@@ -7,7 +7,7 @@
 //  for the JS modules and the engine core stays dependency-free (AGENTS).
 //
 //  Construction happens ONCE per process, on the first WebSocket client:
-//    * provider: Binance combined stream (trade + bookTicker + 1m kline)
+//    * provider: Binance combined stream (trade + bookTicker + ticker + 1m kline)
 //    * source='kline' -> 4m/10m candles come from D22 aggregation of closed
 //      1m bars; trades/quotes flow through to subscribers as-is
 //  Env knobs (server-side only, never public):
@@ -16,6 +16,8 @@
 //    MARKET_EXCHANGE=fapi|spot
 //    MARKET_KLINE=1m       (empty = no kline stream; trades builder path)
 // MARKET_DEPTH=off      disable the depth stream + REST snapshot sync
+// MARKET_TICKER24=off   disable the 24h ticker pipeline (WS @ticker stream +
+//                         REST 24hr poller) feeding Band-1 telemetry
 //    MARKET_RECORD=off        disable the §23 candle recorder (default on)
 //    MARKET_RECORD_RETENTION_DAYS=90   declared retention in the dataset manifest
 // =============================================================================
@@ -47,13 +49,18 @@ export interface MarketPlane {
     setSkew?(ms: number): number
   }
   quoteStore: { all(): Array<Record<string, unknown>>; size(): number }
+  ticker24Store: { all(): Array<Record<string, unknown>>; size(): number }
   orderbookStore: { symbols(): string[]; get(symbol: string): unknown }
   monitor: { status(): Record<string, unknown> }
   provider: { status(): Record<string, unknown> } | null
   /** Static config mirrored into the WS hello frame (S5 UI). */
   symbols?: string[]
   timeframes?: string[]
+  /** Serve one more symbol at runtime (false = invalid or already served). */
+  addSymbol?(symbol: string): boolean
   attachDepthSync?(sync: DepthSync): void
+  /** Route one canonical event through the D17 gate into stores + bus. */
+  route(event: MarketEvent, topic: string): void
   start(): void
   stop(): void
   stats(): Record<string, unknown>
@@ -93,14 +100,39 @@ export async function getMarketPlane(): Promise<MarketPlane> {
       const exchange = process.env.MARKET_EXCHANGE === 'spot' ? 'spot' : 'fapi'
       const kline = process.env.MARKET_KLINE === '' ? null : (process.env.MARKET_KLINE || '1m')
       const depth = process.env.MARKET_DEPTH !== 'off'
+      const ticker24 = process.env.MARKET_TICKER24 !== 'off'
       const provider = process.env.MARKET_PROVIDER === 'off'
         ? null
-        : mod.createBinanceProvider({ market: exchange, symbols, klineInterval: kline, depth })
+        : mod.createBinanceProvider({ market: exchange, symbols, klineInterval: kline, depth, ticker24 })
 
       // kline mode needs a 1m base to aggregate from; without a kline stream
       // the plane falls back to building every timeframe from raw trades.
       const source = kline ? 'kline' : 'trades'
       const plane = mod.createMarketPlane({ symbols, timeframes: ['1m', '4m', '10m'], source, provider })
+
+      // 24h ticker pipeline (Band-1 24h Change / VOL): the WS @ticker stream
+      // is subscribed above, but several venues/networks never deliver it —
+      // so a slow REST 24hr poller feeds the SAME canonical event + store.
+      // The store stale-guard merges both sources (newer eventTime wins).
+      if (ticker24) {
+        try {
+          const pollMod = await import(pathToFileURL(join(process.cwd(), 'market', 'ticker24Poll.mjs')).href) as unknown as {
+            createTicker24Poll(opts: Record<string, unknown>): { start(): void }
+          }
+          const poll = pollMod.createTicker24Poll({
+            symbols,
+            getSymbols: () => [...(plane.symbols ?? [])],
+            market: exchange,
+            bus: plane.bus,
+            route: (event: MarketEvent, topic: string) => plane.route(event, topic),
+            fetchImpl: fetch
+          })
+          poll.start()
+          console.log(`[market] 24h ticker poller started (${symbols.join(',')})`)
+        } catch (err) {
+          console.warn(`[market] 24h ticker poller not started (fail-soft): ${err instanceof Error ? err.message : String(err)}`)
+        }
+      }
 
       // Depth diffs only make sense after a REST snapshot — the sync owns
       // the official sequencing and publishes materialized ladders to the bus.
@@ -186,6 +218,27 @@ export async function getMarketPlane(): Promise<MarketPlane> {
             console.warn(`[market] candle recorder not started (fail-soft): ${err instanceof Error ? err.message : String(err)}`)
           }
         })()
+      }
+
+      // G8.2: publish the plane's MEASURED health (provider state, sequence
+      // gaps, latency) so the paper executor — a different process — can feed
+      // it into the §35 data-quality gate. A tiny snapshot replaced atomically;
+      // fail-soft, the feed itself never depends on this writer.
+      try {
+        const healthHref = pathToFileURL(join(process.cwd(), 'market', 'healthSnapshot.mjs')).href
+        const healthMod = (await import(healthHref)) as unknown as {
+          createMarketHealthWriter(opts: Record<string, unknown>): { start(): void; stop(): void, file?: string }
+        }
+        const file = process.env.MARKET_HEALTH_FILE || join(process.cwd(), 'logs', 'market-plane-health.json')
+        const writer = healthMod.createMarketHealthWriter({
+          plane,
+          file,
+          everyMs: Number(process.env.MARKET_HEALTH_INTERVAL_MS || 15_000),
+        })
+        writer.start()
+        console.log(`[market] health snapshot writer started -> ${file}`)
+      } catch (err) {
+        console.warn(`[market] health snapshot writer not started (fail-soft): ${err instanceof Error ? err.message : String(err)}`)
       }
 
       return plane

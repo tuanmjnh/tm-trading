@@ -17,6 +17,8 @@ const BotProfileSchema = new mongoose.Schema(
     profileId: { type: String, required: true, index: true },
     name: { type: String, default: '' },
     description: { type: String, default: '' },
+    // Tenancy (roadmap §61.3): bots are user-scoped.
+    ownerId: { type: String, default: null, index: true },
     // Exact immutable strategy version this profile runs (§29/§57.5). Not copied.
     strategyVersionId: { type: String, default: null, index: true },
     mode: { type: String, enum: BOT_PROFILE_MODES, default: 'BACKTEST', index: true },

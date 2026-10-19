@@ -27,6 +27,8 @@ import { runRetentionService } from '../exec/retention.mjs'
 import { runReconcileService } from './reconcile.mjs'
 import { runCrossScan } from './crossScan.mjs'
 import { runAlertRules } from './alertRules.mjs'
+import { runMacro } from './macro.mjs'
+import { runNewsExtract } from './newsExtract.mjs'
 import { notify } from '../notify/service.mjs'
 
 loadEnv()
@@ -52,6 +54,11 @@ const SERVICES = [
   // §58.5 — evaluate user alert rules against the intel event stream, route
   // matches through the notify/ router (dedupe via notification_logs, D4).
   { name: 'alertRules', run: runAlertRules, intervalSec: Number(process.env.ALERT_RULES_INTERVAL || DEFAULT_INTERVALS.alertRules), tag: '[alert-rules]' },
+  // §60 Slice F — FRED macro vintages (skips cleanly without FRED_API_KEY).
+  { name: 'macro', run: runMacro, intervalSec: Number(process.env.MACRO_INTERVAL || DEFAULT_INTERVALS.macro), tag: '[macro]' },
+  // §60 Slice D/E — LLM extraction of eligible items (budget-capped, skips
+  // cleanly without AI key; NEWS_EXTRACT=0 disables).
+  { name: 'newsExtract', run: runNewsExtract, intervalSec: Number(process.env.NEWS_EXTRACT_INTERVAL || 86400), tag: '[news-extract]' },
 ]
 
 const log = (tag, msg) => console.log(`${new Date().toISOString()} ${tag} ${msg}`)

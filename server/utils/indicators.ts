@@ -223,12 +223,15 @@ function mapRun(doc: Record<string, any>): IndicatorRun | null {
 
 /** Persist a computed run. Returns null when Mongo is unavailable. */
 export async function saveIndicatorRun(
-  run: Omit<IndicatorRun, 'id' | 'createdAt'>
+  run: Omit<IndicatorRun, 'id' | 'createdAt'>,
+  ownerId?: string | null
 ): Promise<string | null> {
   const IndicatorRun = await engineModel('indicatorRun.mjs', 'IndicatorRun')
   if (!IndicatorRun) return null
   try {
     const created = await IndicatorRun.create({
+      // Tenancy (roadmap §61.3): a stored run belongs to its creator.
+      ownerId: ownerId ?? null,
       indicatorId: run.indicatorId,
       version: run.version,
       symbol: run.symbol,
@@ -247,12 +250,15 @@ export async function saveIndicatorRun(
 }
 
 /** Read one stored run. null = not found OR mongo down (fail-soft). */
-export async function loadIndicatorRun(id: string): Promise<{ run: IndicatorRun | null; mongo: 'up' | 'down' }> {
+export async function loadIndicatorRun(
+  id: string,
+  ownerId?: string | null
+): Promise<{ run: IndicatorRun | null; mongo: 'up' | 'down' }> {
   const IndicatorRun = await engineModel('indicatorRun.mjs', 'IndicatorRun')
   if (!IndicatorRun) return { run: null, mongo: 'down' }
   try {
     if (!/^[0-9a-f]{24}$/i.test(id)) return { run: null, mongo: 'up' }
-    const doc = await IndicatorRun.findById(id).lean()
+    const doc = await IndicatorRun.findOne({ _id: id, ...(ownerId ? { ownerId } : {}) }).lean()
     return { run: mapRun(doc as Record<string, any>), mongo: 'up' }
   } catch {
     return { run: null, mongo: 'down' }

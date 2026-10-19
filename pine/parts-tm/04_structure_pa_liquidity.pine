@@ -1,0 +1,279 @@
+// =============================================================================
+//  L3 - MARKET STRUCTURE, PRICE ACTION & LIQUIDITY (v2.0)
+// =============================================================================
+
+// --- 1. Basic Candle Dimensions & Metrics ------------------------------------
+float tm_body    = math.abs(close - open)
+float tm_range   = math.max(high - low, syminfo.mintick)
+float tm_hiWick  = high - math.max(close, open)
+float tm_loWick  = math.min(close, open) - low
+bool  tm_bullBar = close > open
+bool  tm_bearBar = close < open
+
+float tm_prevBody = math.abs(close[1] - open[1])
+
+// Displacement Candle
+bool tm_dispBull = tm_body >= 1.5 * tm_atr and tm_hiWick < tm_body * 0.3
+bool tm_dispBear = tm_body >= 1.5 * tm_atr and tm_loWick < tm_body * 0.3
+
+// Pin Bar Pattern
+bool tm_bullPin = tm_bullBar and tm_loWick >= 2.0 * tm_body
+bool tm_bearPin = tm_bearBar and tm_hiWick >= 2.0 * tm_body
+
+// Engulfing Pattern
+bool tm_bullEng = tm_bullBar and close[1] < open[1] and close >= open[1] and open <= close[1] and tm_body >= tm_prevBody
+bool tm_bearEng = tm_bearBar and close[1] > open[1] and close <= open[1] and open >= close[1] and tm_body >= tm_prevBody
+
+// Rejection Candle
+bool tm_bullRej = tm_hiWick >= tm_range * 0.55 and tm_loWick <= tm_range * 0.15 and tm_bullBar
+bool tm_bearRej = tm_loWick >= tm_range * 0.55 and tm_hiWick <= tm_range * 0.15 and tm_bearBar
+
+float tm_cpBull = (tm_bullPin ? 1.0 : 0.0) + (tm_bullEng ? 1.0 : 0.0) + (tm_dispBull ? 1.2 : 0.0) + (tm_bullRej ? 0.8 : 0.0)
+float tm_cpBear = (tm_bearPin ? 1.0 : 0.0) + (tm_bearEng ? 1.0 : 0.0) + (tm_dispBear ? 1.2 : 0.0) + (tm_bearRej ? 0.8 : 0.0)
+float tm_cpScore = tm_cpBull > tm_cpBear ? math.min(1.0, tm_cpBull / 3.0) : tm_cpBear > tm_cpBull ? -math.min(1.0, tm_cpBear / 3.0) : 0.0
+
+// --- 2. Event Buffer & Helper ------------------------------------------------
+var array<TMEvent> tm_evtBuf = array.new<TMEvent>()
+
+f_pushEvent(string kind, string dir, int barIdx, int timeVal, bool confirmed, float lvl) =>
+    array.push(tm_evtBuf, TMEvent.new(kind, dir, timeVal, barIdx, timeframe.period, confirmed, lvl))
+    while array.size(tm_evtBuf) > 50
+        array.shift(tm_evtBuf)
+
+// --- 3. Swings & Trend Tracking ----------------------------------------------
+float tm_pivH = ta.pivothigh(high, tm_ms_swLen, tm_ms_swLen)
+float tm_pivL = ta.pivotlow(low,   tm_ms_swLen, tm_ms_swLen)
+
+var float tm_swingHi  = na
+var float tm_swingLo  = na
+var float tm_prevHigh = na
+var float tm_prevLow  = na
+var int   tm_hiBar    = na
+var int   tm_loBar    = na
+
+if not na(tm_pivH)
+    tm_prevHigh := tm_swingHi
+    tm_swingHi  := high[tm_ms_swLen]
+    tm_hiBar    := bar_index - tm_ms_swLen
+
+if not na(tm_pivL)
+    tm_prevLow := tm_swingLo
+    tm_swingLo := low[tm_ms_swLen]
+    tm_loBar   := bar_index - tm_ms_swLen
+
+var int tm_trend = 0
+if not na(tm_swingHi) and not na(tm_prevHigh) and not na(tm_swingLo) and not na(tm_prevLow)
+    if tm_swingHi > tm_prevHigh and tm_swingLo > tm_prevLow
+        tm_trend := 1
+    else if tm_swingHi < tm_prevHigh and tm_swingLo < tm_prevLow
+        tm_trend := -1
+
+// --- 4. BOS, CHoCH, MSS ------------------------------------------------------
+bool tm_crossOverHi  = ta.crossover(close, tm_swingHi)
+bool tm_crossUnderLo = ta.crossunder(close, tm_swingLo)
+
+bool tm_bosUp   = tm_ms_bosOn and not na(tm_swingHi) and tm_crossOverHi and tm_trend == 1
+bool tm_bosDown = tm_ms_bosOn and not na(tm_swingLo) and tm_crossUnderLo and tm_trend == -1
+
+bool tm_chochUp   = tm_ms_chochOn and not na(tm_swingHi) and tm_crossOverHi and tm_trend == -1
+bool tm_chochDown = tm_ms_chochOn and not na(tm_swingLo) and tm_crossUnderLo and tm_trend == 1
+
+bool tm_mssUp   = tm_ms_mssOn and tm_chochUp and tm_dispBull
+bool tm_mssDown = tm_ms_mssOn and tm_chochDown and tm_dispBear
+
+if tm_bosUp
+    f_pushEvent("BOS", "bull", bar_index, time, barstate.isconfirmed, tm_swingHi)
+if tm_bosDown
+    f_pushEvent("BOS", "bear", bar_index, time, barstate.isconfirmed, tm_swingLo)
+if tm_chochUp
+    f_pushEvent("CHOCH", "bull", bar_index, time, barstate.isconfirmed, tm_swingHi)
+if tm_chochDown
+    f_pushEvent("CHOCH", "bear", bar_index, time, barstate.isconfirmed, tm_swingLo)
+if tm_mssUp
+    f_pushEvent("MSS", "bull", bar_index, time, barstate.isconfirmed, tm_swingHi)
+if tm_mssDown
+    f_pushEvent("MSS", "bear", bar_index, time, barstate.isconfirmed, tm_swingLo)
+
+// --- 5. Retest & Failed Breakout ---------------------------------------------
+var float tm_lastBreakLvl = na
+var int   tm_lastBreakBar = na
+var int   tm_lastBreakDir = 0
+
+if tm_bosUp or tm_chochUp
+    tm_lastBreakLvl := tm_swingHi
+    tm_lastBreakBar := bar_index
+    tm_lastBreakDir := 1
+else if tm_bosDown or tm_chochDown
+    tm_lastBreakLvl := tm_swingLo
+    tm_lastBreakBar := bar_index
+    tm_lastBreakDir := -1
+
+bool tm_retestBull = tm_ms_retestOn and tm_lastBreakDir == 1 and not na(tm_lastBreakLvl) and not na(tm_lastBreakBar) and (bar_index - tm_lastBreakBar <= tm_ms_retestBars) and (bar_index - tm_lastBreakBar >= 1) and low <= tm_lastBreakLvl + tm_ms_retestTol * tm_atr and close > tm_lastBreakLvl
+bool tm_retestBear = tm_ms_retestOn and tm_lastBreakDir == -1 and not na(tm_lastBreakLvl) and not na(tm_lastBreakBar) and (bar_index - tm_lastBreakBar <= tm_ms_retestBars) and (bar_index - tm_lastBreakBar >= 1) and high >= tm_lastBreakLvl - tm_ms_retestTol * tm_atr and close < tm_lastBreakLvl
+
+bool tm_failBull = tm_ms_failOn and not na(tm_lastBreakBar) and (bar_index - tm_lastBreakBar <= tm_ms_failBars) and tm_lastBreakDir == 1 and close < tm_lastBreakLvl - tm_atr * 0.3
+bool tm_failBear = tm_ms_failOn and not na(tm_lastBreakBar) and (bar_index - tm_lastBreakBar <= tm_ms_failBars) and tm_lastBreakDir == -1 and close > tm_lastBreakLvl + tm_atr * 0.3
+
+// Trend continuation / Pullback
+bool tm_isHH = not na(tm_pivH) and not na(tm_prevHigh) and high[tm_ms_swLen] > tm_prevHigh
+bool tm_isLL = not na(tm_pivL) and not na(tm_prevLow)  and low[tm_ms_swLen]  < tm_prevLow
+bool tm_contBull = tm_ms_contOn and tm_trend == 1 and tm_isHH
+bool tm_contBear = tm_ms_contOn and tm_trend == -1 and tm_isLL
+bool tm_pullBull = tm_ms_pullOn and tm_trend == 1 and low <= tm_ema50 and close > tm_ema50
+bool tm_pullBear = tm_ms_pullOn and tm_trend == -1 and high >= tm_ema50 and close < tm_ema50
+
+// --- 6. Market Structure Visual Labels ---------------------------------------
+if tm_showViz and tm_showMsLabels and tm_ms_bosOn and tm_bosUp
+    label.new(bar_index, low,  "BOS+", style = label.style_label_up,   color = color.new(tm_cBull, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_showMsLabels and tm_ms_bosOn and tm_bosDown
+    label.new(bar_index, high, "BOS-", style = label.style_label_down, color = color.new(tm_cBear, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_showMsLabels and tm_ms_chochOn and tm_chochUp
+    label.new(bar_index, low,  "CHoCH+", style = label.style_label_up,   color = color.new(tm_cBull, 0), textcolor = color.white, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_showMsLabels and tm_ms_chochOn and tm_chochDown
+    label.new(bar_index, high, "CHoCH-", style = label.style_label_down, color = color.new(tm_cBear, 0), textcolor = color.white, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_showMsLabels and tm_ms_mssOn and tm_mssUp and not tm_bosUp
+    label.new(bar_index, low,  "MSS+", style = label.style_label_up,   color = color.new(#f5c542, 10), textcolor = color.black, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_showMsLabels and tm_ms_mssOn and tm_mssDown and not tm_bosDown
+    label.new(bar_index, high, "MSS-", style = label.style_label_down, color = color.new(#f5c542, 10), textcolor = color.black, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_showMsLabels and tm_ms_retestOn and tm_retestBull
+    label.new(bar_index, low, "RT+", style = label.style_label_up, color = color.new(tm_cBull, 40), textcolor = color.white, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_showMsLabels and tm_ms_retestOn and tm_retestBear
+    label.new(bar_index, high, "RT-", style = label.style_label_down, color = color.new(tm_cBear, 40), textcolor = color.white, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_showMsLabels and tm_ms_failOn and tm_failBull
+    label.new(bar_index, low, "FAIL+", style = label.style_label_up, color = color.new(color.gray, 10), textcolor = color.white, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_showMsLabels and tm_ms_failOn and tm_failBear
+    label.new(bar_index, high, "FAIL-", style = label.style_label_down, color = color.new(color.gray, 10), textcolor = color.white, size = size.tiny, force_overlay = true)
+
+// --- 7. Session Tracking (Session Hi / Lo) -----------------------------------
+bool tm_sessAsia    = f_sessAsia(tm_sessTz)
+bool tm_sessLondon  = f_sessLondon(tm_sessTz)
+bool tm_sessNy      = f_sessNy(tm_sessTz)
+bool tm_sessOverlap = tm_sessLondon and tm_sessNy
+string tm_sessName  = f_sessName(tm_sessAsia, tm_sessLondon, tm_sessNy)
+
+var float tm_sessHi   = na
+var float tm_sessLo   = na
+var string tm_sessPrev = ""
+bool tm_sessChanged = tm_sessName != tm_sessPrev
+if tm_sessChanged and tm_sessName != "-"
+    tm_sessHi := high
+    tm_sessLo := low
+else if tm_sessName != "-"
+    tm_sessHi := math.max(nz(tm_sessHi, high), high)
+    tm_sessLo := math.min(nz(tm_sessLo, low),  low)
+if tm_sessName != "-"
+    tm_sessPrev := tm_sessName
+
+// --- 8. Equal Highs / Lows ---------------------------------------------------
+float tm_eqThresh = tm_atr * 0.05
+bool tm_eqHi = not na(tm_pivH) and not na(tm_prevHigh) and math.abs(high[tm_ms_swLen] - tm_prevHigh) <= tm_eqThresh
+bool tm_eqLo = not na(tm_pivL) and not na(tm_prevLow)  and math.abs(low[tm_ms_swLen]  - tm_prevLow)  <= tm_eqThresh
+
+// --- 9. Trendline 2 diem (Up & Down) -----------------------------------------
+var float tm_tl1Lo     = na
+var int   tm_tl1LoB    = na
+var float tm_tl2Lo     = na
+var int   tm_tl2LoB    = na
+var float tm_tl1Hi     = na
+var int   tm_tl1HiB    = na
+var float tm_tl2Hi     = na
+var int   tm_tl2HiB    = na
+var int   tm_tlLoTouch = 0
+var int   tm_tlHiTouch = 0
+
+if not na(tm_pivL)
+    tm_tl1Lo  := tm_tl2Lo
+    tm_tl1LoB := tm_tl2LoB
+    tm_tl2Lo  := low[tm_ms_swLen]
+    tm_tl2LoB := bar_index - tm_ms_swLen
+    tm_tlLoTouch := 0
+if not na(tm_pivH)
+    tm_tl1Hi  := tm_tl2Hi
+    tm_tl1HiB := tm_tl2HiB
+    tm_tl2Hi  := high[tm_ms_swLen]
+    tm_tl2HiB := bar_index - tm_ms_swLen
+    tm_tlHiTouch := 0
+
+bool tm_tlUpOk = not na(tm_tl1Lo) and not na(tm_tl2Lo) and not na(tm_tl1LoB) and not na(tm_tl2LoB) and tm_tl2LoB > tm_tl1LoB
+bool tm_tlDnOk = not na(tm_tl1Hi) and not na(tm_tl2Hi) and not na(tm_tl1HiB) and not na(tm_tl2HiB) and tm_tl2HiB > tm_tl1HiB
+float tm_tlUpSlope = tm_tlUpOk ? (tm_tl2Lo - tm_tl1Lo) / float(tm_tl2LoB - tm_tl1LoB) : 0.0
+float tm_tlDnSlope = tm_tlDnOk ? (tm_tl2Hi - tm_tl1Hi) / float(tm_tl2HiB - tm_tl1HiB) : 0.0
+float tm_tlUpAt = tm_tlUpOk ? tm_tl1Lo + tm_tlUpSlope * float(bar_index - tm_tl1LoB) : na
+float tm_tlDnAt = tm_tlDnOk ? tm_tl1Hi + tm_tlDnSlope * float(bar_index - tm_tl1HiB) : na
+
+if tm_tlUpOk and not na(tm_tlUpAt) and math.abs(low - tm_tlUpAt) <= tm_liq_tlTol * tm_atr
+    tm_tlLoTouch += 1
+if tm_tlDnOk and not na(tm_tlDnAt) and math.abs(high - tm_tlDnAt) <= tm_liq_tlTol * tm_atr
+    tm_tlHiTouch += 1
+
+// --- 10. S/R Zones (Shared Engine Integration) -------------------------------
+float sr_pivH = ta.pivothigh(high, 10, 10)
+float sr_pivL = ta.pivotlow(low, 10, 10)
+if not na(sr_pivH)
+    f_addZone(sr_zones, high[10], -1, tm_atr, tm_sr_width, tm_sr_maxZone)
+if not na(sr_pivL)
+    f_addZone(sr_zones, low[10], 1, tm_atr, tm_sr_width, tm_sr_maxZone)
+
+// --- 11. FVG (Fair Value Gap) with Mitigation & GC ---------------------------
+var array<FvgZone> tm_fvgs = array.new<FvgZone>()
+
+bool tm_newFvgBull = low > high[2] and (low - high[2]) >= tm_fvg_minAtr * tm_atr
+bool tm_newFvgBear = high < low[2] and (low[2] - high) >= tm_fvg_minAtr * tm_atr
+
+if tm_newFvgBull
+    array.push(tm_fvgs, FvgZone.new(low, high[2], 1, bar_index, false))
+if tm_newFvgBear
+    array.push(tm_fvgs, FvgZone.new(low[2], high, -1, bar_index, false))
+
+while array.size(tm_fvgs) > tm_fvg_max
+    array.shift(tm_fvgs)
+
+for g in tm_fvgs
+    if bar_index - g.barIdx > tm_fvg_life
+        g.mitigated := true
+    if g.side == 1 and low <= g.bot
+        g.mitigated := true
+    if g.side == -1 and high >= g.top
+        g.mitigated := true
+
+// Find nearest active FVG for pullback limit entry
+float tm_nearFvgBullPx = na
+float tm_nearFvgBearPx = na
+for g in tm_fvgs
+    if not g.mitigated
+        if g.side == 1 and (na(tm_nearFvgBullPx) or g.top > tm_nearFvgBullPx)
+            tm_nearFvgBullPx := (g.top + g.bot) * 0.5
+        if g.side == -1 and (na(tm_nearFvgBearPx) or g.bot < tm_nearFvgBearPx)
+            tm_nearFvgBearPx := (g.top + g.bot) * 0.5
+
+// --- 12. Order Block with Mitigation & GC ------------------------------------
+var array<ObZone> tm_obs = array.new<ObZone>()
+
+bool tm_newObBull = tm_dispBull and close[1] < open[1]
+bool tm_newObBear = tm_dispBear and close[1] > open[1]
+
+if tm_newObBull
+    array.push(tm_obs, ObZone.new(open[1], close[1], 1, bar_index - 1, false))
+if tm_newObBear
+    array.push(tm_obs, ObZone.new(close[1], open[1], -1, bar_index - 1, false))
+
+while array.size(tm_obs) > tm_ob_max
+    array.shift(tm_obs)
+
+for o in tm_obs
+    if bar_index - o.barIdx > tm_ob_life
+        o.mitigated := true
+    if o.side == 1 and low <= o.bot
+        o.mitigated := true
+    if o.side == -1 and high >= o.top
+        o.mitigated := true
+
+// Find nearest active OB edge for pullback limit entry
+float tm_nearObBullPx = na
+float tm_nearObBearPx = na
+for o in tm_obs
+    if not o.mitigated
+        if o.side == 1 and (na(tm_nearObBullPx) or o.top > tm_nearObBullPx)
+            tm_nearObBullPx := o.top
+        if o.side == -1 and (na(tm_nearObBearPx) or o.bot < tm_nearObBearPx)
+            tm_nearObBearPx := o.bot

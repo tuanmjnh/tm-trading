@@ -188,6 +188,9 @@ export async function loadRunSeries(): Promise<LoadRunsResult> {
 
     out.push({
       id,
+      // Slice 3 manifest "run mode": this projection only reads engine
+      // backtest reports — replay/live-paper live in their own stores.
+      mode: 'BACKTEST' as const,
       engineVersion: rep.engineVersion,
       paramsHash: rep.paramsHash,
       symbol: rep.symbol,

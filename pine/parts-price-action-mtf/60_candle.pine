@@ -1,0 +1,84 @@
+// =============================================================================
+//  L5 - CANDLE PATTERN ENGINE  (v2 §1 + afterfix B-P0-2, B-P1-1, B-P1-4)
+//  Rejection, Displacement, Pin, Engulfing, Inside Bar, Doji, 3 Soldiers / Crows
+//  -> diem [-1, +1] (cp_score)
+//  Moi pattern co toggle rieng (pa_cp_*).
+// =============================================================================
+
+float pa_prevBody = math.abs(close[1] - open[1])
+
+// Pin Bar (rejection nhe)
+bool pa_bullPin = pa_bullBar and pa_loWick >= pa_cp_pinRatio * pa_body
+bool pa_bearPin = pa_bearBar and pa_hiWick >= pa_cp_pinRatio * pa_body
+
+// Engulfing (co them dieu kien than nen manh)
+bool pa_bullEng = pa_bullBar and close[1] < open[1] and close >= open[1] and open <= close[1] and pa_body >= pa_prevBody and pa_body >= pa_cp_strongBody * pa_range
+bool pa_bearEng = pa_bearBar and close[1] > open[1] and close <= open[1] and open >= close[1] and pa_body >= pa_prevBody and pa_body >= pa_cp_strongBody * pa_range
+
+// Displacement candle (body lon + close o cuc tri + volume spike)
+bool pa_dispBullV = pa_dispBull and pa_bullBar and pa_vol >= pa_vol_spikeR * pa_volMA
+bool pa_dispBearV = pa_dispBear and pa_bearBar and pa_vol >= pa_vol_spikeR * pa_volMA
+
+// Rejection candle (rau day chiem phan lon bien do, thanh mong)
+bool pa_bullRej = pa_hiWick >= pa_range * 0.55 and pa_loWick <= pa_range * 0.15 and pa_bullBar
+bool pa_bearRej = pa_loWick >= pa_range * 0.55 and pa_hiWick <= pa_range * 0.15 and pa_bearBar
+
+// -----------------------------------------------------------------------------
+//  B-P0-2: Inside Bar, Doji, 3 Soldiers / 3 Crows
+// -----------------------------------------------------------------------------
+// Inside Bar: nen nam gon trong pham vi high/low cua nen truoc
+bool pa_isInsideBar = high <= high[1] and low >= low[1]
+// Pha vo Inside Bar: nen truoc la inside bar, nen hien tai dong cua vuot ra ngoai
+bool pa_ibBull = pa_cp_ibOn and high[1] <= high[2] and low[1] >= low[2] and close > high[1]
+bool pa_ibBear = pa_cp_ibOn and high[1] <= high[2] and low[1] >= low[2] and close < low[1]
+
+// Doji: than nen rat nho so voi range (<= pa_cp_dojiMax)
+bool pa_isDoji = pa_cp_dojiOn and pa_body <= pa_cp_dojiMax * pa_range
+bool pa_dojiBull = pa_isDoji and pa_loWick > pa_hiWick and close >= open
+bool pa_dojiBear = pa_isDoji and pa_hiWick > pa_loWick and close <= open
+
+// 3 White Soldiers / 3 Black Crows: 3 nen lien tiep cung chieu, than manh
+bool pa_3Soldiers = pa_cp_soldOn and close > open and close[1] > open[1] and close[2] > open[2] and close > close[1] and close[1] > close[2] and pa_body >= pa_cp_strongBody * pa_range and math.abs(close[1] - open[1]) >= pa_cp_strongBody * math.max(high[1] - low[1], syminfo.mintick) and math.abs(close[2] - open[2]) >= pa_cp_strongBody * math.max(high[2] - low[2], syminfo.mintick)
+bool pa_3Crows    = pa_cp_soldOn and close < open and close[1] < open[1] and close[2] < open[2] and close < close[1] and close[1] < close[2] and pa_body >= pa_cp_strongBody * pa_range and math.abs(close[1] - open[1]) >= pa_cp_strongBody * math.max(high[1] - low[1], syminfo.mintick) and math.abs(close[2] - open[2]) >= pa_cp_strongBody * math.max(high[2] - low[2], syminfo.mintick)
+
+// -----------------------------------------------------------------------------
+//  B-P1-1: Volume Veto (pin bar / engulfing chi nhan diem day du khi volume manh)
+// -----------------------------------------------------------------------------
+float pa_vVetoMul = pa_cp_volVetoOn ? (pa_volRatio >= pa_cp_volVetoR ? 1.0 : 0.4) : 1.0
+
+// -----------------------------------------------------------------------------
+//  B-P1-4: Engulfing Streak
+// -----------------------------------------------------------------------------
+var int pa_engulfStreak = 0
+if pa_bullEng or pa_bearEng
+    pa_engulfStreak += 1
+else
+    pa_engulfStreak := 0
+float pa_streakBonus = (pa_cp_streakOn and pa_engulfStreak >= pa_cp_streakMin) ? pa_cp_streakAdd : 0.0
+
+// Scoring
+float pa_cpBull = 0.0
+float pa_cpBear = 0.0
+if pa_cp_pin
+    pa_cpBull += (pa_bullPin ? 1.0 : 0.0) * pa_vVetoMul
+    pa_cpBear += (pa_bearPin ? 1.0 : 0.0) * pa_vVetoMul
+if pa_cp_engulf
+    pa_cpBull += (pa_bullEng ? 1.0 + pa_streakBonus : 0.0) * pa_vVetoMul
+    pa_cpBear += (pa_bearEng ? 1.0 + pa_streakBonus : 0.0) * pa_vVetoMul
+if pa_cp_disp
+    pa_cpBull += pa_dispBullV ? 1.2 : 0.0
+    pa_cpBear += pa_dispBearV ? 1.2 : 0.0
+if pa_cp_rej
+    pa_cpBull += pa_bullRej ? 0.8 : 0.0
+    pa_cpBear += pa_bearRej ? 0.8 : 0.0
+if pa_cp_ibOn
+    pa_cpBull += pa_ibBull ? 0.8 : 0.0
+    pa_cpBear += pa_ibBear ? 0.8 : 0.0
+if pa_cp_dojiOn
+    pa_cpBull += pa_dojiBull ? 0.5 : 0.0
+    pa_cpBear += pa_dojiBear ? 0.5 : 0.0
+if pa_cp_soldOn
+    pa_cpBull += pa_3Soldiers ? 1.2 : 0.0
+    pa_cpBear += pa_3Crows ? 1.2 : 0.0
+
+float pa_cpScore = pa_cpBull > pa_cpBear ? math.min(1.0, pa_cpBull / 3.0) : pa_cpBear > pa_cpBull ? -math.min(1.0, pa_cpBear / 3.0) : 0.0

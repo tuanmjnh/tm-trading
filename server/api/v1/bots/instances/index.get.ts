@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
   if (!BotInstance) return { success: true, data: [], meta: { count: 0, mongo: 'down' } }
 
   try {
-    const filter: Record<string, unknown> = {}
+    const filter: Record<string, unknown> = { ownerId: requireOwnerId(event) }
     if (state) filter.state = state
     if (botProfileId) filter.botProfileId = botProfileId
     if (mode) filter.mode = mode

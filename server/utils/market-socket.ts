@@ -7,9 +7,12 @@
 //
 //  Protocol (JSON text frames):
 //    server -> client : `hello` snapshot ON OPEN, then canonical events
-//                       (market.trade|quote|candle|book|status) as they flow
+//                       (market.trade|quote|candle|book|ticker24|status) as they flow
 //    client -> server : {"type":"ping"}  -> {"type":"pong", now}
 //                       {"type":"hello"} -> a fresh snapshot
+//                       {"type":"subscribe", "symbols":[...]} -> serve more
+//                         symbols at runtime (validated, capped) ->
+//                         {"type":"subscribed", "symbols":[...added]}
 //                       anything else    -> {"type":"error", error}
 //  A client that cannot be written to is silently dropped from THAT emission
 //  (bus handlers are isolated in market/eventBus.mjs — one dead peer never
@@ -24,6 +27,7 @@ export const STREAM_TOPICS: readonly string[] = [
   'market.quote',
   'market.candle',
   'market.book',
+  'market.ticker24',
   'market.status'
 ]
 
@@ -47,6 +51,7 @@ export function buildHello(plane: MarketPlane): MarketEvent {
     symbols: [...(plane.symbols ?? [])],
     timeframes: [...(plane.timeframes ?? [])],
     quotes: plane.quoteStore.all(),
+    ticker24: plane.ticker24Store.all(),
     bookSymbols: plane.orderbookStore.symbols(),
     provider: plane.provider ? plane.provider.status() : null,
     monitor: plane.monitor.status()
@@ -80,6 +85,39 @@ export function attachClient(plane: MarketPlane, send: (data: string) => unknown
   }
 }
 
+/**
+ * Serve more symbols at runtime (TradingView-style search): validated
+ * exchange symbols join the plane (builders + provider streams + depth
+ * snapshot); the client re-reads them from the next hello or live frames.
+ * Capped per call and in total so one client cannot flood the feed.
+ */
+const SUBSCRIBE_PER_CALL = 10
+const SUBSCRIBE_TOTAL = 30
+
+function handleSubscribe(plane: MarketPlane, parsed: unknown): string {
+  const raw = (parsed as { symbols?: unknown }).symbols
+  const list = Array.isArray(raw) ? raw : []
+  const clean = [...new Set(
+    list.map((s) => String(s ?? '').trim().toUpperCase())
+      .filter((s) => /^[A-Z0-9]{5,20}$/.test(s))
+  )].slice(0, SUBSCRIBE_PER_CALL)
+  if (!clean.length) return JSON.stringify({ type: 'error', error: 'bad-symbols' })
+  if (typeof plane.addSymbol !== 'function') {
+    return JSON.stringify({ type: 'error', error: 'unsupported' })
+  }
+  if ((plane.symbols?.length ?? 0) + clean.length > SUBSCRIBE_TOTAL) {
+    return JSON.stringify({ type: 'error', error: 'too-many-symbols' })
+  }
+  const added = clean.filter((s) => {
+    try {
+      return plane.addSymbol!(s)
+    } catch {
+      return false
+    }
+  })
+  return JSON.stringify({ type: 'subscribed', symbols: added })
+}
+
 /** Handle one client frame (string, or a crossws-like Message with .text()). */
 export function handleClientMessage(plane: MarketPlane, raw: unknown): string | null {
   const text = typeof raw === 'string'
@@ -99,5 +137,6 @@ export function handleClientMessage(plane: MarketPlane, raw: unknown): string | 
   const type = (parsed as { type?: unknown }).type
   if (type === 'ping') return JSON.stringify({ type: 'pong', now: plane.clock.now() })
   if (type === 'hello') return JSON.stringify(buildHello(plane))
+  if (type === 'subscribe') return handleSubscribe(plane, parsed)
   return JSON.stringify({ type: 'error', error: 'unknown-type', got: String(type ?? '') })
 }

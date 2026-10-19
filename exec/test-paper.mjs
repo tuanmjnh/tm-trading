@@ -16,7 +16,7 @@
 // =============================================================================
 import { readFileSync } from 'node:fs'
 
-import { findFirstExit, followExitPrice, sanitizeTps, ticketSizingOf } from './paper.mjs'
+import { findFirstExit, followExitPrice, sanitizeTps, ticketSizingOf, ticketLeverageOf } from './paper.mjs'
 
 let pass = 0
 let fail = 0
@@ -148,5 +148,17 @@ check('the gate still gets the RAW array (it must SEE the defect in order to rej
 check('a defective ladder is rejected, with an audit entry (fail closed)', /paper_reject_tps/.test(src) && /status:\s*'rejected'/.test(src))
 check('the data exit scan refuses an unusable TP1 before findFirstExit', /Number\.isFinite\(tp1\)\s*&&\s*tp1\s*>\s*0/.test(src) && /paper_bad_tps1/.test(src))
 check('this suite never pulled the DB layer in (globalThis.__tmMongo undefined)', globalThis.__tmMongo === undefined)
+
+// =============================================================================
+section('7. ticketLeverageOf + sessionId threading (v3 §17.1b, Slice C)')
+
+check('leverage rides the raw JSON payload', ticketLeverageOf({ raw: '{"qty":1,"leverage":3}' }) === 3)
+check('absent/garbage leverage -> null, never throws', ticketLeverageOf({}) === null && ticketLeverageOf({ raw: '{oops' }) === null)
+check('numeric strings coerce like sizingFrom (the door already rejected junk)', ticketLeverageOf({ raw: '{"leverage":"10"}' }) === 10)
+check('out-of-range leverage falls back to nothing', ticketLeverageOf({ raw: '{"leverage":0}' }) === null && ticketLeverageOf({ raw: '{"leverage":126}' }) === null)
+check('the order doc carries leverage + sessionId intents', /leverage: ticketLeverageOf\(a\)/.test(src) && /sessionId, \/\/ Slice C/.test(src))
+check('recordOpen receives leverage + sessionId', /leverage: ticketLeverageOf\(a\),/.test(src) && /source: 'paper',/.test(src))
+check('fills carry the cycle session', (src.match(/sessionId,/g) || []).length >= 4)
+check('quiet cycles write no session rows (activity-only accounting)', /if \(sessionId && \(stats\.opened/.test(src))
 
 finish()

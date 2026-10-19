@@ -1,0 +1,43 @@
+// =============================================================================
+//  30_RIBBON — Dual-MA Trend Ribbon, Cloud Dynamics & Slope Alignment
+// =============================================================================
+
+// --- 1. Ribbon MAs -----------------------------------------------------------
+fz_rb_maFast = f_calcMa(close, fz_rb_fast, fz_rb_type)
+fz_rb_maSlow = f_calcMa(close, fz_rb_slow, fz_rb_type)
+
+// Series changes calculated at root scope for Pine v6 consistency
+fz_rb_fastDelta = ta.change(fz_rb_maFast)
+fz_rb_slowDelta = ta.change(fz_rb_maSlow)
+
+// --- 2. Ribbon Direction & Status --------------------------------------------
+bool fz_rb_bull = fz_rb_maFast > fz_rb_maSlow
+bool fz_rb_bear = fz_rb_maFast < fz_rb_maSlow
+
+// Slope alignment
+bool fz_rb_fastUp = fz_rb_fastDelta > 0
+bool fz_rb_slowUp = fz_rb_slowDelta > 0
+bool fz_rb_fastDn = fz_rb_fastDelta < 0
+bool fz_rb_slowDn = fz_rb_slowDelta < 0
+
+bool fz_rb_strongBull = fz_rb_bull and fz_rb_fastUp and fz_rb_slowUp
+bool fz_rb_strongBear = fz_rb_bear and fz_rb_fastDn and fz_rb_slowDn
+
+// Ribbon expansion / compression (spread in terms of ATR)
+float fz_rb_spread    = math.abs(fz_rb_maFast - fz_rb_maSlow)
+float fz_rb_spreadAtr = fz_atrSafe > 0 ? fz_rb_spread / fz_atrSafe : 0.0
+bool  fz_rb_expanding = fz_rb_spread > fz_rb_spread[1]
+
+// Ribbon boundary bounds
+float fz_rb_top = math.max(fz_rb_maFast, fz_rb_maSlow)
+float fz_rb_bot = math.min(fz_rb_maFast, fz_rb_maSlow)
+
+// --- 3. Price Proximity to Ribbon -------------------------------------------
+// For LONG: Low touches ribbon zone or comes within tolerance
+float fz_pullTolPx = fz_pull_tol * fz_atrSafe
+bool fz_priceInRibbonLong = low <= (fz_rb_top + fz_pullTolPx) and high >= (fz_rb_bot - fz_pullTolPx)
+bool fz_priceInRibbonShort = high >= (fz_rb_bot - fz_pullTolPx) and low <= (fz_rb_top + fz_pullTolPx)
+
+// Trend filter outputs
+bool fz_trendLongOk  = not fz_rb_filter or fz_rb_bull
+bool fz_trendShortOk = not fz_rb_filter or fz_rb_bear

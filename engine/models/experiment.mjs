@@ -12,7 +12,20 @@ const ExperimentSchema = new mongoose.Schema(
     _id: { type: String, required: true }, // `exp:...`
     experimentId: { type: String, required: true, index: true },
     proposalId: { type: String, required: true, index: true },
+    // Tenancy (roadmap §61.3): experiments are user-scoped.
+    ownerId: { type: String, default: null, index: true },
     strategyVersionId: { type: String, default: null },
+    // §59.15 Slice E: the frozen evidence set this experiment was derived from —
+    // the answer to "which facts produced this hypothesis" (D31: evidence, not
+    // vibes, and never a silent promotion).
+    evidenceSetId: { type: String, default: null, index: true },
+    // §59.15 Slice E: the version this candidate must beat, frozen at proposal
+    // time. Never re-derived from the live pointer — that pointer is what a
+    // promotion changes (D31).
+    baselineVersionId: { type: String, default: null },
+    // §59.15 Slice E: the paper-validation sessions launched for this candidate.
+    // Validation runs the CANDIDATE while the baseline stays live, so the two
+    // are never conflated.
     hypothesis: { type: String, default: '' },
     changes: { type: mongoose.Schema.Types.Mixed, default: [] },
     evidence: { type: mongoose.Schema.Types.Mixed, default: [] },
@@ -20,6 +33,9 @@ const ExperimentSchema = new mongoose.Schema(
     recommendedTest: { type: mongoose.Schema.Types.Mixed, default: {} },
 
     arms: { type: mongoose.Schema.Types.Mixed, default: {} },
+    // §59.15 Slice E: paper-validation sessions launched for this candidate
+    // (the baseline stays untouched — D31).
+    paperSessionIds: { type: [String], default: [] },
     status: { type: String, enum: EXPERIMENT_STATES, default: 'proposed', index: true },
     history: { type: mongoose.Schema.Types.Mixed, default: [] },
 

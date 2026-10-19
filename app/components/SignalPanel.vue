@@ -51,7 +51,8 @@ watch(() => props.symbol, () => { void load() }, { immediate: true })
 // TradeTicket bumps reloadKey after a successful POST — refresh without waiting
 // for the 15s poll so the new alert shows up immediately.
 watch(() => props.reloadKey, () => { void load() })
-useIntervalFn(() => { void load() }, 15_000, { immediate: false })
+// Visibility-aware (API budget): pauses while the tab is hidden.
+useVisibleInterval(() => { void load() }, 15_000, { immediate: false })
 
 const sideLabel = (side: string | null): string => {
   if (!side) return '—'

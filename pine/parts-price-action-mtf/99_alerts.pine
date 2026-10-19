@@ -1,0 +1,41 @@
+// =============================================================================
+//  L12 - ALERTS (webhook JSON)
+//  Payload kem structured event: kind/dir/ts/tf/confirmed/level (v2 §1).
+// =============================================================================
+
+// f_ts / f_sym - shared (pine/shared/common.pine)
+
+f_jsonPa(int dir, float entry, float sl, float t1, float t2, float t3) =>
+    string tps = "[" + f_fmtPx(t1) + "," + f_fmtPx(t2) + "," + f_fmtPx(t3) + "]"
+    '{\"side\":\"' + (dir == 1 ? "LONG" : "SHORT" ) + '\",\"price\":' + f_fmtPx(entry) + ',\"sl\":' + f_fmtPx(sl) + ',\"tps\":' + tps + ',\"score\":' + str.tostring(pa_score100) + ',\"quality\":\"' + pa_quality + '\",\"confluence\":' + str.tostring(pa_confluenceScore) + ',\"regime\":\"' + pa_regime + '\",\"atr\":' + f_fmtPx(pa_atr) + '}'
+
+f_jsonEvent(PaEvent e) =>
+    '{\"kind\":\"' + e.kind + '\",\"dir\":\"' + e.dir + '\",\"ts\":' + str.tostring(e.srcTime) + ',\"bar\":' + str.tostring(e.srcBar) + ',\"tf\":\"' + e.tf + '\",\"confirmed\":' + (e.confirmed ? "true" : "false") + ',\"level\":' + f_fmtPx(e.level) + '}'
+
+pa_head   = '{\"v\":1,\"version\":\"1.0.0\",\"schema\":\"pa-mtf.signal.v1.0\",\"ts\":\"' + f_ts() + '\",\"symbol\":\"' + f_sym() + '\",\"tf\":\"' + timeframe.period + '\"'
+bool pa_doSend = pa_payloadMode != "Off"
+
+alertcondition(pa_evEntry and pa_posDir == 1,          "PA MTF LONG",        "PA MTF LONG  {{ticker}} {{interval}}")
+alertcondition(pa_evEntry and pa_posDir == -1,         "PA MTF SHORT",       "PA MTF SHORT {{ticker}} {{interval}}")
+alertcondition(pa_evEntry and pa_confluenceScore == 3, "PA MTF SETUP",       "PA MTF SETUP 3/3 {{ticker}} {{interval}}")
+alertcondition(pa_patSignal,                           "PA MTF PATTERN",     "PA MTF PATTERN {{ticker}}")
+alertcondition(pa_evTp > 0,                            "PA MTF TAKE PROFIT", "PA MTF TP    {{ticker}}")
+alertcondition(pa_evSl,                                "PA MTF STOP LOSS",   "PA MTF SL    {{ticker}}")
+
+if pa_okBar and pa_doSend and pa_evEntry
+    alert(pa_head + ',\"action\":\"ENTRY\",'       + f_jsonPa(pa_posDir, pa_posEntry, pa_posSl, pa_posTp1, pa_posTp2, pa_posTp3) + "}", alert.freq_once_per_bar)
+
+if pa_okBar and pa_doSend and pa_posDir != 0 and pa_evTp > 0
+    alert(pa_head + ',\"action\":\"TAKE_PROFIT\",\"level\":' + str.tostring(pa_evTp) + "}", alert.freq_once_per_bar)
+
+if pa_okBar and pa_doSend and pa_posDir != 0 and pa_evSl
+    alert(pa_head + ',\"action\":\"STOP_LOSS\"}', alert.freq_once_per_bar)
+
+// Market-structure events (BOS/CHoCH/MSS/RETEST/FAILBRK/SWEEP/CONT/PULL)
+bool pa_evtNow = pa_okBar and pa_doSend and array.size(pa_evtBuf) > 0 and barstate.isconfirmed
+var int pa_lastEvtBar = -1
+if pa_evtNow and array.size(pa_evtBuf) > 0
+    PaEvent e2 = array.get(pa_evtBuf, array.size(pa_evtBuf) - 1)
+    if e2.srcBar != pa_lastEvtBar
+        pa_lastEvtBar := e2.srcBar
+        alert(pa_head + ',\"action\":\"EVENT\",' + f_jsonEvent(e2) + "}", alert.freq_once_per_bar)

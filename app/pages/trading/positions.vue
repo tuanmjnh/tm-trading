@@ -14,6 +14,10 @@ const { title, description } = useAdminPageChrome({
 const { viewMode } = useAdminGridView('positions-view-mode')
 const { buildRowActions } = useAdminRowActions()
 const positionsApi = usePositions()
+const feed = useMarketStream()
+const { account } = useAccountScope()
+const { version: workspaceVersion } = useTradingWorkspace()
+const { error: loadError, hasError, isStale, run } = useResourceState()
 
 const statusFilter = ref('all')
 const sourceFilter = ref('all')
@@ -28,7 +32,8 @@ const positionsList = useCursorPagination<PositionItem>({
       cursor: typeof cursor === 'string' ? cursor : null,
       limit,
       status: statusFilter.value === 'all' ? undefined : statusFilter.value,
-      source: sourceFilter.value === 'all' ? undefined : sourceFilter.value
+      source: sourceFilter.value === 'all' ? undefined : sourceFilter.value,
+      account: account.value ?? undefined
     })
     meta.value = res.meta
     return { items: res.items, nextCursor: res.nextCursor, hasMore: !!res.nextCursor }
@@ -51,11 +56,8 @@ const sourceItems = computed(() => [
 ])
 
 async function refreshPositions() {
-  try {
-    await positionsList.refresh()
-  } catch (err) {
-    notify.error(t('positions.title'), getErrorMessage(err, key => t(key)))
-  }
+  await run(async () => { await positionsList.refresh() })
+  if (hasError.value) notify.error(t('positions.title'), getErrorMessage(loadError.value, key => t(key)))
 }
 
 async function loadMorePositions() {
@@ -66,11 +68,18 @@ async function loadMorePositions() {
   }
 }
 
-watch([statusFilter, sourceFilter], () => {
+watch([statusFilter, sourceFilter, account], () => {
   refreshPositions()
 })
 
-onMounted(refreshPositions)
+// §61.17 Phase C: open/close/partial fills bump the positions view — reconcile
+// without a hard refresh.
+watch(workspaceVersion('positions'), refreshPositions)
+
+onMounted(() => {
+  feed.connect()
+  refreshPositions()
+})
 
 const columns = computed<GridColumn[]>(() => [
   { key: 'entryTime', label: t('positions.colTime'), class: 'w-36' },
@@ -103,17 +112,95 @@ const statusLabel = (s: string) =>
 const statusColor = (s: string): 'success' | 'neutral' | 'warning' =>
   s === 'open' ? 'success' : s === 'cancelled' ? 'warning' : 'neutral'
 
+// Live unrealized + notional (mockup blotter stats) — marked to the LIVE
+// plane quote per symbol (last ?? mid, same fallback as the terminal hero).
+// Rows without a quote contribute nothing ('—', never a fabricated mark);
+// symbols outside MARKET_SYMBOLS simply have no quote yet (D1).
+const markOf = (symbol: string): number | null => {
+  const q = feed.state.quotes[symbol]
+  if (!q) return null
+  if (q.last !== undefined) return q.last
+  if (q.bid !== undefined && q.ask !== undefined) return (q.bid + q.ask) / 2
+  return null
+}
+
+interface LiveExposure {
+  unrealized: number | null
+  notional: number | null
+}
+
+const liveExposure = computed<LiveExposure>(() => {
+  let pnl = 0
+  let notion = 0
+  let any = false
+  for (const r of rows.value) {
+    if (r.status !== 'open') continue
+    const mark = markOf(r.symbol)
+    if (mark === null) continue
+    pnl += (mark - r.entryPrice) * r.dir * r.qty
+    notion += mark * r.qty
+    any = true
+  }
+  return any ? { unrealized: pnl, notional: notion } : { unrealized: null, notional: null }
+})
+
 const metrics = computed<MetricItem[]>(() => {
   const m = meta.value
   const realized = m?.realizedPnlAbs ?? null
+  const live = liveExposure.value
+  const liveTone = (v: number | null): MetricItem['tone'] =>
+    v == null ? 'default' : v > 0 ? 'success' : v < 0 ? 'error' : 'default'
   return [
     { key: 'open', label: t('positions.statOpen'), value: m ? String(m.open) : '—', icon: 'i-lucide-layers', tone: 'success' },
     { key: 'closed', label: t('positions.statClosed'), value: m ? String(m.closed) : '—', icon: 'i-lucide-archive' },
-    { key: 'realized', label: t('positions.statRealized'), value: m ? fmtMoney(m.realizedPnlAbs) : '—', icon: 'i-lucide-trending-up', tone: realized == null ? 'default' : realized > 0 ? 'success' : realized < 0 ? 'error' : 'default' }
+    { key: 'realized', label: t('positions.statRealized'), value: m ? fmtMoney(m.realizedPnlAbs) : '—', icon: 'i-lucide-trending-up', tone: liveTone(realized) },
+    { key: 'unrealized', label: t('positions.statUnrealized'), value: fmtMoney(live.unrealized), icon: 'i-lucide-activity', tone: liveTone(live.unrealized) },
+    { key: 'notional', label: t('positions.statNotional'), value: live.notional === null ? '—' : fmtMoney(live.notional), icon: 'i-lucide-banknote' }
   ]
 })
 
 const trail = computed(() => [{ label: t('nav.trading') }, { label: title.value }])
+
+// CSV export — exactly the rows this page has loaded (cursor-paginated), with
+// the stored fields plus the server-computed live numbers when present.
+const exporting = ref(false)
+function exportCsv() {
+  if (!rows.value.length) return
+  exporting.value = true
+  try {
+    const csv = toCsv(rows.value, [
+      { key: 'id', label: 'id', value: p => p.id },
+      { key: 'account', label: 'account', value: p => p.account },
+      { key: 'source', label: 'source', value: p => p.source },
+      { key: 'symbol', label: 'symbol', value: p => p.symbol },
+      { key: 'dir', label: 'dir', value: p => p.dir },
+      { key: 'qty', label: 'qty', value: p => p.qty },
+      { key: 'entryPrice', label: 'entryPrice', value: p => p.entryPrice },
+      { key: 'entryTime', label: 'entryTime', value: p => p.entryTime },
+      { key: 'sl', label: 'sl', value: p => p.sl },
+      { key: 'tps', label: 'tps', value: p => p.tps.join(' ') },
+      { key: 'exitPrice', label: 'exitPrice', value: p => p.exitPrice },
+      { key: 'exitTime', label: 'exitTime', value: p => p.exitTime },
+      { key: 'status', label: 'status', value: p => p.status },
+      { key: 'exitReason', label: 'exitReason', value: p => p.exitReason },
+      { key: 'pnlAbs', label: 'pnlAbs', value: p => p.pnlAbs },
+      { key: 'pnlPct', label: 'pnlPct', value: p => p.pnlPct },
+      { key: 'fees', label: 'fees', value: p => p.fees },
+      { key: 'leverage', label: 'leverage', value: p => p.leverage },
+      { key: 'method', label: 'method', value: p => p.method },
+      { key: 'tf', label: 'tf', value: p => p.tf },
+      { key: 'sessionId', label: 'sessionId', value: p => p.sessionId },
+      { key: 'liveMark', label: 'liveMark', value: p => p.live?.mark ?? null },
+      { key: 'liveUnrealized', label: 'liveUnrealized', value: p => p.live?.unrealized ?? null },
+      { key: 'liveLiqPrice', label: 'liveLiqPrice', value: p => p.live?.liqPrice ?? null },
+      { key: 'updatedAt', label: 'updatedAt', value: p => p.updatedAt }
+    ])
+    downloadCsv(csvFilename('tm-trading-positions'), csv)
+    notify.success(t('common.export'), t('common.exportRows', { n: rows.value.length }))
+  } finally {
+    exporting.value = false
+  }
+}
 
 const mobileBar = useMobileBar()
 mobileBar.registerActions(computed(() => [
@@ -136,12 +223,23 @@ useHead({ title })
 
     <template #right>
       <div class="flex items-center gap-2">
+        <AccountSwitcher />
         <UBadge
           v-if="meta?.mongo === 'down'"
           :label="t('positions.mongoDown')"
           color="warning"
           variant="subtle"
           size="xs"
+        />
+        <UButton
+          icon="i-lucide-download"
+          :label="t('common.export')"
+          variant="soft"
+          color="neutral"
+          size="sm"
+          :disabled="!rows.length"
+          :loading="exporting"
+          @click="exportCsv"
         />
         <UButton
           icon="i-lucide-refresh-cw"
@@ -191,7 +289,14 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
-      <MetricRibbon :items="metrics" cols="grid-cols-3" />
+      <MetricRibbon :items="metrics" cols="grid-cols-2 md:grid-cols-3 xl:grid-cols-5" />
+
+      <SharedRefreshNotice
+        :stale="isStale"
+        :retrying="isLoading"
+        :message="t('common.staleData')"
+        @retry="refreshPositions"
+      />
 
       <div class="flex-1 min-h-0">
         <LazyGridList
@@ -298,6 +403,14 @@ useHead({ title })
 
           <template #empty>
             <AdminEmptyState
+              v-if="hasError"
+              :title="t('common.loadErrorTitle')"
+              :description="t('common.loadErrorHint')"
+              icon="i-lucide-triangle-alert"
+              :actions="[{ label: t('common.retry'), icon: 'i-lucide-refresh-cw', color: 'warning', onClick: refreshPositions }]"
+            />
+            <AdminEmptyState
+              v-else
               :title="t('positions.empty')"
               :description="t('positions.emptyHint')"
               icon="i-lucide-layers"

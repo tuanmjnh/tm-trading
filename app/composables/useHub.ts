@@ -7,15 +7,18 @@ import { HubClient } from 'tm-hub-client'
 //  Source: tm-tools/app/composables/useHub.ts (already working).
 // =============================================================================
 
+// P0-3 — a client-only singleton. Building a client per call also built a
+// `watch` per call; the watcher now lives once, app-scoped, in plugins/hub.client.ts.
+let sharedClient: HubClient | null = null
+
 export const useHub = () => {
-  const config = useRuntimeConfig()
   const auth = useAuth()
   const tokenCookie = useCookie('accessToken')
 
-  const hubUrl = (config.public.hubUrl as string) || 'http://localhost:4000'
-  const appId = (config.public.hubAppId as string) || 'tm-trading'
+  // Same endpoint as useAuth(): one Hub, one source of truth.
+  const { hubUrl, appId, source, problem } = useHubEndpoint()
 
-  const client = new HubClient({
+  const createClient = () => new HubClient({
     baseUrl: hubUrl,
     appId: appId,
     getAccessToken: () => auth.accessToken.value || tokenCookie.value,
@@ -28,16 +31,17 @@ export const useHub = () => {
     }
   })
 
+  // Client-only singleton: a server render must never share one client across requests.
+  const client = import.meta.client ? (sharedClient ??= createClient()) : createClient()
+
+  // Idempotent seed; permission CHANGES are applied by plugins/hub.client.ts.
   const seedPermissions = () => {
     const perms = auth.user.value?.permissions
     if (perms?.length) client.setPermissions([...perms])
   }
   seedPermissions()
-  if (import.meta.client) {
-    watch(() => auth.user.value?.permissions, seedPermissions)
-  }
 
-  const hubFetch = async <T = unknown>(
+  const hubFetchRaw = async <T = unknown>(
     path: string,
     options: NitroFetchOptions<NitroFetchRequest> = {}
   ): Promise<T> => {
@@ -61,10 +65,37 @@ export const useHub = () => {
     })) as T
   }
 
+  // F2/U1 — honor the Hub's `Retry-After` on a 429 with a single bounded retry,
+  // then record the window so auth/refresh backs off too (see app/utils/hub.ts).
+  const hubFetch = async <T = unknown>(
+    path: string,
+    options: NitroFetchOptions<NitroFetchRequest> = {}
+  ): Promise<T> => {
+    try {
+      const result = await hubFetchRaw<T>(path, options)
+      clearHubRateLimit()
+      return result
+    } catch (err) {
+      const res = (err as { response?: Response })?.response
+      if (!res || res.status !== 429) throw err
+
+      const waitMs = noteHubRateLimit(res.headers?.get?.('retry-after') ?? null)
+      // Cap the in-request wait so a long Retry-After never hangs the UI; the
+      // recorded window still gates later auth/refresh calls.
+      await new Promise(resolve => setTimeout(resolve, Math.min(waitMs, 3_000)))
+
+      const retry = await hubFetchRaw<T>(path, options)
+      clearHubRateLimit()
+      return retry
+    }
+  }
+
   return {
     client,
     hubUrl,
     appId,
+    source,
+    problem,
     hubFetch,
     // Direct modular access via client
     auth: client.auth,

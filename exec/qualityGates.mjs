@@ -38,6 +38,7 @@ export const DEGRADED_IDS = Object.freeze([
   'oi_delayed',
   'news_unavailable',
   'secondary_provider_unavailable',
+  'ws_stream_degraded',
 ])
 
 /** Default thresholds (ms) for staleness — every one overridable. */
@@ -45,6 +46,7 @@ export const DEFAULT_QUALITY_GATES = Object.freeze({
   quoteStaleMs: 60_000,
   fundingStaleMs: 3_600_000, // 1h
   oiStaleMs: 3_600_000,
+  wsLatencyP95CapMs: 1_500,
 })
 
 /**
@@ -60,6 +62,10 @@ export const DEFAULT_QUALITY_GATES = Object.freeze({
  * @param {number|null} [o.oiAgeMs]
  * @param {boolean|null} [o.newsAvailable]
  * @param {boolean|null} [o.secondaryProviderUp]
+ * @param {'ok'|'degraded'|'stale'|'disconnected'|'unknown'|null} [o.wsState]  market-plane WS health (G8.2)
+ * @param {number|null} [o.wsGapCount]      sequence gaps measured by the WS monitor
+ * @param {number|null} [o.wsLatencyP95Ms]  p95 ingest latency measured by the WS monitor
+ * @param {'rest'|'ws'|null} [o.priceSource] what the fill is PRICED from
  * @param {object} [o.thresholds]
  * @returns {{block: string[], degraded: string[], allowed: boolean, reasons: Array<{id, level:'block'|'degraded', reason}>}}
  */
@@ -77,6 +83,26 @@ export function qualityGates(o = {}) {
   const stream = o.streamState
   if (stream === null || stream === undefined || stream === 'unknown' || stream === 'disconnected') {
     add('market_stream_disconnected', 'block', `market stream state '${stream ?? 'unknown'}' — refusing a fill on data we are not receiving`)
+  }
+
+  // market WS health (G8.2): the plane's monitor (connection + sequence + latency)
+  // is fed in as a MEASURED fact. It only blocks when the fill is actually
+  // priced off the WS — a REST-priced paper fill is not corrupt because a
+  // dashboard socket dropped, but the operator must see it (degraded tier).
+  // `undefined` means "this caller does not measure WS" and adds no verdict.
+  const ws = o.wsState
+  if (ws !== undefined && ws !== null && ws !== 'ok') {
+    const detail = []
+    if ((num(o.wsGapCount) ?? 0) > 0) detail.push(`${num(o.wsGapCount)} sequence gap(s)`)
+    if (num(o.wsLatencyP95Ms) != null && num(o.wsLatencyP95Ms) > th.wsLatencyP95CapMs) {
+      detail.push(`p95 latency ${num(o.wsLatencyP95Ms)}ms > ${th.wsLatencyP95CapMs}ms`)
+    }
+    const suffix = detail.length ? ` (${detail.join(', ')})` : ''
+    if (o.priceSource === 'ws') {
+      add('market_stream_disconnected', 'block', `fills are priced from the market WS, state '${ws}'${suffix} — refusing a fill on a stream we cannot trust`)
+    } else {
+      add('ws_stream_degraded', 'degraded', `market WS state '${ws}'${suffix} — fills price off REST so their price is sound, but live market state is incomplete`)
+    }
   }
 
   // quote stale: measured age over threshold. A null age is NOT auto-block here

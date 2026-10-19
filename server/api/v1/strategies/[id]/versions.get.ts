@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
   if (!Version) return { success: true, data: [], meta: { count: 0, mongo: 'down' } }
 
   try {
-    const rows = await Version.find({ strategyId: id }).sort({ createdAt: -1 }).limit(limit).lean()
+    const rows = await Version.find({ strategyId: id, ownerId: requireOwnerId(event) }).sort({ createdAt: -1 }).limit(limit).lean()
     return { success: true, data: rows, meta: { count: rows.length, mongo: 'up' } }
   } catch {
     return { success: true, data: [], meta: { count: 0, mongo: 'down' } }

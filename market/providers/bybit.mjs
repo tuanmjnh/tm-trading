@@ -11,7 +11,10 @@ const BYBIT_BASE = 'https://api.bybit.com'
 async function bybitFetch(path, params = {}, { fetchImpl, timeoutMs = 8000 } = {}) {
   const url = new URL(BYBIT_BASE + path)
   for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== null) url.searchParams.set(k, String(v))
-  const doFetch = fetchImpl || fetch
+  // globalThis.fetch, NOT bare `fetch`: this module exports its own `fetch`,
+  // which shadows the global binding at module scope -> bare `fetch` here would
+  // call this module's own fetch again and recurse until the stack blows.
+  const doFetch = fetchImpl || globalThis.fetch
   const res = await doFetch(url, { signal: AbortSignal.timeout(timeoutMs) })
   if (!res.ok) throw new Error(`bybit ${path} HTTP ${res.status}`)
   const json = await res.json()

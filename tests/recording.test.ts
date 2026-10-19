@@ -73,8 +73,11 @@ const applyPatch = (doc, patch) => {
   if (patch.$set) Object.assign(doc, patch.$set)
   if (patch.$setOnInsert) for (const [k, v] of Object.entries(patch.$setOnInsert)) if (!(k in doc)) doc[k] = v
   if (patch.$inc) for (const [k, v] of Object.entries(patch.$inc)) doc[k] = (Number(doc[k]) || 0) + v
-  if (patch.$min) for (const [k, v] of Object.entries(patch.$min)) doc[k] = Math.min(Number(doc[k]) ?? v, v)
-  if (patch.$max) for (const [k, v] of Object.entries(patch.$max)) doc[k] = Math.max(Number(doc[k]) ?? v, v)
+  // $min/$max SET the field when it is missing (MongoDB semantics) — that is how
+  // startTs/endTs are created on insert, so they must not be in $setOnInsert too
+  // (Mongo rejects a path repeated across operators as a conflict).
+  if (patch.$min) for (const [k, v] of Object.entries(patch.$min)) doc[k] = doc[k] == null ? v : Math.min(Number(doc[k]), v)
+  if (patch.$max) for (const [k, v] of Object.entries(patch.$max)) doc[k] = doc[k] == null ? v : Math.max(Number(doc[k]), v)
   return doc
 }
 
@@ -433,6 +436,28 @@ describe('feed recorder (§23.3 P1 market_feed: funding/OI + liquidation)', () =
     assert.equal(await createFeedRecorder({ model: null, datasetModel, kind: 'funding', source: 'x' }).record(doc), null)
     const boom = { async updateOne() { throw new Error('mongo down') } }
     assert.deepEqual(await createFeedRecorder({ model: boom, datasetModel, kind: 'funding', source: 'x' }).record(doc), { wrote: false })
+  })
+
+  test('manifest patch never repeats a path across operators (Mongo conflict)', async () => {
+    let patch = null
+    const datasetModel = { async updateOne(_f, p) { patch = p; return { upsertedCount: 1 } } }
+    const model = { async updateOne() { return { upsertedCount: 1 } } }
+    await createFeedRecorder({ model, datasetModel, kind: 'funding', source: 'binance:fapi' }).record(
+      fundingFeedDoc({ symbol: 'BTCUSDT', rate: 0.0001, price: 60000, nextFundingTime: 5, ingestTime: 1 }),
+    )
+    // Mongo rejects an update that addresses the same path from two operators
+    // ("Updating the path 'startTs' would create a conflict at 'startTs'").
+    const owner = new Map()
+    for (const [op, spec] of Object.entries(patch)) {
+      for (const path of Object.keys(spec)) {
+        assert.equal(owner.has(path), false, `path '${path}' set by both ${owner.get(path)} and ${op}`)
+        owner.set(path, op)
+      }
+    }
+    // startTs/endTs/count live in $min/$max/$inc only — they create the fields.
+    assert.equal(patch.$min.startTs, 5)
+    assert.equal(patch.$max.endTs, 5)
+    assert.equal(patch.$inc.count, 1)
   })
 })
 

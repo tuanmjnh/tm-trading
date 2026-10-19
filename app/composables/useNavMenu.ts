@@ -9,13 +9,19 @@ export const useNavMenu = () => {
   const allowedRoutes = useState<RouteTreeNode[]>('nav:allowedRoutes', () => [])
 
   async function fetchRoutes(force = false, targetAppId?: string) {
+    // Explicit `targetAppId` previews another app's catalog; the normal path
+    // shares one deduped loader with the middleware (see utils/navRoutes.ts).
+    if (!targetAppId) return loadAllowedRoutes({ force })
+
     if (allowedRoutes.value.length > 0 && !force) return allowedRoutes.value
     if (!auth.isAuthenticated.value) return []
 
     try {
-      const query = targetAppId ? `?appId=${encodeURIComponent(targetAppId)}` : ''
-      const { data } = await hubFetch<{ success: boolean, data: RouteTreeNode[] }>(`/api/v1/auth/routes${query}`)
+      const { data } = await hubFetch<{ success: boolean, data: RouteTreeNode[] }>(
+        `/api/v1/auth/routes?appId=${encodeURIComponent(targetAppId)}`
+      )
       allowedRoutes.value = data || []
+      writeNavCache(allowedRoutes.value)
     } catch {
       allowedRoutes.value = []
     }

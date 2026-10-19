@@ -65,6 +65,25 @@ export async function getAlertRule() {
   return alertRuleMemo
 }
 
+/**
+ * Model `alerts` (§61.17 Phase D step-in / §61.3) — null = Mongo down.
+ *
+ * The alert-rules service writes one row here per (rule, event) match so the
+ * dashboard's Signals view is generated IN-APP per owner, instead of depending
+ * on the shared TradingView webhook. Rows are inert to the paper executor: they
+ * carry `action: null`, so `exec/paper.mjs` (which only processes ENTRY alerts)
+ * never opens a position from a rule match.
+ */
+let alertMemo = null
+export async function getAlert() {
+  if (alertMemo) return alertMemo
+  const mg = await connectMongo()
+  if (!mg) return null
+  const mod = await import('../engine/models/alert.mjs')
+  alertMemo = mod.Alert
+  return alertMemo
+}
+
 /** Model `experiments` (Experiment Engine §28.1) — null = Mongo down. */
 let experimentMemo = null
 export async function getExperiment() {

@@ -95,6 +95,8 @@ export function snapshotRecord(args = {}) {
 
   return {
     snapshotId: snapshotIdFor(alertKey),
+    // Tenancy (roadmap §61.3): the decision snapshot belongs to the desk owner.
+    ownerId: args.ownerId != null ? String(args.ownerId) : null,
     snapshotHash: contextHash,
     kind: Object.values(SNAPSHOT_KIND).includes(args.kind) ? args.kind : SNAPSHOT_KIND.entryDecision,
     instrumentId,

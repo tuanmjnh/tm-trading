@@ -1,7 +1,70 @@
 # Changelog — TM Indicator
 
 All notable changes to the TM Indicator project are documented in this file.
-The project adheres to the roadmap established in `docs/indicator/tm-indicator/TM_Indicator_Roadmap.md`.
+The project adheres to the roadmap established in `docs/indicator/tm-indicator/TM_Indicator_Roadmap_v2.md`.
+
+---
+
+## [2.0.0] - Next-Gen Multi-Asset Winrate & Expectancy Release
+### Added
+- Created `pine/parts-tm2/` module architecture for **TM Indicator 2** and **TM Indicator Strategy Lab 2**:
+  - `00_header.pine`
+  - `01_inputs_and_profiles.pine`
+  - `02_types_and_state_defs.pine`
+  - `03_regime_and_volatility.pine`
+  - `04_structure_pa_liquidity.pine`
+  - `05_momentum_volume_extension.pine`
+  - `06_mtf_and_intermarket_tuple.pine`
+  - `07_obstacle_and_gates.pine`
+  - `08_adaptive_scoring_engine.pine`
+  - `09_plan_and_state_machine.pine`
+  - `10_visuals_and_dashboard.pine`
+  - `11_alerts.pine` (`// @part skip:tm2-strategy`)
+  - `11_strategy_exec.pine` (`// @part skip:tm2`)
+- Registered build targets `tm2` and `tm2-strategy` in `tools/build.mjs` bundling into:
+  - `pine/dist/TM Indicator 2.pine` (1,522 lines)
+  - `pine/dist/TM Indicator Strategy Lab 2.pine` (1,604 lines)
+- Added CLI commands in `package.json`:
+  - `npm run pine:tm2`
+  - `npm run pine:tm2-strat`
+  - `npm run pine:copy:tm2`
+  - `npm run pine:copy:tm2-strat`
+- **Dynamic Trade Management:**
+  - Auto Break-Even at TP1 (moves SL to `Entry + Fee Buffer`).
+  - Dynamic Trailing Stop activated after reaching TP2.
+  - Time-Decay / Stagnation Exit if trade fails to gain 0.3R within 15 bars.
+- **Smart Entry Execution:**
+  - Pullback Limit Entry mode targeting 50% FVG, Order Block edge, or EMA Fast.
+  - Auto-cancellation of pending limit orders after $K$ bars or if TP1 is touched before fill.
+- **Market Regime Classifier:**
+  - Real-time classification into `TRENDING`, `RANGING`, and `CHOPPY_SQUEEZE`.
+  - Gated breakout signals during Choppy Squeeze regimes.
+  - Dynamic adaptive weights shifting between Trending and Ranging regimes.
+- **Room-to-Left & Obstacle Gate:**
+  - Measures distance to closest opposing structural barrier (S/R, OB, Swing).
+  - Rejects trades where `Distance_to_Obstacle < Distance_to_TP1`.
+- **Anti-Overextension Gate:**
+  - Prevents chasing market orders when price extension > 2.2x ATR or candle range > 2.5x ATR.
+- **Inter-Market & Session Intelligence:**
+  - Integrated `BTC Leader Filter` protecting ETH and Altcoin trades from sudden Bitcoin dumps/pumps.
+  - Integrated `Weekend Low-Liquidity Filter` for crypto assets.
+- **Pine v6 Tuple MTF & Drawing GC:**
+  - All MTF queries bundled into 5 tuple `request.security()` calls.
+  - Drawing garbage collection ensures zero memory overflow (< 500 boxes/lines).
+- **Separated Dashboard Analytics:**
+  - Dashboard rows 13 & 14 display `TP1 Hit Rate (%)` alongside `Net Trade Winrate (%)` and Realized R metrics.
+- Complete documentation suite in `docs/indicator/tm-indicator-2/`:
+  - `audit-baseline.md`
+  - `asset-profiles.md`
+  - `futures-risk-model.md`
+  - `ablation-walkforward-protocol.md`
+  - `regression-checklist.md`
+  - `known-limitations.md`
+  - `README.md`
+
+### Fixed
+- **P0 RR Check:** Explicitly separated TP1 as partial exit & Auto-BE trigger, while evaluating `Min RR` against TP2 (Standard Target), eliminating false signal suppression.
+- **P0 State Machine:** Replaced loss-recording of in-the-money trades with Auto Break-Even (+0.35R net), dramatically reducing drawdowns.
 
 ---
 

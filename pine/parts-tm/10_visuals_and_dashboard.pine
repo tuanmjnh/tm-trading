@@ -1,0 +1,404 @@
+// =============================================================================
+//  L9 - VISUALIZATION & COMPREHENSIVE DASHBOARD (v2.0)
+// =============================================================================
+
+// --- 1. Signal & Limit Markers -----------------------------------------------
+bool tm_drawLongEntry  = tm_showViz and tm_showSig and (tm_evEntry or tm_evFilled) and tm_posDir == 1
+bool tm_drawShortEntry = tm_showViz and tm_showSig and (tm_evEntry or tm_evFilled) and tm_posDir == -1
+
+plotshape(tm_drawLongEntry,  title = "LONG ENTRY",  style = shape.triangleup,   location = location.belowbar, color = tm_cBull, size = size.small, text = "L", textcolor = tm_cBull, force_overlay = true)
+plotshape(tm_drawShortEntry, title = "SHORT ENTRY", style = shape.triangledown, location = location.abovebar, color = tm_cBear, size = size.small, text = "S", textcolor = tm_cBear, force_overlay = true)
+
+plotshape(tm_showViz and tm_showSig and tm_evPending and tm_posDir == 1,  title = "LONG LIMIT PENDING",  style = shape.circle, location = location.belowbar, color = color.new(tm_cBull, 30), size = size.tiny, text = "L-LIM", textcolor = tm_cBull, force_overlay = true)
+plotshape(tm_showViz and tm_showSig and tm_evPending and tm_posDir == -1, title = "SHORT LIMIT PENDING", style = shape.circle, location = location.abovebar, color = color.new(tm_cBear, 30), size = size.tiny, text = "S-LIM", textcolor = tm_cBear, force_overlay = true)
+
+// Hit & Lifecycle Labels
+if tm_showViz and tm_showHit and tm_evTp == 1
+    label.new(bar_index, tm_posTp1, "TP1+ (BE)", style = label.style_label_left, color = color.new(tm_cBull, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_showHit and tm_evTp == 2
+    label.new(bar_index, tm_posTp2, "TP2+ (TR)", style = label.style_label_left, color = color.new(tm_cBull, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_showHit and tm_evTp == 3
+    label.new(bar_index, tm_posTp3, "TP3+ (RUN)", style = label.style_label_left, color = color.new(tm_cBull, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_showHit and tm_evSl
+    string slTxt = tm_exitReason == TM2_EXIT_BREAKEVEN ? "BE-HIT" : tm_exitReason == TM2_EXIT_TRAIL ? "TR-HIT" : "SL-HIT"
+    color slCol  = tm_exitReason == TM2_EXIT_BREAKEVEN ? color.orange : tm_exitReason == TM2_EXIT_TRAIL ? color.teal : tm_cBear
+    label.new(bar_index, tm_posSl, slTxt, style = label.style_label_left, color = color.new(slCol, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_showHit and tm_evDecay
+    label.new(bar_index, close, "TIME-DECAY", style = label.style_label_left, color = color.new(color.gray, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_showHit and tm_evTimeout
+    label.new(bar_index, close, "TIMEOUT", style = label.style_label_left, color = color.new(color.gray, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+
+// --- 2. Active Position Zone Boxes, Lines & Info Label -----------------------
+var box   tm_bxSl    = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(color.gray, 60), bgcolor = color.new(color.gray, 88), force_overlay = true)
+var box   tm_bxTp1   = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(tm_cBull, 50),  bgcolor = color.new(tm_cBull, 90),  force_overlay = true)
+var box   tm_bxTp2   = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(tm_cBull, 60),  bgcolor = color.new(tm_cBull, 93),  force_overlay = true)
+var box   tm_bxTp3   = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(tm_cBull, 70),  bgcolor = color.new(tm_cBull, 95),  force_overlay = true)
+var line  tm_lnEntry = line.new(bar_index, 0.0, bar_index + 1, 0.0, color = color.new(color.silver, 30), style = line.style_dashed, force_overlay = true)
+var line  tm_lnStop  = line.new(bar_index, 0.0, bar_index + 1, 0.0, color = color.new(tm_cBear, 30),  style = line.style_solid,  force_overlay = true)
+var label tm_lbInfo  = label.new(bar_index, 0.0, "", style = label.style_label_left, color = color.new(color.gray, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+
+int   tm_right = tm_posDir != 0 and not na(tm_posBar) ? tm_posBar + tm_zoneLen : bar_index + 1
+color tm_base  = tm_posDir == 1 ? tm_cBull : tm_cBear
+bool  tm_posActive = tm_posStage >= TM2_STAGE_PENDING_LIMIT and tm_posDir != 0 and not na(tm_posBar)
+
+if tm_showViz and tm_showZone and tm_posActive
+    box.set_lefttop(tm_bxSl,  tm_posBar, math.max(tm_posEntry, tm_posSl))
+    box.set_rightbottom(tm_bxSl, tm_right, math.min(tm_posEntry, tm_posSl))
+    box.set_lefttop(tm_bxTp1, tm_posBar, math.max(tm_posEntry, tm_posTp1))
+    box.set_rightbottom(tm_bxTp1, tm_right, math.min(tm_posEntry, tm_posTp1))
+    box.set_lefttop(tm_bxTp2, tm_posBar, math.max(tm_posEntry, tm_posTp2))
+    box.set_rightbottom(tm_bxTp2, tm_right, math.min(tm_posEntry, tm_posTp2))
+    box.set_lefttop(tm_bxTp3, tm_posBar, math.max(tm_posEntry, tm_posTp3))
+    box.set_rightbottom(tm_bxTp3, tm_right, math.min(tm_posEntry, tm_posTp3))
+    line.set_xy1(tm_lnEntry, tm_posBar, tm_posEntry)
+    line.set_xy2(tm_lnEntry, tm_right,  tm_posEntry)
+    line.set_xy1(tm_lnStop,  tm_posBar, tm_posSl)
+    line.set_xy2(tm_lnStop,  tm_right,  tm_posSl)
+    label.set_xy(tm_lbInfo, tm_right, tm_posTp3)
+    string stageStr = tm_posStage == TM2_STAGE_PENDING_LIMIT ? "PENDING LIMIT" : tm_posDir == 1 ? "LONG" : "SHORT"
+    string modeStr  = tm_posMode == "" ? "" : tm_posMode + "\n"
+    string posLabel = modeStr + stageStr + "\nE " + f_fmtPx(tm_posEntry) + "\nSL " + f_fmtPx(tm_posSl) + "\nTP1 " + f_fmtPx(tm_posTp1) + "\nTP2 " + f_fmtPx(tm_posTp2) + "\nTP3 " + f_fmtPx(tm_posTp3)
+    label.set_text(tm_lbInfo, posLabel)
+    label.set_color(tm_lbInfo, color.new(tm_base, 10))
+else
+    box.set_lefttop(tm_bxSl,  bar_index, na)
+    box.set_rightbottom(tm_bxSl,  bar_index, na)
+    box.set_lefttop(tm_bxTp1, bar_index, na)
+    box.set_rightbottom(tm_bxTp1, bar_index, na)
+    box.set_lefttop(tm_bxTp2, bar_index, na)
+    box.set_rightbottom(tm_bxTp2, bar_index, na)
+    box.set_lefttop(tm_bxTp3, bar_index, na)
+    box.set_rightbottom(tm_bxTp3, bar_index, na)
+    line.set_xy1(tm_lnEntry, bar_index, na)
+    line.set_xy2(tm_lnEntry, bar_index + 1, na)
+    line.set_xy1(tm_lnStop,  bar_index, na)
+    line.set_xy2(tm_lnStop,  bar_index + 1, na)
+    label.set_xy(tm_lbInfo, bar_index, na)
+    label.set_text(tm_lbInfo, "")
+
+// --- 3. Liquidity Lines (PDH / PDL, PWH / PWL, Session High / Low) -----------
+var line tm_lPDH = na
+var line tm_lPDL = na
+var line tm_lPWH = na
+var line tm_lPWL = na
+var line tm_lSHi = na
+var line tm_lSLo = na
+bool tm_newDay  = f_isNewDay()
+bool tm_newWeek = ta.change(time("W")) != 0
+
+// PDH / PDL
+bool tm_pdVis = tm_showViz and tm_showPd and tm_liq_pdOn
+if tm_pdVis and (tm_newDay or na(tm_lPDH))
+    if not na(tm_lPDH)
+        line.delete(tm_lPDH)
+        line.delete(tm_lPDL)
+    tm_lPDH := line.new(bar_index, tm_pdh, bar_index + 1, tm_pdh, color = color.new(color.orange, 40), style = line.style_dashed, width = 1, force_overlay = true)
+    tm_lPDL := line.new(bar_index, tm_pdl, bar_index + 1, tm_pdl, color = color.new(color.orange, 40), style = line.style_dashed, width = 1, force_overlay = true)
+if tm_pdVis and not na(tm_lPDH)
+    line.set_x2(tm_lPDH, bar_index + 1)
+    line.set_x2(tm_lPDL, bar_index + 1)
+if not tm_pdVis and not na(tm_lPDH)
+    line.delete(tm_lPDH)
+    line.delete(tm_lPDL)
+    tm_lPDH := na
+    tm_lPDL := na
+
+// PWH / PWL
+bool tm_pwVis = tm_showViz and tm_showPw and tm_liq_pwOn
+if tm_pwVis and (tm_newWeek or na(tm_lPWH))
+    if not na(tm_lPWH)
+        line.delete(tm_lPWH)
+        line.delete(tm_lPWL)
+    tm_lPWH := line.new(bar_index, tm_pwh, bar_index + 1, tm_pwh, color = color.new(color.blue, 50), style = line.style_dotted, width = 1, force_overlay = true)
+    tm_lPWL := line.new(bar_index, tm_pwl, bar_index + 1, tm_pwl, color = color.new(color.blue, 50), style = line.style_dotted, width = 1, force_overlay = true)
+if tm_pwVis and not na(tm_lPWH)
+    line.set_x2(tm_lPWH, bar_index + 1)
+    line.set_x2(tm_lPWL, bar_index + 1)
+if not tm_pwVis and not na(tm_lPWH)
+    line.delete(tm_lPWH)
+    line.delete(tm_lPWL)
+    tm_lPWH := na
+    tm_lPWL := na
+
+// Session High / Low
+bool tm_sdVis = tm_showViz and tm_showSess and tm_liq_sessOn
+if tm_sdVis and (tm_sessChanged or na(tm_lSHi)) and tm_sessName != "-" and not na(tm_sessHi)
+    if not na(tm_lSHi)
+        line.delete(tm_lSHi)
+        line.delete(tm_lSLo)
+    tm_lSHi := line.new(bar_index, tm_sessHi, bar_index + 1, tm_sessHi, color = color.new(color.gray, 30), style = line.style_dashed, width = 1, force_overlay = true)
+    tm_lSLo := line.new(bar_index, tm_sessLo, bar_index + 1, tm_sessLo, color = color.new(color.gray, 30), style = line.style_dashed, width = 1, force_overlay = true)
+if tm_sdVis and not na(tm_lSHi)
+    line.set_xy1(tm_lSHi, bar_index, tm_sessHi)
+    line.set_xy2(tm_lSHi, bar_index + 1, tm_sessHi)
+    line.set_xy1(tm_lSLo, bar_index, tm_sessLo)
+    line.set_xy2(tm_lSLo, bar_index + 1, tm_sessLo)
+if not tm_sdVis and not na(tm_lSHi)
+    line.delete(tm_lSHi)
+    line.delete(tm_lSLo)
+    tm_lSHi := na
+    tm_lSLo := na
+
+// Sweep Labels on Chart
+if tm_showViz and tm_showSweepLabels and tm_liq_sweepOn and tm_sweepBull
+    label.new(bar_index, low,  "Sweep+", style = label.style_label_up,   color = color.new(tm_cBull, 10), textcolor = color.white, size = size.tiny, force_overlay = true)
+if tm_showViz and tm_showSweepLabels and tm_liq_sweepOn and tm_sweepBear
+    label.new(bar_index, high, "Sweep-", style = label.style_label_down, color = color.new(tm_cBear, 10), textcolor = color.white, size = size.tiny, force_overlay = true)
+
+// --- 4. 2-Point Trendline Engine ---------------------------------------------
+var line tm_lnTlUp = na
+var line tm_lnTlDn = na
+
+bool tm_tlVis = tm_showViz and tm_showTl and tm_liq_tlOn
+bool tm_tlUpDraw = tm_tlVis and tm_tlUpOk and not na(tm_tlUpAt) and math.abs(tm_tlUpAt - close) <= tm_liq_tlMaxDev * tm_atr
+if tm_tlUpDraw
+    if not na(tm_lnTlUp)
+        line.set_xy1(tm_lnTlUp, tm_tl1LoB, tm_tl1Lo)
+        line.set_xy2(tm_lnTlUp, bar_index, tm_tlUpAt)
+    else
+        tm_lnTlUp := line.new(tm_tl1LoB, tm_tl1Lo, bar_index, tm_tlUpAt, color = color.new(tm_cBull, 30), width = 1, force_overlay = true)
+else if not na(tm_lnTlUp)
+    line.delete(tm_lnTlUp)
+    tm_lnTlUp := na
+
+bool tm_tlDnDraw = tm_tlVis and tm_tlDnOk and not na(tm_tlDnAt) and math.abs(tm_tlDnAt - close) <= tm_liq_tlMaxDev * tm_atr
+if tm_tlDnDraw
+    if not na(tm_lnTlDn)
+        line.set_xy1(tm_lnTlDn, tm_tl1HiB, tm_tl1Hi)
+        line.set_xy2(tm_lnTlDn, bar_index, tm_tlDnAt)
+    else
+        tm_lnTlDn := line.new(tm_tl1HiB, tm_tl1Hi, bar_index, tm_tlDnAt, color = color.new(tm_cBear, 30), width = 1, force_overlay = true)
+else if not na(tm_lnTlDn)
+    line.delete(tm_lnTlDn)
+    tm_lnTlDn := na
+
+// --- 5. Price Zones (S/R, FVG, Order Blocks) on Last Bar ---------------------
+var array<box> tm_zoneBoxes = array.new<box>()
+if barstate.islast and tm_showViz and tm_showPriceZones
+    for bx in tm_zoneBoxes
+        box.delete(bx)
+    array.clear(tm_zoneBoxes)
+    if tm_sr_showOn
+        for z in sr_zones
+            if not z.broken
+                color zC = z.side == 1 ? color.new(tm_cBull, 88) : color.new(tm_cBear, 88)
+                color zBC = z.side == 1 ? color.new(tm_cBull, 55) : color.new(tm_cBear, 55)
+                int zLeft = math.max(bar_index - 50, 0)
+                array.push(tm_zoneBoxes, box.new(zLeft, z.top, bar_index + tm_zoneLen, z.bot, border_color = zBC, bgcolor = zC, force_overlay = true))
+    if tm_fvg_showOn
+        for g in tm_fvgs
+            if not g.mitigated and (bar_index - g.barIdx <= 300)
+                color gC = g.side == 1 ? color.new(tm_cBull, 88) : color.new(tm_cBear, 88)
+                color gB = g.side == 1 ? color.new(tm_cBull, 55) : color.new(tm_cBear, 55)
+                int gLeft = math.max(g.barIdx, bar_index - 300)
+                array.push(tm_zoneBoxes, box.new(gLeft, g.top, g.barIdx + tm_fvg_life, g.bot, border_color = gB, bgcolor = gC, force_overlay = true))
+    if tm_ob_showOn
+        for o in tm_obs
+            if not o.mitigated and (bar_index - o.barIdx <= 300)
+                color oC = o.side == 1 ? color.new(#f5c542, 85) : color.new(#ff8b3d, 85)
+                color oB = o.side == 1 ? color.new(#f5c542, 50) : color.new(#ff8b3d, 50)
+                int oLeft = math.max(o.barIdx, bar_index - 300)
+                array.push(tm_zoneBoxes, box.new(oLeft, o.top, o.barIdx + tm_zoneLen, o.bot, border_color = oB, bgcolor = oC, force_overlay = true))
+else if array.size(tm_zoneBoxes) > 0 and not tm_showPriceZones
+    for bx in tm_zoneBoxes
+        box.delete(bx)
+    array.clear(tm_zoneBoxes)
+
+// --- 6. Indicators Overlay & Pane Plots ---------------------------------------
+plot(tm_showViz and tm_showEma ? tm_emaF : na, "EMA fast", color = color.new(color.teal, 0),   linewidth = 1, force_overlay = true)
+plot(tm_showViz and tm_showEma ? tm_emaM : na, "EMA mid",  color = color.new(color.orange, 0), linewidth = 1, force_overlay = true)
+plot(tm_showViz and tm_showEma ? tm_emaS : na, "EMA slow", color = color.new(color.red, 20),   linewidth = 1, force_overlay = true)
+plot(tm_showViz and tm_showVwap and tm_vwapOk ? tm_vwap : na, "VWAP", color = color.new(#b388ff, 0), linewidth = 1, style = plot.style_linebr, force_overlay = true)
+
+// Volume Pane (VSA 6 Bucket Colors)
+color tm_volCol = f_vsaColor(tm_vol, tm_volMA, tm_vol_spikeR, tm_vol_rVH, tm_vol_rH, tm_vol_rN, tm_vol_rL)
+plot(tm_showViz and tm_showVol ? tm_vol : na, "Volume", color = tm_volCol, style = plot.style_columns, format = format.volume)
+plot(tm_showViz and tm_vol_showMA ? tm_volMA : na, "Volume MA", color = color.new(color.green, 0), linewidth = 1, format = format.volume)
+
+// --- 7. Dashboard: Compact (default) + Advanced -------------------------------
+// v2.1: Compact answers "why is there no trade?" on one screen. Advanced keeps
+// every v1 row and adds score/lifecycle diagnostics. Both modes share one table,
+// so switching mode never deletes chart elements.
+f_dashRow(table t, int row, string key, string val, color valCol, color keyCol, color bgCol, string fSize) =>
+    table.cell(t, 0, row, key, text_color = keyCol, text_size = fSize, text_halign = text.align_left, bgcolor = bgCol)
+    table.cell(t, 1, row, val, text_color = valCol, text_size = fSize, text_halign = text.align_right, bgcolor = bgCol)
+
+bool tm_dashWanted = tm_showViz and tm_showDash
+int  tm_dashRows   = tm_dashMode == "Compact" ? 13 : 34
+var table tm_tbl   = na
+var int   tm_tblRows = 0
+
+if tm_dashWanted and (na(tm_tbl) or tm_tblRows != tm_dashRows)
+    if not na(tm_tbl)
+        table.delete(tm_tbl)
+    tm_tbl := table.new(position.top_right, 2, tm_dashRows, border_width = 1, border_color = color.new(color.gray, 70), force_overlay = true)
+    tm_tblRows := tm_dashRows
+
+if not tm_dashWanted and not na(tm_tbl)
+    table.delete(tm_tbl)
+    tm_tbl := na
+    tm_tblRows := 0
+
+tm_font = tm_dashSize == "Tiny" ? size.tiny : tm_dashSize == "Small" ? size.small : size.normal
+
+// Shared display strings
+string tm_dirTxt    = tm_dir == 1 ? "LONG" : tm_dir == -1 ? "SHORT" : "-"
+string tm_ctxTxt    = not tm_tfHierarchyOk ? "TF_WARN" : tm_ctxDir == 1 ? "Bull" : tm_ctxDir == -1 ? "Bear" : "Neutral"
+string tm_setupTxt  = not tm_tfHierarchyOk ? "TF_WARN" : tm_setupDir == 1 ? "Bull" : tm_setupDir == -1 ? "Bear" : "Neutral"
+string tm_statusTxt = f_tmLiveStatus(tm_signal, tm_posStage, tm_noTradeReason)
+string tm_reasonTxt = f_tmReasonLabel(tm_noTradeReason)
+string tm_modeTxt   = tm_activeMode == "NONE" ? f_tmReasonLabel(tm_modeReason) : tm_activeMode
+string tm_planTxt   = tm_plan2.orderType + " " + (tm_plan2.orderType == "LIMIT" ? "@" + f_fmtPx(tm_plan2.limitPrice) : "@MKT")
+string tm_perfTxt   = "TP1 " + str.tostring(tm_tp1HitRate, "#.#") + "% | Net " + str.tostring(tm_netWinrate, "#.#") + "% | " + str.tostring(tm_avgRealizedR, "+#.##;-#.##") + "R"
+int    tm_blockCount = tm_blockMask == "" ? 0 : str.length(tm_blockMask) - str.length(str.replace_all(tm_blockMask, ",", "")) + 1
+color  tm_scoreCol  = tm_dir == 1 ? tm_cBull : tm_dir == -1 ? tm_cBear : color.gray
+color  tm_regCol    = tm_regime.code == 1 ? (tm_regime.trendDir == 1 ? tm_cBull : tm_cBear) : tm_regime.code == 0 ? color.yellow : color.purple
+color  tm_sessCol   = tm_sessOverlap ? color.orange : tm_sessNy ? color.yellow : tm_sessLondon ? color.aqua : tm_sessAsia ? color.teal : color.silver
+
+if not na(tm_tbl) and barstate.islast
+    color kC = color.new(color.gray, 10)
+    color vC = color.silver
+    color bg = color.new(color.black, 100)
+    table.clear(tm_tbl, 0, 0, 1, tm_dashRows - 1)
+
+    // --- Compact mode --------------------------------------------------------
+    if tm_dashMode == "Compact"
+        string compactHead = "TM2 [" + tm_assetMode + "] " + syminfo.ticker
+        string compactReason = tm_reasonTxt + (tm_blockCount > 1 ? " (+" + str.tostring(tm_blockCount - 1) + ")" : "")
+        string funnelTxt = "Cand " + str.tostring(tm_statCandidates) + " | Elig " + str.tostring(tm_statEligible) + " | Pend " + str.tostring(tm_statPendingN) + " | Fill " + str.tostring(tm_statFilledN) + " | Closed " + str.tostring(tm_statClosedN)
+        string compactSessTxt = tm_sessName + (tm_sessOverlap ? " (London/NY)" : "") + (na(tm_sessHi) ? "" : " | " + f_fmtPx(tm_sessHi) + " / " + f_fmtPx(tm_sessLo))
+        f_dashRow(tm_tbl, 0, compactHead, timeframe.period + " | v" + tm_scoreVersion, color.orange, color.orange, bg, tm_font)
+        f_dashRow(tm_tbl, 1, "Bias / Regime", "Ctx " + tm_ctxTxt + " | Setup " + tm_setupTxt + " | " + tm_regime.name, tm_regCol, kC, bg, tm_font)
+        f_dashRow(tm_tbl, 2, "Session", compactSessTxt, tm_sessCol, kC, bg, tm_font)
+        f_dashRow(tm_tbl, 3, "Long / Short Score", "L " + str.tostring(tm_longScore100) + " | S " + str.tostring(tm_shortScore100) + " | gap " + str.tostring(tm_scoreGap), tm_scoreCol, kC, bg, tm_font)
+        f_dashRow(tm_tbl, 4, "Status", tm_statusTxt + " / " + tm_dirTxt, tm_signal ? tm_scoreCol : color.gray, kC, bg, tm_font)
+        f_dashRow(tm_tbl, 5, "Top Block Reason", compactReason, tm_noTradeReason == "OK" ? color.gray : color.orange, kC, bg, tm_font)
+        f_dashRow(tm_tbl, 6, "Entry Mode", tm_modeTxt, tm_modeReady ? color.teal : color.gray, kC, bg, tm_font)
+        f_dashRow(tm_tbl, 7, "Entry Plan", tm_planTxt, tm_plan2.orderType == "LIMIT" ? color.teal : vC, kC, bg, tm_font)
+        f_dashRow(tm_tbl, 8, "SL / Risk", (tm_plan2.valid ? f_fmtPx(tm_plan2.sl) : "-") + " / " + (tm_plan2.valid ? f_fmtPx(tm_plan2.risk) : "-"), tm_plan2.valid ? vC : color.yellow, kC, bg, tm_font)
+        string compactTpTxt = tm_plan2.valid ? f_fmtPx(tm_plan2.tp1) + " / " + f_fmtPx(tm_plan2.tp2) + " / " + f_fmtPx(tm_plan2.tp3) : "-"
+        f_dashRow(tm_tbl, 9, "TP1 / TP2 / TP3", compactTpTxt, vC, kC, bg, tm_font)
+        f_dashRow(tm_tbl, 10, "Net RR / Lev / Liq", str.tostring(tm_plan2.netRR, "#.##") + "R | " + str.tostring(tm_plan2.effLev, "#.#") + "x | " + (na(tm_plan2.liqPrice) ? "-" : f_fmtPx(tm_plan2.liqPrice)), tm_plan2.valid ? vC : color.yellow, kC, bg, tm_font)
+        f_dashRow(tm_tbl, 11, "TP1% / Net% / AvgR", tm_perfTxt, tm_avgRealizedR >= 0 ? color.green : color.red, kC, bg, tm_font)
+        f_dashRow(tm_tbl, 12, "Lifecycle", funnelTxt, vC, kC, bg, tm_font)
+    // --- Advanced mode -------------------------------------------------------
+    else
+        // Row 0: header
+        f_dashRow(tm_tbl, 0, "TM2 [" + tm_assetMode + "] " + syminfo.ticker, timeframe.period, color.orange, color.orange, bg, tm_font)
+
+        // Row 1: selected-side score
+        string advScoreTxt = tm_directionCode == "OK" ? str.tostring(tm_score100) + " / " + tm_quality : "NO TRADE (" + tm_directionCode + ")"
+        f_dashRow(tm_tbl, 1, "Score", advScoreTxt, tm_scoreCol, kC, bg, tm_font)
+
+        // Row 2: signal / status
+        string advStatus = tm_dirTxt + (tm_signal ? " [SIG]" : tm_noTradeReason != "OK" ? " [" + tm_noTradeReason + "]" : "")
+        f_dashRow(tm_tbl, 2, "Signal / Status", advStatus, tm_signal ? tm_scoreCol : color.gray, kC, bg, tm_font)
+
+        // Row 3: structure
+        f_dashRow(tm_tbl, 3, "Structure", tm_trend == 1 ? "Bullish" : tm_trend == -1 ? "Bearish" : "Ranging", tm_trend == 1 ? tm_cBull : tm_trend == -1 ? tm_cBear : color.gray, kC, bg, tm_font)
+
+        // Row 4: BOS / CHoCH / MSS
+        string structEvt = tm_bosUp or tm_bosDown ? "BOS" : tm_chochUp or tm_chochDown ? "CHoCH" : tm_mssUp or tm_mssDown ? "MSS" : "-"
+        f_dashRow(tm_tbl, 4, "BOS / CHoCH / MSS", structEvt, (tm_bosUp or tm_chochUp or tm_mssUp) ? tm_cBull : (tm_bosDown or tm_chochDown or tm_mssDown) ? tm_cBear : color.gray, kC, bg, tm_font)
+
+        // Row 5: retest / failed breakout
+        f_dashRow(tm_tbl, 5, "Retest / Fail", tm_retestBull or tm_retestBear ? "RETEST" : tm_failBull or tm_failBear ? "FAILBRK" : "-", tm_retestBull or tm_failBear ? tm_cBull : tm_retestBear or tm_failBull ? tm_cBear : color.gray, kC, bg, tm_font)
+
+        // Row 6: latest structure event
+        string tm_evtTxt = "-"
+        color tm_evtCol = color.gray
+        if array.size(tm_evtBuf) > 0
+            TMEvent tm_lastEvt = array.get(tm_evtBuf, array.size(tm_evtBuf) - 1)
+            tm_evtTxt := tm_lastEvt.kind + " " + (tm_lastEvt.dir == "bull" ? "+" : "-") + (tm_lastEvt.confirmed ? "" : "?")
+            tm_evtCol := tm_lastEvt.dir == "bull" ? tm_cBull : tm_cBear
+        f_dashRow(tm_tbl, 6, "Last event", tm_evtTxt, tm_evtCol, kC, bg, tm_font)
+
+        // Row 7: context TF
+        f_dashRow(tm_tbl, 7, "Context TF (" + tm_ctxTf + ")", tm_ctxTxt, not tm_tfHierarchyOk ? color.yellow : tm_ctxDir == 1 ? tm_cBull : tm_ctxDir == -1 ? tm_cBear : color.gray, kC, bg, tm_font)
+
+        // Row 8: setup TF
+        f_dashRow(tm_tbl, 8, "Setup TF (" + tm_setupTf + ")", tm_setupTxt, not tm_tfHierarchyOk ? color.yellow : tm_setupDir == 1 ? tm_cBull : tm_setupDir == -1 ? tm_cBear : color.gray, kC, bg, tm_font)
+
+        // Row 9: liquidity
+        f_dashRow(tm_tbl, 9, "Liquidity", tm_sweepBull ? "Sweep+" : tm_sweepBear ? "Sweep-" : "-", tm_sweepBull ? tm_cBull : tm_sweepBear ? tm_cBear : color.gray, kC, bg, tm_font)
+
+        // Row 10: PDH / PDL
+        f_dashRow(tm_tbl, 10, "PDH / PDL", f_fmtPx(tm_pdh) + " / " + f_fmtPx(tm_pdl), vC, kC, bg, tm_font)
+
+        // Row 11: PWH / PWL
+        f_dashRow(tm_tbl, 11, "PWH / PWL", f_fmtPx(tm_pwh) + " / " + f_fmtPx(tm_pwl), vC, kC, bg, tm_font)
+
+        // Row 12: session high / low
+        f_dashRow(tm_tbl, 12, "Sess Hi / Lo", (na(tm_sessHi) ? "-" : f_fmtPx(tm_sessHi)) + " / " + (na(tm_sessLo) ? "-" : f_fmtPx(tm_sessLo)), vC, kC, bg, tm_font)
+
+        // Row 13: trendline touches
+        f_dashRow(tm_tbl, 13, "Trendline touch", str.tostring(tm_tlLoTouch) + " up / " + str.tostring(tm_tlHiTouch) + " dn", vC, kC, bg, tm_font)
+
+        // Row 14: candle pattern
+        string cpLabel = tm_dispBull ? "Displacement+" : tm_dispBear ? "Displacement-" : tm_bullEng ? "Engulf+" : tm_bearEng ? "Engulf-" : tm_bullPin ? "Pin+" : tm_bearPin ? "Pin-" : tm_bullRej ? "Rej+" : tm_bearRej ? "Rej-" : "-"
+        f_dashRow(tm_tbl, 14, "Candle", cpLabel, tm_cpScore > 0 ? tm_cBull : tm_cpScore < 0 ? tm_cBear : color.gray, kC, bg, tm_font)
+
+        // Row 15: volume bucket
+        f_dashRow(tm_tbl, 15, "Volume / Bucket", str.tostring(tm_volRatio, "#.##") + "x / " + tm_volBucket, tm_isTim ? color.purple : vC, kC, bg, tm_font)
+        // Row 16: relative volume / OBV
+        f_dashRow(tm_tbl, 16, "RelVol / OBV", str.tostring(tm_relVol, "#.##") + "x / " + (tm_obvSlope > 0 ? "+" : tm_obvSlope < 0 ? "-" : "0"), tm_obvScore > 0 ? tm_cBull : tm_obvScore < 0 ? tm_cBear : vC, kC, bg, tm_font)
+
+        // Row 17: RSI / MACD
+        f_dashRow(tm_tbl, 17, "RSI / MACD", str.tostring(tm_rsi, "#.#") + " / " + str.tostring(tm_macdHist, format.mintick), tm_rsi < tm_rsiOs ? tm_cBull : tm_rsi > tm_rsiOb ? tm_cBear : vC, kC, bg, tm_font)
+
+        // Row 18: ADX / DMI
+        f_dashRow(tm_tbl, 18, "ADX / DMI", str.tostring(tm_adx, "#.#") + " / " + (tm_diPlus > tm_diMinus ? "+" : "-"), tm_adx >= tm_adxMin ? color.purple : vC, kC, bg, tm_font)
+
+        // Row 19: ATR% / BBW
+        f_dashRow(tm_tbl, 19, "ATR% / BBW", str.tostring(tm_atrPct, "#.##") + "% / " + str.tostring(tm_bbWidth, "#.##") + (tm_bbExpand ? " Exp" : " Ctr"), vC, kC, bg, tm_font)
+
+        // Row 20: VWAP / day location
+        f_dashRow(tm_tbl, 20, "VWAP / Day pos", (tm_vwapOk ? f_fmtPx(tm_vwap) : "-") + " / " + str.tostring(f_clamp(tm_dayRange, -1.0, 1.0), "+#.##;-#.##"), tm_vwapScore > 0 ? tm_cBull : tm_vwapScore < 0 ? tm_cBear : vC, kC, bg, tm_font)
+
+        // Row 21: session
+        string advSessTxt = tm_sessName + (tm_sessOverlap ? " (London/NY Overlap)" : "") + (tm_cryptoSessionNeutral ? " [24/7 Neutral]" : "")
+        f_dashRow(tm_tbl, 21, "Session", advSessTxt, tm_sessCol, kC, bg, tm_font)
+
+        // Row 22: position / orders / W-L-TO
+        string posTxt = (tm_posDir == 1 ? "LONG" : tm_posDir == -1 ? "SHORT" : "-") + " / " + str.tostring(tm_dayCount) + "/" + str.tostring(tm_maxDay) + " / " + str.tostring(tm_statNetWins) + "-" + str.tostring(tm_statFullLosses) + "-" + str.tostring(tm_statTimeouts)
+        f_dashRow(tm_tbl, 22, "Position / Orders / W-L-TO", posTxt, tm_posDir == 1 ? tm_cBull : tm_posDir == -1 ? tm_cBear : vC, kC, bg, tm_font)
+
+        // Row 23: leverage / liquidation / net RR
+        string futuresTxt = str.tostring(tm_plan2.effLev, "#.#") + "x | Liq " + (na(tm_plan2.liqPrice) ? "-" : f_fmtPx(tm_plan2.liqPrice)) + " | " + str.tostring(tm_plan2.netRR, "#.##") + "R"
+        f_dashRow(tm_tbl, 23, "Lev / Liq / Net RR", futuresTxt, tm_plan2.valid ? vC : color.yellow, kC, bg, tm_font)
+
+        // Row 24: market regime
+        f_dashRow(tm_tbl, 24, "Market Regime", tm_regime.name, tm_regCol, kC, bg, tm_font)
+
+        // Row 25: obstacle / overextension
+        bool obsBlock = tm_dir == 1 ? tm_obstacleBlockedLong : tm_dir == -1 ? tm_obstacleBlockedShort : false
+        string obsTxt = obsBlock ? "BLOCKED (< TP1)" : "CLEAR"
+        string extTxt = tm_isOverextended ? "EXT (" + str.tostring(tm_extEma, "#.#") + "x)" : "NORMAL"
+        f_dashRow(tm_tbl, 25, "Obstacle / Overext", obsTxt + " / " + extTxt, obsBlock ? color.red : tm_isOverextended ? color.yellow : tm_cBull, kC, bg, tm_font)
+
+        // Row 26: entry plan + RR evaluation target
+        f_dashRow(tm_tbl, 26, "Entry Plan (RR@" + tm_plan2.evalTarget + ")", tm_planTxt, tm_plan2.orderType == "LIMIT" ? color.teal : vC, kC, bg, tm_font)
+
+        // Row 27: performance
+        f_dashRow(tm_tbl, 27, "TP1% / Net% / Avg R", tm_perfTxt + " | BE " + str.tostring(tm_statBeSaves), tm_avgRealizedR >= 0 ? color.green : color.red, kC, bg, tm_font)
+
+        // Row 28: independent directional scores (v2.1)
+        f_dashRow(tm_tbl, 28, "Long / Short Score [v2.1]", "L " + str.tostring(tm_longScore100) + " | S " + str.tostring(tm_shortScore100), tm_scoreCol, kC, bg, tm_font)
+
+        // Row 29: direction selection diagnostics
+        string dirDiag = "cand " + (tm_candidateDir == 1 ? "LONG" : tm_candidateDir == -1 ? "SHORT" : "-") + " | gap " + str.tostring(tm_scoreGap) + " >= " + str.tostring(tm_scoreMargin)
+        f_dashRow(tm_tbl, 29, "Direction / Margin", dirDiag, tm_directionCode == "OK" ? tm_scoreCol : color.orange, kC, bg, tm_font)
+
+        // Row 30: top block reason
+        f_dashRow(tm_tbl, 30, "Top Block Reason [v2.1]", tm_reasonTxt, tm_noTradeReason == "OK" ? color.gray : color.orange, kC, bg, tm_font)
+
+        // Row 31: every active blocker
+        f_dashRow(tm_tbl, 31, "All Blockers (" + str.tostring(tm_blockCount) + ")", tm_blockMask == "" ? "-" : tm_blockMask, tm_blockCount > 0 ? color.orange : color.gray, kC, bg, tm_font)
+
+        // Row 32: active entry mode
+        string advMode = tm_modeTxt + " | ready " + (tm_modeReady ? "Y" : "N")
+        f_dashRow(tm_tbl, 32, "Entry Mode [v2.1]", advMode, tm_modeReady ? color.teal : color.gray, kC, bg, tm_font)
+
+        // Row 33: score config + lifecycle funnel
+        string cfgTxt = "v" + tm_scoreVersion + " | cfg " + tm_cfgName + " | Cand " + str.tostring(tm_statCandidates) + " | Elig " + str.tostring(tm_statEligible) + " | Pend " + str.tostring(tm_statPendingN) + " | Fill " + str.tostring(tm_statFilledN) + " | Closed " + str.tostring(tm_statClosedN)
+        f_dashRow(tm_tbl, 33, "Score Cfg / Lifecycle", cfgTxt, vC, kC, bg, tm_font)

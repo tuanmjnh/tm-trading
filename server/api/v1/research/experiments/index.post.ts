@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'invalid_proposal', message: 'body must be a proposal object' })
   }
   try {
-    const data = await createExperiment(body)
+    const data = await createExperiment(body, {}, requireOwnerId(event))
     return { success: true, data }
   } catch (err) {
     throw researchHttpError(err)

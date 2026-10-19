@@ -291,6 +291,17 @@ copy lại đường dẫn tuyệt đối của tm-hub — dùng alias tương �
 | 6 | `nuxt dev` → `[nitro] ERROR Error: spawn EPERM` | Nitro cần spawn tiến trình con cho dev worker; sandbox chặn | Chạy dev server với quyền rộng hơn |
 | 7 | Dev server chạy mà `http://127.0.0.1:4001/` **không** trả lời | Server bind IPv6 | Dùng **`http://localhost:4001/`** |
 | 8 | Xung đột cổng với tm-hub | tm-hub dùng `4000` | tm-trading dùng **`4001`** |
+| 9 | Login POST vào `localhost:4000` dù `.env` ghi `https://tm-hub-app.vercel.app` | `NUXT_PUBLIC_HUB_URL` là **runtime config**: env của tiến trình ghi đè `.env` (ví dụ lúc test offline phải set `NUXT_PUBLIC_HUB_URL=http://localhost:4000`) | Đọc `[hub-config] hubUrl=... (from ...)` ở đầu log dev server, hoặc `window.__NUXT__.config.public.hubUrl` trong browser. Khởi động lại **không kèm** override là về lại `.env` |
+| 10 | Biến env rỗng nhưng không báo gì, app im lặng trỏ về localhost | `A \|\| B \|\| 'http://localhost:4000'` coi chuỗi rỗng là "không có" | Từ 2026-10-17: `shared/utils/hubEnv.ts` resolve tường minh, cảnh báo biến rỗng và tên legacy (`HUB_URL`, `NUXT_PUBLIC_HUB_API_URL`), `hubUrlSource` hiển thị nguồn đã chọn |
+
+### Quy tắc resolve Hub endpoint (chốt 2026-10-17)
+
+Thứ tự: `NUXT_PUBLIC_HUB_URL` → `HUB_URL` → `NUXT_PUBLIC_HUB_API_URL` → mặc định
+`http://localhost:4000`. Biến **được khai báo nhưng rỗng** bị bỏ qua **kèm cảnh báo**
+(đây chính là cách cấu hình sai trước đây biến thành "login không chạy" mà không có
+thông báo nào). `useAuth()` và `useHub()` dùng **cùng một** `useHubEndpoint()` — không
+còn fallback `localhost` riêng ở từng composable, vì hai chỗ resolve khác nhau sẽ tạo
+ra trạng thái "đăng nhập được nhưng menu rỗng".
 
 ---
 

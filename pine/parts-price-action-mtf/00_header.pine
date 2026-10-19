@@ -1,0 +1,46 @@
+//@version=6
+{{DECL}}
+{{SHARED}}
+
+// =============================================================================
+//  PRICE ACTION MTF  -  v1.0.0
+//  Indicator Price Action + hoi tu da khung (MTF confluence) theo phuong phap
+//  "Nh Kien Thuc Trading" - docs/indicator/price-action-mtf/
+//  (copy-on-write tu TM XAU Signals 2 / parts-xau2, KHONG sua ban cu)
+//
+//  Layer structure:
+//    L0  CONFIG       - input nhom (Moi tinh nang co toggle rieng)
+//    L1  CORE         - ATR/ATR%, volume VSA, RelVol, OBV, EMA 20/50/200,
+//                       displacement, pivots, session detect
+//    L2  MARKET STR   - Swing, HH/HL/LH/LL, BOS, CHoCH, MSS, Retest,
+//                       Failed Breakout, Continuation, Pullback  -> UDT PaEvent
+//                       + B-P0-1: Double/Triple Top-Bottom + Vai dau vai
+//    L3  LIQUIDITY    - PDH/PDL, PWH/PWL, Session Hi/Lo, Equal Hi/Lo, Sweep,
+//                       Trendline 2 diem (touchCount/slope/break)
+//    L4  ZONES        - S/R zones + FVG + Order Block (tuong doi, rieng toggle)
+//    L5  CANDLE       - Pin, Engulfing, Displacement, Rejection
+//                       + B-P0-2: Inside bar / Doji / 3 Soldiers-Crows
+//                       + B-P1-1: volume veto nguong High (ratio >= 1.2)
+//                       + B-P1-4: dem chuoi engulfing
+//    L6  INDICATORS   - nhom theo chuc nang:
+//                       Trend / Momentum(RSI+MACD+DMI) / Volatility(ATR%+BBW) /
+//                       Volume(RelVol+OBV+VSA) / Location(VWAP+day range)
+//    L7  MTF CONTEXT  - Context TF (H4/D/W/M) + Setup TF (H1/M15); entry = chart
+//                       TF - LTF khong duoc override HTF (co VETO ro rang)
+//    L8  SCORING      - 0-100, 11 nhom trong so tong 100 + B-P0-3 CONFLUENCE 0-3
+//                       (trend + level + xac nhan) - alert `setup` chi khi 3/3
+//    L9  RISK         - Entry/SL/TP plan + gate (+ B-P1-2 regime gate,
+//                       B-P1-3 measured-move TP)
+//    L10 STATE        - position lifecycle
+//    L11 VIZ          - dashboard chuan parts-xau/80_viz.pine (table.clear +
+//                       key gray-10 / value silver / nen trong suot + dong Session)
+//    L12 ALERTS       - webhook JSON: moi event kem {kind,dir,ts,tf,confirmed,level}
+//                       + PA MTF SETUP (confluence 3/3) + PA MTF PATTERN
+//
+//  Core principles:
+//    - No repaint on confirmed signals (barstate.isconfirmed gate)
+//    - No future data leakage (request.security [1] + lookahead_on)
+//    - Moi event UDT PaEvent: source timestamp + timeframe + confirmed + level
+//    - Tat ca nguong/trong so deu configurable (khong hard-code)
+//    - Toggle OFF moi afterfix => hanh vi TRUNG ban cu (parts-xau2)
+// =============================================================================

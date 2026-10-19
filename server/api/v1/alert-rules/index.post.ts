@@ -10,6 +10,6 @@ import { createAlertRule } from '../../../utils/alertRules'
  */
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  const rule = await createAlertRule(body)
+  const rule = await createAlertRule(body, requireOwnerId(event))
   return { success: true, data: rule }
 })

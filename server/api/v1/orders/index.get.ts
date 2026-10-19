@@ -17,9 +17,12 @@ export default defineEventHandler(async (event) => {
 
   const { items, meta, mongo } = await listPaperOrders({
     limit,
+    ownerId: requireOwnerId(event),
     cursor,
     status: query.status ? String(query.status) : undefined,
-    symbol: query.symbol ? String(query.symbol) : undefined
+    symbol: query.symbol ? String(query.symbol) : undefined,
+    sessionId: query.sessionId ? String(query.sessionId) : undefined,
+    account: query.account ? String(query.account) : undefined
   })
 
   const { data: paged, nextCursor } = cursorPage(items, limit, (item) => item.id)

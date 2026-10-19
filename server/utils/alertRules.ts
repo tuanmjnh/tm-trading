@@ -79,6 +79,8 @@ function assertId(id: string): string {
 
 export interface ListAlertRulesQuery {
   limit: number
+  /** Tenancy (roadmap §61.3): only the caller's own rules are ever returned. */
+  ownerId: string
   enabled?: boolean
 }
 
@@ -92,7 +94,7 @@ export async function listAlertRules(q: ListAlertRulesQuery): Promise<ListAlertR
   const AlertRule = await alertRuleModel()
   if (!AlertRule) return { items: [], total: 0, mongo: 'down' }
 
-  const filter: Record<string, unknown> = {}
+  const filter: Record<string, unknown> = { ownerId: q.ownerId }
   if (q.enabled !== undefined) filter.enabled = q.enabled
 
   try {
@@ -105,11 +107,11 @@ export async function listAlertRules(q: ListAlertRulesQuery): Promise<ListAlertR
   }
 }
 
-export async function getAlertRuleById(id: string): Promise<AlertRule | null> {
+export async function getAlertRuleById(id: string, ownerId: string): Promise<AlertRule | null> {
   const AlertRule = await alertRuleModel()
   if (!AlertRule) return null
   assertId(id)
-  const doc = await AlertRule.findById(id).lean()
+  const doc = await AlertRule.findOne({ _id: id, ownerId }).lean()
   return doc ? serializeRule(doc) : null
 }
 
@@ -124,12 +126,12 @@ async function buildNormalized(body: unknown): Promise<Record<string, unknown>> 
   return { ...normalized, ruleKey: ruleKeyFor(normalized) }
 }
 
-export async function createAlertRule(body: unknown): Promise<AlertRule> {
+export async function createAlertRule(body: unknown, ownerId: string): Promise<AlertRule> {
   const AlertRule = await alertRuleModel()
   if (!AlertRule) {
     throw createError({ statusCode: 503, statusMessage: 'mongo_down', message: 'MongoDB unavailable — rule not saved' })
   }
-  const doc = await buildNormalized(body)
+  const doc = { ...(await buildNormalized(body)), ownerId }
   try {
     const created = await AlertRule.create(doc)
     return serializeRule(created.toObject())
@@ -141,14 +143,14 @@ export async function createAlertRule(body: unknown): Promise<AlertRule> {
   }
 }
 
-export async function updateAlertRule(id: string, body: unknown): Promise<AlertRule> {
+export async function updateAlertRule(id: string, body: unknown, ownerId: string): Promise<AlertRule> {
   const AlertRule = await alertRuleModel()
   if (!AlertRule) {
     throw createError({ statusCode: 503, statusMessage: 'mongo_down', message: 'MongoDB unavailable — rule not saved' })
   }
   assertId(id)
 
-  const current = await AlertRule.findById(id).lean()
+  const current = await AlertRule.findOne({ _id: id, ownerId }).lean()
   if (!current) {
     throw createError({ statusCode: 404, statusMessage: 'not_found', message: `alert rule not found: ${id}` })
   }
@@ -174,7 +176,7 @@ export async function updateAlertRule(id: string, body: unknown): Promise<AlertR
   const doc = await buildNormalized(merged)
 
   try {
-    const updated = await AlertRule.findByIdAndUpdate(id, { $set: doc }, { new: true }).lean()
+    const updated = await AlertRule.findOneAndUpdate({ _id: id, ownerId }, { $set: doc }, { new: true }).lean()
     if (!updated) {
       throw createError({ statusCode: 404, statusMessage: 'not_found', message: `alert rule not found: ${id}` })
     }
@@ -188,13 +190,13 @@ export async function updateAlertRule(id: string, body: unknown): Promise<AlertR
   }
 }
 
-export async function deleteAlertRule(id: string): Promise<{ id: string }> {
+export async function deleteAlertRule(id: string, ownerId: string): Promise<{ id: string }> {
   const AlertRule = await alertRuleModel()
   if (!AlertRule) {
     throw createError({ statusCode: 503, statusMessage: 'mongo_down', message: 'MongoDB unavailable — rule not deleted' })
   }
   assertId(id)
-  const deleted = await AlertRule.findByIdAndDelete(id).lean()
+  const deleted = await AlertRule.findOneAndDelete({ _id: id, ownerId }).lean()
   if (!deleted) {
     throw createError({ statusCode: 404, statusMessage: 'not_found', message: `alert rule not found: ${id}` })
   }

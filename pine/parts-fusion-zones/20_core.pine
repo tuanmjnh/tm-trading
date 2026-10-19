@@ -1,0 +1,91 @@
+// =============================================================================
+//  20_CORE — ATR, MA Factory, Sessions, Asset Profile & Regime Classifier
+// =============================================================================
+
+// --- 1. Bar Close Filter (No-Repaint Control) --------------------------------
+fz_isConfirmed = not fz_confirmOnly or barstate.isconfirmed
+
+// --- 2. Volatility (ATR) -----------------------------------------------------
+fz_atr14 = ta.atr(14)
+fz_atrSafe = math.max(fz_atr14, syminfo.mintick * 2)
+
+// --- 3. MA Factory Function --------------------------------------------------
+f_calcMa(float src, int len, string maType) =>
+    float sVal = ta.sma(src, len)
+    float hVal = ta.hma(src, len)
+    float eVal = ta.ema(src, len)
+    maType == "SMA" ? sVal : maType == "HMA" ? hVal : eVal
+
+// --- 4. Market Sessions ------------------------------------------------------
+fz_isAsia   = f_sessAsia(fz_sessTz)
+fz_isLondon = f_sessLondon(fz_sessTz)
+fz_isNy     = f_sessNy(fz_sessTz)
+fz_curSess  = f_sessName(fz_isAsia, fz_isLondon, fz_isNy)
+
+// --- 5. Asset Profile Auto-Detection -----------------------------------------
+string fz_effAsset = fz_assetMode
+if fz_assetMode == "Auto"
+    string sym = syminfo.ticker
+    if str.contains(sym, "XAU") or str.contains(sym, "GOLD")
+        fz_effAsset := "XAU"
+    else if str.contains(sym, "BTC")
+        fz_effAsset := "BTC"
+    else if str.contains(sym, "ETH")
+        fz_effAsset := "ETH"
+    else if syminfo.type == "crypto"
+        fz_effAsset := "Crypto Other"
+    else
+        fz_effAsset := "Custom"
+
+// Profile-specific adjustment factor for volatility buffers
+float fz_assetVolMult = 1.0
+if fz_effAsset == "XAU"
+    fz_assetVolMult := 1.10
+else if fz_effAsset == "BTC"
+    fz_assetVolMult := 1.25
+else if fz_effAsset == "ETH"
+    fz_assetVolMult := 1.20
+else if fz_effAsset == "Crypto Other"
+    fz_assetVolMult := 1.35
+
+// --- 6. Regime Classifier (Trend vs Range vs High Volatility) ----------------
+// We use a combination of ADX(14) and Choppiness Index(14)
+fz_tr14    = ta.tr(true)
+fz_atr14_  = ta.atr(14)
+fz_chgHigh = ta.change(high)
+fz_chgLow  = ta.change(low)
+float fz_dmPos = fz_chgHigh > 0 and fz_chgHigh > (0 - fz_chgLow) ? math.max(fz_chgHigh, 0.0) : 0.0
+float fz_dmNeg = (0 - fz_chgLow) > 0 and (0 - fz_chgLow) > fz_chgHigh ? math.max(0.0 - fz_chgLow, 0.0) : 0.0
+fz_trSm    = ta.rma(fz_tr14, 14)
+fz_rmaPos  = ta.rma(fz_dmPos, 14)
+fz_rmaNeg  = ta.rma(fz_dmNeg, 14)
+fz_diPos   = fz_trSm > 0 ? 100.0 * fz_rmaPos / fz_trSm : 0.0
+fz_diNeg   = fz_trSm > 0 ? 100.0 * fz_rmaNeg / fz_trSm : 0.0
+fz_dx      = (fz_diPos + fz_diNeg) > 0 ? 100.0 * math.abs(fz_diPos - fz_diNeg) / (fz_diPos + fz_diNeg) : 0.0
+fz_adx     = ta.rma(fz_dx, 14)
+
+// Choppiness Index (14)
+float fz_ciSumTr = math.sum(fz_tr14, 14)
+float fz_ciMaxHi = ta.highest(high, 14)
+float fz_ciMinLo = ta.lowest(low, 14)
+float fz_ciDiff  = fz_ciMaxHi - fz_ciMinLo
+float fz_chop    = 50.0
+if fz_ciDiff > 0 and fz_ciSumTr > 0
+    fz_chop := 100.0 * (math.log10(fz_ciSumTr / fz_ciDiff) / math.log10(14.0))
+
+// Classification:
+// - Trending if ADX >= 23 and Chop <= 55
+// - Range/Chop if Chop >= 60 or ADX < 20
+// - Transitional/Neutral otherwise
+string fz_regime = "Neutral"
+bool fz_isTrending = false
+bool fz_isRanging  = false
+
+if fz_adx >= 23.0 and fz_chop <= 56.0
+    fz_regime := "Trending"
+    fz_isTrending := true
+else if fz_chop >= 58.0 or fz_adx < 18.0
+    fz_regime := "Range"
+    fz_isRanging := true
+else
+    fz_regime := "Transitional"

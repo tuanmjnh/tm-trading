@@ -5,6 +5,10 @@ import mongoose from 'mongoose'
 
 const PositionSchema = new mongoose.Schema(
   {
+    // Tenancy (docs/web-app/user-tenancy-plan.md): hub user id (`sub`) that owns
+    // the row. `account` below is a sub-book inside one owner, never the owner.
+    ownerId: { type: String, default: null, index: true },
+
     account: { type: String, required: true },
     source: { type: String, enum: ['paper', 'mt5', 'exchange', 'manual'], default: 'paper' },
 
@@ -75,6 +79,12 @@ const PositionSchema = new mongoose.Schema(
     // slippage = adverse bps applied on top of the quote at the entry fill.
     orderType: { type: String, default: null },
     slippage: { type: Number, default: null },
+    // v3 §17.1b: per-position leverage intent from the ticket (1..125x, null =
+    // legacy/account-level). Drives isolated marginUsed + liq distance through
+    // simulation/margin.mjs modelForPosition — never the risk gate caps (D7).
+    leverage: { type: Number, default: null },
+    // Slice C: trading session this position belongs to (additive, nullable).
+    sessionId: { type: String, default: null, index: true },
     // §34: execution fidelity level (F0..F4) — the precision tier of the fill
     // model that produced this position. null = not recorded (legacy).
     fidelity: { type: String, default: null },
@@ -84,7 +94,9 @@ const PositionSchema = new mongoose.Schema(
 
 PositionSchema.index({ account: 1, status: 1 })
 PositionSchema.index({ symbol: 1, entryTime: -1 })
-// externalId phai duy nhat TRONG mot account+nguon, nhung cho phep null (lenh tay)
-PositionSchema.index({ account: 1, source: 1, externalId: 1 }, { unique: true, sparse: true })
+// externalId phai duy nhat TRONG mot owner+account+nguon, nhung cho phep null
+// (lenh tay). ownerId vao khoa (roadmap §61.3): hai tenant co the co cung
+// (account, source, externalId).
+PositionSchema.index({ ownerId: 1, account: 1, source: 1, externalId: 1 }, { unique: true, sparse: true })
 
 export const Position = mongoose.models.positions || mongoose.model('positions', PositionSchema)

@@ -23,13 +23,17 @@ export default defineEventHandler(async (event) => {
   const { limit, cursor } = getListParams(event, 50, 200)
   const query = getQuery(event)
 
+  const ownerId = requireOwnerId(event)
+
   const { items, total, open, closed, realizedPnlAbs, mongo } = await listPositions({
     limit,
+    ownerId,
     cursor,
     status: query.status ? String(query.status) : undefined,
     symbol: query.symbol ? String(query.symbol) : undefined,
     source: query.source ? String(query.source) : undefined,
-    account: query.account ? String(query.account) : undefined
+    account: query.account ? String(query.account) : undefined,
+    sessionId: query.sessionId ? String(query.sessionId) : undefined
   })
 
   // Live numbers (v3 §19/§20): best-effort, never blocking. Plane rows carry
@@ -62,11 +66,13 @@ export default defineEventHandler(async (event) => {
   const margin = await simulationMargin()
   const MARGIN_DEFAULTS = margin.MARGIN_DEFAULTS
 
-  const data = items.map((p) =>
+  // enrichPosition is async — awaiting per row (was: un-awaited Promise
+  // objects serialized as {}, so `live` never reached the dashboard).
+  const data = await Promise.all(items.map(async (p) =>
     p.status === 'open'
-      ? { ...p, live: enrichPosition(p, quoteFor(p.symbol), MARGIN_DEFAULTS) }
+      ? { ...p, live: await enrichPosition(p, quoteFor(p.symbol), MARGIN_DEFAULTS) }
       : p
-  )
+  ))
 
   const {
     data: paged,
@@ -87,6 +93,7 @@ export default defineEventHandler(async (event) => {
       // refresh / reconnect / backend restart). Realized-based numbers never
       // need a quote; unrealized/margin are null when the plane is down.
       account: mongo === 'up' ? await paperAccount({
+        ownerId,
         account: query.account ? String(query.account) : undefined,
         quoteFor,
         model: MARGIN_DEFAULTS,

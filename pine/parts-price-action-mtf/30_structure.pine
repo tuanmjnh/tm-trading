@@ -1,0 +1,390 @@
+// =============================================================================
+//  L2 - MARKET STRUCTURE ENGINE  (v2 §1)
+//  Swing -> HH/HL/LH/LL -> BOS -> CHoCH -> MSS -> Retest -> Failed Breakout
+//           -> Trend continuation / Pullback
+//  Moi event deu la structured data (UDT PaEvent): source timestamp, timeframe,
+//  confirmation state, price levels. Confirmed events khong repaint.
+// =============================================================================
+
+type PaEvent
+    string kind      // BOS / CHoCH / MSS / RETEST / FAILBRK / CONT / PULL / SWEEP
+    string dir       // bull / bear
+    int    srcBar    // bar_index cua nguon (khong phai bar hien tai)
+    int    srcTime   // timestamp UTC cua nguon
+    string tf        // timeframe.period luc do
+    bool   confirmed // barstate.isconfirmed luc event xay ra
+    float  level     // gia quan trong (swing/level bi pha)
+
+var array<PaEvent> pa_evtBuf = array.new<PaEvent>()
+
+f_pushEvent(string kind, string dir, int srcBar, int srcTime, bool confirmed, float level) =>
+    array.push(pa_evtBuf, PaEvent.new(kind, dir, srcBar, srcTime, timeframe.period, confirmed, level))
+    if array.size(pa_evtBuf) > 50
+        array.shift(pa_evtBuf)
+
+// --- State --------------------------------------------------------------------
+var float pa_lastHigh    = na
+var float pa_prevHigh    = na
+var float pa_lastLow     = na
+var float pa_prevLow     = na
+var int   pa_lastHighBar = na
+var int   pa_lastLowBar  = na
+var int   pa_trend       = 0    // 1=bull, -1=bear, 0=undefined
+
+var bool pa_bosUp    = false
+var bool pa_bosDown  = false
+var bool pa_chochUp  = false
+var bool pa_chochDown = false
+var bool pa_mssUp    = false
+var bool pa_mssDown  = false
+
+var float pa_brkLevel = na    // level moi bi pha (dung cho retest/fail)
+var int   pa_brkDir   = 0
+var int   pa_brkBar   = na
+
+pa_bosUp    := false
+pa_bosDown  := false
+pa_chochUp  := false
+pa_chochDown := false
+pa_mssUp    := false
+pa_mssDown  := false
+
+bool pa_okConfirmed = not pa_confirmOnly or barstate.isconfirmed
+
+// --- Pivot processing ---------------------------------------------------------
+if not na(pa_pivH)
+    float pa_newH = high[pa_ms_swLen]
+    int   pa_newHBar = bar_index - pa_ms_swLen
+    if not na(pa_lastHigh)
+        if pa_trend <= 0 and close > pa_lastHigh
+            pa_bosUp   := true
+            pa_trend   := 1
+            pa_brkLevel := pa_lastHigh
+            pa_brkDir  := 1
+            pa_brkBar  := pa_newHBar
+        if pa_trend < 0 and pa_newH > pa_lastHigh
+            pa_chochUp := true
+            pa_trend   := 1
+            pa_brkLevel := pa_lastHigh
+            pa_brkDir  := 1
+            pa_brkBar  := pa_newHBar
+        pa_prevHigh := pa_lastHigh
+    pa_lastHigh    := pa_newH
+    pa_lastHighBar := pa_newHBar
+
+if not na(pa_pivL)
+    float pa_newL = low[pa_ms_swLen]
+    int   pa_newLBar = bar_index - pa_ms_swLen
+    if not na(pa_lastLow)
+        if pa_trend >= 0 and close < pa_lastLow
+            pa_bosDown := true
+            pa_trend   := -1
+            pa_brkLevel := pa_lastLow
+            pa_brkDir  := -1
+            pa_brkBar  := pa_newLBar
+        if pa_trend > 0 and pa_newL < pa_lastLow
+            pa_chochDown := true
+            pa_trend     := -1
+            pa_brkLevel  := pa_lastLow
+            pa_brkDir   := -1
+            pa_brkBar   := pa_newLBar
+        pa_prevLow := pa_lastLow
+    pa_lastLow    := pa_newL
+    pa_lastLowBar := pa_newLBar
+
+// --- MSS: pha vung bang displacement candle (body >= ATR x, dong ngoai cuc tri) -
+if pa_bosUp and pa_dispBull
+    pa_mssUp := true
+if pa_bosDown and pa_dispBear
+    pa_mssDown := true
+if pa_chochUp and pa_dispBull
+    pa_mssUp := true
+if pa_chochDown and pa_dispBear
+    pa_mssDown := true
+
+// --- HH/HL/LH/LL classification ------------------------------------------------
+pa_isHH = not na(pa_pivH) and not na(pa_prevHigh) and high[pa_ms_swLen] > pa_prevHigh
+pa_isLH = not na(pa_pivH) and not na(pa_prevHigh) and high[pa_ms_swLen] < pa_prevHigh
+pa_isHL = not na(pa_pivL) and not na(pa_prevLow)  and low[pa_ms_swLen]  > pa_prevLow
+pa_isLL = not na(pa_pivL) and not na(pa_prevLow)  and low[pa_ms_swLen]  < pa_prevLow
+
+// --- Retest: gia tro lai vung moi bi pha (trong cua so retestBars) -------------
+pa_retestBull = pa_ms_retestOn and pa_brkDir == 1 and not na(pa_brkLevel) and not na(pa_brkBar) and bar_index - pa_brkBar <= pa_ms_retestBars and low <= pa_brkLevel + pa_ms_retestTol * pa_atr and close > pa_brkLevel
+pa_retestBear = pa_ms_retestOn and pa_brkDir == -1 and not na(pa_brkLevel) and not na(pa_brkBar) and bar_index - pa_brkBar <= pa_ms_retestBars and high >= pa_brkLevel - pa_ms_retestTol * pa_atr and close < pa_brkLevel
+
+// --- Failed Breakout: pha roi dong tro lai ben trong trong failBars -------------
+pa_failBull = pa_ms_failOn and pa_brkDir == -1 and not na(pa_brkLevel) and not na(pa_brkBar) and bar_index - pa_brkBar <= pa_ms_failBars and close > pa_brkLevel
+pa_failBear = pa_ms_failOn and pa_brkDir == 1 and not na(pa_brkLevel) and not na(pa_brkBar) and bar_index - pa_brkBar <= pa_ms_failBars and close < pa_brkLevel
+
+// =============================================================================
+//  B-P0-1 MAU HINH GIA (method n05): Double/Triple Top-Bottom + Vai dau vai
+//  Quy tac quan trong nhat cua video: "cho xac nhan pha vai" - tuc la mau hinh
+//  CHI TRONG THAI (status = FORMING), tin hieu chi phat khi PHA NECKLINE.
+//
+//  Cach lam (khong doi hoi ve them gi):
+//    - 2 dinh/day gan nhat (pa_lastHigh/prevHigh, pa_lastLow/prevLow da co o tren)
+//      nam trong band ± pa_patBand x ATR  -> ve Double Top / Double Bottom.
+//    - Voi DOUBLE: neckline = day giua 2 dinh (cho DT) / dinh giua 2 day (cho DB).
+//      Lay tu ta.lowest(low, ...) / ta.highest(high, ...) tren khoang giua 2 pivot.
+//    - Vai dau vai: dau = dinh GIUA (pa_lastHigh) cao hon 2 vai; 2 vai gan nhau.
+//      Voi H&S nguoc: dau = day giua thap hon 2 vai.
+//    - Triple: 3 pivot lien tiep trong band (dung chuoi dem khi xu ly pivot).
+//    - Pha neckline: close vuot qua neckline theo huong dao chieu -> PATTERN event.
+// =============================================================================
+type PaPattern
+    string kind      // DT / DB / HST / HSN (double top, double bottom, H&S top, inverse)
+    string dir       // bull / bear  (huong tin hieu sau khi pha neckline)
+    float  a         // dinh/day 1
+    float  b         // dinh/day 2 (hoac dau voi H&S)
+    float  c         // dinh/day 3 (0.0 voi double)
+    float  neck      // neckline
+    int    aBar
+    int    bBar
+    int    cBar
+    bool   broken    // da pha neckline
+    int    brkBar
+
+var array<PaPattern> pa_pats = array.new<PaPattern>()
+
+// Lich su pivot (giu 4 muc gan nhat moi loai - du cho double/triple/H&S)
+var array<float> pa_hiPx  = array.new<float>()
+var array<int>   pa_hiBar = array.new<int>()
+var array<float> pa_loPx  = array.new<float>()
+var array<int>   pa_loBar = array.new<int>()
+
+if not na(pa_pivH)
+    array.push(pa_hiPx, high[pa_ms_swLen])
+    array.push(pa_hiBar, bar_index - pa_ms_swLen)
+    while array.size(pa_hiPx) > 4
+        array.shift(pa_hiPx)
+        array.shift(pa_hiBar)
+if not na(pa_pivL)
+    array.push(pa_loPx, low[pa_ms_swLen])
+    array.push(pa_loBar, bar_index - pa_ms_swLen)
+    while array.size(pa_loPx) > 4
+        array.shift(pa_loPx)
+        array.shift(pa_loBar)
+
+float pa_band = pa_atr * pa_patBand
+
+f_inBand(float x, float y) =>
+    not na(x) and not na(y) and math.abs(x - y) <= pa_band
+
+// --- Neckline tu khoang giua 2 pivot ------------------------------------------
+//  Neckline = cuc tri NGUOC chieu trong khoang giua 2 pivot. Tinh bang buffer
+//  theo bar_index thay vi `ta.lowest(low[off], len)`: offset dong trong [] co the
+//  vuot buffer lich su (RE10143 - loi da gap that o parts-xau2 20_core OBV).
+//  Buffer giu 1200 bar > pa_patMaxBars toi da (1000).
+var array<float> pa_lowBuf  = array.new<float>()
+var array<float> pa_highBuf = array.new<float>()
+
+array.push(pa_lowBuf, low)
+array.push(pa_highBuf, high)
+while array.size(pa_lowBuf) > 1200
+    array.shift(pa_lowBuf)
+    array.shift(pa_highBuf)
+
+// Cuc tri thap nhat / cao nhat trong khoang (b1, b2) - khong tinh 2 dau mut
+f_bufMinLow(int b1, int b2) =>
+    float res = na
+    int   n   = array.size(pa_lowBuf)
+    for k = b1 + 1 to b2 - 1
+        int off = bar_index - k
+        if off >= 0 and off < n
+            float v = array.get(pa_lowBuf, n - 1 - off)
+            res := na(res) ? v : math.min(res, v)
+    res
+
+f_bufMaxHigh(int b1, int b2) =>
+    float res = na
+    int   n   = array.size(pa_highBuf)
+    for k = b1 + 1 to b2 - 1
+        int off = bar_index - k
+        if off >= 0 and off < n
+            float v = array.get(pa_highBuf, n - 1 - off)
+            res := na(res) ? v : math.max(res, v)
+    res
+
+// --- Phat hien khi co pivot moi -------------------------------------------------
+bool pa_newDT = false
+bool pa_newDB = false
+bool pa_newHST = false
+bool pa_newHSN = false
+
+if pa_patOn and not na(pa_pivH) and array.size(pa_hiPx) >= 2
+    float h1 = array.get(pa_hiPx, array.size(pa_hiPx) - 2)
+    float h2 = array.get(pa_hiPx, array.size(pa_hiPx) - 1)
+    int   b1 = array.get(pa_hiBar, array.size(pa_hiBar) - 2)
+    int   b2 = array.get(pa_hiBar, array.size(pa_hiBar) - 1)
+    bool  fresh2 = bar_index - b1 <= pa_patMaxBars
+    float neckDT = f_bufMinLow(b1, b2)
+    // Double Top: 2 dinh bang nhau -> day thap nhat giua chung la neckline
+    if fresh2 and f_inBand(h1, h2) and not na(neckDT)
+        pa_newDT := true
+        array.push(pa_pats, PaPattern.new("DT", "bear", h1, h2, 0.0, neckDT, b1, b2, 0, false, 0))
+    // Vai dau vai dinh: dinh thu 2 CAO HON han dinh 1 -> can dinh thu 3 thap gan bang dinh 1
+    if fresh2 and array.size(pa_hiPx) >= 3 and h1 > 0.0 and h2 >= h1 * pa_patHsRatio and not na(neckDT)
+        pa_newHST := true
+        array.push(pa_pats, PaPattern.new("HST", "bear", h1, h2, 0.0, neckDT, b1, b2, 0, false, 0))
+
+if pa_patOn and not na(pa_pivL) and array.size(pa_loPx) >= 2
+    float l1 = array.get(pa_loPx, array.size(pa_loPx) - 2)
+    float l2 = array.get(pa_loPx, array.size(pa_loPx) - 1)
+    int   b1 = array.get(pa_loBar, array.size(pa_loBar) - 2)
+    int   b2 = array.get(pa_loBar, array.size(pa_loBar) - 1)
+    bool  fresh2 = bar_index - b1 <= pa_patMaxBars
+    float neckDB = f_bufMaxHigh(b1, b2)
+    if fresh2 and f_inBand(l1, l2) and not na(neckDB)
+        pa_newDB := true
+        array.push(pa_pats, PaPattern.new("DB", "bull", l1, l2, 0.0, neckDB, b1, b2, 0, false, 0))
+    // Vai dau vai nguoc: day thu 2 THAP HON han day 1
+    if fresh2 and array.size(pa_loPx) >= 3 and l2 > 0.0 and l2 <= l1 / pa_patHsRatio and not na(neckDB)
+        pa_newHSN := true
+        array.push(pa_pats, PaPattern.new("HSN", "bull", l1, l2, 0.0, neckDB, b1, b2, 0, false, 0))
+
+// Mo rong vai thu 3 cho H&S: khi co them pivot va no gan bang vai thu nhat
+if pa_patOn and array.size(pa_hiPx) >= 3
+    float h1 = array.get(pa_hiPx, array.size(pa_hiPx) - 3)
+    float h3 = array.get(pa_hiPx, array.size(pa_hiPx) - 1)
+    int   b3 = array.get(pa_hiBar, array.size(pa_hiBar) - 1)
+    for p in pa_pats
+        if p.kind == "HST" and p.c == 0.0 and f_inBand(h1, h3)
+            p.c    := h3
+            p.cBar := b3
+if pa_patOn and array.size(pa_loPx) >= 3
+    float l1 = array.get(pa_loPx, array.size(pa_loPx) - 3)
+    float l3 = array.get(pa_loPx, array.size(pa_loPx) - 1)
+    int   b3 = array.get(pa_loBar, array.size(pa_loBar) - 1)
+    for p in pa_pats
+        if p.kind == "HSN" and p.c == 0.0 and f_inBand(l1, l3)
+            p.c    := l3
+            p.cBar := b3
+
+// Gioi han so mau hinh luu
+while array.size(pa_pats) > 30
+    array.shift(pa_pats)
+
+// --- PHA NECKLINE -> tin hieu (day la tin hieu THAT, khong phai du doan) --------
+bool pa_hsTopBrk = false
+bool pa_hsBotBrk = false
+bool pa_dtBrk    = false
+bool pa_dbBrk    = false
+bool pa_triple   = false
+
+for p in pa_pats
+    if not p.broken and not na(p.neck) and bar_index > p.bBar
+        if (p.kind == "DT" or p.kind == "HST") and close < p.neck and close[1] >= p.neck
+            p.broken := true
+            p.brkBar := bar_index
+            if p.kind == "DT"
+                pa_dtBrk := true
+            else
+                pa_hsTopBrk := true
+        if (p.kind == "DB" or p.kind == "HSN") and close > p.neck and close[1] <= p.neck
+            p.broken := true
+            p.brkBar := bar_index
+            if p.kind == "DB"
+                pa_dbBrk := true
+            else
+                pa_hsBotBrk := true
+
+// Triple top/bottom: 3 dinh/day gan nhau (double da bat -> chi can them 1 pivot nua)
+if pa_patOn and array.size(pa_hiPx) >= 3
+    float h1 = array.get(pa_hiPx, array.size(pa_hiPx) - 3)
+    float h3 = array.get(pa_hiPx, array.size(pa_hiPx) - 1)
+    pa_triple := f_inBand(h1, h3)
+if pa_patOn and array.size(pa_loPx) >= 3
+    float l1 = array.get(pa_loPx, array.size(pa_loPx) - 3)
+    float l3 = array.get(pa_loPx, array.size(pa_loPx) - 1)
+    pa_triple := pa_triple or f_inBand(l1, l3)
+
+// Pattern dang TRONG THAI (chua pha neckline) - de ve duong dut net "ky vong"
+var float pa_patNeck = na
+var string pa_patKind = "-"
+var string pa_patDir = "-"
+pa_patNeck := na
+pa_patKind := "-"
+pa_patDir  := "-"
+if pa_patOn and array.size(pa_pats) > 0
+    PaPattern pLast = array.get(pa_pats, array.size(pa_pats) - 1)
+    if not pLast.broken
+        pa_patNeck := pLast.neck
+        pa_patKind := pLast.kind
+        pa_patDir  := pLast.dir
+
+bool pa_patSignal = pa_hsTopBrk or pa_hsBotBrk or pa_dtBrk or pa_dbBrk
+string pa_patSigKind = pa_hsTopBrk ? "HST" : pa_hsBotBrk ? "HSN" : pa_dtBrk ? "DT" : pa_dbBrk ? "DB" : "-"
+string pa_patSigDir  = (pa_hsTopBrk or pa_dtBrk) ? "bear" : (pa_hsBotBrk or pa_dbBrk) ? "bull" : "-"
+
+var float pa_patHeight = 0.0
+if pa_patSignal and not na(pa_patNeck)
+    pa_patHeight := math.abs(close - pa_patNeck)
+
+if pa_okConfirmed and pa_patSignal
+    f_pushEvent("PATTERN", pa_patSigDir, bar_index, time, barstate.isconfirmed, pa_patNeck)
+
+// Nhan mau hinh (chi ve nhan PHA NECKLINE - khong ve "ky vong" nhu tin hieu)
+if pa_showViz and pa_patOn and pa_patSignal
+    label.new(bar_index, pa_patSigDir == "bear" ? high : low, pa_patSigKind, style = pa_patSigDir == "bear" ? label.style_label_down : label.style_label_up, color = pa_patSigDir == "bear" ? color.new(pa_cBear, 0) : color.new(pa_cBull, 0), textcolor = color.white, size = size.small, force_overlay = true)
+if pa_showViz and pa_patOn and pa_newDT
+    label.new(bar_index, high, "DT?", style = label.style_label_down, color = color.new(color.gray, 30), textcolor = color.white, size = size.tiny, force_overlay = true)
+if pa_showViz and pa_patOn and pa_newDB
+    label.new(bar_index, low, "DB?", style = label.style_label_up, color = color.new(color.gray, 30), textcolor = color.white, size = size.tiny, force_overlay = true)
+
+// --- Trend continuation / Pullback --------------------------------------------
+pa_contBull = pa_ms_contOn and pa_trend == 1 and pa_isHH
+pa_contBear = pa_ms_contOn and pa_trend == -1 and pa_isLL
+pa_pullBull = pa_ms_pullOn and pa_trend == 1 and low <= pa_emaM and close > pa_emaM
+pa_pullBear = pa_ms_pullOn and pa_trend == -1 and high >= pa_emaM and close < pa_emaM
+
+// --- Structured events (ghi vao UDT buffer - chi khi nen da dong) --------------
+if pa_okConfirmed and pa_bosUp
+    f_pushEvent("BOS", "bull", pa_lastHighBar, time, barstate.isconfirmed, pa_lastHigh)
+if pa_okConfirmed and pa_bosDown
+    f_pushEvent("BOS", "bear", pa_lastLowBar, time, barstate.isconfirmed, pa_lastLow)
+if pa_okConfirmed and pa_chochUp
+    f_pushEvent("CHoCH", "bull", pa_lastHighBar, time, barstate.isconfirmed, pa_lastHigh)
+if pa_okConfirmed and pa_chochDown
+    f_pushEvent("CHoCH", "bear", pa_lastLowBar, time, barstate.isconfirmed, pa_lastLow)
+if pa_okConfirmed and pa_mssUp
+    f_pushEvent("MSS", "bull", pa_lastHighBar, time, barstate.isconfirmed, pa_lastHigh)
+if pa_okConfirmed and pa_mssDown
+    f_pushEvent("MSS", "bear", pa_lastLowBar, time, barstate.isconfirmed, pa_lastLow)
+if pa_okConfirmed and pa_retestBull
+    f_pushEvent("RETEST", "bull", bar_index, time, barstate.isconfirmed, pa_brkLevel)
+if pa_okConfirmed and pa_retestBear
+    f_pushEvent("RETEST", "bear", bar_index, time, barstate.isconfirmed, pa_brkLevel)
+if pa_okConfirmed and pa_failBull
+    f_pushEvent("FAILBRK", "bull", bar_index, time, barstate.isconfirmed, pa_brkLevel)
+if pa_okConfirmed and pa_failBear
+    f_pushEvent("FAILBRK", "bear", bar_index, time, barstate.isconfirmed, pa_brkLevel)
+if pa_okConfirmed and pa_contBull
+    f_pushEvent("CONT", "bull", pa_lastHighBar, time, barstate.isconfirmed, pa_lastHigh)
+if pa_okConfirmed and pa_contBear
+    f_pushEvent("CONT", "bear", pa_lastLowBar, time, barstate.isconfirmed, pa_lastLow)
+if pa_okConfirmed and pa_pullBull
+    f_pushEvent("PULL", "bull", bar_index, time, barstate.isconfirmed, pa_emaM)
+if pa_okConfirmed and pa_pullBear
+    f_pushEvent("PULL", "bear", bar_index, time, barstate.isconfirmed, pa_emaM)
+
+// --- Labels (gate bang master switch) -----------------------------------------
+if pa_showViz and pa_ms_bosOn and pa_bosUp
+    label.new(bar_index, low,  "BOS+", style = label.style_label_up,   color = color.new(pa_cBull, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if pa_showViz and pa_ms_bosOn and pa_bosDown
+    label.new(bar_index, high, "BOS-", style = label.style_label_down, color = color.new(pa_cBear, 20), textcolor = color.white, size = size.tiny, force_overlay = true)
+if pa_showViz and pa_ms_chochOn and pa_chochUp
+    label.new(bar_index, low,  "CHoCH+", style = label.style_label_up,   color = color.new(pa_cBull, 0), textcolor = color.white, size = size.tiny, force_overlay = true)
+if pa_showViz and pa_ms_chochOn and pa_chochDown
+    label.new(bar_index, high, "CHoCH-", style = label.style_label_down, color = color.new(pa_cBear, 0), textcolor = color.white, size = size.tiny, force_overlay = true)
+if pa_showViz and pa_ms_mssOn and pa_mssUp and not pa_bosUp
+    label.new(bar_index, low,  "MSS+", style = label.style_label_up,   color = color.new(#f5c542, 10), textcolor = color.black, size = size.tiny, force_overlay = true)
+if pa_showViz and pa_ms_mssOn and pa_mssDown and not pa_bosDown
+    label.new(bar_index, high, "MSS-", style = label.style_label_down, color = color.new(#f5c542, 10), textcolor = color.black, size = size.tiny, force_overlay = true)
+if pa_showViz and pa_ms_retestOn and pa_retestBull
+    label.new(bar_index, low, "RT+", style = label.style_label_up, color = color.new(pa_cBull, 40), textcolor = color.white, size = size.tiny, force_overlay = true)
+if pa_showViz and pa_ms_retestOn and pa_retestBear
+    label.new(bar_index, high, "RT-", style = label.style_label_down, color = color.new(pa_cBear, 40), textcolor = color.white, size = size.tiny, force_overlay = true)
+if pa_showViz and pa_ms_failOn and pa_failBull
+    label.new(bar_index, low, "FAIL+", style = label.style_label_up, color = color.new(color.gray, 10), textcolor = color.white, size = size.tiny, force_overlay = true)
+if pa_showViz and pa_ms_failOn and pa_failBear
+    label.new(bar_index, high, "FAIL-", style = label.style_label_down, color = color.new(color.gray, 10), textcolor = color.white, size = size.tiny, force_overlay = true)

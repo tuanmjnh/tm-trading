@@ -10,6 +10,6 @@ import { updateAlertRule } from '../../../utils/alertRules'
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id') ?? ''
   const body = await readBody(event)
-  const rule = await updateAlertRule(id, body)
+  const rule = await updateAlertRule(id, body, requireOwnerId(event))
   return { success: true, data: rule }
 })

@@ -1,6 +1,7 @@
 import { getQuery, getRouterParam } from 'h3'
 import {
   getCandles,
+  normalizeEndTime,
   normalizeInterval,
   normalizeLimit,
   normalizeMarket,
@@ -11,10 +12,12 @@ import {
 /**
  * GET /api/v1/markets/:instrument/candles - historical candles (§17).
  *
- * Query: ?interval=1m|4m|10m|1h... &limit=&market=spot|futures
+ * Query: ?interval=1m|4m|10m|1h... &limit=&market=spot|futures&endTime=
  * Native intervals come straight from Binance; 4m/10m are composed from 1m
  * rows with market/aggregate.mjs (same boundaries as /ws/market).
- * Upstream auth token required (server/middleware/auth.ts - D10).
+ * `endTime` (epoch ms) pages OLDER bars — the chart uses it when the user
+ * drags past the oldest loaded candle. Upstream auth token required
+ * (server/middleware/auth.ts - D10).
  *
  * In-memory TTL cache: the chart polls history far more often than the
  * forming candle actually changes, and the live plane already pushes
@@ -41,13 +44,14 @@ export default defineEventHandler(async (event) => {
     const market = normalizeMarket(q.market ? String(q.market) : undefined, process.env.MARKET_EXCHANGE)
     const { interval, composite, maxLimit } = normalizeInterval(q.interval ? String(q.interval) : undefined)
     const limit = normalizeLimit(q.limit ? String(q.limit) : undefined, { min: 1, max: maxLimit, def: 300 })
-    const key = `${market}:${symbol}:${interval}:${limit}`
+    const endTime = normalizeEndTime(q.endTime ? String(q.endTime) : undefined)
+    const key = `${market}:${symbol}:${interval}:${limit}:${endTime ?? ''}`
 
     try {
       const hit = CACHE.get(key)
       if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.payload
 
-      const { candles, meta } = await getCandles({ symbol, market, interval, limit })
+      const { candles, meta } = await getCandles({ symbol, market, interval, limit, endTime })
       const payload = { success: true, data: candles, meta: { ...meta, composite } }
       CACHE.set(key, { at: Date.now(), payload })
       LAST_GOOD.set(key, { at: Date.now(), payload })

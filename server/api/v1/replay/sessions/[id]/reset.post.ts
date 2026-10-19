@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'invalid_id', message: 'session id is required' })
   }
   try {
-    return { success: true, data: await resetReplaySession(id) }
+    return { success: true, data: await resetReplaySession(id, requireOwnerId(event)) }
   } catch (err) {
     throw replayHttpError(err)
   }

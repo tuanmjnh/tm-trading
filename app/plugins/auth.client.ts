@@ -72,6 +72,11 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
   })
 
+  // NOTE (F9): the auto-imported `$fetch` is bound to the original instance
+  // (`.nuxt/imports.d.ts` -> `export const $fetch = globalThis.$fetch`) before
+  // this plugin runs, so this override only affects explicit `globalThis.$fetch`
+  // calls — NOT the app's `/api/v1` composables. Session freshness is handled by
+  // the proactive refresh timer in `useAuth` (`scheduleProactiveRefresh`).
   globalThis.$fetch = customFetch
   nuxtApp.$fetch = customFetch
 

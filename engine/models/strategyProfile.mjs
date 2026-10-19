@@ -11,6 +11,8 @@ const StrategyProfileSchema = new mongoose.Schema(
   {
     _id: { type: String, required: true }, // profileId
     profileId: { type: String, required: true, index: true },
+    // Tenancy (roadmap §61.3): strategies are user-scoped.
+    ownerId: { type: String, default: null, index: true },
     name: { type: String, default: '' },
     status: { type: String, enum: PROFILE_STATUSES, default: 'draft', index: true },
     strategyVersionId: { type: String, default: null, index: true },

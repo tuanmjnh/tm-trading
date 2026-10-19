@@ -362,10 +362,13 @@ check('appendAiLog: never throws (null entry still logged)', caught(() => append
 check('appendAiLog: explicit file argument is honoured', readLog(lf).rows.length === 3)
 
 // =============================================================================
-section('10. agent: TOOL_NAMES (read-only guardrail, 6 tools)')
+section('10. agent: TOOL_NAMES (read-only guardrail, 7 tools)')
 
-const EXPECT = ['queryDB', 'getKlines', 'scanMovers', 'methodSignals', 'regimeSnapshot', 'backtestQuick']
-check('TOOL_NAMES: exactly 6 tools', TOOL_NAMES.length === 6, TOOL_NAMES.join(','))
+// Policy decision V3.5 §60 Slice E: `newsEvidence` joins the read-only surface
+// (A0 Observe; engine/agentPolicy.mjs READ_TOOLS). It returns ranked evidence
+// packets with IDs — it cannot place/modify/cancel orders or touch accounts.
+const EXPECT = ['queryDB', 'getKlines', 'scanMovers', 'methodSignals', 'regimeSnapshot', 'backtestQuick', 'newsEvidence']
+check('TOOL_NAMES: exactly 7 tools', TOOL_NAMES.length === 7, TOOL_NAMES.join(','))
 check('TOOL_NAMES: exact names + order', JSON.stringify([...TOOL_NAMES]) === JSON.stringify(EXPECT), TOOL_NAMES.join(','))
 check('TOOLS: every entry has description + parameters + handler', TOOL_NAMES.every((n) => typeof TOOLS[n]?.description === 'string' && TOOLS[n].description.length > 0 && TOOLS[n].parameters?.type === 'object' && typeof TOOLS[n].handler === 'function'))
 check('TOOL_NAMES/TOOLS: frozen (no tool can be added)', Object.isFrozen(TOOL_NAMES) && Object.isFrozen(TOOLS))
@@ -375,7 +378,7 @@ check('guardrail: no tool name mentions order/account mutation', TOOL_NAMES.ever
 section('11. agent: toolSpecs + defaultSystem')
 
 const specs = toolSpecs()
-check('toolSpecs(): 6 specs, each with name/description/parameters (no handler leakage)', specs.length === 6 && specs.every((s) => typeof s.name === 'string' && typeof s.description === 'string' && s.parameters?.type === 'object' && s.handler === undefined))
+check('toolSpecs(): 7 specs, each with name/description/parameters (no handler leakage)', specs.length === 7 && specs.every((s) => typeof s.name === 'string' && typeof s.description === 'string' && s.parameters?.type === 'object' && s.handler === undefined))
 check('toolSpecs(): names match TOOL_NAMES', JSON.stringify(specs.map((s) => s.name)) === JSON.stringify(EXPECT))
 const specFiltered = toolSpecs(['getKlines', 'backtestQuick'])
 check('toolSpecs([..]): filters exactly to the requested list', specFiltered.length === 2 && at(specFiltered, 0)?.name === 'getKlines' && at(specFiltered, 1)?.name === 'backtestQuick')

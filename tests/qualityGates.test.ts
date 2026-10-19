@@ -55,7 +55,9 @@ describe('qualityGates (§35)', () => {
       'market_stream_disconnected', 'quote_stale', 'candle_gap_unresolved',
       'orderbook_sequence_invalid', 'instrument_not_active', 'risk_state_unavailable',
     ])
-    assert.deepEqual(DEGRADED_IDS, ['funding_stale', 'oi_delayed', 'news_unavailable', 'secondary_provider_unavailable'])
+    // `ws_stream_degraded` is the G8.2 addition: the market plane's measured WS
+    // health is a §35.2 concern (shown, never blocking a REST-priced fill).
+    assert.deepEqual(DEGRADED_IDS, ['funding_stale', 'oi_delayed', 'news_unavailable', 'secondary_provider_unavailable', 'ws_stream_degraded'])
   })
 
   test('degraded conditions are reported but never block', () => {

@@ -1,0 +1,121 @@
+// =============================================================================
+//  L6 - ROOM-TO-LEFT / OBSTACLE GATE & ELIGIBILITY EVALUATOR (v2.0)
+// =============================================================================
+
+// --- 1. Nearest Barrier / Obstacle Calculation (Room-to-Left) ----------------
+float tm_nearestRes = na
+float tm_nearestSup = na
+
+// Scan unbroken S/R zones
+for z in sr_zones
+    if not z.broken
+        if z.side == -1 and z.bot > close
+            tm_nearestRes := na(tm_nearestRes) ? z.bot : math.min(tm_nearestRes, z.bot)
+        if z.side == 1 and z.top < close
+            tm_nearestSup := na(tm_nearestSup) ? z.top : math.max(tm_nearestSup, z.top)
+
+// v2.1 Bug 2: FVGs are intentionally NOT obstacles for this gate. A fresh FVG
+// can sit within a fraction of an ATR of price and would recreate the same
+// false blocks as the old 5-bar swing scan. FVGs are still used as LIMIT entry
+// locations in the plan builder.
+
+// Scan active Order Blocks
+for o in tm_obs
+    if not o.mitigated
+        if o.side == -1 and o.bot > close
+            tm_nearestRes := na(tm_nearestRes) ? o.bot : math.min(tm_nearestRes, o.bot)
+        if o.side == 1 and o.top < close
+            tm_nearestSup := na(tm_nearestSup) ? o.top : math.max(tm_nearestSup, o.top)
+
+// Factor in PDH / PDL and PWH / PWL only when sufficiently distant from entry (> 0.3 * tm_atr)
+float tm_minObsDist = nz(tm_atr, close * 0.01) * 0.3
+if not na(tm_pdh) and tm_pdh > close and (tm_pdh - close) >= tm_minObsDist
+    tm_nearestRes := na(tm_nearestRes) ? tm_pdh : math.min(tm_nearestRes, tm_pdh)
+if not na(tm_pdl) and tm_pdl < close and (close - tm_pdl) >= tm_minObsDist
+    tm_nearestSup := na(tm_nearestSup) ? tm_pdl : math.max(tm_nearestSup, tm_pdl)
+
+if not na(tm_pwh) and tm_pwh > close and (tm_pwh - close) >= tm_minObsDist
+    tm_nearestRes := na(tm_nearestRes) ? tm_pwh : math.min(tm_nearestRes, tm_pwh)
+if not na(tm_pwl) and tm_pwl < close and (close - tm_pwl) >= tm_minObsDist
+    tm_nearestSup := na(tm_nearestSup) ? tm_pwl : math.max(tm_nearestSup, tm_pwl)
+
+// Distance to Obstacle vs Target Distance to TP1
+float tm_estDistTp1 = nz(tm_atr, close * 0.01) * tm_sl_atrMul * tm_rr1
+
+float tm_distToRes = not na(tm_nearestRes) ? tm_nearestRes - close : na
+float tm_distToSup = not na(tm_nearestSup) ? close - tm_nearestSup : na
+
+bool tm_obstacleBlockedLong  = tm_gate_obstacle and not na(tm_distToRes) and tm_distToRes < (tm_estDistTp1 * tm_obstacleBuffer)
+bool tm_obstacleBlockedShort = tm_gate_obstacle and not na(tm_distToSup) and tm_distToSup < (tm_estDistTp1 * tm_obstacleBuffer)
+
+// --- 2. Smart Eligibility Gates Evaluation -----------------------------------
+// v2.1: every blocker produces a standardized reason code. `rsn` keeps the
+// highest-priority blocker (stable order, used by the compact dashboard), while
+// `mask` keeps ALL active blockers for the Advanced dashboard and alert payload.
+// Score/quality never appears here: gates are independent of confidence.
+f_evaluateGates(int dir) =>
+    bool   regimeOk   = true
+    bool   mtfOk      = true
+    bool   btcOk      = true
+    bool   obstacleOk = true
+    bool   overextOk  = true
+    bool   circuitOk  = true
+    string rsn        = "OK"
+    string mask       = ""
+
+    // 1. Regime Gate: no breakout entries in CHOPPY/SQUEEZE, and no buying the
+    // upper half / selling the lower half of a RANGING box.
+    bool regimeBlocked = false
+    if tm_gate_regime and tm_regime.code == -1
+        regimeBlocked := true
+    else if tm_gate_regime and tm_regime.code == 0
+        if not na(tm_nearestRes) and not na(tm_nearestSup)
+            float rangeMid = (tm_nearestRes + tm_nearestSup) * 0.5
+            if dir == 1 and close > rangeMid
+                regimeBlocked := true
+            if dir == -1 and close < rangeMid
+                regimeBlocked := true
+    if regimeBlocked
+        regimeOk := false
+        rsn      := "BLOCKED_REGIME"
+        mask     := f_tmBlockers(mask, "BLOCKED_REGIME")
+
+    // 2. MTF hierarchy + Context veto + BTC leader
+    bool setupOk = not tm_htfFilter or not tm_tfHierarchyOk or tm_setupDir == 0 or tm_setupDir == dir
+    bool vetoCtx = tm_htfVetoOn and tm_tfHierarchyOk and tm_ctxDir != 0 and tm_ctxDir != dir
+    mtfOk := setupOk and not vetoCtx
+    if not mtfOk
+        if rsn == "OK"
+            rsn := "BLOCKED_MTF"
+        mask := f_tmBlockers(mask, "BLOCKED_MTF")
+
+    btcOk := dir == 1 ? tm_btcLongOk : dir == -1 ? tm_btcShortOk : true
+    if not btcOk
+        string btcCode = dir == 1 ? "BTC_DUMPING_VETO" : "BTC_PUMPING_VETO"
+        if rsn == "OK"
+            rsn := btcCode
+        mask := f_tmBlockers(mask, btcCode)
+
+    // 3. Obstacle Gate (Room-to-Left)
+    obstacleOk := dir == 1 ? not tm_obstacleBlockedLong : dir == -1 ? not tm_obstacleBlockedShort : true
+    if not obstacleOk
+        if rsn == "OK"
+            rsn := "BLOCKED_OBSTACLE"
+        mask := f_tmBlockers(mask, "BLOCKED_OBSTACLE")
+
+    // 4. Overextension Gate (market entries only; Auto mode converts to limit)
+    overextOk := not tm_gate_overext or not tm_isOverextended or tm_entryMode != "Market on Confirm"
+    if not overextOk
+        if rsn == "OK"
+            rsn := "BLOCKED_OVEREXTENSION"
+        mask := f_tmBlockers(mask, "BLOCKED_OVEREXTENSION")
+
+    // 5. Weekend / Low Liquidity Filter
+    if tm_weekendBlocked
+        circuitOk := false
+        if rsn == "OK"
+            rsn := "BLOCKED_LIQUIDITY"
+        mask := f_tmBlockers(mask, "BLOCKED_LIQUIDITY")
+
+    bool allPassed = regimeOk and mtfOk and btcOk and obstacleOk and overextOk and circuitOk
+    GateStatus.new(regimeOk, mtfOk, btcOk, obstacleOk, overextOk, circuitOk, allPassed, rsn, mask)

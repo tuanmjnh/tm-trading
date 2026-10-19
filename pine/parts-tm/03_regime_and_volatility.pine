@@ -1,0 +1,63 @@
+// =============================================================================
+//  L2 - VOLATILITY & MARKET REGIME CLASSIFIER (Phase 3 Core Engine)
+// =============================================================================
+
+// --- 1. Basic Volatility Calculations ----------------------------------------
+tm_atr    = ta.atr(tm_atrLen)
+tm_atrPct = not na(close) and close > 0.0 ? (tm_atr / close) * 100.0 : 0.0
+
+// Bollinger Bands & Squeeze Measurement
+tm_bbBasis = ta.sma(close, 20)
+tm_bbDev   = 2.0 * ta.stdev(close, 20)
+tm_bbUpper = tm_bbBasis + tm_bbDev
+tm_bbLower = tm_bbBasis - tm_bbDev
+tm_bbWidth = tm_bbBasis > 0.0 ? (tm_bbUpper - tm_bbLower) / tm_bbBasis * 100.0 : 0.0
+
+tm_bbwLowest  = ta.lowest(tm_bbWidth, tm_regimeBbwLen)
+tm_bbwHighest = ta.highest(tm_bbWidth, tm_regimeBbwLen)
+tm_bbwPct     = (tm_bbwHighest - tm_bbwLowest) > 0.0 ? (tm_bbWidth - tm_bbwLowest) / (tm_bbwHighest - tm_bbwLowest) * 100.0 : 50.0
+bool tm_isSqueeze = tm_bbwPct <= tm_regimeBbwSqueezePct
+bool tm_bbExpand  = tm_bbWidth > ta.sma(tm_bbWidth, 20)
+
+// Directional Movement & ADX
+[tm_diPlus, tm_diMinus, tm_adx] = ta.dmi(tm_dmiLen, 14)
+
+// EMA 20 and 50 Slopes (normalized by ATR to be asset-neutral)
+tm_ema20 = ta.ema(close, tm_emaFast)
+tm_ema50 = ta.ema(close, tm_emaMid)
+float tm_emaSlope20 = not na(tm_atr) and tm_atr > 0.0 ? (tm_ema20 - tm_ema20[3]) / (3.0 * tm_atr) : 0.0
+float tm_emaSlope50 = not na(tm_atr) and tm_atr > 0.0 ? (tm_ema50 - tm_ema50[5]) / (5.0 * tm_atr) : 0.0
+
+bool tm_emaBull = close > tm_ema20 and tm_ema20 > tm_ema50 and tm_emaSlope20 > 0.03
+bool tm_emaBear = close < tm_ema20 and tm_ema20 < tm_ema50 and tm_emaSlope20 < -0.03
+
+// --- 2. Market Regime Classifier ---------------------------------------------
+// Phân loại thị trường thành:
+//  - TRENDING (1): ADX >= adxTrending, EMA aligned, BBW expanding, không ở trong Squeeze.
+//  - CHOPPY_SQUEEZE (-1): ADX < adxChop hoặc BBW trong vùng nén chặt (Squeeze).
+//  - RANGING (0): Thị trường tích lũy / đi ngang với biên độ rõ ràng, thích hợp đánh Mean-Reversion tại S/R.
+f_classifyRegime(float adxVal, bool isSq, float slope20, bool emaUp, bool emaDn, float bbwP) =>
+    int regCode  = 0
+    int tDir     = 0
+    string rName = "RANGING"
+
+    if adxVal >= tm_regimeAdxTrending and (emaUp or emaDn) and not isSq
+        regCode := 1
+        tDir    := emaUp ? 1 : -1
+        rName   := emaUp ? "TRENDING_BULL" : "TRENDING_BEAR"
+    else if adxVal < tm_regimeAdxChop or (isSq and math.abs(slope20) < 0.05)
+        regCode := -1
+        tDir    := 0
+        rName   := "CHOPPY_SQUEEZE"
+    else
+        regCode := 0
+        tDir    := 0
+        rName   := "RANGING"
+
+    MarketRegime.new(regCode, tDir, rName, adxVal, bbwP, isSq)
+
+tm_regime = f_classifyRegime(tm_adx, tm_isSqueeze, tm_emaSlope20, tm_emaBull, tm_emaBear, tm_bbwPct)
+
+// Volatility score [-1, +1]. v2.1 keeps volatility OUT of the directional score:
+// it drives the regime classifier, mode selection and the gates instead.
+float tm_volScore = tm_bbExpand ? 1.0 : tm_isSqueeze ? -1.0 : 0.0

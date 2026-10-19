@@ -1,0 +1,171 @@
+// =============================================================================
+//  95_VIZ — Visual Renderer, Dynamic Zones Drawing & Multi-Tier Dashboard
+// =============================================================================
+
+// --- 1. Ribbon Plots & Cloud Fill --------------------------------------------
+p_fast = plot(fz_rb_show and fz_showViz ? fz_rb_maFast : na, "Ribbon Fast", color = fz_rb_bull ? color.new(fz_cBull, 25) : color.new(fz_cBear, 25), linewidth = 2)
+p_slow = plot(fz_rb_show and fz_showViz ? fz_rb_maSlow : na, "Ribbon Slow", color = fz_rb_bull ? color.new(fz_cBull, 55) : color.new(fz_cBear, 55), linewidth = 2)
+fill(p_fast, p_slow, color = fz_rb_show and fz_showViz ? (fz_rb_bull ? color.new(fz_cBull, 82) : color.new(fz_cBear, 82)) : na, title = "Ribbon Cloud Fill")
+
+// --- 2. Dynamic Supply & Demand Zone Boxes -----------------------------------
+var array<box> fz_boxArr = array.new<box>()
+
+if barstate.islast and fz_zn_show and fz_showViz
+    if array.size(fz_boxArr) > 0
+        for i = 0 to array.size(fz_boxArr) - 1
+            box.delete(array.get(fz_boxArr, i))
+        array.clear(fz_boxArr)
+
+    if array.size(fz_zones) > 0
+        for i = 0 to array.size(fz_zones) - 1
+            FzZone z = array.get(fz_zones, i)
+            if not z.broken
+                color zBg     = z.side == 1 ? color.new(fz_cBull, 85) : color.new(fz_cBear, 85)
+                color zBorder = z.side == 1 ? color.new(fz_cBull, 35) : color.new(fz_cBear, 35)
+                int safeStart = math.max(bar_index - 300, z.startBar)
+                box b = box.new(safeStart, z.top, bar_index + 8, z.bot, border_color = zBorder, border_width = 1, bgcolor = zBg)
+                array.push(fz_boxArr, b)
+
+// --- 3. Signal Shapes & Hit Alerts -------------------------------------------
+plotshape(fz_showSig and fz_showViz and fz_signalLong,  title = "Long Signal",  style = shape.triangleup,   location = location.belowbar, color = fz_cBull, size = size.small)
+plotshape(fz_showSig and fz_showViz and fz_signalShort, title = "Short Signal", style = shape.triangledown, location = location.abovebar, color = fz_cBear, size = size.small)
+
+plotshape(fz_showHit and fz_showViz and fz_hitTp1, title = "TP1 Hit", style = shape.circle, location = location.abovebar, color = color.green, size = size.tiny, text = "TP1")
+plotshape(fz_showHit and fz_showViz and fz_hitTp2, title = "TP2 Hit", style = shape.circle, location = location.abovebar, color = color.teal,  size = size.tiny, text = "TP2")
+plotshape(fz_showHit and fz_showViz and fz_hitSl,  title = "SL Hit",  style = shape.cross,  location = location.belowbar, color = color.red,   size = size.tiny, text = "SL")
+
+// --- 4. Active Trade Level Plots, Target Lines & Labels -----------------------
+plot(fz_posSide != 0 and fz_showViz ? fz_posSl  : na, "Active SL",  color = color.red,   linewidth = 1, style = plot.style_linebr)
+plot(fz_posSide != 0 and fz_showViz ? fz_posTp1 : na, "Active TP1", color = color.green, linewidth = 1, style = plot.style_linebr)
+plot(fz_posSide != 0 and fz_showViz ? fz_posTp2 : na, "Active TP2", color = color.teal,  linewidth = 1, style = plot.style_linebr)
+
+var line  fz_lnEntry  = line.new(bar_index, 0.0, bar_index + 1, 0.0, color = color.new(color.silver, 20), style = line.style_dashed, width = 1)
+var line  fz_lnSl     = line.new(bar_index, 0.0, bar_index + 1, 0.0, color = color.new(color.red, 10),    style = line.style_solid,  width = 2)
+var line  fz_lnTp1    = line.new(bar_index, 0.0, bar_index + 1, 0.0, color = color.new(color.green, 10),  style = line.style_solid,  width = 2)
+var line  fz_lnTp2    = line.new(bar_index, 0.0, bar_index + 1, 0.0, color = color.new(color.teal, 10),   style = line.style_solid,  width = 2)
+
+var label fz_lblEntry = label.new(bar_index, 0.0, "", style = label.style_label_left, color = color.new(color.gray, 20),  textcolor = color.white, size = size.tiny)
+var label fz_lblSl    = label.new(bar_index, 0.0, "", style = label.style_label_left, color = color.new(color.red, 10),   textcolor = color.white, size = size.tiny)
+var label fz_lblTp1   = label.new(bar_index, 0.0, "", style = label.style_label_left, color = color.new(color.green, 10), textcolor = color.white, size = size.tiny)
+var label fz_lblTp2   = label.new(bar_index, 0.0, "", style = label.style_label_left, color = color.new(color.teal, 10),  textcolor = color.white, size = size.tiny)
+
+int fz_targetRight = bar_index + 8
+if fz_showViz and fz_showTargets and fz_posSide != 0 and not na(fz_posBar)
+    int safePosBar = math.max(bar_index - 300, fz_posBar)
+    line.set_xy1(fz_lnEntry, safePosBar, fz_posEntry)
+    line.set_xy2(fz_lnEntry, fz_targetRight, fz_posEntry)
+    label.set_xy(fz_lblEntry, fz_targetRight, fz_posEntry)
+    label.set_text(fz_lblEntry, "ENTRY " + f_fmtPx(fz_posEntry))
+
+    line.set_xy1(fz_lnSl, safePosBar, fz_posSl)
+    line.set_xy2(fz_lnSl, fz_targetRight, fz_posSl)
+    label.set_xy(fz_lblSl, fz_targetRight, fz_posSl)
+    label.set_text(fz_lblSl, "SL " + f_fmtPx(fz_posSl))
+
+    line.set_xy1(fz_lnTp1, safePosBar, fz_posTp1)
+    line.set_xy2(fz_lnTp1, fz_targetRight, fz_posTp1)
+    label.set_xy(fz_lblTp1, fz_targetRight, fz_posTp1)
+    label.set_text(fz_lblTp1, "TP1 " + f_fmtPx(fz_posTp1))
+
+    line.set_xy1(fz_lnTp2, safePosBar, fz_posTp2)
+    line.set_xy2(fz_lnTp2, fz_targetRight, fz_posTp2)
+    label.set_xy(fz_lblTp2, fz_targetRight, fz_posTp2)
+    string tp2Tag = fz_tp_mode == "Opposing Zone / RR" ? "TP2 (Zone) " : "TP2 "
+    label.set_text(fz_lblTp2, tp2Tag + f_fmtPx(fz_posTp2))
+else
+    line.set_xy1(fz_lnEntry, bar_index, na)
+    line.set_xy2(fz_lnEntry, bar_index + 1, na)
+    label.set_xy(fz_lblEntry, bar_index, na)
+    label.set_text(fz_lblEntry, "")
+
+    line.set_xy1(fz_lnSl, bar_index, na)
+    line.set_xy2(fz_lnSl, bar_index + 1, na)
+    label.set_xy(fz_lblSl, bar_index, na)
+    label.set_text(fz_lblSl, "")
+
+    line.set_xy1(fz_lnTp1, bar_index, na)
+    line.set_xy2(fz_lnTp1, bar_index + 1, na)
+    label.set_xy(fz_lblTp1, bar_index, na)
+    label.set_text(fz_lblTp1, "")
+
+    line.set_xy1(fz_lnTp2, bar_index, na)
+    line.set_xy2(fz_lnTp2, bar_index + 1, na)
+    label.set_xy(fz_lblTp2, bar_index, na)
+    label.set_text(fz_lblTp2, "")
+
+// --- 5. Interactive HUD Dashboard --------------------------------------------
+var table fz_hud = na
+
+string fz_tblSize = fz_dashSize == "Tiny" ? size.tiny : fz_dashSize == "Normal" ? size.normal : size.small
+int    fz_numRows = fz_dashMode == "Advanced" ? 13 : 8
+
+if barstate.islast and fz_showDash and fz_showViz
+    if na(fz_hud)
+        fz_hud := table.new(position.top_right, 2, fz_numRows, bgcolor = color.new(#131722, 10), border_color = color.new(color.gray, 60), border_width = 1)
+    
+    // Header
+    table.cell(fz_hud, 0, 0, "TM FUSION ZONES", text_color = color.white, bgcolor = color.new(#2962ff, 30), text_size = fz_tblSize)
+    table.cell(fz_hud, 1, 0, "v1.0.0", text_color = color.yellow, bgcolor = color.new(#2962ff, 30), text_size = fz_tblSize)
+
+    // Row 1: Market Regime & Session
+    table.cell(fz_hud, 0, 1, "Regime / Sess", text_color = color.gray, text_size = fz_tblSize)
+    color regClr = fz_isTrending ? fz_cBull : fz_isRanging ? color.orange : color.silver
+    table.cell(fz_hud, 1, 1, fz_regime + " · " + fz_curSess, text_color = regClr, text_size = fz_tblSize)
+
+    // Row 2: Asset Profile & ATR
+    table.cell(fz_hud, 0, 2, "Asset / ATR", text_color = color.gray, text_size = fz_tblSize)
+    table.cell(fz_hud, 1, 2, fz_effAsset + " (" + f_fmtPx(fz_atrSafe) + ")", text_color = color.white, text_size = fz_tblSize)
+
+    // Row 3: Trend Ribbon
+    table.cell(fz_hud, 0, 3, "Trend Ribbon", text_color = color.gray, text_size = fz_tblSize)
+    color rbClr = fz_rb_strongBull ? fz_cBull : fz_rb_bull ? color.new(fz_cBull, 30) : fz_rb_strongBear ? fz_cBear : fz_rb_bear ? color.new(fz_cBear, 30) : color.silver
+    string rbTxt = fz_rb_bull ? (fz_rb_expanding ? "BULL (EXP)" : "BULL") : (fz_rb_expanding ? "BEAR (EXP)" : "BEAR")
+    table.cell(fz_hud, 1, 3, rbTxt, text_color = rbClr, text_size = fz_tblSize)
+
+    // Row 4: Structure & Zones
+    table.cell(fz_hud, 0, 4, "Zone / Swings", text_color = color.gray, text_size = fz_tblSize)
+    string znTxt = fz_inDemandZone ? "DEMAND ZONE" : fz_inSupplyZone ? "SUPPLY ZONE" : "OPEN SPACE"
+    color znClr = fz_inDemandZone ? fz_cBull : fz_inSupplyZone ? fz_cBear : color.white
+    table.cell(fz_hud, 1, 4, znTxt, text_color = znClr, text_size = fz_tblSize)
+
+    // Row 5: Last Setup & Quality Score
+    table.cell(fz_hud, 0, 5, "Setup / Score", text_color = color.gray, text_size = fz_tblSize)
+    string setTxt = longSetupDetected ? "LONG: " + longSetupType : shortSetupDetected ? "SHORT: " + shortSetupType : "No Setup"
+    int dispScr = longSetupDetected ? int(longScore) : shortSetupDetected ? int(shortScore) : 0
+    color scrClr = dispScr >= fz_scr_strong ? fz_cBull : dispScr > fz_scr_noTrade ? color.yellow : color.gray
+    table.cell(fz_hud, 1, 5, setTxt + " (" + str.tostring(dispScr) + "/100)", text_color = scrClr, text_size = fz_tblSize)
+
+    // Row 6: Active Trade Status / Signal Count
+    table.cell(fz_hud, 0, 6, "Trade / Signals", text_color = color.gray, text_size = fz_tblSize)
+    string trdTxt = fz_posSide == 1 ? "IN LONG" : fz_posSide == -1 ? "IN SHORT" : "FLAT"
+    table.cell(fz_hud, 1, 6, trdTxt + " · Tot: " + str.tostring(fz_cntSignals), text_color = fz_posSide != 0 ? color.yellow : color.silver, text_size = fz_tblSize)
+
+    // Row 7: Active Targets (TP / SL Levels)
+    table.cell(fz_hud, 0, 7, "Targets (TP/SL)", text_color = color.gray, text_size = fz_tblSize)
+    string tgtTxt = fz_posSide != 0 ? "TP1: " + f_fmtPx(fz_posTp1) + " | TP2: " + f_fmtPx(fz_posTp2) + " (SL: " + f_fmtPx(fz_posSl) + ")" : "No active trade"
+    color tgtClr = fz_posSide == 1 ? fz_cBull : fz_posSide == -1 ? fz_cBear : color.silver
+    table.cell(fz_hud, 1, 7, tgtTxt, text_color = tgtClr, text_size = fz_tblSize)
+
+    // Rows 8-12: Advanced Analytics
+    if fz_dashMode == "Advanced"
+        // Row 8: MTF Context
+        table.cell(fz_hud, 0, 8, "HTF Bias (" + fz_mtf_tf + ")", text_color = color.gray, text_size = fz_tblSize)
+        table.cell(fz_hud, 1, 8, fz_htfBull ? "BULLISH" : "BEARISH", text_color = fz_htfBull ? fz_cBull : fz_cBear, text_size = fz_tblSize)
+
+        // Row 9: Win / Loss
+        table.cell(fz_hud, 0, 9, "Win / Loss", text_color = color.gray, text_size = fz_tblSize)
+        int totTrades = fz_cntWins + fz_cntLosses
+        float wr = totTrades > 0 ? (float(fz_cntWins) / totTrades) * 100.0 : 0.0
+        table.cell(fz_hud, 1, 9, str.tostring(fz_cntWins) + "W - " + str.tostring(fz_cntLosses) + "L (" + str.tostring(math.round(wr)) + "%)", text_color = color.white, text_size = fz_tblSize)
+
+        // Row 10: Long Score Breakdown
+        table.cell(fz_hud, 0, 10, "Score LONG", text_color = color.gray, text_size = fz_tblSize)
+        table.cell(fz_hud, 1, 10, str.tostring(int(longScore)) + (longBlockReason != "" ? " [" + longBlockReason + "]" : " [OK]"), text_color = longEligible ? fz_cBull : color.silver, text_size = fz_tblSize)
+
+        // Row 11: Short Score Breakdown
+        table.cell(fz_hud, 0, 11, "Score SHORT", text_color = color.gray, text_size = fz_tblSize)
+        table.cell(fz_hud, 1, 11, str.tostring(int(shortScore)) + (shortBlockReason != "" ? " [" + shortBlockReason + "]" : " [OK]"), text_color = shortEligible ? fz_cBear : color.silver, text_size = fz_tblSize)
+
+        // Row 12: Choppiness & ADX
+        table.cell(fz_hud, 0, 12, "ADX / Chop", text_color = color.gray, text_size = fz_tblSize)
+        table.cell(fz_hud, 1, 12, str.tostring(math.round(fz_adx)) + " / " + str.tostring(math.round(fz_chop)), text_color = color.white, text_size = fz_tblSize)

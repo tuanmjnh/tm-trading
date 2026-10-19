@@ -1,0 +1,67 @@
+// @part skip:lk-vsa
+// =============================================================================
+//  LAYER 5 - STRATEGY BRIDGE (chi co o ban lk-vsa-strategy)
+//  Marker "@part skip:lk-vsa" => ban indicator LongKaco VSA KHONG chua file nay.
+//  Doc THANG state tu 40_events (tm_lvlE/S/T, tm_lvlDir) - khong tinh lai tin
+//  hieu, nen backtest va indicator khong the lech nhau.
+//
+//  A-P1-2 PYRAMID: tm_i_btPyr = 1 (mac dinh) = 1 lenh/signal - Y HET ban cu
+//  (market entry + exit "VSA X" + ID "Long"/"Short", de backtest A/B khong lech).
+//  tm_i_btPyr = N > 1: chia khoi luong thanh N lenh con CUNG zone, lech nhau
+//  quanh entry: lenh thu i lech (i - (N+1)/2) * buocATR * ATR, va SL/TP dung
+//  CHUNG mot bo muc cua setup. Moi lenh con co ID rieng "L1..Ln"/"S1..Sn".
+//
+//  VI SAO N = 1 VAN DUNG `strategy.position_size`:
+//  docs TradingView (Concepts/Strategies, muc Pyramiding) noi ro: CUNG MOT ID van
+//  mo them lenh moi khi pyramiding cho phep - vi du chinh chu cua tai lieu goi
+//  strategy.entry("Entry") 4 lan va voi `pyramiding = 4` thi CA 4 lan deu thanh
+//  lenh. Nghia la ban cu (`pyramiding = 0`) BO QUA lenh thu 2 cung chieu, con ban
+//  nay (`pyramiding = 5` de chay duoc pyramid) se CONG DON. Vi vay duong N = 1
+//  duoc chan bang `strategy.position_size >= 0` (Long) / `<= 0` (Short): dung la
+//  "chi 1 lenh mo cung chieu" cua pyramiding = 0, nhung van dao chieu duoc.
+// =============================================================================
+tm_i_btOn  = input.bool(true, "Bat dat lenh theo setup ST", group = "TM · Backtest", display = display.data_window)
+tm_i_btPct = input.float(100.0, "Khoi luong (% equity)", minval = 1.0, maxval = 100.0, step = 5.0, group = "TM · Backtest", display = display.data_window)
+tm_i_btPyr = input.int(1, "Pyramid - so lenh con cung zone", minval = 1, maxval = 5, group = "TM · Backtest", display = display.data_window)
+tm_i_btStep = input.float(0.25, "Pyramid - buoc lech entry (x ATR)", minval = 0.0, maxval = 2.0, step = 0.05, group = "TM · Backtest", display = display.data_window)
+
+// Vao lenh dung luc setup ST duoc tao (40_events vua gan tm_lvl* cung bar)
+tm_btLong  = tm_i_btOn and tm_sigSTl and tm_hasSV
+tm_btShort = tm_i_btOn and tm_sigSTs and tm_hasBC
+// Che do 1 lenh = duong cu (market tai close). Che do pyramid = N lenh limit.
+tm_btMulti = tm_i_btPyr > 1
+
+// qty = phan tram equity / gia -> default_qty_type khong can dung.
+// Chia deu cho so lenh con: N lenh nho cong lai = 1 lenh lon (cung khoi luong).
+tm_btQty = tm_i_btPct / 100.0 * strategy.equity / close / tm_i_btPyr
+
+// Entry lenh con thu i lech quanh tm_lvlE: i=1..N -> (i - (N+1)/2) * buoc * ATR
+//   N=3 -> -1, 0, +1 buoc; N=4 -> -1.5, -0.5, +0.5, +1.5 buoc
+f_pyrEntry(int i, int n, float level, int dir) =>
+    float off = (i - (n + 1) / 2.0) * tm_i_btStep * tm_atr
+    dir == 1 ? level + off : level - off
+
+tm_btEn = tm_lvlDir == 1 ? "Long" : tm_lvlDir == -1 ? "Short" : ""
+
+if tm_btLong and not tm_btMulti and strategy.position_size >= 0
+    strategy.entry("Long", strategy.long, qty = tm_btQty, comment = "LK VSA ST LONG")
+if tm_btShort and not tm_btMulti and strategy.position_size <= 0
+    strategy.entry("Short", strategy.short, qty = tm_btQty, comment = "LK VSA ST SHORT")
+if tm_btLong and tm_btMulti
+    for i = 1 to tm_i_btPyr
+        strategy.entry("L" + str.tostring(i), strategy.long, qty = tm_btQty, limit = f_pyrEntry(i, tm_i_btPyr, tm_lvlE, 1), comment = "LK VSA ST LONG pyr")
+if tm_btShort and tm_btMulti
+    for i = 1 to tm_i_btPyr
+        strategy.entry("S" + str.tostring(i), strategy.short, qty = tm_btQty, limit = f_pyrEntry(i, tm_i_btPyr, tm_lvlE, -1), comment = "LK VSA ST SHORT pyr")
+
+// Thoat dung muc Entry/SL/TP cua setup gan nhat (40_events da tinh san).
+// N = 1: giu NGUYEN duong cu (1 exit "VSA X" theo ID Long/Short).
+// N > 1: from_entry phai khop ID tung lenh con -> 1 exit cho moi ID.
+if tm_i_btOn and tm_lvlDir != 0 and not tm_lvlDone and not tm_btMulti
+    strategy.exit("VSA X", from_entry = tm_btEn, stop = tm_lvlS, limit = tm_lvlT)
+if tm_i_btOn and tm_lvlDir != 0 and not tm_lvlDone and tm_btMulti and tm_lvlDir == 1
+    for i = 1 to tm_i_btPyr
+        strategy.exit("XL" + str.tostring(i), from_entry = "L" + str.tostring(i), stop = tm_lvlS, limit = tm_lvlT)
+if tm_i_btOn and tm_lvlDir != 0 and not tm_lvlDone and tm_btMulti and tm_lvlDir == -1
+    for i = 1 to tm_i_btPyr
+        strategy.exit("XS" + str.tostring(i), from_entry = "S" + str.tostring(i), stop = tm_lvlS, limit = tm_lvlT)

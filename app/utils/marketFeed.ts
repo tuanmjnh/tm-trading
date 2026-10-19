@@ -24,9 +24,43 @@ export interface HelloMessage {
   symbols: string[]
   timeframes: string[]
   quotes: QuoteSnapshotRow[]
+  ticker24: Ticker24SnapshotRow[]
   bookSymbols: string[]
   provider: Record<string, unknown> | null
   monitor: Record<string, unknown>
+}
+
+export interface Ticker24SnapshotRow {
+  symbol: string
+  lastPrice?: number
+  openPrice?: number
+  highPrice?: number
+  lowPrice?: number
+  baseVolume?: number
+  quoteVolume?: number
+  priceChange?: number
+  priceChangePercent?: number
+  trades?: number
+  eventTime?: number
+}
+
+/** Rolling 24h ticker (exchange-computed window — displayed, never derived). */
+export interface Ticker24Message {
+  type: 'market.ticker24'
+  source: string
+  symbol: string
+  market?: string
+  lastPrice: number
+  openPrice: number
+  highPrice: number
+  lowPrice: number
+  baseVolume: number
+  quoteVolume: number
+  priceChange: number
+  priceChangePercent: number
+  trades: number
+  eventTime: number
+  ingestTime: number
 }
 
 export interface QuoteSnapshotRow {
@@ -122,6 +156,8 @@ export interface FeedState {
   hello: HelloMessage | null
   /** Last quote per symbol. */
   quotes: Record<string, QuoteMessage>
+  /** Rolling 24h ticker per symbol (Band-1 telemetry). */
+  ticker24: Record<string, Ticker24Message>
   /** Last candle per `${symbol}|${timeframe}`. */
   lastCandles: Record<string, CandleMessage>
   /** Recent trades, NEWEST FIRST, capped. */
@@ -147,6 +183,7 @@ export function createFeedState(): FeedState {
     connection: 'idle',
     hello: null,
     quotes: {},
+    ticker24: {},
     lastCandles: {},
     trades: [],
     lastTrades: {},
@@ -217,6 +254,25 @@ export function applyFeedMessage(state: FeedState, raw: unknown): ApplyResult {
           ingestTime: 0
         }
       }
+      for (const row of (msg.ticker24 as Ticker24SnapshotRow[] | undefined) ?? []) {
+        if (!row || typeof row.symbol !== 'string') continue
+        state.ticker24[row.symbol] = {
+          type: 'market.ticker24',
+          source: 'hello',
+          symbol: row.symbol,
+          lastPrice: Number(row.lastPrice) || 0,
+          openPrice: Number(row.openPrice) || 0,
+          highPrice: Number(row.highPrice) || 0,
+          lowPrice: Number(row.lowPrice) || 0,
+          baseVolume: Number(row.baseVolume) || 0,
+          quoteVolume: Number(row.quoteVolume) || 0,
+          priceChange: Number(row.priceChange) || 0,
+          priceChangePercent: Number(row.priceChangePercent) || 0,
+          trades: Number(row.trades) || 0,
+          eventTime: Number(row.eventTime) || 0,
+          ingestTime: 0
+        }
+      }
       state.frames++
       return 'ok'
     }
@@ -257,6 +313,17 @@ export function applyFeedMessage(state: FeedState, raw: unknown): ApplyResult {
       state.frames++
       return 'ok'
     }
+    case 'market.ticker24': {
+      const tk = msg as unknown as Ticker24Message
+      if (typeof tk.symbol !== 'string' || !Number.isFinite(tk.lastPrice)) {
+        state.parseErrors++
+        return 'bad-frame'
+      }
+      const prev = state.ticker24[tk.symbol]
+      if (!prev || (tk.eventTime ?? 0) >= prev.eventTime) state.ticker24[tk.symbol] = tk
+      state.frames++
+      return 'ok'
+    }
     case 'market.status': {
       state.providerStatus = msg as unknown as StatusMessage
       state.frames++
@@ -286,6 +353,126 @@ export function applyFeedMessage(state: FeedState, raw: unknown): ApplyResult {
     }
     default:
       return 'ignored'
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Batched applier — main-thread protection for hot symbols.
+//
+// BTCUSDT sustains 1000+ quote and 100+ trade frames/s. Applying every frame
+// straight into Vue reactive state saturates the renderer (clicks queue for
+// seconds — the reported "hang when leaving /trade"). Batching coalesces one
+// window into a single reactive commit per stream:
+//   quotes / ticker24 / candles / books -> LATEST per key wins (snapshots,
+//     coalescing is lossless for display)
+//   trades                              -> ALL appended, newest-first cap kept
+//   hello / status / error / pong        -> applied IMMEDIATELY (handshake and
+//     provider policy must never wait for the window)
+// Manual flush() exists so tests never need timers.
+// ---------------------------------------------------------------------------
+
+/** Batch window: 4 reactive commits/s no matter the frame rate. */
+export const BATCH_FLUSH_MS = 250
+/** Trades buffered per window (well above the hottest observed rate). */
+export const BATCH_MAX_TRADES = 2000
+
+export interface BatchedFeed {
+  push(raw: unknown): void
+  flush(): void
+  pending(): number
+}
+
+const frameSymbol = (parsed: unknown): string | null => {
+  const s = (parsed as { symbol?: unknown }).symbol
+  return typeof s === 'string' ? s : null
+}
+
+export function createBatchedFeed(state: FeedState): BatchedFeed {
+  const quotes = new Map<string, unknown>()
+  const tickers = new Map<string, unknown>()
+  const candles = new Map<string, unknown>()
+  const books = new Map<string, unknown>()
+  const trades: unknown[] = []
+
+  return {
+    push(raw: unknown): void {
+      // Parse once: applyFeedMessage accepts objects, so the queued value is
+      // reused at flush with identical semantics (no double JSON.parse).
+      let parsed: unknown = raw
+      if (typeof raw === 'string') {
+        try {
+          parsed = JSON.parse(raw)
+        } catch {
+          applyFeedMessage(state, raw)
+          return
+        }
+      }
+      const t = parsed && typeof parsed === 'object' && !Array.isArray(parsed) &&
+        typeof (parsed as { type?: unknown }).type === 'string'
+        ? (parsed as { type: string }).type
+        : ''
+      switch (t) {
+        case 'market.quote': {
+          const s = frameSymbol(parsed)
+          if (s) {
+            quotes.set(s, parsed)
+            return
+          }
+          break
+        }
+        case 'market.ticker24': {
+          const s = frameSymbol(parsed)
+          if (s) {
+            tickers.set(s, parsed)
+            return
+          }
+          break
+        }
+        case 'market.candle': {
+          const s = frameSymbol(parsed)
+          const tf = (parsed as { timeframe?: unknown }).timeframe
+          if (s && typeof tf === 'string') {
+            candles.set(`${s}|${tf}`, parsed)
+            return
+          }
+          break
+        }
+        case 'market.book': {
+          const s = frameSymbol(parsed)
+          if (s) {
+            books.set(s, parsed)
+            return
+          }
+          break
+        }
+        case 'market.trade': {
+          trades.push(parsed)
+          if (trades.length > BATCH_MAX_TRADES) trades.splice(0, trades.length - BATCH_MAX_TRADES)
+          return
+        }
+        default:
+          break
+      }
+      // hello / status / error / malformed: straight through, never delayed.
+      applyFeedMessage(state, parsed)
+    },
+
+    flush(): void {
+      for (const q of quotes.values()) applyFeedMessage(state, q)
+      quotes.clear()
+      for (const tk of tickers.values()) applyFeedMessage(state, tk)
+      tickers.clear()
+      for (const c of candles.values()) applyFeedMessage(state, c)
+      candles.clear()
+      for (const b of books.values()) applyFeedMessage(state, b)
+      books.clear()
+      for (const t of trades) applyFeedMessage(state, t)
+      trades.length = 0
+    },
+
+    pending(): number {
+      return quotes.size + tickers.size + candles.size + books.size + trades.length
+    }
   }
 }
 

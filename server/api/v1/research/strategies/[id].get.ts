@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
     return { success: false, error: 'strategy id required', data: null, meta: { mongo: 'down' } }
   }
 
-  const data = await getStrategyResearch(id)
+  const data = await getStrategyResearch(id, {}, requireOwnerId(event))
   return {
     success: true,
     data,

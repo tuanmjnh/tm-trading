@@ -77,6 +77,23 @@ describe('ticket validation (mirrors webhook rules)', () => {
     assert.equal(validateTicket({ ...BUY, riskPct: null }).ok, true) // absent intent
   })
 
+  // v3 §17.1b: leverage intent is an integer 1..125 (Binance bounds). Absent =
+  // legacy account-level margin. The risk gate still caps notional (D7) — the
+  // door only rejects nonsense, never policy.
+  test('leverage must be an integer 1..125 when present', () => {
+    assert.equal(validateTicket({ ...BUY, leverage: 5 }).ok, true)
+    assert.equal(validateTicket({ ...BUY, leverage: 1 }).ok, true)
+    assert.equal(validateTicket({ ...BUY, leverage: 125 }).ok, true)
+    assert.equal(validateTicket({ ...BUY }).ok, true) // absent intent
+    assert.equal(validateTicket({ ...BUY, leverage: null }).ok, true)
+    assert.equal(validateTicket({ ...BUY, leverage: 0 }).ok, false)
+    assert.equal(validateTicket({ ...BUY, leverage: -3 }).ok, false)
+    assert.equal(validateTicket({ ...BUY, leverage: 126 }).ok, false)
+    assert.equal(validateTicket({ ...BUY, leverage: 2.5 }).ok, false)
+    assert.equal(validateTicket({ ...BUY, leverage: '5' }).ok, false)
+    assert.equal(validateTicket({ ...BUY, leverage: Number.NaN }).ok, false)
+  })
+
   // Phase 7P: order types ride the ticket into the paper fill model.
   test('accepts every modelled order type', () => {
     assert.deepEqual([...ORDER_TYPES], ['market', 'limit', 'stop'])

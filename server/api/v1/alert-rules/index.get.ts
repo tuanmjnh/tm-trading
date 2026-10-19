@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
   if (query.enabled === 'true') enabled = true
   else if (query.enabled === 'false') enabled = false
 
-  const { items, total, mongo } = await listAlertRules({ limit, enabled })
+  const { items, total, mongo } = await listAlertRules({ limit, enabled, ownerId: requireOwnerId(event) })
 
   return {
     success: true,

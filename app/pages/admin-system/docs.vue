@@ -177,7 +177,7 @@ mobileBar.registerInfo(computed(() => ({
           import { createHubClient } from 'tm-hub-client'
 
           export const hub = createHubClient({
-          baseUrl: process.env.NUXT_PUBLIC_HUB_API_URL || 'http://localhost:4000',
+          baseUrl: process.env.NUXT_PUBLIC_HUB_URL || 'http://localhost:4000',
           appId: 'tm-tools'
           })
 

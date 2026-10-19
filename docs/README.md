@@ -48,10 +48,11 @@ docs/
 - [docs/web-app/app-inheritance.md](file:///d:/Applications/tm-trading/docs/web-app/app-inheritance.md): Hub-client architecture, satellite modules, and IAM integration.
 - [docs/web-app/ui-design-system.md](file:///d:/Applications/tm-trading/docs/web-app/ui-design-system.md): UI styling, component tokens, dark theme, and typography guidelines.
 - [docs/web-app/navigation-audit.md](file:///d:/Applications/tm-trading/docs/web-app/navigation-audit.md): Menu routes, authorization mapping, and navigation hierarchy.
-- [docs/web-app/tm-trading-roadmap-v1.md](file:///d:/Applications/tm-trading/docs/web-app/tm-trading-roadmap-v1.md): Web App Roadmap Phase 1.
-- [docs/web-app/tm-trading-roadmap-v2.md](file:///d:/Applications/tm-trading/docs/web-app/tm-trading-roadmap-v2.md): Web App Roadmap Phase 2.
-- [docs/web-app/tm-trading-roadmap-v3.md](file:///d:/Applications/tm-trading/docs/web-app/tm-trading-roadmap-v3.md): Web App Roadmap Phase 3.
-- [docs/web-app/tm-trading-roadmap-v3.3.md](file:///d:/Applications/tm-trading/docs/web-app/tm-trading-roadmap-v3.3.md): Web App Roadmap Phase 3.3.
+- [docs/web-app/tm-trading-roadmap-v3.5.md](file:///d:/Applications/tm-trading/docs/web-app/tm-trading-roadmap-v3.5.md): **Web App Roadmap V3.5 — the single authority.** §59 = AI agents, bots, sessions, autonomy; §60 = news, events & macro intelligence.
+- [docs/web-app/ai-agent-session-audit.md](file:///d:/Applications/tm-trading/docs/web-app/ai-agent-session-audit.md): §59.17 required first deliverable — existing AI agent/session models, APIs and route ownership.
+- [docs/web-app/news-macro-status.md](file:///d:/Applications/tm-trading/docs/web-app/news-macro-status.md): §60 status record — slice status, closed gaps and their tests, remaining coverage/translation gaps.
+- [docs/web-app/roadmap-v3.5-gap-audit.md](file:///d:/Applications/tm-trading/docs/web-app/roadmap-v3.5-gap-audit.md): The gap audit that produced the §59/§60 work list, with a closure log at the top — read §0 before acting on a gap.
+- Superseded roadmaps (**V1 – V3.4**) are archived for history only — do not implement from them: `docs/web-app/archive/`.
 
 ---
 

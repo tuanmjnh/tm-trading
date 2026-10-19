@@ -1,0 +1,59 @@
+// =============================================================================
+//  L4 - MOMENTUM, VOLUME & ANTI-OVEREXTENSION METRICS (v2.0)
+// =============================================================================
+
+// --- 1. Trend Stack (EMA 20 / 50 / 200) ---------------------------------------
+tm_emaF = ta.ema(close, tm_emaFast)
+tm_emaM = ta.ema(close, tm_emaMid)
+tm_emaS = ta.ema(close, tm_emaSlow)
+
+bool tm_emaStackBull = tm_emaF > tm_emaM and tm_emaM > tm_emaS
+bool tm_emaStackBear = tm_emaF < tm_emaM and tm_emaM < tm_emaS
+float tm_trendScore  = tm_emaStackBull ? 1.0 : tm_emaStackBear ? -1.0 : (close > tm_emaF ? 0.4 : close < tm_emaF ? -0.4 : 0.0)
+
+// --- 2. Momentum (RSI + MACD) ------------------------------------------------
+tm_rsi = ta.rsi(close, tm_rsiLen)
+[tm_macdLine, tm_macdSignal, tm_macdHist] = ta.macd(close, tm_macdF, tm_macdS, tm_macdSig)
+
+float tm_rsiScore  = tm_rsi < tm_rsiOs ? 1.0 : tm_rsi > tm_rsiOb ? -1.0 : (tm_rsi - 50.0) / 20.0
+float tm_macdScore = tm_macdHist > 0 ? (tm_macdHist > tm_macdHist[1] ? 1.0 : 0.5) : (tm_macdHist < tm_macdHist[1] ? -1.0 : -0.5)
+float tm_momScore  = f_clamp(tm_rsiScore * 0.4 + tm_macdScore * 0.6, -1.0, 1.0)
+
+// --- 3. Volume VSA Engine (Wilder RMA + RelVol + OBV) ------------------------
+float tm_vol = nz(volume)
+float tm_volMA = ta.rma(tm_vol, tm_vol_maLen)
+float tm_volRatio = not na(tm_volMA) and tm_volMA > 0.0 ? tm_vol / tm_volMA : 0.0
+string tm_volBucket = f_vsaName(tm_vol, tm_volMA, tm_vol_spikeR, tm_vol_rVH, tm_vol_rH, tm_vol_rN, tm_vol_rL)
+bool tm_isTim = not na(tm_volMA) and tm_volMA > 0.0 and tm_vol >= tm_volMA * tm_vol_spikeR
+
+// Relative Volume (RelVol)
+float tm_volSma20 = ta.sma(tm_vol, 20)
+float tm_relVol = not na(tm_volSma20) and tm_volSma20 > 0.0 ? tm_vol / tm_volSma20 : 0.0
+
+// On-Balance Volume (OBV) Slope
+var float tm_obv = 0.0
+tm_obv := tm_obv + (close > close[1] ? tm_vol : close < close[1] ? -tm_vol : 0.0)
+float tm_obvSlope = tm_obv - nz(tm_obv[10])
+float tm_obvScore = tm_obvSlope > 0 ? 1.0 : tm_obvSlope < 0 ? -1.0 : 0.0
+
+float tm_volumeScore = f_clamp((tm_isTim ? 1.0 : tm_relVol >= tm_rvMin ? 0.7 : 0.0) * (close >= open ? 1.0 : -1.0) * 0.6 + tm_obvScore * 0.4, -1.0, 1.0)
+
+// --- 4. Anchored VWAP (Intraday Location) ------------------------------------
+var float tm_cumVol = 0.0
+var float tm_cumVwap = 0.0
+if f_isNewDay()
+    tm_cumVol  := tm_vol
+    tm_cumVwap := tm_vol * hlc3
+else
+    tm_cumVol  += tm_vol
+    tm_cumVwap += tm_vol * hlc3
+
+float tm_vwap = tm_cumVol > 0.0 ? tm_cumVwap / tm_cumVol : close
+bool tm_vwapOk = not na(tm_vwap) and tm_vwap > 0.0
+float tm_vwapScore = tm_vwapOk ? f_clamp((close - tm_vwap) / nz(tm_atr, close * 0.01), -1.0, 1.0) : 0.0
+
+// --- 5. Anti-Overextension / Exhaustion Metrics (Pillar 5) --------------------
+// Đo độ giãn của giá so với EMA 20 và biên độ nến tín hiệu
+float tm_extEma = not na(tm_atr) and tm_atr > 0.0 ? math.abs(close - tm_emaF) / tm_atr : 0.0
+float tm_extCandle = not na(tm_atr) and tm_atr > 0.0 ? (high - low) / tm_atr : 1.0
+bool  tm_isOverextended = tm_extEma > tm_maxExtAtr or tm_extCandle > tm_maxCandleAtr

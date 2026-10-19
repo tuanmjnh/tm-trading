@@ -28,6 +28,7 @@ export function toFillItem(f: any): PaperFillItem {
     fillId: String(f.fillId ?? ''),
     orderId: String(f.orderId ?? ''),
     alertKey: f.alertKey == null ? null : String(f.alertKey),
+    sessionId: f.sessionId == null ? null : String(f.sessionId),
     account: String(f.accountId ?? 'default'),
     source: String(f.source ?? 'paper'),
     symbol: String(f.symbol ?? ''),
@@ -52,9 +53,17 @@ export function toFillItem(f: any): PaperFillItem {
 
 export interface ListFillsQuery {
   limit: number
+  /**
+   * Tenancy (docs/web-app/user-tenancy-plan.md): hub user id (`sub`) that owns
+   * the fills. Required — an unscoped read would leak another account's ledger.
+   */
+  ownerId: string
   cursor?: string
   symbol?: string
   orderId?: string
+  sessionId?: string
+  /** Narrow to one sub-book (account switcher, §61.17 Phase B). */
+  account?: string
 }
 
 export interface ListFillsResult {
@@ -72,9 +81,11 @@ export async function listPaperFills(q: ListFillsQuery): Promise<ListFillsResult
   })
   if (!PaperFill) return empty()
 
-  const filter: Record<string, any> = {}
+  const filter: Record<string, any> = { ownerId: q.ownerId }
   if (q.symbol) filter.symbol = q.symbol.toUpperCase()
   if (q.orderId) filter.orderId = q.orderId
+  if (q.sessionId) filter.sessionId = q.sessionId
+  if (q.account) filter.accountId = q.account
   if (q.cursor) {
     if (!Types.ObjectId.isValid(q.cursor)) {
       throw createError({ statusCode: 400, statusMessage: 'error.invalidCursor', message: 'cursor khong phai id hop le' })
@@ -92,8 +103,8 @@ export async function listPaperFills(q: ListFillsQuery): Promise<ListFillsResult
       .lean()
     const total = await PaperFill.countDocuments(countFilter)
     const [fills, simulated] = await Promise.all([
-      PaperFill.countDocuments(),
-      PaperFill.countDocuments({ simulateOnly: true })
+      PaperFill.countDocuments({ ownerId: q.ownerId }),
+      PaperFill.countDocuments({ ownerId: q.ownerId, simulateOnly: true })
     ])
     return {
       items: docs.map(toFillItem),

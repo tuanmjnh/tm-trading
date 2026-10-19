@@ -62,6 +62,38 @@ function applyCors(event: H3Event, flags: Record<string, unknown>): void {
   // Origin outside whitelist -> do not send Allow-Origin (blocked by browser on client).
 }
 
+// P0-6 — browser-side caching for the read-heavy GET endpoints.
+//
+// These paths are re-fetched on every page visit and a few are expensive on a
+// cold cache (the instrument universe scan especially). `private` keeps the
+// entry in the browser only — every one of these is token-gated, so a shared
+// cache must never serve another user's response. Windows stay short for
+// anything the app also mutates (news/intel) and long only for static registries.
+const CACHE_RULES: Array<{ prefix: string, maxAge: number, swr: number }> = [
+  { prefix: '/api/v1/indicators', maxAge: 300, swr: 600 }, // engine registry — identical for every user
+  { prefix: '/api/v1/methods', maxAge: 300, swr: 600 }, // method registry
+  { prefix: '/api/v1/venues', maxAge: 300, swr: 600 },
+  { prefix: '/api/v1/configs/public', maxAge: 300, swr: 600 },
+  { prefix: '/api/v1/instruments', maxAge: 60, swr: 120 }, // includes the heavy universe scan
+  { prefix: '/api/v1/calendar', maxAge: 60, swr: 120 },
+  { prefix: '/api/v1/intel', maxAge: 20, swr: 40 },
+  { prefix: '/api/v1/news', maxAge: 20, swr: 40 }
+]
+
+function applyCacheHeaders(event: H3Event, path: string): void {
+  const method = getMethod(event)
+  if (method !== 'GET' && method !== 'HEAD') return
+
+  const rule = CACHE_RULES.find(r => path === r.prefix || path.startsWith(`${r.prefix}/`))
+  if (!rule) return
+
+  setHeader(
+    event,
+    'Cache-Control',
+    `private, max-age=${rule.maxAge}, stale-while-revalidate=${rule.swr}`
+  )
+}
+
 function enforceRateLimit(event: H3Event, appId: string, flags: Record<string, unknown>): void {
   const api = flags.api as ApiFeatureSection | undefined
   const rlCfg = api?.rateLimit
@@ -116,6 +148,9 @@ export default defineEventHandler(async (event) => {
     setResponseStatus(event, 204)
     return '' // Return value terminates middleware request (preflight)
   }
+
+  // Caching is independent of the feature flags (which fail open).
+  applyCacheHeaders(event, path)
 
   if (!flags) return
 

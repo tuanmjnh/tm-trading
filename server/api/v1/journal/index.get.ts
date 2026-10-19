@@ -25,6 +25,7 @@ export default defineEventHandler(async (event) => {
   const { items, total, stats, source, warnings, filters } = await listJournal({
     limit,
     cursor,
+    ownerId: requireOwnerId(event),
     source: query.source ? String(query.source) : undefined,
     method: query.method ? String(query.method) : undefined,
     regime: query.regime ? String(query.regime) : undefined,

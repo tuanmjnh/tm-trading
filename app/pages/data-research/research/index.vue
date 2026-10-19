@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Proposal, StrategyResearch } from '~~/types/research'
+import type { EvidenceSet } from '~~/types/research'
 import type { StrategyProfile } from '~~/types/strategy'
 import { getErrorMessage } from '~/shared/utils/errors'
 
@@ -32,7 +33,15 @@ const knownStrategies = ref<StrategyProfile[]>([])
 const research = ref<StrategyResearch | null>(null)
 const allProposals = ref<Proposal[]>([])
 const isLoading = ref(false)
-const creatingId = ref<string | null>(null)
+
+// -------- approve → evidence picker (§59.15 Slice E) --------
+const showApprove = ref(false)
+const pendingProposal = ref<Proposal | null>(null)
+const evidenceOptions = ref<EvidenceSet[]>([])
+const selectedEvidenceId = ref<string | null>(null)
+const evidenceLoading = ref(false)
+const approveError = ref('')
+const creating = ref(false)
 
 async function load() {
   isLoading.value = true
@@ -83,15 +92,52 @@ const trail = computed(() => [
 ])
 
 async function approve(proposal: Proposal) {
-  creatingId.value = proposal.proposalId
+  // §59.15 Slice E — AI output links to evidence. Before an experiment can be
+  // written, the reviewer picks WHICH frozen set the hypothesis came from; an
+  // AI-generated proposal cannot be approved without one (the server refuses
+  // with evidence_required). Integrity is re-verified server-side on save, not
+  // guessed from this list.
+  pendingProposal.value = proposal
+  selectedEvidenceId.value = proposal.evidenceSetId ?? null
+  approveError.value = ''
+  evidenceLoading.value = true
+  showApprove.value = true
   try {
-    const exp = await api.createExperiment(proposal)
+    evidenceOptions.value = await api.evidenceSets({
+      strategyVersionId: proposal.strategyVersionId || undefined,
+      limit: 50
+    })
+    if (!selectedEvidenceId.value && evidenceOptions.value.length) {
+      // pre-select the newest set for this version so approving is one click
+      selectedEvidenceId.value = evidenceOptions.value[0]?.setId ?? null
+    }
+  } finally {
+    evidenceLoading.value = false
+  }
+}
+
+async function submitApprove() {
+  const proposal = pendingProposal.value
+  if (!proposal) return
+  const aiGenerated = !!proposal.generation
+  if (aiGenerated && !selectedEvidenceId.value) {
+    approveError.value = t('research.approve.evidenceRequired')
+    return
+  }
+  creating.value = true
+  approveError.value = ''
+  try {
+    const exp = await api.createExperiment({
+      ...proposal,
+      evidenceSetId: selectedEvidenceId.value ?? undefined
+    } as Proposal)
     notify.success(t('research.createExperiment'))
+    showApprove.value = false
     if (exp?._id) router.push(`/data-research/research/experiments/${encodeURIComponent(exp._id)}`)
   } catch (err) {
-    notify.error(t('research.createExperiment'), getErrorMessage(err, key => t(key)))
+    approveError.value = getErrorMessage(err, key => t(key))
   } finally {
-    creatingId.value = null
+    creating.value = false
   }
 }
 
@@ -115,6 +161,15 @@ useHead({ title })
 
     <template #right>
       <div class="flex items-center gap-2">
+        <UButton
+          icon="i-lucide-lock"
+          :label="t('research.viewEvidenceSets')"
+          variant="soft"
+          color="neutral"
+          size="sm"
+          to="/data-research/research/evidence"
+          :ui="{ label: 'hidden md:block' }"
+        />
         <UButton
           icon="i-lucide-test-tube"
           :label="t('research.viewExperiments')"
@@ -287,7 +342,7 @@ useHead({ title })
                 color="primary"
                 variant="soft"
                 size="sm"
-                :loading="creatingId === p.proposalId"
+                :loading="creating && pendingProposal?.proposalId === p.proposalId"
                 @click="approve(p)"
               />
             </div>
@@ -303,5 +358,108 @@ useHead({ title })
         />
       </div>
     </div>
+
+    <!-- Approve → pick the evidence the hypothesis came from (§59.15 Slice E) -->
+    <UModal v-model:open="showApprove" :title="t('research.approve.title')" size="lg">
+      <template #body>
+        <div class="space-y-4">
+          <p class="text-sm text-muted">{{ t('research.approve.desc') }}</p>
+
+          <div class="text-xs text-dimmed truncate">
+            {{ pendingProposal?.proposalId }} · {{ pendingProposal?.hypothesis?.slice(0, 80) }}
+          </div>
+
+          <div v-if="evidenceLoading" class="flex items-center gap-2 text-sm text-muted py-4">
+            <UIcon name="i-lucide-loader-2" class="w-4 h-4 animate-spin text-primary" />
+            {{ t('research.approve.loadingEvidence') }}
+          </div>
+
+          <UAlert
+            v-else-if="!evidenceOptions.length"
+            color="warning"
+            variant="subtle"
+            icon="i-lucide-triangle-alert"
+            :title="t('research.approve.noEvidence')"
+            :description="t('research.approve.noEvidenceHint')"
+          />
+
+          <div v-else class="flex flex-col gap-1.5 max-h-72 overflow-y-auto">
+            <UButton
+              v-for="s in evidenceOptions"
+              :key="s.setId"
+              :color="selectedEvidenceId === s.setId ? 'primary' : 'neutral'"
+              :variant="selectedEvidenceId === s.setId ? 'soft' : 'ghost'"
+              size="sm"
+              class="justify-start h-auto py-2 flex-col items-start gap-1"
+              @click="selectedEvidenceId = s.setId"
+            >
+              <span class="flex items-center gap-2 w-full flex-wrap">
+                <UIcon
+                  :name="selectedEvidenceId === s.setId ? 'i-lucide-circle-dot' : 'i-lucide-circle'"
+                  class="w-3.5 h-3.5 shrink-0"
+                />
+                <span class="font-mono text-[11px] truncate">{{ s.setId }}</span>
+                <UBadge
+                  :label="t(`research.sets.kinds.${s.kind}`)"
+                  color="info"
+                  variant="subtle"
+                  size="xs"
+                  class="shrink-0"
+                />
+                <UBadge
+                  v-if="s.metrics && !s.metrics.sufficient"
+                  :label="t('research.insufficientSample')"
+                  color="warning"
+                  variant="subtle"
+                  size="xs"
+                  class="shrink-0"
+                />
+                <UBadge
+                  v-if="s.sealed === false"
+                  :label="t('research.sets.detail.moving')"
+                  color="warning"
+                  variant="subtle"
+                  size="xs"
+                  class="shrink-0"
+                />
+              </span>
+              <span class="text-[11px] text-muted ps-6 text-left">
+                {{ t('research.sets.columns.trades') }}: {{ s.metrics?.trades ?? 0 }} ·
+                {{ s.strategyVersionId || '—' }} ·
+                {{ s.pointInTime?.frozenAt ? new Date(s.pointInTime.frozenAt).toLocaleString() : '—' }}
+              </span>
+            </UButton>
+          </div>
+
+          <UAlert
+            v-if="approveError"
+            color="error"
+            variant="subtle"
+            icon="i-lucide-triangle-alert"
+            :title="approveError"
+          />
+
+          <UAlert
+            color="neutral"
+            variant="subtle"
+            icon="i-lucide-shield-check"
+            :title="t('research.approve.verifyNote')"
+          />
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2 w-full">
+          <UButton :label="t('global.cancel')" color="neutral" variant="ghost" :disabled="creating" @click="showApprove = false" />
+          <UButton
+            icon="i-lucide-flask-conical"
+            :label="t('research.createExperiment')"
+            color="primary"
+            variant="soft"
+            :loading="creating"
+            @click="submitApprove"
+          />
+        </div>
+      </template>
+    </UModal>
   </BasePage>
 </template>

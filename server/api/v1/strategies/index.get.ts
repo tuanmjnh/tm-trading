@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   if (!Profile) return { success: true, data: [], meta: { count: 0, mongo: 'down' } }
 
   try {
-    const rows = await Profile.find({}).sort({ createdAt: -1 }).lean()
+    const rows = await Profile.find({ ownerId: requireOwnerId(event) }).sort({ createdAt: -1 }).lean()
     return { success: true, data: rows, meta: { count: rows.length, mongo: 'up' } }
   } catch {
     return { success: true, data: [], meta: { count: 0, mongo: 'down' } }

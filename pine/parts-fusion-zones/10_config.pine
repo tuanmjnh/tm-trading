@@ -1,0 +1,77 @@
+// =============================================================================
+//  10_CONFIG — Inputs, Asset Profiles, Setups & Parameters
+// =============================================================================
+
+// --- 1. General & Mode --------------------------------------------------------
+fz_confirmOnly = input.bool(true,  "Chi tin hieu nen da dong (no-repaint)", group = "FZ · Chung", display = display.data_window)
+fz_payloadMode = input.string("Full", "Webhook payload", options = ["Full", "Slim", "Off"], group = "FZ · Chung", display = display.data_window)
+fz_assetMode   = input.string("Auto", "Asset Profile", options = ["Auto", "XAU", "BTC", "ETH", "Crypto Other", "Custom"], group = "FZ · Chung", display = display.data_window)
+
+// --- 2. Trend Ribbon ----------------------------------------------------------
+fz_rb_show   = input.bool(false,  "Hien thi Trend Ribbon", group = "FZ · Trend Ribbon", display = display.data_window)
+fz_rb_type   = input.string("EMA", "Ribbon MA Type", options = ["EMA", "SMA", "HMA"], group = "FZ · Trend Ribbon", display = display.data_window)
+fz_rb_fast   = input.int(20,      "Ribbon Fast Length", minval = 2, maxval = 200, group = "FZ · Trend Ribbon", display = display.data_window)
+fz_rb_slow   = input.int(50,      "Ribbon Slow Length", minval = 5, maxval = 500, group = "FZ · Trend Ribbon", display = display.data_window)
+fz_rb_filter = input.bool(true,   "Bat buoc cung chieu Ribbon", group = "FZ · Trend Ribbon", display = display.data_window)
+
+// --- 3. Dynamic Zones (Supply / Demand / SR) ----------------------------------
+fz_zn_show     = input.bool(true,  "Hien thi Supply / Demand Zones", group = "FZ · Dynamic Zones", display = display.data_window)
+fz_zn_swLen    = input.int(7,      "Zone Pivot Lookback", minval = 2, maxval = 50, group = "FZ · Dynamic Zones", display = display.data_window)
+fz_zn_widthAtr = input.float(0.5,  "Zone Width (x ATR)", minval = 0.1, step = 0.05, group = "FZ · Dynamic Zones", display = display.data_window)
+fz_zn_max      = input.int(10,     "So luong Zones toi da", minval = 2, maxval = 30, group = "FZ · Dynamic Zones", display = display.data_window)
+
+// --- 4. Market Structure & Liquidity ------------------------------------------
+fz_ms_show    = input.bool(true,  "Hien thi BOS / CHoCH", group = "FZ · Structure & Liquidity", display = display.data_window)
+fz_ms_swLen   = input.int(5,      "Structure Swing Lookback", minval = 2, maxval = 20, group = "FZ · Structure & Liquidity", display = display.data_window)
+fz_ms_sweepOn = input.bool(true,  "Phat hien Liquidity Sweep", group = "FZ · Structure & Liquidity", display = display.data_window)
+fz_ms_pdOn    = input.bool(true,  "Hien thi PDH / PDL", group = "FZ · Structure & Liquidity", display = display.data_window)
+
+// --- 5. 3 Entry Setups (Ablation Toggles) ------------------------------------
+fz_setup_pullback = input.bool(true,  "Setup 1: Trend Pullback (Ribbon/Zone)", group = "FZ · Entry Setups", display = display.data_window)
+fz_setup_sweep    = input.bool(true,  "Setup 2: Liquidity Sweep Reversal", group = "FZ · Entry Setups", display = display.data_window)
+fz_setup_range    = input.bool(false, "Setup 3: Range Mean-Reversion", group = "FZ · Entry Setups", display = display.data_window)
+fz_pull_tol       = input.float(0.4,  "Pullback Tolerance (x ATR)", minval = 0.1, step = 0.05, group = "FZ · Entry Setups", display = display.data_window)
+fz_sweep_confBars = input.int(3,      "Cua so xac nhan Sweep (nen)", minval = 1, maxval = 10, group = "FZ · Entry Setups", display = display.data_window)
+
+// --- 6. Multi-Timeframe (MTF) Context -----------------------------------------
+fz_mtf_on  = input.bool(true,     "Bat HTF Context Bias", group = "FZ · MTF Context", display = display.data_window)
+fz_mtf_tf  = input.timeframe("240", "HTF Context Timeframe", options = ["60", "240", "D", "W"], group = "FZ · MTF Context", display = display.data_window)
+fz_mtf_len = input.int(100,       "HTF Trend EMA Length", minval = 10, maxval = 500, group = "FZ · MTF Context", display = display.data_window)
+
+// --- 7. Scoring Weights & Thresholds ------------------------------------------
+fz_w_trend  = input.float(25.0, "W: Trend (Ribbon)", minval = 0.0, step = 1.0, group = "FZ · Scoring Weights", display = display.data_window)
+fz_w_zone   = input.float(25.0, "W: Zone (Supply/Demand)", minval = 0.0, step = 1.0, group = "FZ · Scoring Weights", display = display.data_window)
+fz_w_struct = input.float(20.0, "W: Structure (BOS/Sweep)", minval = 0.0, step = 1.0, group = "FZ · Scoring Weights", display = display.data_window)
+fz_w_candle = input.float(15.0, "W: Candle Confirmation", minval = 0.0, step = 1.0, group = "FZ · Scoring Weights", display = display.data_window)
+fz_w_mtf    = input.float(15.0, "W: MTF Alignment", minval = 0.0, step = 1.0, group = "FZ · Scoring Weights", display = display.data_window)
+
+fz_scr_noTrade = input.int(49, "Score <= NO TRADE", minval = 0, maxval = 99, group = "FZ · Score Thresholds", display = display.data_window)
+fz_scr_setup   = input.int(65, "Score <= SETUP", minval = 1, maxval = 99, group = "FZ · Score Thresholds", display = display.data_window)
+fz_scr_strong  = input.int(78, "Score <= STRONG", minval = 1, maxval = 99, group = "FZ · Score Thresholds", display = display.data_window)
+fz_scoreMargin = input.int(8,  "Min LONG/SHORT Score Gap", minval = 0, maxval = 50, group = "FZ · Score Thresholds", display = display.data_window)
+
+// --- 8. Risk Engine, SL & TP --------------------------------------------------
+fz_sl_mode      = input.string("Zone / Swing", "Kieu dat SL", options = ["Zone / Swing", "ATR Multiplier"], group = "FZ · Risk & TP/SL", display = display.data_window)
+fz_tp_mode      = input.string("Opposing Zone / RR", "Kieu tinh TP", options = ["Opposing Zone / RR", "Fixed RR"], group = "FZ · Risk & TP/SL", display = display.data_window)
+fz_sl_atrMul    = input.float(1.5, "SL = ATR x", minval = 0.5, step = 0.1, group = "FZ · Risk & TP/SL", display = display.data_window)
+fz_sl_padAtr    = input.float(0.2, "Dem SL (x ATR)", minval = 0.05, step = 0.05, group = "FZ · Risk & TP/SL", display = display.data_window)
+fz_sl_minAtr    = input.float(0.5, "SL min (x ATR)", minval = 0.2, step = 0.1, group = "FZ · Risk & TP/SL", display = display.data_window)
+fz_sl_maxAtr    = input.float(3.5, "SL max (x ATR)", minval = 1.0, step = 0.1, group = "FZ · Risk & TP/SL", display = display.data_window)
+fz_rr1          = input.float(1.0, "TP1 (R)", minval = 0.5, step = 0.1, group = "FZ · Risk & TP/SL", display = display.data_window)
+fz_rr2          = input.float(2.0, "TP2 (R)", minval = 1.0, step = 0.1, group = "FZ · Risk & TP/SL", display = display.data_window)
+fz_rr3          = input.float(3.0, "TP3 (R)", minval = 1.5, step = 0.1, group = "FZ · Risk & TP/SL", display = display.data_window)
+fz_rrMin        = input.float(1.5, "RR toi thieu kiem tra", minval = 0.5, step = 0.1, group = "FZ · Risk & TP/SL", display = display.data_window)
+fz_obstacleGate = input.bool(true, "Obstacle Gate: Chan neu can < TP1", group = "FZ · Risk & TP/SL", display = display.data_window)
+fz_coolBars     = input.int(8,     "Cooldown giua 2 lenh (nen)", minval = 0, group = "FZ · Risk & TP/SL", display = display.data_window)
+
+// --- 9. Display & Dashboard ---------------------------------------------------
+fz_showViz      = input.bool(true,  "Master Visual Switch", group = "FZ · Display", display = display.data_window)
+fz_cBull        = input.color(color.new(#089981, 0), "Mau LONG / Bull Ribbon", group = "FZ · Display", inline = "clr", display = display.data_window)
+fz_cBear        = input.color(color.new(#f23645, 0), "Mau SHORT / Bear Ribbon", group = "FZ · Display", inline = "clr", display = display.data_window)
+fz_showSig      = input.bool(true,  "Hien thi icon tin hieu Entry", group = "FZ · Display", display = display.data_window)
+fz_showTargets  = input.bool(true,  "Hien thi duong muc tieu Entry/SL/TP", group = "FZ · Display", display = display.data_window)
+fz_showHit      = input.bool(true,  "Hien thi nhan TP/SL hit", group = "FZ · Display", display = display.data_window)
+fz_showDash     = input.bool(true,  "Hien thi Dashboard", group = "FZ · Display", display = display.data_window)
+fz_dashMode     = input.string("Compact", "Dashboard Mode", options = ["Compact", "Advanced"], group = "FZ · Display", display = display.data_window)
+fz_dashSize     = input.string("Small", "Dashboard Size", options = ["Tiny", "Small", "Normal"], group = "FZ · Display", display = display.data_window)
+fz_sessTz       = input.string("America/New_York", "Mui gio thi truong", options = ["America/New_York", "Europe/London", "Asia/Ho_Chi_Minh", "Asia/Tokyo", "UTC"], group = "FZ · Display", display = display.data_window)

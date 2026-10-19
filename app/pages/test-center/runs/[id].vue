@@ -8,11 +8,72 @@ const { t } = useI18n()
 const notify = useNotify()
 const route = useRoute()
 const runsApi = useRuns()
+const researchApi = useResearch()
+
+// §59.15 Slice E — freeze this run's evidence. The id here is the SERIES id the
+// Test Center links and compares (`engineVersion~symbol~tf~paramsHash`); the
+// service resolves it against reports/*.ndjson, i.e. the same rows this page
+// displays, so the frozen set cannot disagree with what the reviewer saw (D12).
+const freezing = ref(false)
+const frozenSetId = ref<string | null>(null)
+
+async function freezeEvidence() {
+  if (!data.value || freezing.value) return
+  freezing.value = true
+  try {
+    const doc = await researchApi.freezeEvidence({ kind: 'backtest-run', sourceId: seriesId.value })
+    frozenSetId.value = doc.setId || doc._id
+    notify.success(
+      doc.alreadyFrozen ? t('runs.freezeEvidenceExists') : t('runs.freezeEvidence'),
+      doc.sourceChanged ? t('runs.freezeEvidenceChanged') : frozenSetId.value || undefined
+    )
+  } catch (err) {
+    notify.error(t('runs.freezeEvidence'), getErrorMessage(err, key => t(key)))
+  } finally {
+    freezing.value = false
+  }
+}
 
 const seriesId = computed(() => String(route.params.id ?? ''))
 const data = ref<RunSeriesDetail | null>(null)
 const isLoading = ref(true)
 const { viewMode } = useAdminGridView('run-detail-view-mode')
+
+// Slice 3 lineage: strategy versions that cite this run as backtest/holdout
+// evidence. Reverse of the version->run pointer (read-only, fail-soft).
+interface LineageRow {
+  strategyVersionId: string
+  strategyId: string | null
+  version: string | null
+  status: string | null
+  backtest: boolean
+  holdout: boolean
+  profileName: string | null
+}
+const lineage = ref<LineageRow[]>([])
+
+async function loadLineage() {
+  try {
+    const res = await $fetch<{ success: boolean; data: LineageRow[] }>(
+      `/api/v1/runs/${encodeURIComponent(seriesId.value)}/lineage`
+    )
+    lineage.value = res.data ?? []
+  } catch {
+    lineage.value = []
+  }
+}
+
+const versionStates: Record<string, string> = {
+  draft: 'strategyLab.strategyDetail.versionStates.draft',
+  backtest: 'strategyLab.strategyDetail.versionStates.backtest',
+  holdout: 'strategyLab.strategyDetail.versionStates.holdout',
+  paper: 'strategyLab.strategyDetail.versionStates.paper',
+  stable_paper: 'strategyLab.strategyDetail.versionStates.stable_paper',
+  archived: 'strategyLab.strategyDetail.versionStates.archived'
+}
+const stateLabel = (s: string | null) => (s ? t(versionStates[s] ?? s) : '—')
+const stateColor = (s: string | null): 'primary' | 'success' | 'info' | 'warning' | 'neutral' =>
+  s === 'stable_paper' ? 'success' : s === 'paper' ? 'info' : s === 'archived' ? 'neutral' : s === 'draft' ? 'warning' : 'primary'
 
 async function load() {
   isLoading.value = true
@@ -24,6 +85,7 @@ async function load() {
   } finally {
     isLoading.value = false
   }
+  void loadLineage()
 }
 
 onMounted(load)
@@ -38,6 +100,13 @@ const description = computed(() => {
 const trail = computed(() => [
   { label: t('nav.test_center'), to: '/test-center/runs' },
   { label: title.value }
+])
+
+// Slice 3 — explicit mode separation: a backtest run's metrics are distinct
+// from replay / live-paper. Label this surface and cross-link the other two.
+const otherModes = computed(() => [
+  { key: 'REPLAY' as const, to: '/test-center/replay' },
+  { key: 'LIVE_PAPER' as const, to: '/test-center/forward' }
 ])
 
 const params = computed(() => {
@@ -138,6 +207,18 @@ useHead({ title })
 
     <template #right>
       <div class="flex items-center gap-2">
+        <TestCenterRunModeBadge mode="BACKTEST" />
+        <UButton
+          v-for="m in otherModes"
+          :key="m.key"
+          :icon="m.key === 'REPLAY' ? 'i-lucide-history' : 'i-lucide-fast-forward'"
+          :label="t(`testCenter.modes.${m.key}`)"
+          variant="ghost"
+          color="neutral"
+          size="sm"
+          :to="m.to"
+          :ui="{ label: 'hidden lg:block' }"
+        />
         <UButton
           icon="i-lucide-scale"
           :label="t('runs.compare.nav')"
@@ -145,6 +226,27 @@ useHead({ title })
           color="primary"
           size="sm"
           :to="`/test-center/runs/compare?ids=${encodeURIComponent(seriesId)}`"
+          :ui="{ label: 'hidden md:block' }"
+        />
+        <UButton
+          v-if="data && !frozenSetId"
+          icon="i-lucide-lock"
+          :label="t('runs.freezeEvidence')"
+          variant="soft"
+          color="primary"
+          size="sm"
+          :loading="freezing"
+          :title="t('runs.freezeEvidenceHint')"
+          @click="freezeEvidence"
+        />
+        <UButton
+          v-if="frozenSetId"
+          icon="i-lucide-fingerprint"
+          :label="t('runs.viewEvidenceSet')"
+          variant="soft"
+          color="primary"
+          size="sm"
+          :to="`/data-research/research/evidence/${encodeURIComponent(frozenSetId)}`"
           :ui="{ label: 'hidden md:block' }"
         />
         <UButton
@@ -158,7 +260,23 @@ useHead({ title })
       </div>
     </template>
 
-    <div class="flex flex-col gap-6 w-full pb-24 lg:pb-6">
+    <div v-if="!isLoading && !data" class="flex flex-col items-center justify-center py-20">
+      <AdminEmptyState
+        :title="t('runs.detail.notFound')"
+        :description="t('runs.detail.notFoundHint')"
+        icon="i-lucide-search-x"
+      />
+      <UButton
+        to="/test-center/runs"
+        icon="i-lucide-arrow-left"
+        :label="t('nav.test_center')"
+        color="primary"
+        variant="soft"
+        class="mt-4"
+      />
+    </div>
+
+    <div v-else class="flex flex-col gap-6 w-full pb-24 lg:pb-6">
       <!-- Canh bao D1: khong im lang khi so lieu khong Sach -->
       <UAlert
         v-for="w in data?.warnings ?? []"
@@ -260,8 +378,27 @@ useHead({ title })
 
           <dl class="space-y-3 text-xs">
             <div class="flex items-start justify-between gap-3">
+              <dt class="text-muted shrink-0">{{ t('runs.detail.seriesId') }}</dt>
+              <dd class="flex items-center gap-1.5 min-w-0">
+                <code class="text-[11px] text-primary bg-primary/10 px-1.5 py-0.5 rounded font-mono break-all">{{ seriesId }}</code>
+                <UButton icon="i-lucide-copy" variant="ghost" color="neutral" size="xs" @click="copyText(seriesId)" />
+              </dd>
+            </div>
+            <div class="flex items-start justify-between gap-3">
+              <dt class="text-muted shrink-0">{{ t('runs.mode') }}</dt>
+              <dd><UBadge label="BACKTEST" color="primary" variant="subtle" size="xs" class="font-mono" /></dd>
+            </div>
+            <div class="flex items-start justify-between gap-3">
               <dt class="text-muted shrink-0">{{ t('runs.engineVersion') }}</dt>
               <dd class="font-mono text-highlighted">{{ data?.engineVersion }}</dd>
+            </div>
+            <div class="flex items-start justify-between gap-3">
+              <dt class="text-muted shrink-0">{{ t('runs.detail.preset') }}</dt>
+              <dd class="font-mono" :class="data?.preset ? 'text-highlighted' : 'text-dimmed'">{{ data?.preset || '—' }}</dd>
+            </div>
+            <div class="flex items-start justify-between gap-3">
+              <dt class="text-muted shrink-0">{{ t('runs.detail.dataset') }}</dt>
+              <dd class="text-muted font-mono">{{ data?.rawTrades ?? '—' }} <span class="text-dimmed">→ {{ trades.length }}</span></dd>
             </div>
             <div class="flex items-start justify-between gap-3">
               <dt class="text-muted shrink-0">{{ t('runs.paramsHash') }}</dt>
@@ -436,6 +573,49 @@ useHead({ title })
             </template>
           </LazyGridList>
         </div>
+      </UCard>
+
+      <!-- Slice 3: run -> strategy-version lineage (reverse evidence pointer) -->
+      <UCard v-if="data">
+        <template #header>
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-lucide-git-branch" class="w-4 h-4 text-primary" />
+              <h3 class="font-semibold text-sm">{{ t('runs.detail.lineage.title') }}</h3>
+              <span class="text-[11px] text-dimmed">{{ t('runs.detail.lineage.desc') }}</span>
+            </div>
+            <UBadge :label="String(lineage.length)" variant="subtle" size="xs" />
+          </div>
+        </template>
+
+        <div v-if="lineage.length" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div
+            v-for="row in lineage"
+            :key="row.strategyVersionId"
+            class="flex items-center justify-between gap-3 rounded border border-default/60 px-3 py-2"
+          >
+            <div class="min-w-0">
+              <NuxtLink
+                v-if="row.strategyId"
+                :to="`/strategy-lab/${encodeURIComponent(row.strategyId)}`"
+                class="block font-mono text-xs text-highlighted truncate hover:underline"
+              >{{ row.strategyVersionId }}</NuxtLink>
+              <span v-else class="block font-mono text-xs text-dimmed truncate">{{ row.strategyVersionId }}</span>
+              <span class="text-[11px] text-dimmed truncate">{{ row.profileName || row.strategyId }}</span>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <UBadge :label="stateLabel(row.status)" :color="stateColor(row.status)" variant="subtle" size="xs" />
+              <UBadge v-if="row.backtest" :label="t('runs.detail.lineage.backtestEvidence')" color="primary" variant="subtle" size="xs" />
+              <UBadge v-if="row.holdout" :label="t('runs.detail.lineage.holdoutEvidence')" color="info" variant="subtle" size="xs" />
+            </div>
+          </div>
+        </div>
+        <AdminEmptyState
+          v-else
+          :title="t('runs.detail.lineage.empty')"
+          :description="t('runs.detail.lineage.emptyHint')"
+          icon="i-lucide-git-branch"
+        />
       </UCard>
     </div>
   </BasePage>

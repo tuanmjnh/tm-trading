@@ -22,6 +22,7 @@ import {
   type IPriceLine,
   type ISeriesApi,
   type ISeriesMarkersPluginApi,
+  type LogicalRange,
   type SeriesMarker,
   type Time,
   type UTCTimestamp
@@ -103,6 +104,30 @@ const mounted = new Map<string, MountedIndicator>()
 let priceLines: IPriceLine[] = []
 /** Series-marker plugin for scored news + method events inside the loaded bar window. */
 let markerPlugin: ISeriesMarkersPluginApi<Time> | null = null
+
+// -----------------------------------------------------------------------------
+//  Client-side history cache + older-bar paging (C3/C7).
+//  C7: switching symbols/panes re-fetched the same 300 bars every remount. A
+//  short-lived module cache renders the last known base instantly and then
+//  revalidates in the background (stale-while-revalidate) — the live plane
+//  keeps the tail fresh either way, so the REST base is all that can go stale.
+//  C3: dragging past the oldest loaded candle pages OLDER bars via the
+//  endpoint's `endTime` (one upstream call per page) and anchors the viewport
+//  on the bars the user was already looking at.
+// -----------------------------------------------------------------------------
+const CANDLE_TTL_MS = 30_000
+const CANDLE_CACHE_MAX = 24
+const OLDER_LIMIT = 300
+const MAX_BARS = 3000
+/** Left-edge trigger in logical bars — start paging slightly before the wall. */
+const OLDER_TRIGGER = 15
+const candleCache = new Map<string, { at: number; bars: ChartBar[] }>()
+
+let historyEpoch = 0
+/** Guards the range handler against our own programmatic viewport shifts. */
+let suppressRange = false
+const loadingOlder = ref(false)
+let noMoreHistory = false
 
 /** Per-method marker color (Phase 10) — matches the method names registry. */
 const METHOD_COLOR: Record<string, string> = {
@@ -369,34 +394,162 @@ const updateIndicators = (): void => {
   }
 }
 
-async function loadHistory(): Promise<void> {
+// -----------------------------------------------------------------------------
+//  rAF-coalesced indicator refresh. The live feed emits a `market.candle`
+//  (forming) frame after EVERY trade, and each frame used to trigger a full
+//  O(bars x indicators) recompute + setData — hundreds per second on a liquid
+//  symbol, which froze the chart. Coalesce: at most ONE recompute per display
+//  frame. The candle series itself is still updated immediately (cheap update)
+//  so the chart stays responsive; only the derived indicator series are batched.
+// -----------------------------------------------------------------------------
+let indicatorRaf = 0
+const scheduleIndicators = (): void => {
+  if (indicatorRaf) return // a refresh is already pending this frame
+  indicatorRaf = requestAnimationFrame(() => {
+    indicatorRaf = 0
+    updateIndicators()
+  })
+}
+
+// Markers ride their own frame budget: renderMarkers() rebuilds the whole marker
+// list, and the live plane emits a forming-candle frame after EVERY trade. It
+// used to run synchronously per frame (unlike the indicators), which is the
+// expensive half of the pair on a liquid symbol. Same rule: at most one rebuild
+// per display frame.
+let markerRaf = 0
+const scheduleMarkers = (): void => {
+  if (markerRaf) return
+  markerRaf = requestAnimationFrame(() => {
+    markerRaf = 0
+    renderMarkers()
+  })
+}
+
+async function loadHistory(opts: { background?: boolean } = {}): Promise<void> {
   if (props.replay) return // replay owns the bars — see loadReplay()
   const key = candleKey(props.symbol, props.timeframe)
-  loading.value = true
-  loadError.value = null
+  const epoch = ++historyEpoch
+  noMoreHistory = false
+
+  const cached = candleCache.get(key)
+  const fresh = cached !== undefined && Date.now() - cached.at < CANDLE_TTL_MS
+  // Fresh cache -> paint immediately, then revalidate silently (no spinner).
+  const background = opts.background === true || fresh
+  if (fresh && cached) {
+    applyBars(key, cached.bars.slice())
+    loading.value = false
+    loadError.value = null
+  }
+  if (!background) {
+    loading.value = true
+    loadError.value = null
+  }
   try {
     const res = await $fetch<{ success: boolean; data?: CandleMessage[] }>(
       `/api/v1/markets/${encodeURIComponent(props.symbol)}/candles`,
       { params: { interval: props.timeframe, limit: 300 } }
     )
-    bars = candlesToBars(res.data ?? [])
-    loadedKey = key
-    series?.setData(bars.map(asPoint))
-    // Catch up with a live frame that arrived while the fetch was in flight.
-    const live = feed.state.lastCandles[key]
-    if (live && series) {
-      bars = upsertBar(bars, live)
-      const last = bars[bars.length - 1]
-      if (last) series.update(asPoint(last))
-    }
-    updateIndicators()
-    syncZones()
-    renderMarkers()
+    if (epoch !== historyEpoch) return // superseded by a newer symbol/timeframe
+    const next = candlesToBars(res.data ?? [])
+    applyBars(key, next)
+    cacheCandles(key, next)
   } catch (err) {
-    loadError.value = errorMessage(err)
+    if (epoch !== historyEpoch) return
+    // A background revalidation miss is silent — the cached base still stands.
+    if (!background) loadError.value = errorMessage(err)
   } finally {
-    loading.value = false
+    if (!background && epoch === historyEpoch) loading.value = false
   }
+}
+
+/** Install a set of bars as the chart's data (+ live catch-up, indicators, overlays). */
+function applyBars(key: string, nextBars: ChartBar[]): void {
+  bars = nextBars
+  loadedKey = key
+  series?.setData(bars.map(asPoint))
+  // Catch up with a live frame that arrived while the fetch was in flight.
+  const live = feed.state.lastCandles[key]
+  if (live && series) {
+    bars = upsertBar(bars, live)
+    const last = bars[bars.length - 1]
+    if (last) series.update(asPoint(last))
+  }
+  updateIndicators()
+  syncZones()
+  renderMarkers()
+}
+
+/** Insert/refresh one key in the client cache (LRU-ish: oldest key evicted first). */
+function cacheCandles(key: string, nextBars: ChartBar[]): void {
+  candleCache.delete(key)
+  candleCache.set(key, { at: Date.now(), bars: nextBars.slice() })
+  while (candleCache.size > CANDLE_CACHE_MAX) {
+    const oldest = candleCache.keys().next().value
+    if (oldest === undefined) break
+    candleCache.delete(oldest)
+  }
+}
+
+/**
+ * Page OLDER bars (C3) when the user drags past the oldest loaded candle.
+ * The response is prepended, then the viewport is re-anchored on the bars that
+ * were already visible (their logical indices shift by the number prepended),
+ * so paging never yanks the view. An empty page marks history exhausted.
+ */
+async function loadOlder(): Promise<void> {
+  if (props.replay || loadingOlder.value || noMoreHistory) return
+  const key = candleKey(props.symbol, props.timeframe)
+  const oldest = bars[0]
+  if (!series || !oldest || loadedKey !== key) return
+  const epoch = historyEpoch
+  loadingOlder.value = true
+  try {
+    const res = await $fetch<{ success: boolean; data?: CandleMessage[] }>(
+      `/api/v1/markets/${encodeURIComponent(props.symbol)}/candles`,
+      {
+        params: {
+          interval: props.timeframe,
+          limit: OLDER_LIMIT,
+          endTime: oldest.time * 1000 - 1
+        }
+      }
+    )
+    if (epoch !== historyEpoch) return // symbol/timeframe changed mid-flight
+    const seen = new Set(bars.map((b) => b.time))
+    const freshBars = candlesToBars(res.data ?? []).filter((b) => !seen.has(b.time))
+    if (freshBars.length === 0) {
+      noMoreHistory = true
+      return
+    }
+    const prevLen = bars.length
+    bars = [...freshBars, ...bars].slice(-MAX_BARS)
+    const added = bars.length - prevLen
+    const visible = chart?.timeScale().getVisibleLogicalRange() ?? null
+    suppressRange = true
+    series.setData(bars.map(asPoint))
+    updateIndicators()
+    renderMarkers()
+    if (visible && chart && added > 0) {
+      chart.timeScale().setVisibleLogicalRange({ from: visible.from + added, to: visible.to + added })
+    }
+    requestAnimationFrame(() => { suppressRange = false })
+    const cached = candleCache.get(key)
+    if (cached) candleCache.set(key, { at: cached.at, bars })
+  } catch {
+    // Paging is opportunistic: keep what is already loaded, never surface an error.
+  } finally {
+    loadingOlder.value = false
+  }
+}
+
+/** Left-edge watcher — fires on every pan/zoom frame from lightweight-charts. */
+function onVisibleRangeChange(range: LogicalRange | null): void {
+  if (!range || suppressRange) return
+  if (props.replay || loadingOlder.value || noMoreHistory) return
+  if (!series || bars.length === 0) return
+  if (loadedKey !== candleKey(props.symbol, props.timeframe)) return
+  if (range.from > OLDER_TRIGGER) return
+  void loadOlder()
 }
 
 /**
@@ -408,6 +561,9 @@ async function loadHistory(): Promise<void> {
 function loadReplay(): void {
   const session = props.replay
   if (!session) return
+  historyEpoch++ // drop any in-flight live page
+  noMoreHistory = true // replay owns the window — never page the live API
+  loadingOlder.value = false
   loading.value = true
   loadError.value = null
   try {
@@ -452,7 +608,12 @@ const retry = (): void => {
 
 watch(
   () => candleKey(props.symbol, props.timeframe),
-  () => { void loadHistory() }
+  () => {
+    noMoreHistory = false
+    loadingOlder.value = false
+    historyEpoch++ // invalidate any in-flight older page
+    void loadHistory()
+  }
 )
 
 // Replay lifecycle: attach -> seed load; every new batch -> apply the tail.
@@ -487,8 +648,9 @@ watch(
     bars = upsertBar(bars, live)
     const last = bars[bars.length - 1]
     if (last) series.update(asPoint(last))
-    updateIndicators()
-    renderMarkers()
+    // Coalesced: indicators/markers recompute once per frame, not per trade.
+    scheduleIndicators()
+    scheduleMarkers()
   }
 )
 
@@ -505,6 +667,8 @@ onMounted(() => {
   chart = createChart(el.value, chartOptions())
   series = chart.addSeries(CandlestickSeries, candleOptions())
   markerPlugin = createSeriesMarkers(series, [])
+  // C3: page older bars when the user drags past the oldest loaded candle.
+  chart.timeScale().subscribeVisibleLogicalRangeChange(onVisibleRangeChange)
   // Phase 10: clicking a bar that carries a method event opens it in the
   // inspector (the page highlights the matching row). Non-event clicks no-op.
   chart.subscribeClick((param) => {
@@ -522,6 +686,15 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  if (indicatorRaf) {
+    cancelAnimationFrame(indicatorRaf)
+    indicatorRaf = 0
+  }
+  if (markerRaf) {
+    cancelAnimationFrame(markerRaf)
+    markerRaf = 0
+  }
+  chart?.timeScale().unsubscribeVisibleLogicalRangeChange(onVisibleRangeChange)
   chart?.remove()
   chart = null
   series = null
@@ -532,8 +705,16 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="relative w-full h-[420px] lg:h-[560px] rounded-md overflow-hidden">
+  <div class="relative w-full h-[320px] sm:h-[420px] lg:h-[560px] rounded-md overflow-hidden">
     <div ref="el" class="absolute inset-0" />
+
+    <div
+      v-if="loadingOlder && !loading"
+      class="pointer-events-none absolute left-2 top-2 z-10 flex items-center gap-1.5 rounded bg-default/80 px-2 py-1 ring ring-default backdrop-blur-[2px]"
+    >
+      <UIcon name="i-lucide-loader-circle" class="size-3 animate-spin text-muted" />
+      <span class="text-[11px] text-muted">{{ t('trade.loadingOlder') }}</span>
+    </div>
 
     <div v-if="loading" class="absolute inset-0 z-10 grid place-items-center bg-default/70 backdrop-blur-[2px]">
       <div class="flex flex-col items-center gap-2">

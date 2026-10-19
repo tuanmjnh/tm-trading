@@ -1,4 +1,4 @@
-import type { RouteTreeNode } from '~/types/rbac'
+import { loadAllowedRoutes } from '~/utils/navRoutes'
 import { flattenVisiblePaths, navAllows } from '~/utils/navTree'
 
 const PUBLIC_PATHS = new Set(['/login', '/register'])
@@ -29,16 +29,10 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (path === '/') return
 
   try {
-    // Do not use useNavMenu() here - it calls useI18n() which throws outside component setup.
-    // Read state and fetch directly.
-    const allowedRoutes = useState<RouteTreeNode[]>('nav:allowedRoutes', () => [])
-    let accessible = allowedRoutes.value
-    if (!accessible.length) {
-      const { hubFetch } = useHub()
-      const { data } = await hubFetch<{ success: boolean, data: RouteTreeNode[] }>('/api/v1/auth/routes')
-      accessible = data || []
-      allowedRoutes.value = accessible
-    }
+    // One shared catalog load (utils/navRoutes): a cache hit resolves without a
+    // round trip, and an in-flight fetch started by plugins/nav.client.ts is
+    // reused — so this no longer queues behind the `fetchUser()` above.
+    const accessible = await loadAllowedRoutes()
     const paths = flattenVisiblePaths(accessible)
     if (paths.length > 0 && !paths.some(p => navAllows(p, path))) {
       return navigateTo({ path: '/' })

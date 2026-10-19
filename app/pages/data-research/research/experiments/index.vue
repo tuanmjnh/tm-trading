@@ -154,6 +154,15 @@ useHead({ title })
     <template #right>
       <div class="flex items-center gap-2">
         <UButton
+          icon="i-lucide-lock"
+          :label="t('research.viewEvidenceSets')"
+          variant="soft"
+          color="neutral"
+          size="sm"
+          to="/data-research/research/evidence"
+          :ui="{ label: 'hidden md:block' }"
+        />
+        <UButton
           icon="i-lucide-sparkles"
           :label="t('research.viewResearch')"
           variant="soft"

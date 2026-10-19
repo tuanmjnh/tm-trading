@@ -1,13 +1,21 @@
 <script setup lang="ts">
 import type { IntelNewsItem, IntelRegime } from '~~/types/intel'
+import type { MacroCalendarEvent } from '~~/types/macro'
 import type { NewsDay } from '~/utils/calendar'
 import type { MetricItem } from '~/components/MetricRibbon.vue'
 
 // =============================================================================
-//  News Calendar (roadmap §58.5 /markets/calendar) — the intel `news` stream
-//  (scored headlines written by services/news.mjs) grouped into UTC-day buckets,
-//  newest first, with the token-unlock window from the same intel snapshot as
-//  CONTEXT only (the full regime panel lives on Market Intelligence — §58.6).
+//  Market Calendar (roadmap §58.5 /markets/calendar) — two complementary halves:
+//
+//  1. News calendar: the intel `news` stream (scored headlines written by
+//     services/news.mjs) grouped into UTC-day buckets, newest first, with the
+//     token-unlock window from the same intel snapshot as CONTEXT only (the full
+//     regime panel lives on Market Intelligence — §58.6).
+//  2. Scheduled macro releases (§60.7): upcoming rows from `/api/v1/calendar`.
+//     These are CADENCE PROJECTIONS derived from observed FRED publication times,
+//     so each one is labelled `projected` with the evidence behind it — an
+//     official calendar (FOMC/ECB/BLS) is a separate licensed source and is NOT
+//     wired yet, and the page must not pretend otherwise.
 // =============================================================================
 const { t } = useI18n()
 const { title, description } = useAdminPageChrome({
@@ -15,6 +23,11 @@ const { title, description } = useAdminPageChrome({
   descKey: 'marketCalendar.desc'
 })
 const calendar = useMarketCalendar()
+const macroCalendar = useMacroCalendar()
+
+const releases = ref<MacroCalendarEvent[]>([])
+const releasesTotal = ref(0)
+const releasesProjected = ref(0)
 
 const news = ref<IntelNewsItem[]>([])
 const unlocks = ref<IntelRegime['unlocks48h']>([])
@@ -30,15 +43,27 @@ const LEVELS: Array<'high' | 'med' | ''> = ['', 'high', 'med']
 async function refresh() {
   isLoading.value = true
   try {
-    const snap = await calendar.load()
+    const [snap, macro] = await Promise.all([calendar.load(), macroCalendar.load()])
     news.value = snap.news
     unlocks.value = snap.unlocks
     mongo.value = snap.mongo
     generatedAt.value = snap.generatedAt
     total.value = snap.total
+    releases.value = macro.events
+    releasesTotal.value = macro.total
+    releasesProjected.value = macro.projected
   } finally {
     isLoading.value = false
   }
+}
+
+function fmtRelease(iso: string | null): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? iso : `${d.toISOString().slice(0, 10)} UTC`
+}
+function fmtValue(v: number | null): string {
+  return v === null || v === undefined ? '—' : String(v)
 }
 onMounted(refresh)
 
@@ -55,7 +80,7 @@ const chips = computed(() => LEVELS.map(lv => ({
 const metrics = computed<MetricItem[]>(() => [
   { key: 'total', label: t('marketCalendar.metrics.total'), value: String(total.value), icon: 'i-lucide-newspaper', tone: 'primary' },
   { key: 'high', label: t('marketCalendar.metrics.high'), value: String(news.value.filter(n => n.level === 'high').length), icon: 'i-lucide-triangle-alert', tone: 'error' },
-  { key: 'med', label: t('marketCalendar.metrics.med'), value: String(news.value.filter(n => n.level === 'med').length), icon: 'i-lucide-activity', tone: 'warning' }
+  { key: 'scheduled', label: t('marketCalendar.metrics.scheduled'), value: String(releasesTotal.value), icon: 'i-lucide-calendar-clock', tone: 'info' }
 ])
 
 const trail = computed(() => [{ label: t('nav.markets') }, { label: title.value }])
@@ -146,6 +171,53 @@ useHead({ title })
         :title="t('marketCalendar.mongoDown')"
         :description="t('marketCalendar.emptyMongo')"
       />
+
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-2 flex-wrap">
+            <UIcon name="i-lucide-calendar-clock" class="size-4 text-primary" />
+            <span class="text-xs font-semibold text-highlighted">{{ t('marketCalendar.scheduledTitle') }}</span>
+            <UBadge
+              v-if="releasesProjected"
+              :label="t('marketCalendar.projectedCount', { n: releasesProjected })"
+              color="warning"
+              variant="subtle"
+              size="xs"
+            />
+          </div>
+        </template>
+
+        <p class="text-[11px] text-dimmed mb-2">{{ t('marketCalendar.scheduledHint') }}</p>
+
+        <div v-if="releases.length" class="flex flex-col divide-y divide-default">
+          <div
+            v-for="r in releases"
+            :key="r.id"
+            class="flex items-center gap-3 py-2"
+          >
+            <span class="text-[11px] font-mono text-dimmed w-28 shrink-0">{{ fmtRelease(r.scheduledAt) }}</span>
+            <UBadge
+              :label="t(`marketCalendar.importance_${r.importance}`)"
+              :color="r.importance === 'high' ? 'error' : r.importance === 'low' ? 'neutral' : 'warning'"
+              variant="subtle"
+              size="xs"
+            />
+            <span class="text-xs text-highlighted truncate flex-1 min-w-0">{{ r.title }}</span>
+            <UBadge v-if="r.projected" :label="t('marketCalendar.projected')" color="neutral" variant="outline" size="xs" />
+            <span class="text-[11px] font-mono text-dimmed shrink-0">
+              {{ t('marketCalendar.previousShort') }} {{ fmtValue(r.previous.value) }}
+              · {{ t('marketCalendar.consensusShort') }} {{ r.consensus === null ? t('marketCalendar.noConsensus') : fmtValue(r.consensus) }}
+            </span>
+          </div>
+        </div>
+
+        <AdminEmptyState
+          v-else
+          :title="t('marketCalendar.noSchedule')"
+          :description="t('marketCalendar.noScheduleHint')"
+          icon="i-lucide-calendar-clock"
+        />
+      </UCard>
 
       <UCard v-if="unlocks.length">
         <template #header>

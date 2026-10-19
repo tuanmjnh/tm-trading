@@ -17,6 +17,15 @@ const seed = ref<{ bids: BookLevel[]; asks: BookLevel[] } | null>(null)
 const seedError = ref<string | null>(null)
 const loading = ref(true)
 
+// C7: the ladder re-seeded from REST on every mount / symbol change (it remounts
+// when a dock pane is toggled). A short-lived module cache paints the last known
+// snapshot instantly and then revalidates in the background — the live plane
+// overwrites it as soon as the WS book syncs, so only the pre-sync frame is cached.
+const SEED_TTL_MS = 10_000
+const SEED_CACHE_MAX = 24
+const seedCache = new Map<string, { at: number; bids: BookLevel[]; asks: BookLevel[] }>()
+let seedEpoch = 0
+
 const errorMessage = (err: unknown): string => {
   if (err && typeof err === 'object') {
     const e = err as { data?: { message?: string }; message?: string }
@@ -25,22 +34,43 @@ const errorMessage = (err: unknown): string => {
   return String(err)
 }
 
-async function loadSeed(): Promise<void> {
-  loading.value = true
-  seedError.value = null
+async function loadSeed(opts: { background?: boolean } = {}): Promise<void> {
+  const sym = props.symbol
+  const epoch = ++seedEpoch
+  const cached = seedCache.get(sym)
+  const fresh = cached !== undefined && Date.now() - cached.at < SEED_TTL_MS
+  const background = opts.background === true || fresh
+  if (fresh && cached) {
+    seed.value = { bids: cached.bids, asks: cached.asks }
+    loading.value = false
+    seedError.value = null
+  }
+  if (!background) {
+    loading.value = true
+    seedError.value = null
+  }
   try {
     const res = await $fetch<{
       success: boolean
       data?: { bids?: Array<{ price: number; qty: number }>; asks?: Array<{ price: number; qty: number }> }
-    }>(`/api/v1/markets/${encodeURIComponent(props.symbol)}/orderbook`, { params: { limit: 50 } })
-    seed.value = {
-      bids: (res.data?.bids ?? []).map((l) => [l.price, l.qty]),
-      asks: (res.data?.asks ?? []).map((l) => [l.price, l.qty])
+    }>(`/api/v1/markets/${encodeURIComponent(sym)}/orderbook`, { params: { limit: 50 } })
+    if (epoch !== seedEpoch) return // superseded symbol
+    const bids = (res.data?.bids ?? []).map((l): BookLevel => [l.price, l.qty])
+    const asks = (res.data?.asks ?? []).map((l): BookLevel => [l.price, l.qty])
+    seed.value = { bids, asks }
+    seedCache.delete(sym)
+    seedCache.set(sym, { at: Date.now(), bids, asks })
+    while (seedCache.size > SEED_CACHE_MAX) {
+      const oldest = seedCache.keys().next().value
+      if (oldest === undefined) break
+      seedCache.delete(oldest)
     }
   } catch (err) {
-    seedError.value = errorMessage(err)
+    if (epoch !== seedEpoch) return
+    // A silent background miss keeps the cached ladder on screen.
+    if (!background) seedError.value = errorMessage(err)
   } finally {
-    loading.value = false
+    if (!background && epoch === seedEpoch) loading.value = false
   }
 }
 
@@ -52,9 +82,25 @@ const asks = computed(() => liveBook.value?.asks ?? seed.value?.asks ?? [])
 const isLive = computed(() => !!liveBook.value)
 const ready = computed(() => bids.value.length > 0 || asks.value.length > 0)
 
+/** Cumulative depth rows, accumulated from the best price outward (mockup
+ *  Total column — a pure local sum over the visible ladder, never a feed). */
+interface DepthRow {
+  price: number
+  qty: number
+  total: number
+}
+const accumulate = (levels: BookLevel[]): DepthRow[] => {
+  const out: DepthRow[] = []
+  let run = 0
+  for (const lvl of levels.slice(0, 14)) {
+    run += lvl[1]
+    out.push({ price: lvl[0], qty: lvl[1], total: run })
+  }
+  return out
+}
 /** Display rows: best ask adjacent to the spread (bottom of the ask block). */
-const askRows = computed(() => asks.value.slice(0, 14).reverse())
-const bidRows = computed(() => bids.value.slice(0, 14))
+const askRows = computed(() => accumulate(asks.value).reverse())
+const bidRows = computed(() => accumulate(bids.value))
 
 const bestBid = computed(() => bids.value[0])
 const bestAsk = computed(() => asks.value[0])
@@ -64,11 +110,11 @@ const spread = computed(() =>
 
 const maxQty = computed(() => {
   let max = 0
-  for (const lvl of [...askRows.value, ...bidRows.value]) if (lvl[1] > max) max = lvl[1]
+  for (const lvl of [...askRows.value, ...bidRows.value]) if (lvl.qty > max) max = lvl.qty
   return max > 0 ? max : 1
 })
 
-const barWidth = (lvl: BookLevel): string => `${Math.min(100, (lvl[1] / maxQty.value) * 100)}%`
+const barWidth = (lvl: DepthRow): string => `${Math.min(100, (lvl.qty / maxQty.value) * 100)}%`
 
 const clock = (ms: number): string =>
   ms > 0 ? new Date(ms).toLocaleTimeString('en-GB', { hour12: false }) : '—'
@@ -86,9 +132,10 @@ const clock = (ms: number): string =>
       </div>
     </div>
 
-    <div class="grid grid-cols-2 px-1 pb-1 text-[11px] text-muted border-b border-default">
+    <div class="grid grid-cols-3 px-1 pb-1 text-[11px] text-muted border-b border-default">
       <span>{{ t('trade.price') }}</span>
       <span class="text-right">{{ t('trade.qty') }}</span>
+      <span class="text-right">{{ t('trade.total') }}</span>
     </div>
 
     <div v-if="loading && !ready" class="grid place-items-center gap-2 py-8">
@@ -99,7 +146,7 @@ const clock = (ms: number): string =>
     <div v-else-if="seedError && !ready" class="grid place-items-center gap-2 py-8 text-center">
       <UIcon name="i-lucide-triangle-alert" class="size-5 text-error" />
       <p class="max-w-[16rem] font-mono text-[11px] break-all text-error/80">{{ seedError }}</p>
-      <UButton size="xs" color="primary" variant="soft" @click="loadSeed">{{ t('trade.retry') }}</UButton>
+      <UButton size="xs" color="primary" variant="soft" @click="loadSeed()">{{ t('trade.retry') }}</UButton>
     </div>
 
     <template v-else>
@@ -107,16 +154,17 @@ const clock = (ms: number): string =>
       <div class="flex flex-col">
         <div
           v-for="lvl in askRows"
-          :key="`a-${lvl[0]}`"
-          class="relative grid grid-cols-2 rounded-[2px] px-1 py-[1px]"
+          :key="`a-${lvl.price}`"
+          class="relative grid grid-cols-3 rounded-[2px] px-1 py-[1px]"
         >
           <span
             class="absolute inset-y-0 right-0 bg-error/10"
             :style="{ width: barWidth(lvl) }"
             aria-hidden="true"
           />
-          <span class="relative font-mono text-[11px] text-error">{{ formatPrice(lvl[0]) }}</span>
-          <span class="relative text-right font-mono text-[11px] text-default/80">{{ formatQty(lvl[1]) }}</span>
+          <span class="relative font-mono text-[11px] text-error">{{ formatPrice(lvl.price) }}</span>
+          <span class="relative text-right font-mono text-[11px] text-default/80">{{ formatQty(lvl.qty) }}</span>
+          <span class="relative text-right font-mono text-[11px] text-muted">{{ formatQty(lvl.total) }}</span>
         </div>
       </div>
 
@@ -137,16 +185,17 @@ const clock = (ms: number): string =>
       <div class="flex flex-col">
         <div
           v-for="lvl in bidRows"
-          :key="`b-${lvl[0]}`"
-          class="relative grid grid-cols-2 rounded-[2px] px-1 py-[1px]"
+          :key="`b-${lvl.price}`"
+          class="relative grid grid-cols-3 rounded-[2px] px-1 py-[1px]"
         >
           <span
             class="absolute inset-y-0 right-0 bg-primary/10"
             :style="{ width: barWidth(lvl) }"
             aria-hidden="true"
           />
-          <span class="relative font-mono text-[11px] text-primary">{{ formatPrice(lvl[0]) }}</span>
-          <span class="relative text-right font-mono text-[11px] text-default/80">{{ formatQty(lvl[1]) }}</span>
+          <span class="relative font-mono text-[11px] text-primary">{{ formatPrice(lvl.price) }}</span>
+          <span class="relative text-right font-mono text-[11px] text-default/80">{{ formatQty(lvl.qty) }}</span>
+          <span class="relative text-right font-mono text-[11px] text-muted">{{ formatQty(lvl.total) }}</span>
         </div>
       </div>
 

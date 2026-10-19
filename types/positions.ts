@@ -33,6 +33,10 @@ export interface PositionItem {
   exitReason: string | null
   /** null = unknown (never 0 by default). */
   fees: number | null
+  /** v3 §17.1b per-position leverage intent (null = legacy/account-level). */
+  leverage: number | null
+  /** Slice C: trading session this position belongs to (null = pre-session). */
+  sessionId: string | null
   /** Version stamp (docs/data-model.md §10.3): 'declared' | 'unknown'. */
   stampKind: string
   stampParamsHash: string | null

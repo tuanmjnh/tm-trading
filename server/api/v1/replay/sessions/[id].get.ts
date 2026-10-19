@@ -19,7 +19,7 @@ export default defineEventHandler((event) => {
   const raw = q.cursor !== undefined ? Number(q.cursor) : 0
   const cursor = Number.isInteger(raw) && raw >= 0 ? raw : 0
   try {
-    return { success: true, data: readReplaySession(id, cursor) }
+    return { success: true, data: readReplaySession(id, cursor, requireOwnerId(event)) }
   } catch (err) {
     throw replayHttpError(err)
   }

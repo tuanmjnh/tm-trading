@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
 import type { RunSeries } from '~~/types/runs'
+import type { BotInstance } from '~~/types/bots'
+import type { Proposal } from '~~/types/research'
 import type { RiskStatusData } from '~~/types/risk'
 import type { IntelData, IntelZone } from '~~/types/intel'
 import type { MetricItem } from '~/components/MetricRibbon.vue'
@@ -14,6 +16,8 @@ const { buildRowActions } = useAdminRowActions()
 const runsApi = useRuns()
 const riskApi = useRisk()
 const intelApi = useIntel()
+const botsApi = useBots()
+const researchApi = useResearch()
 
 const series = ref<RunSeries[]>([])
 const isLoading = ref(true)
@@ -70,10 +74,48 @@ function fmtUtc(iso: string): string {
   return `${d.toISOString().slice(0, 16).replace('T', ' ')} UTC`
 }
 
+// Live operations strip (mockup): running sessions + pending AI proposals.
+// Both reads are fail-soft — an empty list renders the empty state (D1).
+const sessions = ref<BotInstance[]>([])
+const proposals = ref<Proposal[]>([])
+
+const sessRank = (s: string) => (s === 'running' ? 0 : s === 'paused' ? 1 : 2)
+
+async function loadSessions() {
+  try {
+    const list = await botsApi.instances({ limit: 10 })
+    sessions.value = [...list]
+      .sort((a, b) => sessRank(a.state) - sessRank(b.state))
+      .slice(0, 4)
+  } catch {
+    sessions.value = []
+  }
+}
+
+async function loadProposals() {
+  try {
+    proposals.value = (await researchApi.proposals({ limit: 5 })).slice(0, 3)
+  } catch {
+    proposals.value = []
+  }
+}
+
+const sessColor = (s: string): 'success' | 'info' | 'warning' | 'error' | 'neutral' =>
+  s === 'running' ? 'success'
+    : s === 'queued' || s === 'starting' ? 'info'
+      : s === 'paused' || s === 'stopping' ? 'warning'
+        : s === 'failed' || s === 'halted' ? 'error'
+          : 'neutral'
+
+const fmtSignedMoney = (v: number | null) =>
+  v === null || !Number.isFinite(v) ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(2)}`
+
 onMounted(() => {
   loadRuns()
   loadRisk()
   loadIntel()
+  loadSessions()
+  loadProposals()
 })
 
 const recentRuns = computed(() => series.value.slice(0, 12))
@@ -229,6 +271,84 @@ useHead({ title: computed(() => t('dashboard.title')) })
 
       <!-- KPI -->
       <MetricRibbon :items="cards" />
+
+      <!-- Live operations (mockup): sessions + AI proposals -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <UCard>
+          <template #header>
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <UIcon name="i-lucide-cpu" class="w-4 h-4 text-primary" />
+                <h3 class="font-semibold text-sm">{{ t('dashboard.liveSessions') }}</h3>
+                <UBadge :label="String(sessions.length)" variant="subtle" size="xs" />
+              </div>
+              <UButton
+                icon="i-lucide-arrow-up-right"
+                :label="t('dashboard.viewAll')"
+                variant="ghost"
+                color="primary"
+                size="xs"
+                to="/strategy-lab/bots/instances"
+                :ui="{ label: 'hidden md:block' }"
+              />
+            </div>
+          </template>
+
+          <div v-if="sessions.length" class="flex flex-col">
+            <NuxtLink
+              v-for="s in sessions"
+              :key="s._id"
+              :to="`/strategy-lab/bots/instances/${encodeURIComponent(s._id)}`"
+              class="flex items-center gap-2 py-1.5 px-1 min-w-0 rounded border-t border-default/50 first:border-t-0 hover:bg-elevated/40"
+            >
+              <UBadge :label="s.state" :color="sessColor(s.state)" variant="subtle" size="xs" class="shrink-0" />
+              <span class="flex-1 min-w-0 font-mono text-[11px] text-highlighted truncate">{{ s.instanceId }}</span>
+              <span
+                class="text-[11px] font-mono shrink-0"
+                :class="s.paperPnl === null ? 'text-dimmed' : s.paperPnl >= 0 ? 'text-success' : 'text-error'"
+              >{{ fmtSignedMoney(s.paperPnl) }}</span>
+            </NuxtLink>
+          </div>
+          <AdminEmptyState v-else :title="t('dashboard.noSessions')" icon="i-lucide-cpu" />
+        </UCard>
+
+        <UCard>
+          <template #header>
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <UIcon name="i-lucide-sparkles" class="w-4 h-4 text-primary" />
+                <h3 class="font-semibold text-sm">{{ t('dashboard.proposals') }}</h3>
+                <UBadge :label="String(proposals.length)" variant="subtle" size="xs" />
+              </div>
+              <UButton
+                icon="i-lucide-arrow-up-right"
+                :label="t('dashboard.viewAll')"
+                variant="ghost"
+                color="primary"
+                size="xs"
+                to="/data-research/research"
+                :ui="{ label: 'hidden md:block' }"
+              />
+            </div>
+          </template>
+
+          <div v-if="proposals.length" class="flex flex-col">
+            <NuxtLink
+              v-for="p in proposals"
+              :key="p.proposalId"
+              to="/data-research/research"
+              class="flex flex-col gap-1 py-1.5 px-1 min-w-0 rounded border-t border-default/50 first:border-t-0 hover:bg-elevated/40"
+            >
+              <div class="flex items-center gap-2 min-w-0">
+                <UBadge v-if="p.status" :label="p.status" color="neutral" variant="subtle" size="xs" class="shrink-0" />
+                <span class="flex-1 min-w-0 text-xs text-highlighted truncate">{{ p.hypothesis }}</span>
+              </div>
+              <span class="text-[10px] text-dimmed font-mono">{{ p.evidence.length }} {{ t('dashboard.evidence') }}</span>
+            </NuxtLink>
+          </div>
+          <AdminEmptyState v-else :title="t('dashboard.noProposals')" icon="i-lucide-sparkles" />
+        </UCard>
+      </div>
 
       <!-- Risk gate + drift (Phase 7) -->
       <UCard>

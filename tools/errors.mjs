@@ -42,8 +42,8 @@ if (!text.trim()) {
   process.exit(1)
 }
 
-if (hasTarget && !['indicator', 'strategy', 'both', 'vsa'].includes(targetArg)) {
-  console.error(`--target chi nhan indicator | strategy | vsa | both (nhan "${targetArg}")`)
+if (hasTarget && !['indicator', 'strategy', 'both', 'vsa', 'lk-vsa'].includes(targetArg)) {
+  console.error(`--target chi nhan indicator | strategy | vsa | lk-vsa | both (nhan "${targetArg}")`)
   process.exit(1)
 }
 
@@ -105,7 +105,7 @@ const chosen = guessTarget()
 
 // Thu muc parts cua tung target: vsa nam o pine/parts-vsa, khong phai pine/parts.
 // Truoc day hardcode 'parts' nen bao loi cua ban VSA luon tro sai duong dan.
-const PARTS_DIR = { indicator: 'parts', strategy: 'parts', vsa: 'parts-vsa' }
+const PARTS_DIR = { indicator: 'parts', strategy: 'parts', vsa: 'parts-vsa', 'lk-vsa': 'parts-longkaco-vsa' }
 
 function partPath(from, target) {
   // "x.pine" -> pine/<parts-dir>/x.pine ; "shared/x.pine" -> pine/shared/x.pine

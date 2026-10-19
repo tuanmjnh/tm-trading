@@ -1,0 +1,48 @@
+// =============================================================================
+//  L6 - TECHNICAL INDICATOR ENGINE  (v2 §2)
+//  Nhom theo chuc nang: Trend / Momentum / Volatility / Volume / Location.
+//  Nguyen tac: chi so CORRELATED duoc AVERAGE ben trong nhom - KHONG tinh
+//  trung lap nhu xac nhan doc lap (v2 §2).
+// =============================================================================
+
+// --- Momentum: RSI + MACD + DMI/ADX --------------------------------------------
+float pa_rsi = ta.rsi(close, pa_rsiLen)
+float pa_rsiScore = pa_rsi < pa_rsiOs ? 1.0 : pa_rsi > pa_rsiOb ? -1.0 : 0.0
+
+[ pa_macdLine, pa_macdSig, pa_macdHist ] = ta.macd(close, pa_macdF, pa_macdS, pa_macdSigLen)
+bool  pa_macdCrossOver  = ta.crossover(pa_macdLine, pa_macdSig)
+bool  pa_macdCrossUnder = ta.crossunder(pa_macdLine, pa_macdSig)
+float pa_macdScore = pa_macdCrossOver ? 1.0 : pa_macdCrossUnder ? -1.0 : pa_macdHist > 0 ? 0.5 : pa_macdHist < 0 ? -0.5 : 0.0
+
+[ pa_diPlus, pa_diMinus, pa_adx ] = ta.dmi(pa_dmiLen, pa_dmiSmooth)
+float pa_dmiScore = pa_adx >= pa_adxMin ? (pa_diPlus > pa_diMinus ? 1.0 : -1.0) : 0.0
+
+// Momentum nhom = binh quan 3 chi so (correlated - khong nhan them trong so)
+float pa_momScore = (pa_rsiScore + pa_macdScore + pa_dmiScore) / 3.0
+
+// --- Volatility: ATR regime + ATR% + Bollinger Band Width -----------------------
+float pa_atrMa = ta.sma(pa_atr, 20)
+float pa_atrRegime = pa_atr > pa_atrMa * 1.2 ? 1.0 : pa_atr < pa_atrMa * 0.8 ? 0.0 : 0.5
+[ pa_bbMid, pa_bbUp, pa_bbLo ] = ta.bb(close, pa_bbLen, pa_bbMult)
+float pa_bbWidth = (pa_bbUp - pa_bbLo) / pa_bbMid * 100.0
+float pa_bbWidthMa = ta.sma(pa_bbWidth, pa_bbLen)
+bool  pa_bbExpand = pa_bbWidth > pa_bbWidthMa
+// Volatility score: expansion KEO THEO huong gia (khong phan chieu) -> chi do do
+float pa_volScore = pa_bbExpand ? (close > open ? 0.5 : -0.5) : 0.0
+
+// --- Volume: RelVol + OBV slope + VSA bucket (da tinh o L1) ---------------------
+float pa_relVolScore = pa_relVol >= pa_rvMin ? (close > open ? 1.0 : close < open ? -1.0 : 0.0) : 0.0
+float pa_obvScore = pa_obvSlope > 0 ? 1.0 : pa_obvSlope < 0 ? -1.0 : 0.0
+float pa_vsaScore = pa_isTim ? (pa_bullBar ? 1.0 : pa_bearBar ? -1.0 : 0.0) : 0.0
+// Volume nhom = binh quan (RelVol/OBV/VSA cung doc 1 chieu so voi gia)
+float pa_volumeScore = (pa_relVolScore + pa_obvScore + pa_vsaScore) / 3.0
+
+// --- Location: VWAP + vi tri trong daily range ----------------------------------
+float pa_vwap = ta.vwap(close)
+bool  pa_vwapOk = not na(pa_vwap)
+float pa_vwapScore = pa_vwapOk ? (close > pa_vwap ? 1.0 : close < pa_vwap ? -1.0 : 0.0) : 0.0
+float pa_dayRange = not na(pa_pdh) and not na(pa_pdl) and pa_pdh > pa_pdl ? (close - pa_pdl) / (pa_pdh - pa_pdl) * 2.0 - 1.0 : 0.0
+float pa_locationScore = (pa_vwapScore + f_clamp(pa_dayRange, -1.0, 1.0)) / 2.0
+
+// --- Trend: EMA stack + diem xuong/huong tuong doi -------------------------------
+float pa_trendScore = pa_emaStackBull ? 1.0 : pa_emaStackBear ? -1.0 : (close > pa_emaF and pa_emaF > pa_emaM ? 0.5 : close < pa_emaF and pa_emaF < pa_emaM ? -0.5 : 0.0)

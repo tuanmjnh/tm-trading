@@ -15,7 +15,7 @@ export default defineEventHandler(async (event: H3Event) => {
     return { success: false, error: 'run id required', data: null, meta: { mongo: 'down' } }
   }
 
-  const { run, mongo } = await loadIndicatorRun(id)
+  const { run, mongo } = await loadIndicatorRun(id, requireOwnerId(event))
 
   if (!run) {
     return {

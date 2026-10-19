@@ -18,6 +18,8 @@ const BotInstanceSchema = new mongoose.Schema(
     _id: { type: String, required: true }, // instanceId
     instanceId: { type: String, required: true, index: true },
     botProfileId: { type: String, default: null, index: true },
+    // Tenancy (roadmap §61.3): bot sessions are user-scoped.
+    ownerId: { type: String, default: null, index: true },
     // Exact immutable strategy version + fingerprint for traceability (§57.4 H).
     strategyVersionId: { type: String, default: null },
     strategyFingerprint: { type: String, default: null },

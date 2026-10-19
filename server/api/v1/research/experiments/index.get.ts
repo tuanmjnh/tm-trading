@@ -15,6 +15,6 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const status = query.status ? String(query.status) : undefined
 
-  const { rows, mongo } = await listExperiments({ status, limit })
+  const { rows, mongo } = await listExperiments({ status, limit }, {}, requireOwnerId(event))
   return { success: true, data: rows, meta: { count: rows.length, mongo } }
 })

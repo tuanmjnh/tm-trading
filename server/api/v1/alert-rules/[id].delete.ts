@@ -7,6 +7,6 @@ import { deleteAlertRule } from '../../../utils/alertRules'
  */
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id') ?? ''
-  const result = await deleteAlertRule(id)
+  const result = await deleteAlertRule(id, requireOwnerId(event))
   return { success: true, data: result }
 })

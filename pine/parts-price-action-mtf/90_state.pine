@@ -1,0 +1,120 @@
+// =============================================================================
+//  L10 - STATE MACHINE
+//  Position lifecycle: open -> manage (TP/SL) -> close -> reset next bar
+// =============================================================================
+
+var int   pa_posDir    = 0
+var float pa_posEntry  = na
+var float pa_posSl     = na
+var float pa_posTp1    = na
+var float pa_posTp2    = na
+var float pa_posTp3    = na
+var float pa_posRisk   = na
+var int   pa_posBars   = 0
+var int   pa_posStage  = 0
+var int   pa_posBar    = na
+var bool  pa_needReset = false
+
+var int pa_statTrades = 0
+var int pa_statWins   = 0
+var int pa_statLosses = 0
+
+var float pa_xEntry = na
+var float pa_xSl    = na
+var int   pa_xDir   = 0
+var int   pa_xBar   = na
+var float pa_xExit  = na
+var float pa_xR     = na
+
+var bool pa_evEntry = false
+var int  pa_evTp    = 0
+var bool pa_evSl    = false
+var bool pa_evClose = false
+
+pa_evEntry := false
+pa_evTp    := 0
+pa_evSl    := false
+pa_evClose := false
+
+// 1. Deferred reset
+if pa_needReset
+    pa_needReset := false
+    pa_posDir    := 0
+    pa_posBars   := 0
+    pa_posStage  := 0
+    pa_posEntry  := na
+    pa_posSl     := na
+    pa_posTp1    := na
+    pa_posTp2    := na
+    pa_posTp3    := na
+    pa_posRisk   := na
+    pa_posBar    := na
+
+// 2. Manage open position
+if pa_posDir != 0
+    bool  isUp  = pa_posDir == 1
+    float t1    = pa_posStage < 1 ? pa_posTp1 : na
+    float t2    = pa_posStage < 2 ? pa_posTp2 : na
+    float t3    = pa_posStage < 3 ? pa_posTp3 : na
+
+    bool hitSl = isUp ? low  <= pa_posSl : high >= pa_posSl
+    bool hit1  = not na(t1) and (isUp ? high >= t1 : low <= t1)
+    bool hit2  = not na(t2) and (isUp ? high >= t2 : low <= t2)
+    bool hit3  = not na(t3) and (isUp ? high >= t3 : low <= t3)
+    bool closed = false
+
+    if hitSl and (hit1 or hit2 or hit3)
+        closed := true
+        pa_evSl    := true
+        pa_evClose := true
+        pa_statLosses += 1
+    else if hitSl
+        closed := true
+        pa_evSl    := true
+        pa_evClose := true
+        pa_statLosses += 1
+    else if hit3
+        pa_evTp    := 3
+        pa_posStage := 3
+        closed       := true
+        pa_evClose  := true
+        pa_statWins += 1
+    else if hit2
+        pa_evTp    := 2
+        pa_posStage := 2
+    else if hit1
+        pa_evTp    := 1
+        pa_posStage := 1
+
+    if not closed and pa_posBars > 300
+        closed       := true
+        pa_evClose  := true
+
+    if closed
+        pa_statTrades += 1
+        pa_xEntry     := pa_posEntry
+        pa_xSl        := pa_posSl
+        pa_xDir       := pa_posDir
+        pa_xBar       := pa_posBar
+        pa_xExit      := pa_evSl ? pa_posSl : pa_evTp == 3 ? pa_posTp3 : pa_evTp == 2 ? pa_posTp2 : pa_posTp1
+        pa_xR         := not na(pa_posRisk) and pa_posRisk > 0.0 ? (pa_xExit - pa_posEntry) * float(pa_posDir) / pa_posRisk : na
+        pa_needReset  := true
+
+// 3. Open new position
+if pa_okBar and pa_signal and pa_posDir == 0
+    pa_posDir   := pa_plan.dir
+    pa_posEntry := pa_plan.entry
+    pa_posSl    := pa_plan.sl
+    pa_posTp1   := pa_plan.tp1
+    pa_posTp2   := pa_plan.tp2
+    pa_posTp3   := pa_plan.tp3
+    pa_posRisk  := pa_plan.risk
+    pa_posBars  := 0
+    pa_posStage := 0
+    pa_posBar   := bar_index
+    pa_evEntry  := true
+    pa_dayCount := pa_dayCount + 1
+    pa_barsSince := 0
+
+if pa_posDir != 0 and not pa_evEntry and not pa_needReset
+    pa_posBars += 1

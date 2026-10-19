@@ -197,16 +197,29 @@ if (existsSync(badSnippetsFile)) {
 // =============================================================================
 section('2. dist — build lai tu parts va kiem tra cu phap')
 
-build('indicator')
-build('strategy')
-build('vsa')
-build('vsa-strategy')
-build('sweep')
-build('xau')
-build('xau2')
 build('tm')
+build('tm-strategy')
+build('xau')
+build('lk-vsa')
+build('lk-vsa-strategy')
+build('pa-mtf')
+build('pa-mtf-strategy')
+build('fz')
+build('fz-strategy')
 
-for (const f of ['TM Signals.pine', 'TM Backtest.pine', 'TM VSA Wyckoff.pine', 'TM VSA Backtest.pine', 'TM Liquidity Sweep.pine', 'TM XAU Signals.pine', 'TM XAU Signals 2.pine', 'TM Indicator.pine']) {
+const ACTIVE_DIST = [
+  'LongKaco VSA.pine',
+  'LongKaco VSA Backtest.pine',
+  'Price Action MTF.pine',
+  'Price Action MTF Backtest.pine',
+  'TM Fusion Zones.pine',
+  'TM Fusion Zones Backtest.pine',
+  'TM XAU Signals 2.pine',
+  'TM Indicator 2.pine',
+  'TM Indicator Strategy Lab 2.pine',
+]
+
+for (const f of ACTIVE_DIST) {
   const p = join(ROOT, 'pine', 'dist', f)
   check(`${f} ton tai`, existsSync(p))
   if (!existsSync(p)) continue
@@ -215,217 +228,127 @@ for (const f of ['TM Signals.pine', 'TM Backtest.pine', 'TM VSA Wyckoff.pine', '
   check(`${f} dong dau la //@version=6`, src.startsWith('//@version=6'), JSON.stringify(src.slice(0, 18)))
   check(`${f} co khai bao indicator/strategy`, /^(indicator|strategy)\(/m.test(src))
   check(`${f} da thay {{DECL}}/{{SHARED}}`, !src.includes('{{DECL}}') && !src.includes('{{SHARED}}'))
-  check(`${f} co alertcondition`, src.includes('alertcondition('))
+  if (f !== 'TM Indicator Strategy Lab 2.pine') check(`${f} co alertcondition`, src.includes('alertcondition('))
   check(`${f} ngoac doi chieu`, (src.match(/\(/g) || []).length === (src.match(/\)/g) || []).length)
   check(`${f} khong canh bao lint`, lint(src, f).length === 0, JSON.stringify(lint(src, f)))
 
   // Refactor shared 2026-10: moi dinh nghia f_* chi xuat hien DONG MOT lan trong dist.
-  // Bat lai truong hop ai do copy lai ham tu shared vao parts (vi du {SHARED} trong comment).
-  // Chi khop dinh nghia (dong ket thuc bang `=>`), khong khop loi GOI ham (indent).
   const defs = [...src.matchAll(/^\s*(f_\w+)\s*\([^)]*\)\s*=>/gm)].map((m) => m[1])
   const dupDefs = [...new Set(defs.filter((d, i) => defs.indexOf(d) !== i))]
   check(`${f} khong trung dinh nghia ham f_*`, dupDefs.length === 0, JSON.stringify(dupDefs))
 }
 
-const sig = readFileSync(join(ROOT, 'pine', 'dist', 'TM Signals.pine'), 'utf8')
-const bts = readFileSync(join(ROOT, 'pine', 'dist', 'TM Backtest.pine'), 'utf8')
-const vsa = readFileSync(join(ROOT, 'pine', 'dist', 'TM VSA Wyckoff.pine'), 'utf8')
+// =============================================================================
+section('2b. LongKaco VSA — ban build rieng (parts-longkaco-vsa)')
 
-check('indicator: co dashboard', sig.includes('table.new('))
-check('indicator: KHONG goi strategy.entry', !sig.includes('strategy.entry('))
-check('strategy: co lenh lenh trading', bts.includes('strategy.entry(') && bts.includes('strategy.exit('))
-check('strategy: KHONG ve dashboard', !bts.includes('table.new('))
+// Ban LongKaco VSA la COPY-ON-WRITE cua parts-vsa + 3 afterfix cua bo A. Bat bien:
+//   (1) ban cu parts-vsa KHONG bi doi -> dist TM VSA Wyckoff phai y het truoc/sau
+//       khi them target moi (kiem bang cach so voi chinh no o day: khong co
+//       assertion nao khac duoc phep doi), va
+//   (2) tat het afterfix -> dieu kien su kien phai TRUNG ban cu (A/B that su).
+const lk  = readFileSync(join(ROOT, 'pine', 'dist', 'LongKaco VSA.pine'), 'utf8')
+const lkBT = readFileSync(join(ROOT, 'pine', 'dist', 'LongKaco VSA Backtest.pine'), 'utf8')
 
-// --- TM VSA Wyckoff: bao mat tinh nang + van de tinh toan ---
-check('vsa: indicator overlay=false', /indicator\("TM VSA Wyckoff"/.test(vsa) && vsa.includes('overlay = false'))
-check('vsa: khong goi strategy.entry', !vsa.includes('strategy.entry('))
-check('vsa: histogram volume + MA co toggle (chuan xau)',
-  vsa.includes('plot(tm_i_showViz and tm_i_showVol ? tm_vol : na, "Volume"') &&
-  vsa.includes('plot(tm_i_showViz and tm_i_showMA ? tm_volMA : na, "Volume MA"'))
-check('vsa: nhan tren gia force_overlay >= 8', (vsa.match(/force_overlay = true/g) || []).length >= 8, `count=${(vsa.match(/force_overlay = true/g) || []).length}`)
-check('vsa: alert SV/BC/ST LONG/ST SHORT', ['"VSA SV"', '"VSA BC"', '"VSA ST LONG"', '"VSA ST SHORT"', '"VSA NS"', '"VSA ND"'].every((t) => vsa.includes(t)))
-check('vsa: dung shared f_vsaColor + f_sessionOk', vsa.includes('f_vsaColor(') && vsa.includes('f_sessionOk('))
-check('vsa: SV/BC bat buoc qua cot TIM', /tm_sigSV = .*tm_isPurple/.test(vsa) && /tm_sigBC = .*tm_isPurple/.test(vsa))
-check('tm signals: dung shared f_vsaColor (khong ternary)', sig.includes('f_vsaColor(') && !/tm_vol >= tm_volMA \* 2\.2 \?/.test(sig))
+// --- A-P0-1 sweep-truoc-ST --------------------------------------------------
+check('lk-vsa: co input cong sweep (sweepReq/sweepWin) + group rieng',
+  /tm_i_sweepReq\s*=\s*input\.bool/.test(lk) && /tm_i_sweepWin\s*=\s*input\.int/.test(lk) && lk.includes('TM · Sweep (A-P0-1)'))
+check('lk-vsa: bar sweep = rau VUOT level nhung CLOSE TRO LAI (giong TM Liquidity Sweep)',
+  /tm_sweepUpBar = .*low < tm_svPx and close > tm_svPx/.test(lk) && /tm_sweepDnBar = .*high > tm_bcPx and close < tm_bcPx/.test(lk))
+check('lk-vsa: bar sweep phai SAU bar SV/BC (>= svBar/bcBar)',
+  /tm_sweepUpBl >= tm_svBar/.test(lk) && /tm_sweepDnBl >= tm_bcBar/.test(lk))
+check('lk-vsa: tin hieu THO tach khoi tin hieu da qua cong',
+  /tm_stRawL = /.test(lk) && /tm_stRawS = /.test(lk) && /tm_sigSTl = tm_stRawL and \(not tm_sweepGateOn or tm_sweepL\)/.test(lk))
+check('lk-vsa: cong sweep CHI ap cho che do VSA (Wyckoff da co spring/UTAD)',
+  /tm_sweepGateOn = tm_i_sweepReq and not tm_wyckoffMode/.test(lk))
+check('lk-vsa: co canh bao rieng khi bi loai vi thieu sweep',
+  /tm_noSweep = tm_sweepGateOn and/.test(lk) && lk.includes('"LK VSA NO SWEEP"'))
+check('lk-vsa: dashboard co dong Sweep truoc ST',
+  lk.includes('"Sweep truoc ST"') && /table\.new\(position\.top_right, 2, 15/.test(lk) && lk.includes('table.clear(tm_tbl, 0, 0, 1, 14)'))
 
-// --- CE10165 THAT tren TradingView (2026-09-30): ta.pivotlow(20) bi bao
-// "No value assigned to the rightbars parameter". Ref khong ghi default param
-// (vi du nz() van dung duoc 1 tham so) nen KHONG lam rule lint chung - chi kiem
-// cuc bo 2 ham pivot: goi 1 tham so la sai, 2-3 tham so la dung.
-for (const [lb, src] of [['tm', sig], ['vsa', vsa]]) {
+const lkStRaw = (lk.match(/^tm_stRawL = .*$/m) ?? [''])[0].replace(/^tm_stRawL = /, '')
+check('lk-vsa: dieu kien ST THO co khai bao', lkStRaw !== '')
+const lkSsRaw = (lk.match(/^tm_stRawS = .*$/m) ?? [''])[0].replace(/^tm_stRawS = /, '')
+check('lk-vsa: dieu kien ST SHORT THO co khai bao', lkSsRaw !== '')
+
+// --- A-P1-1 TP measured move ------------------------------------------------
+check('lk-vsa: TP co che do thu 3 "Measured move (A-P1-1)"',
+  /tm_i_tpMode\s*=\s*input\.string\(.*"Measured move \(A-P1-1\)"/.test(lk) && /tm_tpMM\s*=/.test(lk))
+check('lk-vsa: measured move do tu PHA DAY TRUOC (khong nhin tuong lai)',
+  /tm_mmUp\s*= tm_lastPHigh - tm_lowRun1/.test(lk) && /tm_mmDn\s*= tm_highRun1 - tm_lastPLow/.test(lk) &&
+  /tm_highRun1 = ta\.highest\(high, tm_i_run \+ 1\)/.test(lk) && /tm_lowRun1  = ta\.lowest\(low, tm_i_run \+ 1\)/.test(lk))
+check('lk-vsa: MM chi dung khi pha day di NGUOC chieu vi the, du phong rrFb x R',
+  /tpM1  = tm_highFresh and .*tm_mmUp > rk1 \? e1 \+ tm_mmUp : tpR1/.test(lk) &&
+  /tpM2  = tm_lowFresh and .*tm_mmDn > rk2 \? e2 - tm_mmDn : tpR2/.test(lk))
+check('lk-vsa: TT MM giu nguyen luat "bo qua setup khi risk <= 0"',
+  (lk.match(/if rk[12] > 0/g) || []).length === 2)
+check('lk-vsa: dashboard hien TP mode R/Pivot/MM', /tm_tpDash\s*=/.test(lk) && lk.includes('+ tm_tpDash'))
+
+// --- A-P1-3 CLX-E -----------------------------------------------------------
+check('lk-vsa: CLX-E co input + state mot lan cho moi setup',
+  /tm_i_clxOn\s*=\s*input\.bool/.test(lk) && /var bool tm_clxE = false/.test(lk) && /if tm_sigST\n    tm_clxE := false/.test(lk))
+check('lk-vsa: CLX-E = volume TIM khi gia da di >= clxR x R theo huong co loi',
+  /tm_isPurple and not tm_lvlDone/.test(lk) && /tm_lvlDir == 1 and high >= tm_lvlE \+ tm_i_clxR \* tm_lvlRisk/.test(lk) &&
+  /tm_lvlDir == -1 and low <= tm_lvlE - tm_i_clxR \* tm_lvlRisk/.test(lk))
+check('lk-vsa: nhan CLX-E tren gia (xcross, force_overlay) + alert rieng',
+  /plotshape\(.*tm_clxE and tm_lvlDir == 1, title = "CLX-E LONG", style = shape\.xcross/.test(lk) &&
+  /plotshape\(.*tm_clxE and tm_lvlDir == -1, title = "CLX-E SHORT"/.test(lk) && lk.includes('"LK VSA CLX-E"'))
+check('lk-vsa: dashboard co dong CLX-E (muc tien xa nhat / nguong)', lk.includes('"CLX-E"') && /tm_clxDash\s*=/.test(lk))
+
+// --- A-P1-2 pyramid (chi o ban strategy) ------------------------------------
+check('lk-vsa-strategy: pyramid co input 1..5 + buoc lech ATR',
+  /tm_i_btPyr\s*=\s*input\.int\(1, .*minval = 1, maxval = 5/.test(lkBT) && /tm_i_btStep\s*=\s*input\.float/.test(lkBT))
+check('lk-vsa-strategy: pyramiding = 5 trong khai bao strategy (bat buoc de chay pyramid)',
+  /^strategy\("LongKaco VSA Backtest".*pyramiding = 5/m.test(lkBT))
+check('lk-vsa-strategy: N lenh con co ID rieng (L1..Ln / S1..Sn) + 1 exit moi ID',
+  /strategy\.entry\("L" \+ str\.tostring\(i\)/.test(lkBT) && /for i = 1 to tm_i_btPyr/.test(lkBT) &&
+  /strategy\.exit\("XL" \+ str\.tostring\(i\), from_entry = "L" \+ str\.tostring\(i\)/.test(lkBT))
+check('lk-vsa-strategy: N = 1 giu NGUYEN duong cu (market + ID Long/Short + exit VSA X)',
+  /strategy\.entry\("Long", strategy\.long, qty = tm_btQty, comment = "LK VSA ST LONG"\)/.test(lkBT) &&
+  /strategy\.exit\("VSA X", from_entry = tm_btEn, stop = tm_lvlS, limit = tm_lvlT\)/.test(lkBT) && /tm_btMulti = tm_i_btPyr > 1/.test(lkBT))
+// P0: pyramiding = 5 khien CUNG MOT ID cong don (docs TV: chinh vi du "Entry" 4 lan
+// voi pyramiding = 4 deu thanh lenh) -> duong N = 1 PHAI tu chan bang position_size,
+// neu khong backtest A/B se lech ngay tu mac dinh.
+check('lk-vsa-strategy: N = 1 tu chan lenh thu 2 bang strategy.position_size',
+  /tm_btLong and not tm_btMulti and strategy\.position_size >= 0/.test(lkBT) &&
+  /tm_btShort and not tm_btMulti and strategy\.position_size <= 0/.test(lkBT))
+check('lk-vsa-strategy: khoi luong chia deu cho so lenh con', /tm_btQty = tm_i_btPct \/ 100\.0 \* strategy\.equity \/ close \/ tm_i_btPyr/.test(lkBT))
+check('lk-vsa-strategy: la strategy, cat 60_viz, khong goi strategy.entry o ban indicator',
+  /^strategy\("LongKaco VSA Backtest"/m.test(lkBT) && !lkBT.includes('table.new(') && !lk.includes('strategy.entry('))
+check('lk-vsa: alertcondition co o CA HAI ban (top-level, hop le trong strategy)',
+  lk.includes('alertcondition(tm_sigSV') && lkBT.includes('alertcondition(tm_sigSV') && lk.includes('"LK VSA SV"'))
+
+// --- twin: logic su kien cua 2 ban LongKaco phai GIONG HET -------------------
+const lkLogic = (s) =>
+  s.split('\n').filter((l) => /^\s*tm_(sigSV|sigBC|sigSTl|sigSTs|sigST|sigNS|sigND|stRawL|stRawS|noSweep|clxE)\s*=/.test(l) || /^\s*tm_lvl[ESTBD]+\s*:=/.test(l))
+check('lk twin: logic su kien indicator = strategy (khong the lech)',
+  lkLogic(lk).join('\n') === lkLogic(lkBT).join('\n'), `${lkLogic(lk).length} vs ${lkLogic(lkBT).length}`)
+for (const [lb, src, master, sigInput] of [['lk-vsa', lk, 'tm_i_showViz', 'tm_i_showSig']]) {
+  check(`${lb}: co input master tat/bat toan bo viz`, new RegExp(`${master}\\s*= input\\.bool`).test(src))
+  check(`${lb}: master gate marker (plotshape)`, src.includes(`plotshape(${master} and ${sigInput}`))
+  check(`${lb}: master gate dashboard`, src.includes(`if ${master} and `))
+  check(`${lb}: dashboard co dong Session (chuan xau)`, src.includes('"Session"') && src.includes('"London/NY"'))
+}
+check('lk-vsa: khong truyen width/height % cho table.cell',
+  !/\b(width|height)\s*=/.test(lk.split('\n').filter((l) => l.includes('table.cell(')).join('\n')))
+check('lk-vsa: pivot goi 2-3 tham so (CE10165)', (() => {
   const bad = []
-  for (const m of src.matchAll(/ta\.pivot(?:low|high)\s*\(/g)) {
-    const n = splitArgs(src, m.index + m[0].length).length
-    if (n < 2 || n > 3) bad.push(`${n} args`)
-  }
-  check(`${lb}: ta.pivotlow/high goi 2-3 tham so (CE10165)`, bad.length === 0, JSON.stringify(bad))
-}
-
-// width/height cua table.cell la PHAN TRAM khong gian pane (docs TV: width = 100
-// = 100% -> "covers the whole chart"), KHONG phai pixel. Goi that 2026-09-30: VSA
-// truyen width = 68, height = 18 -> 9 hang x 18% + bgcolor xam dac phu het chart.
-// TM/VSA de auto-size theo text (1 dong = 1 cell theo quy uoc file).
-for (const [lb, src] of [['tm', sig], ['vsa', vsa]]) {
-  const bad = src.split('\n').filter((l) => l.includes('table.cell(') && /\b(width|height)\s*=/.test(l))
-  check(`${lb}: table.cell khong truyen width/height (%)`, bad.length === 0, bad[0]?.slice(0, 70))
-}
-
-// Guard: table.cell thieu dau phay truoc mot kwarg (xuat hien 2026-09-30 khi sua
-// width/height bang replaceAll - xoa nham phay). Mot dong = 1 cell theo quy uoc file:
-// ... token, kwarg = ... | token kwarg = ...  =>  phai co , hoac ( truoc kwarg.
-for (const [lb, src] of [['tm', sig], ['vsa', vsa]]) {
-  const bad = src.split('\n')
-    .filter((l) => l.includes('table.cell('))
-    .filter((l) => /[\w")\]]\s+[A-Za-z_]\w*\s*=/.test(l))
-  check(`${lb}: table.cell du dau phay truoc kwarg`, bad.length === 0, bad[0]?.slice(0, 70))
-}
-
-// Level tu dong Entry/SL/TP (setup ST gan nhat) - state, input, ve line + label
-check('vsa: level Entry/SL/TP co state + 3 input',
-  /tm_lvlE\s*:=/.test(vsa) && /tm_i_lvlOn/.test(vsa) && /tm_i_slBuf/.test(vsa) && /tm_i_rrFb/.test(vsa))
-check('vsa: line/label Entry-SL-TP force_overlay',
-  /label\.new\(bar_index, tm_lvlE, "Entry /.test(vsa) && /label\.new\(bar_index, tm_lvlS/.test(vsa) && /label\.new\(bar_index, tm_lvlT/.test(vsa)
-  && (vsa.match(/force_overlay = true/g) || []).length >= 14)
-check('vsa: level tu dong dong khi cham TP/SL (uu tien SL)',
-  /tm_lvlDone\s*:=\s*true/.test(vsa) && /tm_lvlRes\s*:=\s*"SL"/.test(vsa) && /tm_lvlDoneBar\s*:=/.test(vsa))
-check('vsa: dung 1 nhan Entry (gia tai bar cuoi, khong nhan bar ST) + nhan ket qua',
-  /label\.new\(bar_index, tm_lvlE, "Entry /.test(vsa) && !/label\.new\(tm_lvlB/.test(vsa) && /label\.new\(tm_lvlDoneBar/.test(vsa))
-
-// --- VSA: 2 ban sua 2026-10-01 (docs/vsa-optimization.md #1,#2) --------------
-// #2 Entry la lenh LIMIT -> PHAI theo doi da khop truoc khi xet TP/SL. Truoc day
-//    setup chua tung vao lenh van bi ghi "TP"/"SL" -> bao cao tren chart sai.
-check('vsa: auto-close BAT BUOC entry da khop (tm_lvlFill)',
-  /var bool\s+tm_lvlFill\s*=/.test(vsa) && /if not tm_lvlFill/.test(vsa) && /tm_lvlFill\s*:=\s*true/.test(vsa))
-check('vsa: chi xet TP/SL khi da khop (if tm_lvlFill bao ngoai)',
-  /if tm_lvlFill\n\s+if tm_lvlDir == 1/.test(vsa), 'thieu gate tm_lvlFill quanh khoi TP/SL')
-check('vsa: ca 2 khoi tao setup (LONG+SHORT) deu gan tm_lvlFill theo che do',
-  (vsa.match(/tm_lvlFill\s*:=\s*tm_entryMarket/g) || []).length === 2, `so lan = ${(vsa.match(/tm_lvlFill\s*:=\s*tm_entryMarket/g) || []).length} (mong doi 2)`)
-// #1 Rang buoc phi: fee_R = phi_round-trip / (slBuf x ATR%)
-check('vsa: co fee_R + feeOk + slBuf toi thieu',
-  /tm_feeR\s*=/.test(vsa) && /tm_feeOk\s*=/.test(vsa) && /tm_slBufMin\s*=/.test(vsa))
-check('vsa: co input phi (feePct, feeMaxR)',
-  /tm_i_feePct\s*=\s*input\.float/.test(vsa) && /tm_i_feeMaxR\s*=\s*input\.float/.test(vsa))
-check('vsa: dashboard co dong Phi/R + slBuf toi thieu',
-  vsa.includes('"Phi/R"') && vsa.includes('"slBuf toi thieu"') && /table\.new\(position\.top_right, 2, 13/.test(vsa))
-// --- Muc 5b: doi MO HINH vao lenh (docs/vsa-optimization.md §5b) -------------
-check('vsa: co input chon kieu vao lenh + kieu TP',
-  /tm_i_entryMode\s*=\s*input\.string/.test(vsa) && /tm_i_tpMode\s*=\s*input\.string/.test(vsa))
-check('vsa: market entry lay CLOSE bar ST, limit lay cuc tri SV/BC',
-  /\(tm_entryMarket or tm_wyckoffMode\) \? close : tm_svPx/.test(vsa) && /\(tm_entryMarket or tm_wyckoffMode\) \? close : tm_bcPx/.test(vsa))
-check('vsa: SL = ngoai DAY/DINH bar kich hoat o che do Wyckoff, ngoai cuc tri o che do VSA',
-  /\(\(tm_wyckoffMode \? low : tm_svPx\) - tm_i_slBuf \* tm_atr\)/.test(vsa) && /\(\(tm_wyckoffMode \? high : tm_bcPx\) \+ tm_i_slBuf \* tm_atr\)/.test(vsa))
-check('vsa: TP theo R dung RUI RO THAT (e + rrFb * rk), khong dung slBuf*ATR',
-  /tm_tpTheoR \? e1 \+ tm_i_rrFb \* rk1/.test(vsa) && /tm_tpTheoR \? e2 - tm_i_rrFb \* rk2/.test(vsa))
-check('vsa: bo qua setup khi risk <= 0', (vsa.match(/if rk[12] > 0/g) || []).length === 2)
-check('vsa: dashboard hien che do vao lenh/TP',
-  vsa.includes('"Vao lenh / TP"') && /\(tm_entryMarket or tm_wyckoffMode\) \? "Market" : "Limit"/.test(vsa))
-// --- §5c: CHIEN LUOC 'VSA loc + WYCKOFF' (spring/UTAD, SOS/SOW, LPS/LPSY) ----
-check('vsa: co input chon chien luoc + su kien Wyckoff + nguong',
-  /tm_i_signalMode\s*=\s*input\.string/.test(vsa) && /tm_i_wyckoffEvent\s*=\s*input\.string/.test(vsa) &&
-  /tm_i_sosSpread\s*=\s*input\.float/.test(vsa) && /tm_i_sosVol\s*=\s*input\.float/.test(vsa) && /tm_i_lpsTol\s*=\s*input\.float/.test(vsa))
-check('vsa: KHONG con BOS/CHoCH (da thay bang Wyckoff cho nhat quan truong phai)',
-  !/tm_brkUp|tm_brkDn|tm_structDir|tm_i_breakMode/.test(vsa))
-check('vsa: Spring/UTAD = PHA VO vung nhung DONG CUA tro lai trong vung',
-  /tm_wSpring = .*low < tm_lastPLow and close > tm_lastPLow and close > open/.test(vsa) &&
-  /tm_wUtad   = .*high > tm_lastPHigh and close < tm_lastPHigh and close < open/.test(vsa))
-check('vsa: SOS/SOW = than RONG + volume MANH dong cua ngoai vung',
-  /tm_wSos = .*tm_spread >= tm_i_sosSpread \* tm_atr and tm_strongVol and close > open/.test(vsa) &&
-  /tm_wSow = .*tm_spread >= tm_i_sosSpread \* tm_atr and tm_strongVol and close < open/.test(vsa))
-check('vsa: LPS/LPSY giu TREN day bar SOS (duoi dinh bar SOW)',
-  /tm_wLps   = .*low > tm_sosLow and low <= tm_sosLow \+ tm_i_lpsTol \* tm_atr and close > open/.test(vsa) &&
-  /tm_wLpsy  = .*high < tm_sowHigh and high >= tm_sowHigh - tm_i_lpsTol \* tm_atr and close < open/.test(vsa))
-check('vsa: SHORT la GONG doi xung cua LONG (spring/sos/lps -> utad/sow/lpsy)',
-  /tm_evShort = tm_i_wyckoffEvent == "Spring" \? tm_wUtad : tm_i_wyckoffEvent == "SOS" \? tm_wSow : tm_wLpsy/.test(vsa))
-check('vsa: Wyckoff mode dung SV/BC lam BO LOC vung (svFresh/bcFresh)',
-  /tm_wyckoffMode \? \(tm_evLong and tm_svFresh\)/.test(vsa) && /tm_wyckoffMode \? \(tm_evShort and tm_bcFresh\)/.test(vsa))
-check('vsa: GIU tm_okBar o CA HAI nhanh cua chien luoc',
-  (vsa.match(/tm_i_evtOn and tm_okBar and \(tm_wyckoffMode/g) || []).length === 2,
-  `so lan = ${(vsa.match(/tm_i_evtOn and tm_okBar and \(tm_wyckoffMode/g) || []).length}`)
-check('vsa: dashboard hien chien luoc dang chay', vsa.includes('"Chien luoc"') && /tm_wyckoffMode \? \("Wyckoff: "/.test(vsa))
-check('vsa: canh bao PHI CAO tren nhan Entry khi fee qua nguong',
-  /tm_feeOk \? "" : " \/ PHI CAO"/.test(vsa))
-check('vsa: nhan SL co hien R thuc te cua setup',
-  /"SL " \+ str\.tostring\(tm_lvlS, format\.mintick\) \+ "  R "/.test(vsa))
-
-// --- TM VSA Backtest: ban twin phai CUNG logic, chi khac phan thi hanh ------
-// Bat bien quan trong nhat: 2 ban chia se dung 1 nguon parts-vsa, nen neu ai do
-// sua logic su kien o mot ban thi ban kia phai doi theo. Test so SANH TRUC TIEP
-// hai dist thay vi kiem chuoi con, de bat duoc lech that.
-const vsaBT = readFileSync(join(ROOT, 'pine', 'dist', 'TM VSA Backtest.pine'), 'utf8')
-const logicLines = (s) =>
-  s.split('\n').filter((l) => /^\s*tm_(sigSV|sigBC|sigSTl|sigSTs|sigST|sigNS|sigND)\s*=/.test(l) || /^\s*tm_lvl[ESTBD]+\s*:=/.test(l))
-const logicA = logicLines(vsa).join('\n')
-const logicB = logicLines(vsaBT).join('\n')
-check('vsa twin: logic su kien GIONG HET ban indicator', logicA.length > 0 && logicA === logicB, `A=${logicA.length}b B=${logicB.length}b`)
-
-check('vsa twin: la strategy', /^strategy\("TM VSA Backtest"/m.test(vsaBT))
-check('vsa twin: co strategy.entry + strategy.exit', vsaBT.includes('strategy.entry(') && vsaBT.includes('strategy.exit('))
-check('vsa twin: KHONG ve dashboard/plotshape (da cat 60_viz)', !vsaBT.includes('table.new(') && !vsaBT.includes('plotshape('))
-check('vsa twin: KHONG lot bridge sang ban indicator', !vsa.includes('strategy.entry(') && !vsa.includes('tm_i_btOn'))
-check('vsa twin: co input rieng cho backtest', vsaBT.includes('TM · Backtest') && vsa.includes('TM · Hien thi'))
-check('vsa twin: dat lenh DUNG luc setup ST tao (khong tre 1 bar)',
-  /tm_btLong\s*=\s*tm_i_btOn and tm_sigSTl and tm_hasSV/.test(vsaBT) && /tm_btShort\s*=\s*tm_i_btOn and tm_sigSTs and tm_hasBC/.test(vsaBT))
-check('vsa twin: exit dung tm_lvlS/tm_lvlT tu 40_events (khong tinh lai)',
-  /strategy\.exit\(.*stop = tm_lvlS, limit = tm_lvlT\)/.test(vsaBT))
-check('vsa twin: qty theo % equity / gia (khong phu thuoc default_qty)', /tm_btQty\s*=\s*tm_i_btPct \/ 100\.0 \* strategy\.equity \/ close/.test(vsaBT))
-check('vsa: 60_viz bi cat khoi ban strategy bang marker',
-  vsa.includes('table.new(') && !vsaBT.includes('table.new(') && vsa.includes('plotshape(tm_i_showViz and tm_i_showSig and tm_sigSV'))
-check('vsa: alertcondition co o CA HAI ban (top-level, hop le trong strategy)',
-  vsa.includes('alertcondition(tm_sigSV') && vsaBT.includes('alertcondition(tm_sigSV'))
-
-// --- TM Liquidity Sweep: quet thanh khoan (LuxAlgo) + xac nhan volume VSA ----
-const swp = readFileSync(join(ROOT, 'pine', 'dist', 'TM Liquidity Sweep.pine'), 'utf8')
-check('sweep: indicator overlay=false (pane rieng cho volume)', /indicator\("TM Liquidity Sweep"/.test(swp) && swp.includes('overlay = false'))
-check('sweep: histogram volume 6 mau + MA co toggle (chuan xau)',
-  swp.includes('plot(tm_i_showViz and tm_i_showVol ? tm_vol : na, "Volume"') &&
-  swp.includes('plot(tm_i_showViz and tm_i_showMA ? tm_volMA : na, "Volume MA"'))
-check('sweep: moi hinh ve tren gia deu force_overlay', (swp.match(/force_overlay = true/g) || []).length >= 13, `count=${(swp.match(/force_overlay = true/g) || []).length}`)
-check('sweep: khong goi strategy.entry (chi la indicator)', !swp.includes('strategy.entry('))
-check('sweep: co UDT level + 2 mang buy-side/sell-side',
-  swp.includes('type TmLevel') && swp.includes('array<TmLevel> tm_buy') && swp.includes('array<TmLevel> tm_sell'))
-check('sweep: dieu kien quet = rau VUOT level nhung close TRO LAI',
-  /high > Lb\.px and close < Lb\.px/.test(swp) && /low < Ls\.px and close > Ls\.px/.test(swp))
-check('sweep: level vuot han (breakout) bi danh dau swept, khong con ung vien',
-  /if close > Lb\.px/.test(swp) && /if close < Ls\.px/.test(swp) && (swp.match(/swept := true/g) || []).length >= 4)
-check('sweep: cong volume VSA (ratio >= nguong input)', /tm_volOk = tm_i_volMinR <= 0\.0 or tm_ratio >= tm_i_volMinR/.test(swp))
-check('sweep: cong rau tu choi (rau >= ti le bien do)',
-  /tm_upWick >= tm_i_wickRng \* tm_rng/.test(swp) && /tm_dnWick >= tm_i_wickRng \* tm_rng/.test(swp))
-check('sweep: dung shared f_vsaColor + f_vsaName + f_sessionOk',
-  swp.includes('f_vsaColor(') && swp.includes('f_vsaName(') && swp.includes('f_sessionOk('))
-check('sweep: alert SWEEP LONG + SWEEP SHORT', swp.includes('"SWEEP LONG"') && swp.includes('"SWEEP SHORT"'))
-check('sweep: dashboard + Entry/SL/TP setup',
-  swp.includes('table.new(') && /label\.new\(bar_index, tm_setE, "Entry /.test(swp) && /table\.new\(position\.top_right, 2, 10/.test(swp))
-check('sweep: knobs toi uu (entryMode/retest/confirm/minRR/SL bounds)',
-  ['tm_i_entryMode', 'tm_i_retestBars', 'tm_i_volRetestMax', 'tm_i_confirmBars', 'tm_i_minRR', 'tm_i_slMinAtr', 'tm_i_slMaxAtr', 'tm_i_trendFast', 'tm_i_trendSlow', 'tm_i_minTouches'].every((k) => swp.includes(k)))
-check('sweep: entry market khop ngay + auto-close sau entry',
-  (swp.match(/tm_setFill    := true/g) || []).length === 2 && /if tm_setFill\n\s+if tm_setDir == 1/.test(swp))
-check('sweep: co state cho retest/confirm (tm_pmDir) + huy khi het cua so',
-  /tm_pmDir := -1/.test(swp) && /bar_index - tm_pmBar > maxBars/.test(swp) && /tm_resLong/.test(swp))
-check('sweep: pivot goi 2-3 tham so (CE10165)', (() => {
-  const bad = []
-  for (const m of swp.matchAll(/ta\.pivot(?:low|high)\s*\(/g)) {
-    const n = splitArgs(swp, m.index + m[0].length).length
+  for (const m of lk.matchAll(/ta\.pivot(?:low|high)\s*\(/g)) {
+    const n = splitArgs(lk, m.index + m[0].length).length
     if (n < 2 || n > 3) bad.push(`${n} args`)
   }
   return bad.length === 0
 })(), 'pivot arg count sai')
 
-// --- Chuan viz parts-xau/80_viz.pine: master switch + dong Session ---------
-// Ca 5 bo phai co: (1) input master tat/bat TOAN BO viz, (2) marker + dashboard
-// bi master gate, (3) dong Session hien phien hien tai (London/NY/New York/...).
-const xauSrc = readFileSync(join(ROOT, 'pine', 'dist', 'TM XAU Signals.pine'), 'utf8')
+// --- Chuan viz: master switch + dong Session ---------
 const xau2Src = readFileSync(join(ROOT, 'pine', 'dist', 'TM XAU Signals 2.pine'), 'utf8')
 for (const [lb, src, master, sigInput] of [
-  ['tm', sig, 'tm_showViz', 'tm_showSig'],
-  ['vsa', vsa, 'tm_i_showViz', 'tm_i_showSig'],
-  ['sweep', swp, 'tm_i_showViz', 'tm_i_showSig'],
-  ['xau', xauSrc, 'xau_showViz', 'xau_showSig'],
-  ['xau2', xau2Src, 'x2_showViz', 'x2_showSig'],
+  ['lk-vsa', lk, 'tm_i_showViz', 'tm_i_showSig'],
+  ['xau', xau2Src, 'x2_showViz', 'x2_showSig'],
 ]) {
   check(`${lb}: co input master tat/bat toan bo viz`, new RegExp(`${master}\\s*= input\\.bool`).test(src))
   check(`${lb}: master gate marker (plotshape)`, src.includes(`plotshape(${master} and ${sigInput}`))
   check(`${lb}: master gate dashboard`, src.includes(`if ${master} and `))
-  check(`${lb}: dashboard co dong Session (chuan xau)`, src.includes('"Session"') && src.includes('"London/NY"'))
+  check(`${lb}: dashboard co dong Session`, src.includes('"Session"'))
 }
 
 // --- XAU Signals 2 (master-prompt v2) ----------------------------------------
@@ -478,7 +401,80 @@ check('xau2: pivot goi 2-3 tham so (CE10165)', (() => {
 // Kiem tra tren MA THAT (bo comment) - truong hop "input.timezone" chi con lai
 // trong comment nen khong duoc goi that su.
 const codeOnly = (s) => s.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
-check('ca hai ban deu khong goi input.timezone', !codeOnly(sig).includes('input.timezone') && !codeOnly(bts).includes('input.timezone'))
+check('ca hai ban deu khong goi input.timezone', !codeOnly(lk).includes('input.timezone') && !codeOnly(xau2Src).includes('input.timezone'))
+
+// =============================================================================
+section('2d. Price Action MTF — ban build rieng (parts-price-action-mtf)')
+
+const paSrc   = readFileSync(join(ROOT, 'pine', 'dist', 'Price Action MTF.pine'), 'utf8')
+const paBtSrc = readFileSync(join(ROOT, 'pine', 'dist', 'Price Action MTF Backtest.pine'), 'utf8')
+
+check('pa-mtf: indicator, khong phai strategy', /^indicator\("Price Action MTF"/m.test(paSrc) && !paSrc.includes('strategy.entry('))
+check('pa-mtf-strategy: la strategy', /^strategy\("Price Action MTF Backtest"/m.test(paBtSrc) && paBtSrc.includes('strategy.entry('))
+check('pa-mtf: co input master tat/bat toan bo viz', /pa_showViz\s*= input\.bool/.test(paSrc))
+check('pa-mtf: master gate marker (plotshape)', paSrc.includes('plotshape(pa_showViz and pa_showSig'))
+check('pa-mtf: master gate dashboard', paSrc.includes('if pa_showViz and pa_showDash'))
+check('pa-mtf: dashboard co dong Session', paSrc.includes('"Session"') && paSrc.includes('pa_sessName'))
+check('pa-mtf: dashboard 2 cot va table.clear phu het hang', paSrc.includes('table.new(position.top_right, 2, 27') && paSrc.includes('table.clear(pa_tbl, 0, 0, 1, 26)'))
+
+// Afterfix B-P0-1: Mau hinh gia (Double/Triple Top-Bottom + Vai dau vai)
+check('pa-mtf: B-P0-1 co Double/Triple Top-Bottom + Vai dau vai pha neckline',
+  paSrc.includes('pa_hsTopBrk') && paSrc.includes('pa_dtBrk') && paSrc.includes('pa_patNeck') && paSrc.includes('f_pushEvent("PATTERN"'))
+
+// Afterfix B-P0-2: Inside bar / Doji / 3 Soldiers & Crows
+check('pa-mtf: B-P0-2 Inside bar, Doji, 3 Soldiers / Crows',
+  paSrc.includes('pa_isInsideBar') && paSrc.includes('pa_ibBull') && paSrc.includes('pa_isDoji') && paSrc.includes('pa_3Soldiers') && paSrc.includes('pa_3Crows'))
+
+// Afterfix B-P0-3: Confluence 0-3
+check('pa-mtf: B-P0-3 confluence score 0-3 va alert setup',
+  paSrc.includes('pa_confluenceScore = (pa_cf1 ? 1 : 0) + (pa_cf2 ? 1 : 0) + (pa_cf3 ? 1 : 0)') &&
+  paSrc.includes('"PA MTF SETUP"') && paSrc.includes('pa_confluenceScore == 3'))
+
+// Afterfix B-P1-1: Volume veto
+check('pa-mtf: B-P1-1 volume veto tren pin/engulf',
+  paSrc.includes('pa_vVetoMul = pa_cp_volVetoOn ? (pa_volRatio >= pa_cp_volVetoR ? 1.0 : 0.4) : 1.0') &&
+  paSrc.includes('(pa_bullPin ? 1.0 : 0.0) * pa_vVetoMul'))
+
+// Afterfix B-P1-2: Regime gate
+check('pa-mtf: B-P1-2 regime gate (ADX + BBW Squeeze + Range Edge)',
+  paSrc.includes('pa_regime') && paSrc.includes('pa_isSqueeze') && paSrc.includes('pa_okRegime') &&
+  paSrc.includes('TRENDING') && paSrc.includes('CHOPPY') && paSrc.includes('RANGING'))
+
+// Afterfix B-P1-3: Measured-move TP
+check('pa-mtf: B-P1-3 measured-move TP theo do cao mo hinh',
+  paSrc.includes('Measured move (B-P1-3)') && paSrc.includes('pa_patHeight') && paSrc.includes('mmDist * 0.5'))
+
+// Afterfix B-P1-4: Engulfing streak
+check('pa-mtf: B-P1-4 dem chuoi engulfing va bonus diem',
+  paSrc.includes('pa_engulfStreak') && paSrc.includes('pa_streakBonus'))
+
+// Strategy twin checks
+check('pa-mtf twin: strategy cat volume plot cua pane',
+  paSrc.includes('plot(pa_showViz and pa_showVol ? pa_vol : na,   "Volume"') && !paBtSrc.includes('plot(pa_showViz and pa_showVol ? pa_vol : na,   "Volume"'))
+check('pa-mtf twin: strategy cat khoi ban indicator', !paSrc.includes('strategy.entry(') && !paSrc.includes('pa_strat_on'))
+check('pa-mtf twin: alertcondition co o ca hai ban', paSrc.includes('alertcondition(pa_evEntry') && paBtSrc.includes('alertcondition(pa_evEntry'))
+
+// =============================================================================
+section('2e. TM Fusion Zones — ban build rieng (parts-fusion-zones)')
+
+const fzSrc   = readFileSync(join(ROOT, 'pine', 'dist', 'TM Fusion Zones.pine'), 'utf8')
+const fzBtSrc = readFileSync(join(ROOT, 'pine', 'dist', 'TM Fusion Zones Backtest.pine'), 'utf8')
+
+check('fz: indicator, khong phai strategy', /^indicator\("TM Fusion Zones"/m.test(fzSrc) && !fzSrc.includes('strategy.entry('))
+check('fz-strategy: la strategy', /^strategy\("TM Fusion Zones Backtest"/m.test(fzBtSrc) && fzBtSrc.includes('strategy.entry('))
+check('fz: shorttitle <= 10 ky tu', fzSrc.includes('shorttitle = "TM FZ"') && fzBtSrc.includes('shorttitle = "TM FZ BT"'))
+check('fz: overlay = true ca hai ban', fzSrc.includes('overlay = true') && fzBtSrc.includes('overlay = true'))
+check('fz: co master visual switch fz_showViz', /fz_showViz\s*= input\.bool/.test(fzSrc))
+check('fz: master visual gate tren plot va HUD', fzSrc.includes('fz_showDash and fz_showViz') && fzSrc.includes('fz_rb_show and fz_showViz'))
+check('fz: co 3 setup vao lenh doc lap',
+  ['fz_setup_pullback', 'fz_setup_sweep', 'fz_setup_range'].every((s) => new RegExp(`${s}\\s*= input\\.bool`).test(fzSrc)))
+check('fz: co scoring weights + thresholds',
+  ['fz_w_trend', 'fz_w_zone', 'fz_w_struct', 'fz_w_candle', 'fz_w_mtf'].every((s) => fzSrc.includes(s)) &&
+  ['fz_scr_noTrade', 'fz_scr_setup', 'fz_scr_strong'].every((s) => fzSrc.includes(s)))
+check('fz: co Obstacle Gate chan opposing zone < TP1', fzSrc.includes('fz_obstacleGate') && fzSrc.includes('f_nearestOpposingZoneDistance'))
+check('fz: webhook schema fz.signal.v1.0', fzSrc.includes('fz.signal.v1.0') && fzSrc.includes('version'))
+check('fz: alertcondition co o ca hai ban', fzSrc.includes('alertcondition(fz_signalLong') && fzBtSrc.includes('alertcondition(fz_signalLong'))
+check('fz twin: strategy cat khoi ban indicator', !fzSrc.includes('strategy.entry(') && fzBtSrc.includes('strategy.entry('))
 
 // =============================================================================
 section('3. webhook — validate payload')
@@ -608,6 +604,53 @@ if (r413.status === 413) {
 
 await new Promise((r) => server.close(r))
 rmSync(tmpLog, { recursive: true, force: true })
+
+// =============================================================================
+section('5. TM Indicator 2 — v2.1 P0/P1 invariants')
+
+// v2.1 P0: LONG and SHORT must be scored independently on the same 0-100 scale.
+// These assertions fail on the v2.0 signed-score design (50 + raw * 50), which
+// made a bearish raw score produce a LOW quality score and blocked SHORT.
+check('tm2 build 0 warning', build('tm2') === 0)
+check('tm2-strategy build 0 warning', build('tm2-strategy') === 0)
+
+const tm2Src = readFileSync(join(ROOT, 'pine', 'dist', 'TM Indicator 2.pine'), 'utf8')
+const tm2StratSrc = readFileSync(join(ROOT, 'pine', 'dist', 'TM Indicator Strategy Lab 2.pine'), 'utf8')
+
+check('tm2: no signed score-to-quality mapping (50 + raw * 50)', !/tm_score100\s*=\s*math\.round\(50\.0\s*\+/.test(tm2Src))
+check('tm2: independent long/short scores', tm2Src.includes('tm_longScore100') && tm2Src.includes('tm_shortScore100') && tm2Src.includes('tm_scoreMargin'))
+check('tm2: symmetric directional parts', tm2Src.includes('f_tmLongPart(') && tm2Src.includes('f_tmShortPart(') && tm2Src.includes('f_tmSideScore('))
+// Structural symmetry: the LONG and SHORT weighted sums must be identical apart
+// from which directional part they consume. This guards against a one-sided
+// weight/threshold being re-introduced by a later edit.
+const weightedExpr = (name) => (tm2Src.match(new RegExp(`float ${name} = (.+)`))?.[1] ?? '').replace(/f_tm(?:Long|Short)Part/g, 'PART').replace(/\s+/g, ' ')
+check('tm2: long/short weighted sums structurally symmetric', weightedExpr('tm_longWeighted') !== '' && weightedExpr('tm_longWeighted') === weightedExpr('tm_shortWeighted'), weightedExpr('tm_longWeighted'))
+check('tm2: explicit direction codes', ['NO_DIRECTION', 'AMBIGUOUS_SETUP', 'BLOCKED_SCORE_LONG', 'BLOCKED_SCORE_SHORT'].every((c) => tm2Src.includes(c)))
+const tm2SecCalls = (tm2Src.match(/=\s*request\.security\s*\(/g) || []).length
+check('tm2: request.security calls <= 5', tm2SecCalls <= 5, String(tm2SecCalls))
+
+// P0/P1 reason codes + RR target semantics
+for (const code of ['BLOCKED_RR', 'BLOCKED_NET_RR', 'BLOCKED_NO_ATR', 'BLOCKED_BAD_SL', 'BLOCKED_BAD_TP', 'BLOCKED_OBSTACLE', 'BLOCKED_OVEREXTENSION', 'BLOCKED_COOLDOWN', 'BLOCKED_DAILY_LIMIT', 'BLOCKED_CIRCUIT_BREAKER', 'BLOCKED_POSITION_OPEN'])
+  check(`tm2: reason code ${code}`, tm2Src.includes(`"${code}"`))
+check('tm2: RR gate names its evaluation target (TP2)', tm2Src.includes('TMPlan2.new(') && tm2Src.includes('"TP2"'))
+
+// v2.1 P1 modules + dashboard
+check('tm2: entry modes A/B/C present', tm2Src.includes('MODE_A_PULLBACK') && tm2Src.includes('MODE_B_SWEEP') && tm2Src.includes('MODE_C_RANGE'))
+check('tm2: compact + advanced dashboard', tm2Src.includes('options = ["Compact", "Advanced"]') && tm2Src.includes('tm_dashRows   = tm_dashMode == "Compact" ? 13 : 34'))
+check('tm2: dashboard co dong Session', tm2Src.includes('"Session"') && tm2Src.includes('tm_sessName'))
+check('tm2: lifecycle funnel counters', ['tm_statCandidates', 'tm_statEligible', 'tm_statPendingN', 'tm_statFilledN', 'tm_statClosedN'].every((v) => tm2Src.includes(v)))
+check('tm2: alert contract v2.1', tm2Src.includes('tm2.signal.v2.1') && tm2Src.includes('"long_score"') && tm2Src.includes('"score_side"') && tm2Src.includes('"blockers"'))
+check('tm2: alert payload keeps score side explicit', tm2Src.includes('"score_side"') && tm2Src.includes('"direction_code"'))
+
+// Both outputs must share the same logic modules (only 11_* differs by marker).
+for (const [name, src] of [['tm2', tm2Src], ['tm2-strategy', tm2StratSrc]]) {
+  const defs = [...src.matchAll(/^\s*(f_\w+)\s*\([^)]*\)\s*=>/gm)].map((m) => m[1])
+  const dup = [...new Set(defs.filter((d, i) => defs.indexOf(d) !== i))]
+  check(`${name}: no duplicate f_* definition`, dup.length === 0, JSON.stringify(dup))
+  check(`${name}: shared scoring helpers inlined once`, (src.match(/f_tmSideScore\(/g) || []).length >= 3)
+}
+check('tm2-strategy: indicator-only alertcondition stripped', !tm2StratSrc.includes('alertcondition('))
+check('tm2: strategy bridge stripped from indicator', !tm2Src.includes('strategy.entry('))
 
 // =============================================================================
 console.log(`\n${fail === 0 ? 'PASS' : 'FAIL'} — ${pass} pass, ${fail} fail\n`)

@@ -1,0 +1,197 @@
+// =============================================================================
+//  L0 - INPUTS & ASSET PROFILES (TM Indicator 2 - Next-Gen Architecture)
+// =============================================================================
+
+// --- 1. General & Mode --------------------------------------------------------
+tm_confirmOnly = input.bool(true,  "Chi tin hieu nen da dong (no-repaint)", group = "TM · Chung", display = display.data_window)
+tm_payloadMode = input.string("Full", "Webhook payload", options = ["Full", "Slim", "Off"], group = "TM · Chung", display = display.data_window)
+
+// --- 2. Asset Profile & Inter-market -----------------------------------------
+tm_assetMode            = input.string("Auto", "Asset Profile", options = ["Auto", "XAU", "BTC", "ETH", "Liquid Altcoin", "High-Risk Altcoin", "Custom"], group = "TM · Asset Profile", display = display.data_window)
+tm_cryptoSessionNeutral = input.bool(true, "Crypto 24/7: Session neutral", group = "TM · Asset Profile", display = display.data_window)
+tm_minVolCheck          = input.bool(true, "Kiem tra thanh khoan toi thieu", group = "TM · Asset Profile", display = display.data_window)
+tm_weekendFilter        = input.bool(true, "Weekend Low-Liquidity Filter (Crypto)", group = "TM · Asset Profile", display = display.data_window)
+tm_btcLeaderOn          = input.bool(true, "BTC Leader Filter (cho ETH/Altcoin)", group = "TM · Asset Profile", display = display.data_window)
+tm_btcTicker            = input.symbol("BINANCE:BTCUSDT.P", "BTC Leader Ticker", group = "TM · Asset Profile", display = display.data_window)
+tm_btcImpulseAtr        = input.float(1.5, "BTC Impulse Filter (x ATR)", minval = 0.5, step = 0.1, group = "TM · Asset Profile", display = display.data_window)
+
+// --- 3. Smart Execution Mode (Market vs Pullback Limit) ----------------------
+tm_entryMode        = input.string("Auto (Adaptive)", "Che do vao lenh", options = ["Market on Confirm", "Pullback Limit (Strict)", "Auto (Adaptive)"], group = "TM · Smart Entry Execution", display = display.data_window)
+tm_limitSource      = input.string("50% FVG", "Vi tri dat Limit", options = ["50% FVG", "Order Block Edge", "EMA Fast Pullback"], group = "TM · Smart Entry Execution", display = display.data_window)
+tm_limitCancelBars  = input.int(5, "Huy Limit sau K nen khong khop", minval = 1, maxval = 20, group = "TM · Smart Entry Execution", display = display.data_window)
+tm_limitCancelOnTp1 = input.bool(true, "Huy Limit neu gia da cham TP1 truoc", group = "TM · Smart Entry Execution", display = display.data_window)
+
+// --- 3b. Entry Modes by Market State (v2.1 Phase 3) --------------------------
+tm_modeFilterOn  = input.bool(true,  "Require an active entry mode (A/B/C)", group = "TM · Entry Modes", display = display.data_window)
+tm_modeA_on      = input.bool(true,  "Mode A: Trend Pullback", group = "TM · Entry Modes", display = display.data_window)
+tm_modeB_on      = input.bool(true,  "Mode B: Liquidity Sweep Reversal", group = "TM · Entry Modes", display = display.data_window)
+tm_modeC_on      = input.bool(false, "Mode C: Range Mean-Reversion", group = "TM · Entry Modes", display = display.data_window)
+tm_modeSweepBars = input.int(3, "Mode B confirmation window (bars)", minval = 1, maxval = 20, group = "TM · Entry Modes", display = display.data_window)
+tm_modePullTol   = input.float(0.35, "Mode A pullback tolerance (x ATR)", minval = 0.05, step = 0.05, group = "TM · Entry Modes", display = display.data_window)
+tm_modeRangeTol  = input.float(0.35, "Mode C range-edge tolerance (x ATR)", minval = 0.05, step = 0.05, group = "TM · Entry Modes", display = display.data_window)
+
+// --- 4. Dynamic Trade Management (Winrate & Expectancy Boost) ----------------
+tm_autoBeOn       = input.bool(true, "Auto Break-Even tai TP1", group = "TM · Dynamic Management", display = display.data_window)
+tm_beOffsetAtr    = input.float(0.05, "Dem BE bao ve phi (x ATR)", minval = 0.0, step = 0.01, group = "TM · Dynamic Management", display = display.data_window)
+tm_trailOn        = input.bool(true, "Trailing Stop sau khi cham TP2", group = "TM · Dynamic Management", display = display.data_window)
+tm_trailType      = input.string("ATR Dynamic", "Kieu Trailing", options = ["ATR Dynamic", "Structure Swing"], group = "TM · Dynamic Management", display = display.data_window)
+tm_trailDistAtr   = input.float(1.5, "Khoang cach Trail (x ATR)", minval = 0.5, step = 0.1, group = "TM · Dynamic Management", display = display.data_window)
+tm_timeDecayOn    = input.bool(true, "Time-Decay / Stagnation Exit", group = "TM · Dynamic Management", display = display.data_window)
+tm_stagnantBars   = input.int(15, "Nen thoat lenh neu < 0.3R va yeu dong luong", minval = 5, maxval = 60, group = "TM · Dynamic Management", display = display.data_window)
+tm_maxHoldBars    = input.int(300, "Thoi gian giu toi da (nen timeout)", minval = 10, maxval = 2000, group = "TM · Dynamic Management", display = display.data_window)
+
+// --- 5. Smart Eligibility Gates (Ablation Toggles) ---------------------------
+tm_gate_regime   = input.bool(true, "Gate 1: Market Regime Filter", group = "TM · Eligibility Gates", display = display.data_window)
+tm_gate_mtf      = input.bool(true, "Gate 2: MTF & BTC Leader Consensus", group = "TM · Eligibility Gates", display = display.data_window)
+tm_gate_obstacle = input.bool(true, "Gate 3: Obstacle Gate (Room-to-Left)", group = "TM · Eligibility Gates", display = display.data_window)
+tm_gate_overext  = input.bool(true, "Gate 4: Anti-Overextension Gate", group = "TM · Eligibility Gates", display = display.data_window)
+tm_gate_circuit  = input.bool(true, "Gate 5: Circuit Breaker & Max Losses", group = "TM · Eligibility Gates", display = display.data_window)
+tm_gate_risk     = input.bool(true, "Gate 6: Futures Margin & Liquidation", group = "TM · Eligibility Gates", display = display.data_window)
+
+// --- 6. Market Regime Classifier Settings ------------------------------------
+tm_regimeAdxTrending   = input.float(22.0, "ADX nguong TRENDING", minval = 10.0, maxval = 50.0, step = 1.0, group = "TM · Market Regime", display = display.data_window)
+tm_regimeAdxChop       = input.float(18.0, "ADX nguong CHOP / SQUEEZE", minval = 5.0, maxval = 30.0, step = 1.0, group = "TM · Market Regime", display = display.data_window)
+tm_regimeBbwLen        = input.int(100, "Bollinger Width lookback", minval = 20, maxval = 300, group = "TM · Market Regime", display = display.data_window)
+tm_regimeBbwSqueezePct = input.float(20.0, "BBW Squeeze Percentile (%)", minval = 5.0, maxval = 50.0, step = 1.0, group = "TM · Market Regime", display = display.data_window)
+
+// --- 7. Obstacle & Overextension Thresholds ----------------------------------
+tm_obstacleBuffer = input.float(0.7, "Ty le khoang cach Can / TP1 (toi thieu)", minval = 0.3, maxval = 2.0, step = 0.05, group = "TM · Obstacle & Overextension", display = display.data_window)
+tm_maxExtAtr      = input.float(2.2, "Do gian toi da so voi EMA 20 (x ATR)", minval = 1.0, step = 0.1, group = "TM · Obstacle & Overextension", display = display.data_window)
+tm_maxCandleAtr   = input.float(2.5, "Bien do nen tin hieu toi da (x ATR)", minval = 1.0, step = 0.1, group = "TM · Obstacle & Overextension", display = display.data_window)
+
+// --- Session Timezone ---
+tm_sessTz = input.string("America/New_York", "Mui gio phien thi truong (NY)", options = ["America/New_York", "Europe/London", "Asia/Ho_Chi_Minh", "Asia/Tokyo", "UTC"], group = "TM · Session", display = display.data_window)
+
+// --- 8. Market Structure Settings --------------------------------------------
+tm_ms_swLen      = input.int(5, "Swing lookback (nen)", minval = 2, maxval = 20, group = "TM · Market Structure", display = display.data_window)
+tm_ms_bosOn      = input.bool(true, "Hien thi BOS", group = "TM · Market Structure", display = display.data_window)
+tm_ms_chochOn    = input.bool(true, "Hien thi CHoCH", group = "TM · Market Structure", display = display.data_window)
+tm_ms_mssOn      = input.bool(true, "Hien thi MSS (break + displ.)", group = "TM · Market Structure", display = display.data_window)
+tm_ms_retestOn   = input.bool(true, "Phat hien Retest sau BOS", group = "TM · Market Structure", display = display.data_window)
+tm_ms_retestBars = input.int(10, "Cua so retest (nen)", minval = 1, maxval = 100, group = "TM · Market Structure", display = display.data_window)
+tm_ms_retestTol  = input.float(0.5, "Retest tolerance (x ATR)", minval = 0.0, step = 0.1, group = "TM · Market Structure", display = display.data_window)
+tm_ms_failOn     = input.bool(true, "Phat hien Failed Breakout", group = "TM · Market Structure", display = display.data_window)
+tm_ms_failBars   = input.int(5, "Cua so failed breakout (nen)", minval = 1, maxval = 50, group = "TM · Market Structure", display = display.data_window)
+tm_ms_contOn     = input.bool(true, "Trend continuation (HH/LL)", group = "TM · Market Structure", display = display.data_window)
+tm_ms_pullOn     = input.bool(true, "Pullback ve EMA", group = "TM · Market Structure", display = display.data_window)
+
+// --- 9. Liquidity, S/R, FVG & Order Block ------------------------------------
+tm_liq_sweepOn   = input.bool(true,  "Hien thi Liquidity Sweep", group = "TM · Liquidity", display = display.data_window)
+tm_liq_pdOn      = input.bool(true,  "Hien thi PDH / PDL", group = "TM · Liquidity", display = display.data_window)
+tm_liq_pwOn      = input.bool(false, "Hien thi PWH / PWL", group = "TM · Liquidity", display = display.data_window)
+tm_liq_sessOn    = input.bool(true,  "Hien thi Session High / Low", group = "TM · Liquidity", display = display.data_window)
+tm_liq_tlOn      = input.bool(true,  "Trendline 2 diem", group = "TM · Liquidity", display = display.data_window)
+tm_liq_tlTol     = input.float(0.25, "Trendline touch tolerance (x ATR)", minval = 0.05, step = 0.05, group = "TM · Liquidity", display = display.data_window)
+tm_liq_tlMaxDev  = input.float(10.0, "Trendline toi da xa gia (x ATR)", minval = 1.0, step = 1.0, group = "TM · Liquidity", display = display.data_window)
+tm_sr_showOn     = input.bool(true,  "Hien thi S/R zones", group = "TM · Zones", display = display.data_window)
+tm_sr_width      = input.float(0.5,  "Zone width (x ATR)", minval = 0.05, step = 0.05, group = "TM · Zones", display = display.data_window)
+tm_sr_maxZone    = input.int(8,      "Max zones", minval = 1, maxval = 20, group = "TM · Zones", display = display.data_window)
+tm_fvg_showOn    = input.bool(true,  "Hien thi FVG", group = "TM · Zones", display = display.data_window)
+tm_fvg_minAtr    = input.float(0.3,  "FVG toi thieu (x ATR)", minval = 0.05, step = 0.05, group = "TM · Zones", display = display.data_window)
+tm_fvg_max       = input.int(20,     "FVG toi da", minval = 1, maxval = 50, group = "TM · Zones", display = display.data_window)
+tm_fvg_life      = input.int(100,    "FVG toi da (nen)", minval = 10, maxval = 500, group = "TM · Zones", display = display.data_window)
+tm_ob_showOn     = input.bool(true,  "Hien thi Order Block", group = "TM · Zones", display = display.data_window)
+tm_ob_max        = input.int(15,     "Order Block toi da", minval = 1, maxval = 30, group = "TM · Zones", display = display.data_window)
+tm_ob_life       = input.int(150,    "Order Block toi da (nen)", minval = 10, maxval = 300, group = "TM · Zones", display = display.data_window)
+
+// --- 10. Indicators & MTF ----------------------------------------------------
+tm_emaFast   = input.int(20,  "EMA fast", minval = 2, maxval = 500, group = "TM · Indicators", display = display.data_window)
+tm_emaMid    = input.int(50,  "EMA mid", minval = 5, maxval = 500, group = "TM · Indicators", display = display.data_window)
+tm_emaSlow   = input.int(200, "EMA slow", minval = 10, maxval = 500, group = "TM · Indicators", display = display.data_window)
+tm_atrLen    = input.int(14,  "ATR length", minval = 1, maxval = 200, group = "TM · Indicators", display = display.data_window)
+tm_rsiLen    = input.int(14,  "RSI length", minval = 2, maxval = 200, group = "TM · Indicators", display = display.data_window)
+tm_rsiOb     = input.float(70, "RSI overbought", minval = 50, maxval = 99, group = "TM · Indicators", display = display.data_window)
+tm_rsiOs     = input.float(30, "RSI oversold", minval = 1, maxval = 50, group = "TM · Indicators", display = display.data_window)
+tm_macdF     = input.int(12, "MACD fast", minval = 2, maxval = 200, group = "TM · Indicators", display = display.data_window)
+tm_macdS     = input.int(26, "MACD slow", minval = 5, maxval = 200, group = "TM · Indicators", display = display.data_window)
+tm_macdSig   = input.int(9,  "MACD signal", minval = 1, maxval = 200, group = "TM · Indicators", display = display.data_window)
+tm_dmiLen    = input.int(14,   "DMI / ADX length", minval = 2, maxval = 200, group = "TM · Indicators", display = display.data_window)
+tm_adxMin    = input.float(20, "ADX nguong manh xu huong", minval = 0.0, maxval = 100.0, step = 1.0, group = "TM · Indicators", display = display.data_window)
+
+tm_ctxTf     = input.timeframe("D", "Context TF (H1/H4/D/W/M)", options = ["60", "240", "D", "W", "M"], group = "TM · MTF", display = display.data_window)
+tm_ctxLen    = input.int(200, "Context EMA length", minval = 10, maxval = 500, group = "TM · MTF", display = display.data_window)
+tm_setupTf   = input.timeframe("60", "Setup TF (M15/M30/H1/H4)", options = ["15", "30", "60", "240"], group = "TM · MTF", display = display.data_window)
+tm_setupLen  = input.int(50, "Setup EMA length", minval = 5, maxval = 500, group = "TM · MTF", display = display.data_window)
+tm_htfFilter = input.bool(true, "Loc theo Setup TF", group = "TM · MTF", display = display.data_window)
+tm_htfVetoOn = input.bool(true, "HTF VETO - chan lenh khi Context doi lap", group = "TM · MTF", display = display.data_window)
+
+// --- 11. Volume & VSA --------------------------------------------------------
+tm_vol_maLen  = input.int(20,    "Cua so Volume MA (Wilder RMA)", minval = 5, maxval = 100, group = "TM · Volume VSA", display = display.data_window)
+tm_vol_showMA = input.bool(true, "Hien Volume MA", group = "TM · Volume VSA", display = display.data_window)
+tm_vol_spikeR = input.float(2.2, "TIM - cot dot bien (ratio)", minval = 1.5, step = 0.1, group = "TM · Volume VSA", display = display.data_window)
+tm_vol_rVH    = input.float(1.8, "VeryHigh (ratio)", minval = 1.0, step = 0.1, group = "TM · Volume VSA", display = display.data_window)
+tm_vol_rH     = input.float(1.2, "High (ratio)",     minval = 0.8, step = 0.1, group = "TM · Volume VSA", display = display.data_window)
+tm_vol_rN     = input.float(0.8, "Normal (ratio)",   minval = 0.4, step = 0.1, group = "TM · Volume VSA", display = display.data_window)
+tm_vol_rL     = input.float(0.4, "Low (ratio)",      minval = 0.1, step = 0.1, group = "TM · Volume VSA", display = display.data_window)
+tm_rvMin      = input.float(1.2, "RelVol nguong",    minval = 0.5, step = 0.1, group = "TM · Volume VSA", display = display.data_window)
+
+// --- 12. Base Scoring Weights (Auto-Adapts by Regime) ------------------------
+tm_w_trend  = input.float(15, "W: Trend (EMA stack)", minval = 0, step = 1, group = "TM · Scoring Weights", display = display.data_window)
+tm_w_struct = input.float(15, "W: Structure (BOS/CHoCH)", minval = 0, step = 1, group = "TM · Scoring Weights", display = display.data_window)
+tm_w_liq    = input.float(12, "W: Liquidity (Sweep)", minval = 0, step = 1, group = "TM · Scoring Weights", display = display.data_window)
+tm_w_loc    = input.float(8,  "W: Location (VWAP/Day)", minval = 0, step = 1, group = "TM · Scoring Weights", display = display.data_window)
+tm_w_sr     = input.float(10, "W: S/R + FVG + OB", minval = 0, step = 1, group = "TM · Scoring Weights", display = display.data_window)
+tm_w_candle = input.float(10, "W: Candle Patterns", minval = 0, step = 1, group = "TM · Scoring Weights", display = display.data_window)
+tm_w_vol    = input.float(8,  "W: Volume VSA", minval = 0, step = 1, group = "TM · Scoring Weights", display = display.data_window)
+tm_w_atr    = input.float(7,  "W: Volatility (Regime)", minval = 0, step = 1, group = "TM · Scoring Weights", display = display.data_window)
+tm_w_mom    = input.float(7,  "W: Momentum (RSI/MACD)", minval = 0, step = 1, group = "TM · Scoring Weights", display = display.data_window)
+tm_w_sess   = input.float(4,  "W: Session Bias", minval = 0, step = 1, group = "TM · Scoring Weights", display = display.data_window)
+tm_w_mtf    = input.float(4,  "W: MTF Alignment", minval = 0, step = 1, group = "TM · Scoring Weights", display = display.data_window)
+
+tm_scr_noTrade = input.int(49, "Score <= NO TRADE", minval = 0, maxval = 99, group = "TM · Score Thresholds", display = display.data_window)
+tm_scr_weak    = input.int(64, "Score <= WEAK", minval = 1, maxval = 99, group = "TM · Score Thresholds", display = display.data_window)
+tm_scr_setup   = input.int(74, "Score <= SETUP", minval = 1, maxval = 99, group = "TM · Score Thresholds", display = display.data_window)
+tm_scr_strong  = input.int(84, "Score <= STRONG", minval = 1, maxval = 99, group = "TM · Score Thresholds", display = display.data_window)
+tm_minQuality  = input.string("SETUP", "Cap do chat luong toi thieu", options = ["WEAK", "SETUP", "STRONG", "A+"], group = "TM · Score Thresholds", display = display.data_window)
+// v2.1: direction is chosen from two independent 0-100 side scores. A gap below
+// this margin is AMBIGUOUS_SETUP instead of forcing a side.
+tm_scoreMargin = input.int(8, "Min LONG/SHORT score gap", minval = 0, maxval = 50, group = "TM · Score Thresholds", display = display.data_window)
+// Ablation profiles from the v2.1 protocol. They only change feature weights;
+// execution gates stay under the explicit "Eligibility Gates" toggles below.
+tm_ablationMode = input.string("E (Full)", "Ablation feature config", options = ["A (Structure + Location)", "B (A + Trend/Momentum)", "C (B + Volume)", "D (C + MTF + Regime)", "E (Full)"], group = "TM · Score Thresholds", display = display.data_window)
+
+// --- 13. Risk Engine, Targets & Futures Model --------------------------------
+tm_sl_atrMul   = input.float(1.5, "SL = ATR x", minval = 0.1, step = 0.1, group = "TM · Risk & Targets", display = display.data_window)
+tm_sl_swing    = input.int(10,    "Swing lookback SL", minval = 2, maxval = 100, group = "TM · Risk & Targets", display = display.data_window)
+tm_sl_padAtr   = input.float(0.2, "Dem sau swing (x ATR)", minval = 0, step = 0.05, group = "TM · Risk & Targets", display = display.data_window)
+tm_sl_minAtr   = input.float(0.5, "SL min (x ATR)", minval = 0.1, step = 0.1, group = "TM · Risk & Targets", display = display.data_window)
+tm_sl_maxAtr   = input.float(3.0, "SL max (x ATR)", minval = 0.5, step = 0.1, group = "TM · Risk & Targets", display = display.data_window)
+
+// P0 Fix: TP1 la Partial & Auto Break-Even; TP2 la Standard Target kiem tra Min RR; TP3 la Runner
+tm_rr1         = input.float(1.0, "TP1 (R) [Partial & Auto-BE]", minval = 0.5, step = 0.1, group = "TM · Risk & Targets", display = display.data_window)
+tm_rr2         = input.float(2.0, "TP2 (R) [Standard Target]", minval = 1.0, step = 0.1, group = "TM · Risk & Targets", display = display.data_window)
+tm_rr3         = input.float(3.0, "TP3 (R) [Runner Target]", minval = 1.5, step = 0.1, group = "TM · Risk & Targets", display = display.data_window)
+tm_rrMin       = input.float(1.5, "RR toi thieu kiem tra tai TP2", minval = 0.0, step = 0.1, group = "TM · Risk & Targets", display = display.data_window)
+
+tm_maxDay      = input.int(4,  "Lenh toi da / ngay", minval = 1, group = "TM · Risk & Targets", display = display.data_window)
+tm_coolBars    = input.int(8,  "Cooldown giua 2 lenh (nen)", minval = 0, group = "TM · Risk & Targets", display = display.data_window)
+
+// Futures Linear USDT Sizing & Margin
+tm_risk_equity     = input.float(10000.0, "Von tai khoan (USDT)", minval = 100.0, step = 500.0, group = "TM · Futures Risk", display = display.data_window)
+tm_risk_pct        = input.float(1.0,     "Rui ro moi lenh (% von)", minval = 0.1, maxval = 10.0, step = 0.1, group = "TM · Futures Risk", display = display.data_window)
+tm_risk_maxLev     = input.float(20.0,    "Don bay toi da cho phep (x)", minval = 1.0, maxval = 125.0, step = 1.0, group = "TM · Futures Risk", display = display.data_window)
+tm_risk_mmr        = input.float(0.005,   "Ty le ky quy duy tri MMR", minval = 0.001, maxval = 0.05, step = 0.001, group = "TM · Futures Risk", display = display.data_window)
+tm_risk_feeSlipPct = input.float(0.08,    "Phi + Truot gia roundtrip (%)", minval = 0.0, maxval = 1.0, step = 0.01, group = "TM · Futures Risk", display = display.data_window)
+tm_risk_maxLosses  = input.int(3,         "Ngat mach khi thua lien tiep (lenh)", minval = 1, maxval = 10, group = "TM · Futures Risk", display = display.data_window)
+
+// --- 14. Visual Display ------------------------------------------------------
+tm_showViz    = input.bool(true, "Master Visual Switch", group = "TM · Display", display = display.data_window)
+tm_cBull      = input.color(color.new(#089981, 0), "Mau LONG",  group = "TM · Display", inline = "clr", display = display.data_window)
+tm_cBear      = input.color(color.new(#f23645, 0), "Mau SHORT", group = "TM · Display", inline = "clr", display = display.data_window)
+tm_showSig    = input.bool(true, "Nhan Entry & Limit", group = "TM · Display", display = display.data_window)
+tm_showHit    = input.bool(true, "Nhan cham TP/SL/BE/TO", group = "TM · Display", display = display.data_window)
+tm_showZone   = input.bool(true, "Ve vung SL/TP", group = "TM · Display", display = display.data_window)
+tm_zoneLen    = input.int(30,    "Do dai vung ve (nen)", minval = 1, maxval = 300, group = "TM · Display", display = display.data_window)
+tm_showEma    = input.bool(false, "EMA 20/50/200 tren gia", group = "TM · Display", display = display.data_window)
+tm_showPd     = input.bool(true, "Duong PDH / PDL", group = "TM · Display", display = display.data_window)
+tm_showPw     = input.bool(false, "Duong PWH / PWL", group = "TM · Display", display = display.data_window)
+tm_showSess   = input.bool(true, "Duong Session Hi / Lo", group = "TM · Display", display = display.data_window)
+tm_showPriceZones = input.bool(true, "Zone S/R + FVG + OB", group = "TM · Display", display = display.data_window)
+tm_showTl     = input.bool(true, "Trendline 2 diem", group = "TM · Display", display = display.data_window)
+tm_showMsLabels = input.bool(true, "Nhan BOS / CHoCH / MSS / Retest", group = "TM · Display", display = display.data_window)
+tm_showSweepLabels = input.bool(true, "Nhan Sweep", group = "TM · Display", display = display.data_window)
+tm_showVwap   = input.bool(true, "VWAP tren gia", group = "TM · Display", display = display.data_window)
+tm_showVol    = input.bool(true, "Histogram Volume", group = "TM · Display", display = display.data_window)
+tm_showDash   = input.bool(true, "Dashboard da nang", group = "TM · Display", display = display.data_window)
+tm_dashSize   = input.string("Small", "Dash size", options = ["Tiny", "Small", "Normal"], group = "TM · Display", display = display.data_window)
+tm_dashMode   = input.string("Compact", "Dash mode (v2.1)", options = ["Compact", "Advanced"], group = "TM · Display", display = display.data_window)

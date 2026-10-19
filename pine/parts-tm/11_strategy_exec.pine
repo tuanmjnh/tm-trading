@@ -1,0 +1,96 @@
+// @part skip:tm
+// =============================================================================
+//  STRATEGY LAB 2 EXECUTION BRIDGE (TM Indicator Strategy Lab 2)
+//  Marker "@part skip:tm" => ban indicator TM Indicator 2 KHONG chua file nay.
+// =============================================================================
+
+tm_strat_on        = input.bool(true, "Bat giao dich tu dong (Strategy Lab 2)", group = "TM · Strategy Lab 2", display = display.data_window)
+tm_strat_dir       = input.string("Long + Short", "Chieu giao dich", options = ["Long + Short", "Long Only", "Short Only"], group = "TM · Strategy Lab 2", display = display.data_window)
+tm_strat_exitMode  = input.string("Full Ladder (40/40/20)", "Kieu chot loi", options = ["TP1 (Quick BE)", "TP2 (Balanced)", "TP3 (Runner)", "Full Ladder (40/40/20)"], group = "TM · Strategy Lab 2", display = display.data_window)
+tm_strat_useSizing = input.bool(true, "Su dung Futures Risk Sizing", group = "TM · Strategy Lab 2", display = display.data_window)
+
+bool tm_stratAllowLong  = tm_strat_dir == "Long + Short" or tm_strat_dir == "Long Only"
+bool tm_stratAllowShort = tm_strat_dir == "Long + Short" or tm_strat_dir == "Short Only"
+
+float tm_calcQty2 = tm_strat_useSizing ? math.max(tm_plan2.posSize, syminfo.mincontract) : (strategy.equity * 0.1 / close)
+bool  tm_stratQtyOk = tm_calcQty2 > 0.0 and not na(close) and close > 0.0
+
+// v2.1: only the transition bar may submit an order. Previously every bar that
+// satisfied tm_signal re-submitted entries, which could bypass the indicator's
+// one-position lifecycle after an exit on the same bar.
+bool tm_stratFire = tm_strat_on and tm_stratQtyOk and tm_signal and (tm_evEntry or tm_evPending) and tm_posStage != TM2_STAGE_IDLE
+bool tm_stratLongEntry  = tm_stratFire and tm_dir == 1 and tm_stratAllowLong and strategy.position_size == 0
+bool tm_stratShortEntry = tm_stratFire and tm_dir == -1 and tm_stratAllowShort and strategy.position_size == 0
+
+// Execution: Market or Limit Orders
+if tm_stratLongEntry
+    if tm_plan2.orderType == "LIMIT"
+        if tm_strat_exitMode == "Full Ladder (40/40/20)"
+            float q1 = tm_calcQty2 * 0.40
+            float q2 = tm_calcQty2 * 0.40
+            float q3 = tm_calcQty2 - q1 - q2
+            strategy.entry("L1", strategy.long, qty = q1, limit = tm_plan2.limitPrice, comment = "TM2 L1 (Lim)")
+            strategy.entry("L2", strategy.long, qty = q2, limit = tm_plan2.limitPrice, comment = "TM2 L2 (Lim)")
+            strategy.entry("L3", strategy.long, qty = q3, limit = tm_plan2.limitPrice, comment = "TM2 L3 (Lim)")
+        else
+            strategy.entry("Long", strategy.long, qty = tm_calcQty2, limit = tm_plan2.limitPrice, comment = "TM2 LONG (Lim)")
+    else
+        if tm_strat_exitMode == "Full Ladder (40/40/20)"
+            float q1 = tm_calcQty2 * 0.40
+            float q2 = tm_calcQty2 * 0.40
+            float q3 = tm_calcQty2 - q1 - q2
+            strategy.entry("L1", strategy.long, qty = q1, comment = "TM2 L1")
+            strategy.entry("L2", strategy.long, qty = q2, comment = "TM2 L2")
+            strategy.entry("L3", strategy.long, qty = q3, comment = "TM2 L3")
+        else
+            strategy.entry("Long", strategy.long, qty = tm_calcQty2, comment = "TM2 LONG")
+
+if tm_stratShortEntry
+    if tm_plan2.orderType == "LIMIT"
+        if tm_strat_exitMode == "Full Ladder (40/40/20)"
+            float q1 = tm_calcQty2 * 0.40
+            float q2 = tm_calcQty2 * 0.40
+            float q3 = tm_calcQty2 - q1 - q2
+            strategy.entry("S1", strategy.short, qty = q1, limit = tm_plan2.limitPrice, comment = "TM2 S1 (Lim)")
+            strategy.entry("S2", strategy.short, qty = q2, limit = tm_plan2.limitPrice, comment = "TM2 S2 (Lim)")
+            strategy.entry("S3", strategy.short, qty = q3, limit = tm_plan2.limitPrice, comment = "TM2 S3 (Lim)")
+        else
+            strategy.entry("Short", strategy.short, qty = tm_calcQty2, limit = tm_plan2.limitPrice, comment = "TM2 SHORT (Lim)")
+    else
+        if tm_strat_exitMode == "Full Ladder (40/40/20)"
+            float q1 = tm_calcQty2 * 0.40
+            float q2 = tm_calcQty2 * 0.40
+            float q3 = tm_calcQty2 - q1 - q2
+            strategy.entry("S1", strategy.short, qty = q1, comment = "TM2 S1")
+            strategy.entry("S2", strategy.short, qty = q2, comment = "TM2 S2")
+            strategy.entry("S3", strategy.short, qty = q3, comment = "TM2 S3")
+        else
+            strategy.entry("Short", strategy.short, qty = tm_calcQty2, comment = "TM2 SHORT")
+
+// Dynamic Exit Management (Auto Break-Even & Trailing)
+// Current effective stop level tracks tm_posSl
+if strategy.position_size > 0
+    if tm_strat_exitMode == "Full Ladder (40/40/20)"
+        strategy.exit("Exit L1", from_entry = "L1", stop = tm_posSl, limit = tm_posTp1, comment_profit = "TP1", comment_loss = "SL/BE")
+        strategy.exit("Exit L2", from_entry = "L2", stop = tm_posSl, limit = tm_posTp2, comment_profit = "TP2", comment_loss = "SL/BE")
+        strategy.exit("Exit L3", from_entry = "L3", stop = tm_posSl, limit = tm_posTp3, comment_profit = "TP3", comment_loss = "SL/BE/TR")
+    else
+        float targetTp = tm_strat_exitMode == "TP1 (Quick BE)" ? tm_posTp1 : tm_strat_exitMode == "TP3 (Runner)" ? tm_posTp3 : tm_posTp2
+        strategy.exit("Exit Long", from_entry = "Long", stop = tm_posSl, limit = targetTp, comment_profit = "TP", comment_loss = "SL/BE")
+
+if strategy.position_size < 0
+    if tm_strat_exitMode == "Full Ladder (40/40/20)"
+        strategy.exit("Exit S1", from_entry = "S1", stop = tm_posSl, limit = tm_posTp1, comment_profit = "TP1", comment_loss = "SL/BE")
+        strategy.exit("Exit S2", from_entry = "S2", stop = tm_posSl, limit = tm_posTp2, comment_profit = "TP2", comment_loss = "SL/BE")
+        strategy.exit("Exit S3", from_entry = "S3", stop = tm_posSl, limit = tm_posTp3, comment_profit = "TP3", comment_loss = "SL/BE/TR")
+    else
+        float targetTp = tm_strat_exitMode == "TP1 (Quick BE)" ? tm_posTp1 : tm_strat_exitMode == "TP3 (Runner)" ? tm_posTp3 : tm_posTp2
+        strategy.exit("Exit Short", from_entry = "Short", stop = tm_posSl, limit = targetTp, comment_profit = "TP", comment_loss = "SL/BE")
+
+// Cancel pending limit orders if expired or missed
+if tm_evCancel and strategy.position_size == 0
+    strategy.cancel_all()
+
+// Close position on Time-Decay or Max Hold Timeout
+if (tm_evDecay or tm_evTimeout) and strategy.position_size != 0
+    strategy.close_all(comment = tm_evDecay ? "TIME_DECAY" : "TIMEOUT")

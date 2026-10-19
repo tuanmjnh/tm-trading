@@ -4,12 +4,12 @@
 dashboard Nuxt, **risk gate** và execution (paper → MT5/exchange).
 
 Bộ chỉ báo TradingView (Pine Script **v6**) là **công cụ hỗ trợ** — nguồn tín hiệu và
-đối chiếu tay — **không phải sản phẩm chính**. Định hướng đầy đủ: `docs/web-app/tm-trading-roadmap-v2.md`.
+đối chiếu tay — **không phải sản phẩm chính**. Định hướng đầy đủ: `docs/web-app/tm-trading-roadmap-v3.5.md`.
 
 ```
 tm-trading/
 ├─ docs/
-│  ├─ tm-trading-roadmap-v2.md kế hoạch tổng thể V2 + quyết định nền tảng (D1–D22)
+│  ├─ tm-trading-roadmap-v3.5.md kế hoạch tổng thể hiện hành (§57–§60) — bản cũ: docs/web-app/archive/
 │  ├─ data-model.md        schema/index/version của mọi collection  (Phase 3)
 │  ├─ app-inheritance.md   kế thừa app/ từ tm-hub: giữ/cắt gì + bẫy môi trường
 │  ├─ architecture.md      kiến trúc, luồng dữ liệu, quy ước mở rộng
@@ -20,6 +20,9 @@ tm-trading/
 ├─ pine/                   ← CÔNG CỤ HỖ TRỢ (không phải sản phẩm)
 │  ├─ parts/*.pine         ← SỬA Ở ĐÂY (nguồn duy nhất — TM Signals/Backtest)
 │  ├─ parts-vsa/*.pine     ← nguồn bộ TM VSA Wyckoff + TM VSA Backtest
+│  ├─ parts-longkaco-vsa/*.pine ← nguồn bộ LongKaco VSA + LongKaco VSA Backtest
+│  │                          (copy-on-write từ parts-vsa + afterfix bộ A —
+│  │                           docs/indicator/longkaco-vsa/)
 │  ├─ shared/*.pine        ← code dùng chung: common.pine (mọi target), sess-inputs.pine
 │                            (vsa+sweep), zones.pine (xau+xau2) — xem docs §4.3
 │  └─ dist/*.pine          ← output, dán vào TradingView
@@ -59,21 +62,23 @@ npm run dev            # dashboard Nuxt -> http://localhost:4001/
 
 | Script | Việc |
 |---|---|
-| `npm run pine:build` | Build cả **7** bản (indicator + strategy + VSA + VSA backtest + sweep + XAU + XAU2) |
+| `npm run pine:build` | Build cả **9** bản (TM Indicator 2/Lab 2 + XAU 2 + LongKaco VSA + LongKaco VSA backtest + Price Action MTF + Price Action MTF backtest + Fusion Zones + Fusion Zones backtest) |
 | `npm run pine:watch` | Tự build lại mỗi khi `pine/parts*/` hoặc `pine/shared/` đổi |
-| `npm run pine:signal` | Chỉ build bản indicator |
-| `npm run pine:backtest` | Chỉ build bản strategy |
-| `npm run pine:vsa` | Chỉ build bản TM VSA Wyckoff |
-| `npm run pine:vsa:backtest` | Chỉ build bản TM VSA Backtest |
-| `npm run pine:sweep` | Chỉ build bản TM Liquidity Sweep |
-| `npm run pine:xau` | Chỉ build bản TM XAU Signals |
-| `npm run pine:xau2` | Chỉ build bản TM XAU Signals 2 (master-prompt v2) |
-| `npm run pine:copy` | Build rồi copy `TM Signals.pine` vào clipboard |
-| `npm run pine:copy:backtest` | Copy `TM Backtest.pine` vào clipboard |
-| `npm run pine:copy:vsa` | Copy `TM VSA Wyckoff.pine` vào clipboard |
-| `npm run pine:copy:vsa:backtest` | Copy `TM VSA Backtest.pine` vào clipboard |
-| `npm run pine:copy:sweep` | Copy `TM Liquidity Sweep.pine` vào clipboard |
-| `npm run pine:copy:xau` | Copy `TM XAU Signals.pine` vào clipboard |
+| `npm run pine:signal` | Chỉ build bản indicator (TM Indicator 2) |
+| `npm run pine:backtest` | Chỉ build bản strategy (TM Indicator Strategy Lab 2) |
+| `npm run pine:vsa` | Chỉ build bản LongKaco VSA |
+| `npm run pine:vsa:backtest` | Chỉ build bản LongKaco VSA Backtest |
+| `npm run pine:lk-vsa` | Chỉ build bản LongKaco VSA |
+| `npm run pine:lk-vsa:backtest` | Chỉ build bản LongKaco VSA Backtest |
+| `npm run pine:xau` | Chỉ build bản TM XAU Signals 2 |
+| `npm run pine:xau2` | Chỉ build bản TM XAU Signals 2 (alias) |
+| `npm run pine:copy` | Build rồi copy `TM Indicator 2.pine` vào clipboard |
+| `npm run pine:copy:backtest` | Copy `TM Indicator Strategy Lab 2.pine` vào clipboard |
+| `npm run pine:copy:vsa` | Copy `LongKaco VSA.pine` vào clipboard |
+| `npm run pine:copy:vsa:backtest` | Copy `LongKaco VSA Backtest.pine` vào clipboard |
+| `npm run pine:copy:lk-vsa` | Copy `LongKaco VSA.pine` vào clipboard |
+| `npm run pine:copy:lk-vsa:backtest` | Copy `LongKaco VSA Backtest.pine` vào clipboard |
+| `npm run pine:copy:xau` | Copy `TM XAU Signals 2.pine` vào clipboard |
 | `npm run pine:copy:xau2` | Copy `TM XAU Signals 2.pine` vào clipboard |
 | `npm run notify` | Chạy webhook receiver |
 | `npm test` | `pine:test` + `test:engine` + `test:db` |
@@ -88,8 +93,16 @@ npm run dev            # dashboard Nuxt -> http://localhost:4001/
 > `npm run pine:build` trả exit code **2** nếu có cảnh báo lint — dùng được trong CI.
 
 Pine không có `#include`, nên logic được viết tách file ở `pine/parts/` (bản TM),
-`pine/parts-vsa/` (bản TM VSA Wyckoff + TM VSA Backtest — **chung một nguồn**) và hàm chung ở
+`pine/parts-vsa/` (bản TM VSA Wyckoff + TM VSA Backtest — **chung một nguồn**),
+`pine/parts-longkaco-vsa/` (bộ **LongKaco VSA** + backtest — xem
+[`docs/indicator/longkaco-vsa/`](docs/indicator/longkaco-vsa/README.md)) và hàm chung ở
 `pine/shared/`; `build.mjs` ghép lại thành một script duy nhất. **Đừng sửa trực tiếp trong `pine/dist/`.**
+
+> `LongKaco VSA` là **copy-on-write** của `parts-vsa` cộng 4 afterfix của bộ video LongKaco
+> (sweep-trước-ST, TP measured-move, CLX-E, pyramid) — `parts-vsa` **không bị sửa một ký tự**,
+> nên hai bản `TM VSA Wyckoff` và `LongKaco VSA` gắn **song song trên cùng chart** để đối chiếu
+> A/B thật (tắt mọi afterfix → hành vi phải trùng bản cũ; smoke test khẳng định điều này bằng
+> cách so từng ký tự của điều kiện ST).
 
 > Bản `TM VSA Backtest` là **strategy twin** của `TM VSA Wyckoff`: cùng `parts-vsa`, chỉ khác
 > khai báo `strategy(...)`; phần vẽ bị cắt bằng marker `@part skip:vsa-strategy`, cầu nối lệnh ở

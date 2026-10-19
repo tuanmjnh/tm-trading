@@ -38,10 +38,10 @@ const TARGET_IA_NAV_LABELS = [
   // 4. Strategy Lab
   'strategies', 'indicators', 'methods', 'bot_profiles', 'bot_instances',
   // 5. Test Center
-  'new_test', 'historical_runs', 'forward_tests', 'replay_training', 'compare_validation',
+  'new_test', 'historical_runs', 'forward_tests', 'replay_training', 'compare_validation', 'sessions',
   // 6. Data & Research
   'data_center', 'datasets', 'market_recordings', 'data_quality', 'data_lineage',
-  'ai_research', 'experiments', 'journal',
+  'ai_research', 'experiments', 'journal', 'ai_agents',
   // 7. Alerts & Notifications
   'alert_rules', 'notification_history', 'inbox',
   // 8. Shared Resources

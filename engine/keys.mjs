@@ -54,6 +54,12 @@ export function alertKey(payload, source = 'tradingview') {
     price,
     level: Number.isFinite(level) ? level : null,
     mode: String(payload?.mode ?? ''),
+    // Tenancy (docs/web-app/user-tenancy-plan.md): two owners may place a
+    // byte-identical order in the same second. Included ONLY when present, so
+    // pre-tenancy keys (and webhook alerts without an owner) stay identical.
+    ...(typeof payload?.ownerId === 'string' && payload.ownerId.length > 0
+      ? { ownerId: payload.ownerId }
+      : {}),
   }
   return 'a1_' + createHash('sha256').update(stableStringify(canon)).digest('hex').slice(0, 40)
 }

@@ -9,10 +9,17 @@ import mongoose from 'mongoose'
 
 const PaperFillSchema = new mongoose.Schema(
   {
-    // Ledger anchors: unique fill, order it belongs to (D3), alert back-ref.
-    fillId: { type: String, required: true, unique: true },
+    // Ledger anchors: fill id (unique per OWNER, roadmap §61.3), order it
+    // belongs to (D3), alert back-ref.
+    fillId: { type: String, required: true },
     orderId: { type: String, required: true },
     alertKey: { type: String, default: null },
+    // Slice C: trading session this fill belongs to (additive, nullable).
+    sessionId: { type: String, default: null, index: true },
+
+    // Tenancy (docs/web-app/user-tenancy-plan.md): hub user id (`sub`) that owns
+    // the row. `accountId` below is a sub-book inside one owner, never the owner.
+    ownerId: { type: String, default: null, index: true },
 
     accountId: { type: String, default: 'default' },
     source: { type: String, default: 'paper' },
@@ -48,5 +55,7 @@ const PaperFillSchema = new mongoose.Schema(
 PaperFillSchema.index({ orderId: 1, eventTime: -1 })
 PaperFillSchema.index({ symbol: 1, eventTime: -1 })
 PaperFillSchema.index({ eventTime: -1 })
+// Per-owner fill identity: the global `fillId_1` unique index is dropped.
+PaperFillSchema.index({ ownerId: 1, fillId: 1 }, { unique: true })
 
 export const PaperFill = mongoose.models.paper_fills || mongoose.model('paper_fills', PaperFillSchema)

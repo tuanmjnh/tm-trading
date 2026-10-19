@@ -34,6 +34,20 @@ const STATUSES = ['all', 'proposed', 'approved', 'running', 'backtested', 'holdo
 const ROLES = ['baseline', 'candidate', 'random', 'holdout']
 const GATE_KEYS = ['hasArms', 'beatBaseline', 'beatRandom', 'sampleSize', 'holdout', 'noDegeneracy', 'riskPreserved', 'reproducible']
 const METRICS = ['winRate', 'profitFactor', 'expectancyR', 'medianR', 'netPct', 'maxDrawdownPct']
+const EVIDENCE_KINDS = ['paper-session', 'replay-session', 'backtest-run', 'dataset']
+const SET_COLUMNS = ['source', 'kind', 'version', 'trades', 'hash', 'frozen']
+const SET_METRICS = ['trades', 'wins', 'losses', 'expectancy', 'totalR', 'net', 'floor', 'rMeasured']
+const SET_TRADE = ['key', 'symbol', 'entry', 'exit', 'r', 'reason']
+const SET_DETAIL = [
+  'title', 'noSet', 'identity', 'setId', 'sourceId', 'sessionId', 'sourceState',
+  'instruments', 'timeframes', 'sessionStartedAt', 'sessionStoppedAt', 'createdBy', 'schemaVersion',
+  'integrity', 'verified', 'integrityOk', 'integrityFailed', 'sufficiency', 'sample', 'moving',
+  'counts', 'dataQuality', 'limitations', 'noLimitations', 'citedBy', 'citedByEmpty', 'trades', 'noTrades', 'openSource', 'openDatasets'
+]
+const FREEZE_KEYS = [
+  'action', 'title', 'desc', 'sourceId', 'sourceIdPlaceholder', 'notes', 'notesPlaceholder',
+  'confirm', 'success', 'alreadyFrozen', 'sourceChanged', 'sourceRequired'
+]
 
 /** Every research.* key the three pages/composable read (kept explicit on purpose). */
 const REQUIRED: string[] = [
@@ -56,6 +70,22 @@ const REQUIRED: string[] = [
   'gates.title', 'gates.allPass', 'gates.someFail', 'gates.empty',
   'create.action', 'create.title', 'create.desc', 'create.placeholder', 'create.notObject', 'create.success', 'create.confirm',
   'columns.experiment', 'columns.status', 'columns.hypothesis', 'columns.changes', 'columns.created',
+  // §59.15 Slice E — frozen evidence sets + the governed paper-validation launch
+  'viewEvidenceSets', 'pips.evidence',
+  'sets.title', 'sets.desc', 'sets.guardrail', 'sets.empty', 'sets.emptyHint',
+  'sets.kinds.all',
+  'sets.rollup.total', 'sets.rollup.insufficient', 'sets.rollup.moving', 'sets.rollup.cited',
+  'launch.action', 'launch.hint', 'launch.success',
+  'approve.title', 'approve.desc', 'approve.loadingEvidence', 'approve.noEvidence',
+  'approve.noEvidenceHint', 'approve.evidenceRequired', 'approve.verifyNote',
+  'provenance.title', 'provenance.candidate', 'provenance.baseline', 'provenance.noBaseline',
+  'provenance.evidenceSet', 'provenance.noEvidence', 'provenance.paperSessions', 'provenance.noPaperSessions',
+  ...EVIDENCE_KINDS.map(k => `sets.kinds.${k}`),
+  ...SET_COLUMNS.map(k => `sets.columns.${k}`),
+  ...SET_METRICS.map(k => `sets.metrics.${k}`),
+  ...SET_TRADE.map(k => `sets.trade.${k}`),
+  ...SET_DETAIL.map(k => `sets.detail.${k}`),
+  ...FREEZE_KEYS.map(k => `sets.freeze.${k}`),
   ...STATUSES.map(s => `status.${s}`),
   ...ROLES.map(r => `roles.${r}`),
   ...GATE_KEYS.map(k => `gateKeys.${k}`),
@@ -63,10 +93,12 @@ const REQUIRED: string[] = [
 ]
 
 describe('research workspace files exist (§58.9 Slice 5)', () => {
-  it('the three leaf pages exist', () => {
+  it('the leaf pages exist', () => {
     assert.ok(existsSync(join(PAGES, 'index.vue')), 'missing research/index.vue')
     assert.ok(existsSync(join(PAGES, 'experiments', 'index.vue')), 'missing research/experiments/index.vue')
     assert.ok(existsSync(join(PAGES, 'experiments', '[id].vue')), 'missing research/experiments/[id].vue')
+    assert.ok(existsSync(join(PAGES, 'evidence', 'index.vue')), 'missing research/evidence/index.vue')
+    assert.ok(existsSync(join(PAGES, 'evidence', '[id].vue')), 'missing research/evidence/[id].vue')
   })
 
   it('the research composable + domain types exist', () => {

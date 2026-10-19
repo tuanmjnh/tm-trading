@@ -6,6 +6,7 @@ import {
   applyFeedMessage,
   candleKey,
   candlesToBars,
+  createBatchedFeed,
   createFeedState,
   formatPrice,
   formatQty,
@@ -129,6 +130,24 @@ describe('applyFeedMessage — canonical events', () => {
     assert.equal(state.frames, 3)
   })
 
+  test('ticker24 seeds from hello and updates per symbol; stale frames ignored', () => {
+    const state = createFeedState()
+    assert.equal(applyFeedMessage(state, JSON.stringify({
+      type: 'hello', protocol: 1, serverTime: T0, clock: { mode: 'live', now: T0 },
+      topics: [], symbols: ['BTCUSDT'], timeframes: ['1m'],
+      quotes: [],
+      ticker24: [{ symbol: 'BTCUSDT', lastPrice: 100, priceChangePercent: 1.5, baseVolume: 10, eventTime: T0 }],
+      bookSymbols: [], provider: null, monitor: {}
+    })), 'ok')
+    assert.equal(state.ticker24.BTCUSDT?.priceChangePercent, 1.5)
+    const live = { type: 'market.ticker24', source: 't', symbol: 'BTCUSDT', lastPrice: 101, openPrice: 99, highPrice: 102, lowPrice: 98, baseVolume: 11, quoteVolume: 1111, priceChange: 2, priceChangePercent: 2, trades: 5, eventTime: T0 + 1, ingestTime: T0 + 1 }
+    assert.equal(applyFeedMessage(state, JSON.stringify(live)), 'ok')
+    assert.equal(state.ticker24.BTCUSDT?.lastPrice, 101)
+    assert.equal(applyFeedMessage(state, JSON.stringify({ ...live, lastPrice: 999, eventTime: T0 - 1 })), 'ok')
+    assert.equal(state.ticker24.BTCUSDT?.lastPrice, 101) // stale must not win
+    assert.equal(applyFeedMessage(state, JSON.stringify({ type: 'market.ticker24', source: 't', symbol: 'X' })), 'bad-frame')
+  })
+
   test('market.status keeps the latest provider state; errors are surfaced', () => {
     const state = createFeedState()
     applyFeedMessage(state, JSON.stringify({ type: 'market.status', provider: 'binance', state: 'connecting' }))
@@ -142,6 +161,54 @@ describe('applyFeedMessage — canonical events', () => {
     assert.equal(applyFeedMessage(state, JSON.stringify({ type: 'market.candle', openTime: T0 })), 'bad-frame')
     assert.equal(applyFeedMessage(state, JSON.stringify({ type: 'market.trade', price: 'x' })), 'bad-frame')
     assert.equal(state.parseErrors, 2)
+  })
+})
+
+describe('createBatchedFeed — hot-symbol coalescing', () => {
+  const quote = (bid: number, et: number) => JSON.stringify({
+    type: 'market.quote', source: 't', symbol: 'BTCUSDT', bid, ask: bid + 1, eventTime: et, ingestTime: et
+  })
+
+  test('quotes keep latest per symbol; nothing applied before flush', () => {
+    const state = createFeedState()
+    const batch = createBatchedFeed(state)
+    batch.push(quote(100, T0))
+    batch.push(quote(101, T0 + 1))
+    batch.push(quote(102, T0 + 2))
+    assert.equal(batch.pending(), 1)
+    assert.equal(state.quotes.BTCUSDT, undefined)
+    batch.flush()
+    assert.equal(state.quotes.BTCUSDT?.bid, 102)
+    assert.equal(state.frames, 1) // one reactive commit, not three
+    assert.equal(batch.pending(), 0)
+  })
+
+  test('trades all append in order; candles/books keep latest per key', () => {
+    const state = createFeedState()
+    const batch = createBatchedFeed(state)
+    batch.push(JSON.stringify(trade({ price: 1, eventTime: T0 })))
+    batch.push(JSON.stringify(trade({ price: 2, eventTime: T0 + 1 })))
+    batch.push(JSON.stringify(candle({ close: 10 })))
+    batch.push(JSON.stringify(candle({ close: 11 })))
+    batch.push(JSON.stringify({ type: 'market.book', symbol: 'BTCUSDT', bids: [[1, 1]], asks: [[2, 1]], eventTime: T0 }))
+    assert.equal(batch.pending(), 4)
+    batch.flush()
+    assert.deepEqual(state.trades.map(x => x.price), [2, 1]) // newest first
+    assert.equal(state.lastCandles['BTCUSDT|1m']?.close, 11)
+    assert.equal(state.books.BTCUSDT?.bids.length, 1)
+  })
+
+  test('hello/status apply immediately, malformed still counted', () => {
+    const state = createFeedState()
+    const batch = createBatchedFeed(state)
+    batch.push(JSON.stringify({ type: 'hello', symbols: [], timeframes: [], quotes: [], bookSymbols: [], provider: null, monitor: {} }))
+    batch.push(JSON.stringify({ type: 'market.status', state: 'connecting' }))
+    assert.ok(state.hello)
+    assert.equal(state.providerStatus?.state, 'connecting')
+    assert.equal(batch.pending(), 0)
+    batch.push('not-json{')
+    assert.equal(state.parseErrors, 1)
+    assert.equal(batch.pending(), 0)
   })
 })
 

@@ -16,5 +16,5 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'invalid_id', message: 'position id is required' })
   }
   const body = await readBody(event).catch(() => undefined)
-  return await modifyPositionAction(id, body)
+  return await modifyPositionAction(id, body, requireOwnerId(event))
 })

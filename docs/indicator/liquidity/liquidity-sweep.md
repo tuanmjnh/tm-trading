@@ -11,7 +11,7 @@ Entry/SL/TP, dashboard) đều dùng `force_overlay = true`.
 > **Phương pháp:** giá **quét qua lấy thanh khoản** rồi **rút râu** (wick rejection), xác nhận
 > bằng **volume VSA** + **xu hướng** → tín hiệu **đảo chiều**. Tham chiếu hình: `private/Capture.PNG`.
 
-Nguồn: `pine/parts-sweep/` (00–70) → `pine/dist/TM Liquidity Sweep.pine` (`npm run pine:sweep`).
+Nguồn: `pine/parts-sweep/` (00–70) → `pine/dist/TM Liquidity Sweep.pine` (archived; logic ported to `engine/methods/sweep.mjs` for backtest/league).
 Logic còn được **port sang engine** (`engine/methods/sweep.mjs`) để **đo bằng backtest/league**.
 
 ---
@@ -148,13 +148,13 @@ Chạy lại: `npm run engine:league -- --methods sweep --limit 3000 --no-write`
 ## 6. Build & cài
 
 ```bash
-npm run pine:sweep        # build target sweep -> pine/dist/TM Liquidity Sweep.pine
-npm run pine:build        # build tất cả
-npm run pine:copy:sweep   # build + copy dist vào clipboard
-npm test             # smoke + engine (gồm test method sweep)
+# TM Liquidity Sweep indicator is archived; logic lives in engine/methods/sweep.mjs
+npm run pine:build        # build tất cả target hiện tại
+npm run pine:copy:sweep   # build + copy dist vào clipboard (alias TM Indicator 2.pine)
+npm test                  # smoke + engine (gồm test method sweep)
 ```
 
-Paste `pine/dist/TM Liquidity Sweep.pine` vào Pine Editor → **Add to chart**.
+Paste `pine/dist/TM Indicator 2.pine` vào Pine Editor → **Add to chart**.
 
 ---
 

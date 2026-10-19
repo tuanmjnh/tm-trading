@@ -1,0 +1,92 @@
+// =============================================================================
+//  L1 - TYPES & STATE DEFINITIONS (Pine Script v6 UDTs)
+// =============================================================================
+
+// Market Structure & Analytical Event
+type TMEvent
+    string kind
+    string dir
+    int    srcTime
+    int    srcBar
+    string tf
+    bool   confirmed
+    float  level
+
+// Market Regime State
+type MarketRegime
+    int    code         // 1 = TRENDING, 0 = RANGING, -1 = CHOPPY_SQUEEZE
+    int    trendDir     // 1 = Bull, -1 = Bear, 0 = Neutral
+    string name         // "TRENDING_BULL", "TRENDING_BEAR", "RANGING", "CHOPPY"
+    float  adx
+    float  bbwPct
+    bool   isSqueeze
+
+// Smart Eligibility Gates Status
+type GateStatus
+    bool   regimeOk
+    bool   mtfOk
+    bool   btcOk
+    bool   obstacleOk
+    bool   overextOk
+    bool   circuitOk
+    bool   allPassed
+    string blockReason      // highest-priority blocker (stable order)
+    string blockMask        // every active blocker code, comma separated
+
+// Comprehensive Trade Plan (Market or Pullback Limit)
+type TMPlan2
+    bool   valid
+    int    dir
+    string orderType    // "MARKET" or "LIMIT"
+    float  entry
+    float  limitPrice
+    float  sl
+    float  tp1
+    float  tp2
+    float  tp3
+    float  risk
+    float  evalRR
+    float  posSize
+    float  notional
+    float  effLev
+    float  marginReq
+    float  liqPrice
+    float  netRR
+    string evalTarget   // target the RR gate is evaluated against ("TP2")
+    string reason       // standardized BLOCKED_* code or VALID
+
+// Fair Value Gap (FVG) Zone with Mitigation Tracking
+type FvgZone
+    float top
+    float bot
+    int   side          // 1 = Bullish FVG, -1 = Bearish FVG
+    int   barIdx
+    bool  mitigated
+
+// Order Block (OB) Zone with Mitigation Tracking
+type ObZone
+    float top
+    float bot
+    int   side          // 1 = Bullish OB, -1 = Bearish OB
+    int   barIdx
+    bool  mitigated
+
+// State Machine Exit Reasons Constants
+int TM2_EXIT_NONE      = 0
+int TM2_EXIT_SL        = 1
+int TM2_EXIT_TP1       = 2
+int TM2_EXIT_TP2       = 3
+int TM2_EXIT_TP3       = 4
+int TM2_EXIT_BREAKEVEN = 5
+int TM2_EXIT_TRAIL     = 6
+int TM2_EXIT_TIMEDECAY = 7
+int TM2_EXIT_TIMEOUT   = 8
+int TM2_CANCEL_TIMEOUT = 9
+int TM2_CANCEL_MISSED  = 10
+
+// State Machine Stages
+int TM2_STAGE_IDLE          = 0
+int TM2_STAGE_PENDING_LIMIT = 1
+int TM2_STAGE_OPEN          = 2
+int TM2_STAGE_TP1_BE        = 3
+int TM2_STAGE_TP2_TRAIL     = 4

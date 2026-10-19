@@ -155,6 +155,9 @@ export function validateStepBody(o: unknown): ReplayBodyValidation<StepInput> {
 
 interface SessionRec {
   id: string
+  /** Tenancy (roadmap §61.3): the session belongs to the user who created it.
+   *  Sessions are process-memory only, so filtering happens on this field. */
+  ownerId: string | null
   player: ReplayPlayer
   interval: string
   intervalMs: number
@@ -217,6 +220,7 @@ async function defaultJournalSync(pos: ReplayPosition): Promise<void> {
   const j = await journalMod()
   // The SAME projection paper rows go through: ndjson always, Mongo when up,
   // key-deduped (D4 in spirit) — a replay row lands with source 'replay'.
+  // Tenancy (roadmap §61.3): the caller stamps the closed row with the owner.
   await j.syncJournal({ positions: [pos], alerts: [], regimeSnapshots: [] })
 }
 
@@ -263,9 +267,24 @@ function summaryOf(rec: SessionRec): ReplaySummary {
   }
 }
 
-function getRec(id: string): SessionRec {
+/**
+ * List active in-memory replay sessions (Slice B observability): newest
+ * first. Sessions die with the process (Slice C makes them durable) — the
+ * list is empty after a restart, honestly so, never backfilled.
+ */
+export function listReplaySessions(ownerId?: string | null): ReplaySummary[] {
+  return [...SESSIONS.values()]
+    .filter((rec) => (ownerId ? rec.ownerId === ownerId : true))
+    .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))
+    .map((rec) => summaryOf(rec))
+}
+
+function getRec(id: string, ownerId?: string | null): SessionRec {
   const rec = SESSIONS.get(String(id ?? '').trim())
-  if (!rec) throw new ReplayError(`replay session not found (${String(id)})`, 404, 'replay_not_found')
+  // An id owned by someone else is indistinguishable from a missing one.
+  if (!rec || (ownerId && rec.ownerId !== ownerId)) {
+    throw new ReplayError(`replay session not found (${String(id)})`, 404, 'replay_not_found')
+  }
   return rec
 }
 
@@ -305,7 +324,7 @@ async function advanceAfterStep(rec: SessionRec, events: CandleEvent[]): Promise
     for (const e of res.errors) console.warn(`[replay:${rec.id}] ${e}`)
     for (const pos of res.closed) {
       try {
-        await rec.deps.journalSync(pos)
+        await rec.deps.journalSync({ ...pos, ownerId: rec.ownerId } as ReplayPosition)
       } catch (e) {
         console.warn(`[replay:${rec.id}] journal write failed for ${pos.id}: ${e instanceof Error ? e.message : String(e)}`)
       }
@@ -345,7 +364,8 @@ function clearTimer(rec: SessionRec): void {
 
 export async function createReplaySession(
   input: CreateSessionInput,
-  deps: ReplayDeps = {}
+  deps: ReplayDeps = {},
+  ownerId?: string | null
 ): Promise<ReplaySummary> {
   if (SESSIONS.size >= MAX_SESSIONS) {
     throw new ReplayError(`replay limit reached (${MAX_SESSIONS} sessions) — restart the dev server to clear`, 409, 'replay_limit')
@@ -366,6 +386,7 @@ export async function createReplaySession(
   }
   const rec: SessionRec = {
     id: `rp_${randomUUID().replace(/-/g, '').slice(0, 12)}`,
+    ownerId: ownerId ?? null,
     player,
     interval: input.interval,
     intervalMs: mod.intervalToMs(input.interval),
@@ -384,8 +405,8 @@ export async function createReplaySession(
   return summaryOf(rec)
 }
 
-export function readReplaySession(id: string, cursor = 0): ReplayRead {
-  const rec = getRec(id)
+export function readReplaySession(id: string, cursor = 0, ownerId?: string | null): ReplayRead {
+  const rec = getRec(id, ownerId)
   return {
     session: summaryOf(rec),
     events: rec.player.takeEvents(cursor) as CandleEvent[],
@@ -394,8 +415,8 @@ export function readReplaySession(id: string, cursor = 0): ReplayRead {
   }
 }
 
-export function playReplaySession(id: string, speed: unknown = undefined): ReplaySummary {
-  const rec = getRec(id)
+export function playReplaySession(id: string, speed: unknown = undefined, ownerId?: string | null): ReplaySummary {
+  const rec = getRec(id, ownerId)
   if (speed !== undefined && speed !== null) {
     try {
       rec.player.setSpeed(Number(speed))
@@ -413,15 +434,15 @@ export function playReplaySession(id: string, speed: unknown = undefined): Repla
   return summaryOf(rec)
 }
 
-export function pauseReplaySession(id: string): ReplaySummary {
-  const rec = getRec(id)
+export function pauseReplaySession(id: string, ownerId?: string | null): ReplaySummary {
+  const rec = getRec(id, ownerId)
   rec.player.pause()
   clearTimer(rec)
   return summaryOf(rec)
 }
 
-export async function stepReplaySession(id: string, candles: number): Promise<ReplayRead> {
-  const rec = getRec(id)
+export async function stepReplaySession(id: string, candles: number, ownerId?: string | null): Promise<ReplayRead> {
+  const rec = getRec(id, ownerId)
   // Manual step takes over: pause the auto-timer first so play/step never race.
   clearTimer(rec)
   const events = playedEvents(rec.player.step(candles))
@@ -449,8 +470,8 @@ export async function stepReplaySession(id: string, candles: number): Promise<Re
 //  so play/step/reset never race. Unknown id -> 404 replay_not_found.
 // -----------------------------------------------------------------------------
 
-export async function resetReplaySession(id: string): Promise<ReplaySummary> {
-  const rec = getRec(id)
+export async function resetReplaySession(id: string, ownerId?: string | null): Promise<ReplaySummary> {
+  const rec = getRec(id, ownerId)
   clearTimer(rec)
   const mod = await replayMod()
   rec.player = mod.createReplayPlayer({
@@ -478,9 +499,10 @@ export async function resetReplaySession(id: string): Promise<ReplaySummary> {
 
 export async function placeReplayOrder(
   id: string,
-  body: unknown
+  body: unknown,
+  ownerId?: string | null
 ): Promise<{ order: ReplayOrder; session: ReplaySummary }> {
-  const rec = getRec(id)
+  const rec = getRec(id, ownerId)
   const st = rec.player.state()
   if (st.mode === 'done') throw new ReplayError('session already finished', 409, 'replay_done')
 

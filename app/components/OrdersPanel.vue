@@ -39,8 +39,9 @@ const statusColor = (s: PaperOrderItem['status']): 'success' | 'warning' | 'neut
 
 const fetchOrders = async (): Promise<void> => {
   // After an auth failure nothing can succeed until the user signs in again,
-  // so skip the call rather than emit a 401 every 5s.
-  if (halted.value) return
+  // so skip the call rather than emit a 401 every tick. Same for a 429: one
+  // full budget window of silence instead of hammering the limiter.
+  if (halted.value || Date.now() < notBefore) return
   try {
     const res = await $fetch<OrdersListResponse>('/api/v1/orders', {
       params: { limit: 24 }
@@ -57,6 +58,8 @@ const fetchOrders = async (): Promise<void> => {
       stopPolling()
       error.value = t('trade.sessionExpired')
     }
+    const status = (err as { response?: { status?: unknown } })?.response?.status
+    if (status === 429) notBefore = Date.now() + 60_000
   }
 }
 
@@ -64,6 +67,8 @@ const fetchOrders = async (): Promise<void> => {
 const halted = ref(false)
 
 let timer: ReturnType<typeof setInterval> | null = null
+// 429 backoff: one full budget window of silence after a rate-limit hit.
+let notBefore = 0
 
 const stopPolling = (): void => {
   if (timer) clearInterval(timer)
@@ -72,7 +77,7 @@ const stopPolling = (): void => {
 
 const startPolling = (): void => {
   if (timer) return
-  timer = setInterval(() => void fetchOrders(), 5000)
+  timer = setInterval(() => void fetchOrders(), 10000)
 }
 
 // Resume polling once the user re-authenticates.
@@ -85,11 +90,32 @@ watch(isAuthenticated, (authed) => {
   }
 })
 
+// Budget guard: the API budget is 60 req/min per app+IP and this 5s poller
+// alone burns 20% of it — pause while the tab is hidden, refetch on show
+// so the panel never displays stale rows.
+const onVisibility = (): void => {
+  if (document.hidden) {
+    stopPolling()
+  } else if (!halted.value) {
+    void fetchOrders()
+    startPolling()
+  }
+}
+
 onMounted(() => {
+  document.addEventListener('visibilitychange', onVisibility)
+  if (document.hidden) return // first visible will fetch via onVisibility
   void fetchOrders()
   startPolling()
 })
-onUnmounted(stopPolling)
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', onVisibility)
+  if (armTimer) {
+    clearTimeout(armTimer)
+    armTimer = null
+  }
+  stopPolling()
+})
 
 watch(reloadOn, () => void fetchOrders())
 
@@ -116,6 +142,53 @@ const cancelOrder = async (o: PaperOrderItem): Promise<void> => {
   }
 }
 
+// Cancel-all (mockup): two-tap arm (auto-disarms in 5s), then one guarded
+// server sweep — every order keeps its own CAS guard, the UI only asks.
+const armingAll = ref(false)
+const cancellingAll = ref(false)
+let armTimer: ReturnType<typeof setTimeout> | null = null
+
+const cancelAll = async (): Promise<void> => {
+  if (!armingAll.value) {
+    armingAll.value = true
+    if (armTimer) clearTimeout(armTimer)
+    armTimer = setTimeout(() => {
+      armingAll.value = false
+      armTimer = null
+    }, 5000)
+    return
+  }
+  if (armTimer) {
+    clearTimeout(armTimer)
+    armTimer = null
+  }
+  armingAll.value = false
+  if (cancellingAll.value) return
+  cancellingAll.value = true
+  try {
+    const res = await $fetch<{ success: boolean; data: { meta: { cancelled: number; skipped: number } } }>(
+      '/api/v1/orders/cancel-all',
+      { method: 'POST', body: { by: 'terminal', reason: 'cancel-all' } }
+    )
+    toast.add({
+      title: t('trade.ordersCancelAllOk', { n: res.data.meta.cancelled, m: res.data.meta.skipped }),
+      icon: 'i-lucide-x-circle',
+      color: 'success'
+    })
+    void fetchOrders()
+  } catch (err) {
+    const msg = (err as { data?: { message?: string } })?.data?.message
+    toast.add({
+      title: msg ?? t('trade.ordersCancelFailed'),
+      icon: 'i-lucide-alert-triangle',
+      color: 'error'
+    })
+    void fetchOrders()
+  } finally {
+    cancellingAll.value = false
+  }
+}
+
 const priceText = (o: PaperOrderItem): string =>
   o.fillPrice != null ? formatPrice(o.fillPrice) : o.price != null ? formatPrice(o.price) : '—'
 
@@ -134,6 +207,16 @@ const qtyText = (o: PaperOrderItem): string =>
         <UBadge color="warning" variant="subtle" size="sm">
           {{ t('trade.ordersLive') }} {{ meta.live }}
         </UBadge>
+        <UButton
+          v-if="meta.live > 0"
+          size="xs"
+          :color="armingAll ? 'error' : 'neutral'"
+          :variant="armingAll ? 'solid' : 'ghost'"
+          :loading="cancellingAll"
+          @click="cancelAll"
+        >
+          {{ armingAll ? t('trade.ordersCancelAllConfirm') : t('trade.ordersCancelAll') }}
+        </UButton>
       </div>
     </div>
 
