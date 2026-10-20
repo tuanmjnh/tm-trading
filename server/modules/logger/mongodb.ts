@@ -7,9 +7,10 @@ import { getMongoConnection } from '#server/utils/mongo'
  * URI resolution wrapper - all connection handling (global cache,
  * concurrent dedup, fail-fast, cooldown, reconnect) resides in server/utils/mongo.ts.
  */
-export async function getMongoLogConnection(uri?: string, dbName: string = 'tm-hub-logs'): Promise<Connection | null> {
+export async function getMongoLogConnection(uri?: string, dbName?: string): Promise<Connection | null> {
   const targetUri = (uri || process.env.MONGODB_LOG_URI || process.env.MONGODB_HISTORY_URI || '').trim()
   if (!targetUri) return null
 
-  return getMongoConnection(targetUri, dbName || 'tm-hub-logs', 'logger', { maxPoolSize: 5 })
+  const targetDb = (dbName || process.env.MONGODB_LOG_DB_NAME || 'tm-hub-logs').trim()
+  return getMongoConnection(targetUri, targetDb, 'logger', { maxPoolSize: 5 })
 }

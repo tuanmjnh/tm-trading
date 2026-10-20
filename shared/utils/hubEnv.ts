@@ -16,7 +16,7 @@
 
 /** Preferred name first; the others are accepted but reported. */
 export const HUB_URL_KEYS = Object.freeze(['NUXT_PUBLIC_HUB_URL', 'HUB_URL', 'NUXT_PUBLIC_HUB_API_URL'])
-export const HUB_APP_ID_KEYS = Object.freeze(['NUXT_PUBLIC_HUB_APP_ID', 'HUB_APP_ID'])
+export const HUB_APP_ID_KEYS = Object.freeze(['NUXT_PUBLIC_HUB_APP_ID'])
 export const HUB_URL_LEGACY_KEYS = Object.freeze(['HUB_URL', 'NUXT_PUBLIC_HUB_API_URL'])
 export const DEFAULT_HUB_URL = 'http://localhost:4000'
 

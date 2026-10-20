@@ -1,4 +1,5 @@
-export const SYSTEM_APP_ID = process.env.HUB_APP_ID || ''
+// Env-key standard (v2): no SYSTEM_APP_ID here. tm-trading is a satellite — it
+// never stores or needs tm-hub's own id; the hub `apps` table is authoritative.
 
 export const APP_TYPES = {
   SYSTEM: 'system',

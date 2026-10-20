@@ -68,15 +68,12 @@ describe('hub endpoint resolution', () => {
     const r = resolveHubEnv({ NUXT_PUBLIC_HUB_URL: 'https://hub' })
     assert.equal(r.appId, '')
     assert.match(String(r.problem), /NUXT_PUBLIC_HUB_APP_ID is not set/)
-    const withLegacyApp = resolveHubEnv({ NUXT_PUBLIC_HUB_URL: 'https://hub', HUB_APP_ID: 'tm-trading_x' })
-    assert.equal(withLegacyApp.appId, 'tm-trading_x')
-    assert.equal(withLegacyApp.appIdSource, 'HUB_APP_ID')
-    assert.equal(withLegacyApp.problem, null)
   })
 
   test('the keys are declared once, preferred first', () => {
     assert.equal(HUB_URL_KEYS[0], 'NUXT_PUBLIC_HUB_URL')
     assert.equal(HUB_APP_ID_KEYS[0], 'NUXT_PUBLIC_HUB_APP_ID')
+    assert.equal(HUB_APP_ID_KEYS.length, 1, 'the app id has exactly one canonical name')
   })
 
   test('the startup report warns in dev and errors in production, always naming the winner', () => {

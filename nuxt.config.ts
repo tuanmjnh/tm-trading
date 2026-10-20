@@ -127,16 +127,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     supabaseUrl: process.env.SUPABASE_URL || '',
     supabaseKey: process.env.SUPABASE_KEY || '',
-    toolsAppId: process.env.TOOLS_APP_ID || 'tm-tools',
     jwtSecret: process.env.AUTH_JWT_SECRET || 'super-secure-shared-secret-key-32-chars-min',
-    jwtAccessExpiry: process.env.AUTH_ACCESS_TOKEN_EXPIRY || '15m',
-    jwtRefreshExpiry: process.env.AUTH_REFRESH_TOKEN_EXPIRY || '7d',
-    mongodbLogUri: process.env.MONGODB_LOG_URI || process.env.MONGODB_HISTORY_URI || '',
-    mongodbLogDbName: process.env.MONGODB_LOG_DB_NAME || 'tm-hub-logs',
     configEncryptionKey: process.env.CONFIG_ENCRYPTION_KEY || '',
-    redisUrl: process.env.REDIS_URL || '',
-    redisHost: process.env.REDIS_HOST || 'localhost',
-    redisPort: parseInt(process.env.REDIS_PORT || '6379', 10),
     public: {
       apiPrefix: '/api/v1',
       hubUrl: HUB_ENV.url,
