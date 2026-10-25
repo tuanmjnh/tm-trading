@@ -1,4 +1,5 @@
 node_modules/
+.playwright-mcp
 .env
 /logs
 *.log
@@ -21,3 +22,10 @@ reports/
 .output/
 # D13 backups (runtime dump, khong commit)
 backups/
+
+# One-off probe scripts (khong commit)
+tools/probes/
+check-*.mjs
+fix-*.mjs
+list-*.mjs
+start-*.mjs

@@ -1,0 +1,16 @@
+const ROOT = 'D:/Applications/tm-trading'
+const db = await import('file:///' + ROOT + '/engine/db.mjs')
+const conn = await db.connectMongo()
+if (!conn) { console.log('mongo unavailable'); process.exit(1) }
+const { BotInstance } = await import('file:///' + ROOT + '/engine/models/botInstance.mjs')
+const inst = await BotInstance.findOne({ instanceId: 'bot-wonderwhales-btcusdt-p-1-ww-probe-20261025' }).lean()
+console.log('State:', inst.state)
+console.log('Subscriptions:', inst.subscriptions)
+console.log('Instruments:', inst.instruments)
+console.log('Timeframes:', inst.timeframes)
+console.log('LastEventAt:', new Date(inst.lastEventAt).toISOString())
+console.log('LastSignalKey:', inst.lastSignalKey)
+console.log('LastSignalTs:', new Date(inst.lastSignalTs).toISOString())
+console.log('Counts:', inst.counts)
+console.log('SessionId:', inst.sessionId)
+process.exit(0)
