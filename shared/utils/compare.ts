@@ -1,4 +1,4 @@
-import type { EquityPoint, RunSeriesDetail, RunSummary } from '~~/types/runs'
+import type { EquityPoint, RunSeriesDetail, RunSummary } from '#shared/types/runs'
 
 // =============================================================================
 //  Backtest series comparison (Phase 7) — 'THUAN' logic, no Vue/fetch, includes tests

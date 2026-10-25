@@ -103,7 +103,7 @@ describe('research workspace files exist (§58.9 Slice 5)', () => {
 
   it('the research composable + domain types exist', () => {
     assert.ok(existsSync(join(ROOT, 'app', 'composables', 'useResearch.ts')), 'missing useResearch.ts')
-    assert.ok(existsSync(join(ROOT, 'types', 'research.ts')), 'missing types/research.ts')
+    assert.ok(existsSync(join(ROOT, 'shared', 'types', 'research.ts')), 'missing shared/types/research.ts')
   })
 })
 

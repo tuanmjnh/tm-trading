@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import * as z from 'zod'
-import type { SystemRoute } from '~~/types'
+import type { RouteTreeNode } from '#shared/types/rbac'
 import { getErrorMessage } from '~/shared/utils/errors'
 import { MODULE_DEFINITIONS } from '#shared/rbac'
 
-const props = defineProps<{ route: SystemRoute | null, appId: string, routes: SystemRoute[] }>()
+const props = defineProps<{ route: RouteTreeNode | null, appId: string, routes: RouteTreeNode[] }>()
 const emit = defineEmits<{ updated: [] }>()
 const open = defineModel<boolean>('open', { default: false })
 const { t } = useI18n()

@@ -31,18 +31,18 @@ import type {
   IntelNewsItem,
   IntelRegime,
   IntelZone
-} from '~~/types/intel'
+} from '#shared/types/intel'
 import type {
   ReplayCandle,
   ReplayOrder,
   ReplayPosition,
   ReplayReadResponse,
   ReplaySummary
-} from '~~/types/replay'
-import type { ConfluenceDetail, MethodEvent } from '~~/types/methods'
-import type { Instrument } from '~~/types/instruments'
-import type { JournalEntry } from '~~/types/journal'
-import type { SymbolRow } from '~/components/SymbolSearchModal.vue'
+} from '#shared/types/replay'
+import type { ConfluenceDetail, MethodEvent } from '#shared/types/methods'
+import type { Instrument } from '#shared/types/instruments'
+import type { JournalEntry } from '#shared/types/journal'
+import type { SymbolRow } from '~/components/trading/SymbolSearchModal.vue'
 import type { UniverseRow } from '~/composables/useMarketCatalog'
 import type { DeskTab } from '~/composables/useTerminalPrefs'
 import { useStorage } from '@vueuse/core'
@@ -51,7 +51,7 @@ import { isAuthError } from '../../shared/utils/errors'
 const { t } = useI18n()
 const auth = useAuth()
 const { prefs: termPrefs, reset: resetTerminalPrefs } = useTerminalPrefs()
-const { title } = useAdminPageChrome({
+const { title, description } = useAdminPageChrome({
   titleKey: 'trade.title',
   descKey: 'trade.desc'
 })
@@ -1006,9 +1006,9 @@ const eventToneClass = (score: number): string =>
 
 <template>
   <!-- Terminal workspace: title only, no description block (mockup has no page header) -->
-  <BasePage id="trade" :title="title">
+  <BasePage id="trade" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('trade.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('trade.pip')" />
     </template>
 
     <template #right>
@@ -1117,14 +1117,14 @@ const eventToneClass = (score: number): string =>
       </div>
 
       <!-- ── Overlays (no layout shift): symbol search, timeframe list, display ── -->
-      <SymbolSearchModal
+      <TradingSymbolSearchModal
         :open="pickerOpen"
         :rows="pickerAllRows"
         :pending-symbol="subscribingSymbol"
         @update:open="pickerOpen = $event"
         @select="pickSymbol"
       />
-      <TimeframeModal
+      <TradingTimeframeModal
         :open="tfPickerOpen"
         :current="timeframe"
         :quick="quickTfs"
@@ -1135,7 +1135,7 @@ const eventToneClass = (score: number): string =>
         @select="timeframe = $event"
         @toggle-quick="toggleQuickTf"
       />
-      <DisplayModal
+      <TradingDisplayModal
         :open="layoutOpen"
         :panes="{ items: paneToggles, values: panes }"
         @update:open="layoutOpen = $event"
@@ -1161,7 +1161,7 @@ const eventToneClass = (score: number): string =>
       </div>
 
       <!-- ── Band 3: per-symbol intel chips (Phase 8/9, hidden in replay, opt-in) ── -->
-      <TradeIntel v-if="!inReplay && panes.intel" :symbol="symbol" :funding="intelFunding" :flow="intelFlow" :accum="intelAccum" :regime="intelRegime" :oi-trend-pct="intelOiTrend" />
+      <TradingTradeIntel v-if="!inReplay && panes.intel" :symbol="symbol" :funding="intelFunding" :flow="intelFlow" :accum="intelAccum" :regime="intelRegime" :oi-trend-pct="intelOiTrend" />
 
       <!-- ── Replay (mockup strip): one line when detached, full panel when attached ── -->
       <div v-if="!replaySession" class="flex items-center gap-2 px-3 py-1.5 rounded border border-default bg-default">
@@ -1179,19 +1179,19 @@ const eventToneClass = (score: number): string =>
           {{ t('trade.replayStart') }}
         </UButton>
       </div>
-      <ReplayPanel v-else :session="replaySession" :events="replayEvents" :orders="replayOrders" :positions="replayPositions" :seed="replaySeed" :active-method="activeMethod" :busy="replayBusy" :error="replayError" @start="startReplay" @play="replayPlay" @pause="replayPause" @step="replayStep" @detach="replayDetach" />
+      <TradingReplayPanel v-else :session="replaySession" :events="replayEvents" :orders="replayOrders" :positions="replayPositions" :seed="replaySeed" :active-method="activeMethod" :busy="replayBusy" :error="replayError" @start="startReplay" @play="replayPlay" @pause="replayPause" @step="replayStep" @detach="replayDetach" />
       <p v-if="replayError && !replaySession" class="text-[11px] text-error px-1">{{ replayError }}</p>
 
       <!-- ── THE DOCK (mockup: flush 12-col — watchlist 2 / chart 7 / order-book+trades 3) ── -->
       <div class="grid grid-cols-1 gap-1 lg:grid-cols-12 lg:items-stretch">
         <!-- Left rail: watchlist (opt-in — the Band-1 picker covers switching) -->
         <div v-if="panes.watchlist" class="lg:col-span-3 order-2 lg:order-1 flex flex-col rounded border border-default bg-default overflow-hidden">
-          <Watchlist :symbol="symbol" :venue-index="watchVenues" @select="symbol = $event" @add="pickerOpen = true" />
+          <TradingWatchlist :symbol="symbol" :venue-index="watchVenues" @select="symbol = $event" @add="pickerOpen = true" />
         </div>
 
         <!-- Chart (always on — stretches when rails hide) -->
         <div class="order-1 lg:order-2 flex flex-col rounded border border-default bg-default overflow-hidden" :class="chartCol">
-          <TradeChart
+          <TradingTradeChart
             :symbol="symbol"
             :timeframe="timeframe"
             :indicators="indicatorSelections"
@@ -1207,7 +1207,7 @@ const eventToneClass = (score: number): string =>
 
         <!-- Right pane: order book + tape (both opt-in) -->
         <div v-if="panes.orderbook || panes.tape" class="lg:col-span-3 order-3 flex flex-col gap-1">
-          <OrderBook v-if="panes.orderbook" :symbol="symbol" />
+          <TradingOrderBook v-if="panes.orderbook" :symbol="symbol" />
 
           <!-- Stream errors only (status already lives in the header badges) -->
           <p v-if="feed.state.lastError" class="font-mono text-[11px] break-all text-error/80 px-1">{{ t('trade.lastError') }}: {{ feed.state.lastError }}</p>
@@ -1235,7 +1235,7 @@ const eventToneClass = (score: number): string =>
 
       <!-- ── Band 4: method events + confluence (Phase 10, hidden in replay, opt-in) ── -->
       <div v-if="!inReplay && panes.methods" class="grid grid-cols-1 gap-1 xl:grid-cols-2">
-        <MethodEventsPanel
+        <TradingMethodEventsPanel
           :symbol="symbol"
           :methods="methodMeta"
           :enabled="enabledMethods"
@@ -1247,7 +1247,7 @@ const eventToneClass = (score: number): string =>
           @toggle="toggleMethod"
           @clear="clearMethods"
         />
-        <ConfluenceCard :symbol="symbol" :detail="confluenceDetail" :loading="confluenceLoading" />
+        <TradingConfluenceCard :symbol="symbol" :detail="confluenceDetail" :loading="confluenceLoading" />
       </div>
 
       <!-- ── Band 5: execution desk (mockup tab bar, roadmap §10) ── -->
@@ -1269,21 +1269,21 @@ const eventToneClass = (score: number): string =>
         </div>
         <div class="flex flex-col gap-1 p-1.5" role="tabpanel">
           <div v-show="deskTab === 'positions'" class="flex flex-col gap-1">
-            <MethodControls v-model="activeMethod" />
-            <PositionPanel :method="activeMethod" @clear-method="activeMethod = ''" />
+            <TradingMethodControls v-model="activeMethod" />
+            <TradingPositionPanel :method="activeMethod" @clear-method="activeMethod = ''" />
           </div>
           <div v-show="deskTab === 'orders'" class="flex flex-col gap-1">
-            <OrdersPanel :reload="signalsReload" />
-            <FillsPanel :reload="signalsReload" />
+            <TradingOrdersPanel :reload="signalsReload" />
+            <TradingFillsPanel :reload="signalsReload" />
           </div>
           <div v-show="deskTab === 'ticket'">
-            <TradeTicket :symbol="symbol" :tf="timeframe" :quote="displayQuote" :replay-session-id="replaySession?.id ?? null" @placed="signalsReload++" />
+            <TradingTradeTicket :symbol="symbol" :tf="timeframe" :quote="displayQuote" :replay-session-id="replaySession?.id ?? null" @placed="signalsReload++" />
           </div>
           <div v-show="deskTab === 'signals'">
-            <SignalPanel :symbol="symbol" :reload-key="signalsReload" />
+            <TradingSignalPanel :symbol="symbol" :reload-key="signalsReload" />
           </div>
           <div v-show="deskTab === 'risk'">
-            <RiskPanel />
+            <TradingRiskPanel />
           </div>
           <div v-show="deskTab === 'journal'">
             <div class="flex flex-col gap-2 rounded bg-default ring ring-default p-3">

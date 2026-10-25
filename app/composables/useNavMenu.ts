@@ -1,5 +1,5 @@
 import type { NavigationMenuItem } from '@nuxt/ui'
-import type { RouteTreeNode } from '~/types/rbac'
+import type { RouteTreeNode } from '#shared/types/rbac'
 
 export const useNavMenu = () => {
   const { t } = useI18n()
@@ -71,7 +71,7 @@ export const useNavMenu = () => {
     }
   }
 
-  function buildNavItems(open: Ref<boolean>): NavigationMenuItem[] {
+  function buildNavItems(open: Ref<boolean>, collapsed = false): NavigationMenuItem[] {
     const router = useRouter()
     // Hub's route tree may still advertise pages whose local files do not exist.
     // Only surface nodes that resolve to an actual local page so the menu never
@@ -83,7 +83,13 @@ export const useNavMenu = () => {
       hasLocalPage: createHasLocalPage(localPaths),
       hiddenNames: hidden
     })
-    return nodes.map((node: RouteTreeNode) => mapRouteToNav(node, open))
+    const items = nodes.map((node: RouteTreeNode) => mapRouteToNav(node, open))
+    // Collapsed mode renders group children as a flat popover link list, so
+    // depth-3 groups (e.g. Data Research › Data › Data sets) must be dissolved
+    // or their descendants become unreachable.
+    if (!collapsed) return items
+    return items.map(item =>
+      (item.children?.length ? { ...item, children: flattenNavGroups<NavigationMenuItem>(item.children) } : item))
   }
 
   return {

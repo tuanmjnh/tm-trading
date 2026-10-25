@@ -7,8 +7,8 @@
 //  when Mongo is unreachable — we surface that as a badge, never as a crash.
 //  Polls every 15s (signals arrive out-of-band from TradingView webhooks).
 // =============================================================================
-import type { SignalItem, SignalsListResponse } from '../../types/signals'
-import { fmtSigned, fmtUtcTime, mongoTone, sideTone, signalTone } from '../utils/terminal'
+import type { SignalItem, SignalsListResponse } from '#shared/types/signals'
+import { fmtSigned, fmtUtcTime, mongoTone, sideTone, signalTone } from '../../utils/terminal'
 
 const props = defineProps<{ symbol: string, reloadKey?: number }>()
 

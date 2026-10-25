@@ -1,4 +1,4 @@
-import type { Instrument, InstrumentListResponse, VenueInfo, VenueListResponse } from '~~/types/instruments'
+import type { Instrument, InstrumentListResponse, VenueInfo, VenueListResponse } from '#shared/types/instruments'
 
 // =============================================================================
 //  useMarketCatalog — canonical Instrument Catalog reads (roadmap §30.1,

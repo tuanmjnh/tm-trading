@@ -15,9 +15,9 @@
 //  D7 gate — but the order lands in the session's in-memory book instead of
 //  the alert pipeline.
 // =============================================================================
-import type { QuoteMessage } from '../utils/marketFeed'
+import type { QuoteMessage } from '../../utils/marketFeed'
 import type { TicketSide, TicketSizeMode, TicketType } from '~/composables/useTerminalPrefs'
-import { attemptFill, FILL_DEFAULTS } from '../../simulation/fill.mjs'
+import { attemptFill, FILL_DEFAULTS } from '../../../simulation/fill.mjs'
 
 const props = defineProps<{
   symbol: string

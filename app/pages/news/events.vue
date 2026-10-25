@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { MarketEventPublic } from '~~/types/news'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
+import type { MarketEventPublic } from '#shared/types/news'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 import type { MarketEventDetail } from '~/composables/useNewsDesk'
 
 // =============================================================================
@@ -29,6 +29,13 @@ const isLoading = ref(false)
 const expanded = ref<string | null>(typeof route.query.id === 'string' ? route.query.id : null)
 const details = ref<Record<string, MarketEventDetail | null>>({})
 const loadingDetail = ref<Record<string, boolean>>({})
+const assistantOpen = ref(false)
+const assistantScope = ref<{ type: 'market_event', id: string } | null>(null)
+
+function askAssistant(id: string) {
+  assistantScope.value = { type: 'market_event', id }
+  assistantOpen.value = true
+}
 
 const trail = computed(() => [{ label: t('news.title') }, { label: title.value }])
 
@@ -98,7 +105,7 @@ useHead({ title })
 <template>
   <BasePage id="news-events" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('newsEvents.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('newsEvents.pip')" />
     </template>
 
     <template #right>
@@ -110,7 +117,7 @@ useHead({ title })
 
     <template #toolbar>
       <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
-        <FilterChips v-model="corrFilter" :items="CORR.map((c) => ({ value: c, label: c ? t(`news.corroboration.${c}`) : t('newsEvents.allCorroboration') }))" />
+        <SharedFilterChips v-model="corrFilter" :items="CORR.map((c) => ({ value: c, label: c ? t(`news.corroboration.${c}`) : t('newsEvents.allCorroboration') }))" />
         <USeparator orientation="vertical" class="h-4" />
         <UInput
           v-model="symbolFilter"
@@ -131,7 +138,7 @@ useHead({ title })
          keep its CONTENT height — `h-full`/`min-h-full` + `min-h-0` pinned it to
          the viewport height and every card shrank to 0 px instead of overflowing. -->
     <div class="flex flex-col w-full pb-24 lg:pb-6 gap-3">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
 
       <UCard v-for="e in events" :key="e.id">
         <div class="flex flex-col gap-2">
@@ -155,6 +162,11 @@ useHead({ title })
               />
             </div>
           </button>
+
+          <div class="flex justify-end -mt-1">
+            <UButton icon="i-lucide-sparkles" variant="ghost" color="primary" size="xs"
+              :aria-label="t('assistant.title')" :title="t('assistant.title')" @click="askAssistant(e.id)" />
+          </div>
 
           <div v-if="expanded === e.id" class="flex flex-col gap-2 pt-1 border-t border-default">
             <p v-if="loadingDetail[e.id]" class="text-[11px] text-dimmed">{{ t('common.loading') }}</p>
@@ -194,5 +206,6 @@ useHead({ title })
         icon="i-lucide-network"
       />
     </div>
+    <BaseModuleAssistantPanel v-model:open="assistantOpen" :scope="assistantScope" />
   </BasePage>
 </template>

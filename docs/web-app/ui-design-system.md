@@ -105,7 +105,7 @@ Dual-engine protocol. Loaded automatically by `@nuxt/fonts` (bundled with `@nuxt
   colour mapping when an ML-signal surface appears): bg `rgba(99,102,241,.12)`, border
   `rgba(139,92,246,.3)`, text `algo`, mono 11px.
 - **Live pip**: 4px dot `brand` with `box-shadow: 0 0 6px #2b7fff` + uppercase `label-micro`.
-  Implemented as `app/components/LivePip.vue` (props `active`, `label`); inactive falls
+  Implemented as `app/components/trading/LivePip.vue` (props `active`, `label`); inactive falls
   back to a muted `bg-default` dot with `text-dimmed` caption and no glow. Used on the
   `/trading` market-stream status block and recent-trades tape header.
 - **Left dock rail**: expanded 240px / collapsed 56px, `150ms cubic-bezier(.4,0,.2,1)`.
@@ -125,7 +125,7 @@ Dual-engine protocol. Loaded automatically by `@nuxt/fonts` (bundled with `@nuxt
 - **Table header**: bg `panel`, `text-dim`, uppercase, Inter 600, 11px,
   border-bottom `border`. Row zebra `transparent` / `rgba(14,23,38,.5)`; hover `popover`.
 - **Depth bar**: bids right-to-left `rgba(43,127,255,.10)` (`bg-primary/10`); asks
-  `rgba(239,68,68,.10)` (`bg-error/10`). Implemented in `app/components/OrderBook.vue`.
+  `rgba(239,68,68,.10)` (`bg-error/10`). Implemented in `app/components/trading/OrderBook.vue`.
 
 ## Token → Nuxt UI v4 mapping
 

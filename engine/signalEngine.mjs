@@ -16,7 +16,7 @@
 //  `$setOnInsert`.
 // =============================================================================
 
-import { ENGINE_VERSION, hashOf, paramsHash } from './version.mjs'
+import { ENGINE_VERSION, hashOf, paramsHash, PARAM_SCHEMA } from './version.mjs'
 import { INTERFACE_VERSION, METHOD_CONTRACT, getMethod } from './methods/index.mjs'
 // Only to register the methods into the registry (see methods/all.mjs — it
 // cannot live in index.mjs because that would create an import cycle). Same
@@ -50,6 +50,23 @@ export function signalEngineFingerprint() {
 function setupForEvent(setups, type, bar) {
   const wantDir = EVENT_DIRECTION[type]
   return setups.find((s) => s.bar === bar && (wantDir === undefined || s.dir === wantDir)) ?? null
+}
+
+/**
+ * paramsHash using the METHOD's own defaults when the parameter set carries
+ * names outside the global PARAM_SCHEMA (wonderwhales/priceAction declare their
+ * own vocabulary, which VSA-schema canonicalParams would reject — league.mjs
+ * had to fall back to hashOf for the same reason). version.mjs keeps the VSA
+ * schema as the global default, so every hash stored before this change stays
+ * reproducible, and parameter sets fully inside the VSA schema hash byte-
+ * identically to the old `paramsHash(params)` — only previously-throwing sets
+ * change behaviour.
+ */
+function methodParamsHash(params, methodDefaults) {
+  const p = params && typeof params === 'object' ? params : {}
+  const foreign = Object.keys(p).filter((k) => !(k in PARAM_SCHEMA))
+  if (foreign.length === 0 || !methodDefaults) return paramsHash(p)
+  return paramsHash(p, methodDefaults)
 }
 
 /**
@@ -99,29 +116,36 @@ export function generateSignals({
     methodVersion: String(INTERFACE_VERSION),
     strategyVersion: strategyVersion ?? `${m.id}@${INTERFACE_VERSION}`,
     engineVersion: engineVersion ?? ENGINE_VERSION,
-    paramsHash: paramsHash(an.params ?? params),
+    paramsHash: methodParamsHash(an.params ?? params, m.defaults),
     indicatorRefs,
   })
 
   return an.events.map((e) => {
-    if (!isSignalEventType(e.type)) {
+    // Methods may emit their own event vocabulary (wonderwhales 'SAR FLIP LONG',
+    // ...). eventSignalType is an OPTIONAL plugin field mapping it onto the
+    // shared signal vocabulary; without a mapping the type must already be one
+    // of SIGNAL_EVENT_TYPES, exactly as before.
+    const mapped = m.eventSignalType?.[e.type]
+    const type = mapped ?? e.type
+    if (!isSignalEventType(type)) {
       throw new Error(`generateSignals: method returned an invalid event type (${JSON.stringify(e.type)})`)
     }
     const bar = bars[e.bar]
     if (!bar) throw new Error(`generateSignals: event points to bar ${e.bar} out of range`)
-    const setup = setupForEvent(an.setups ?? [], e.type, e.bar)
+    const setup = setupForEvent(an.setups ?? [], type, e.bar)
     return signalDoc({
       symbol,
       tf,
       ts: bar.time,
-      type: e.type,
+      type,
       price: bar.close ?? null,
       ownerId,
       accountId,
       attribution,
       meta: {
         bar: e.bar,
-        dir: setup ? setup.dir : (EVENT_DIRECTION[e.type] ?? null),
+        eventType: e.type,
+        dir: setup ? setup.dir : (EVENT_DIRECTION[type] ?? null),
         entry: setup ? setup.entry : null,
         sl: setup ? setup.sl : null,
         tp: setup ? setup.tp : null,

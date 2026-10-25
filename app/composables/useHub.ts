@@ -23,7 +23,7 @@ export const useHub = () => {
     appId: appId,
     getAccessToken: () => auth.accessToken.value || tokenCookie.value,
     onUnauthorized: () => {
-      auth.logout()
+      auth.handleSessionExpired()
     },
     getRefreshToken: () => auth.refreshToken.value || useCookie('refreshToken').value,
     onTokensRefreshed: (tokens) => {
@@ -57,6 +57,9 @@ export const useHub = () => {
       headers.set('Authorization', `Bearer ${token}`)
     }
 
+    // Nuxt's typed-route $fetch overload recurses on the huge API route union
+    // for a dynamic string path (TS2321 "Excessive stack depth").
+    // @ts-expect-error known TS route-type recursion (remove when Nuxt fixes it)
     return (await $fetch(fullUrl, {
       ...options,
       headers,
@@ -75,8 +78,19 @@ export const useHub = () => {
       const result = await hubFetchRaw<T>(path, options)
       clearHubRateLimit()
       return result
-    } catch (err) {
+    } catch (err: unknown) {
       const res = (err as { response?: Response })?.response
+      const status = res?.status || (err as { statusCode?: number })?.statusCode || (err as { status?: number })?.status
+
+      if (status === 401 && !path.includes('/auth/login') && !path.includes('/auth/refresh') && !path.includes('/auth/register')) {
+        const refreshed = await auth.refresh()
+        if (refreshed) {
+          return await hubFetchRaw<T>(path, options)
+        } else {
+          await auth.handleSessionExpired()
+        }
+      }
+
       if (!res || res.status !== 429) throw err
 
       const waitMs = noteHubRateLimit(res.headers?.get?.('retry-after') ?? null)

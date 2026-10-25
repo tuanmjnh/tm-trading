@@ -462,9 +462,9 @@ onMounted(() => load(true))
 </script>
 
 <template>
-  <BasePage id="admin-configs" :title="$t('configs.title')">
+  <BasePage id="admin-configs" :title="$t('configs.title')" :description="t('configs.desc')">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" />
+      <BasePageEyebrow :trail="trail" />
     </template>
     <template #right>
       <div class="flex items-center gap-2">

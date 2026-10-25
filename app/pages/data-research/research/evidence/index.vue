@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { EvidenceKind, EvidenceSet } from '~~/types/research'
+import type { EvidenceKind, EvidenceSet } from '#shared/types/research'
 import { getErrorMessage } from '~/shared/utils/errors'
 
 // Research Evidence Sets (roadmap §59.15 Slice E).
@@ -160,7 +160,7 @@ useHead({ title })
 <template>
   <BasePage id="research-evidence" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('research.pips.evidence')" />
+      <BasePageEyebrow :trail="trail" :pip="t('research.pips.evidence')" />
     </template>
 
     <template #right>
@@ -196,7 +196,7 @@ useHead({ title })
 
     <template #toolbar>
       <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
-        <FilterChips v-model="kindFilter" :items="kindChips" />
+        <SharedFilterChips v-model="kindFilter" :items="kindChips" />
       </div>
     </template>
 
@@ -212,7 +212,7 @@ useHead({ title })
         :title="t('research.sets.guardrail')"
       />
 
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
 
       <LazyGridList
         v-model:view-mode="viewMode"

@@ -1,4 +1,4 @@
-import type { AuthUser } from '~/types/auth'
+import type { AuthUser } from '#shared/types/auth'
 import type { HubUser, Capability } from 'tm-hub-client'
 
 function mapAuthUserToHubUser(user: Partial<AuthUser>): Partial<HubUser> {

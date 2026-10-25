@@ -6,9 +6,9 @@
 //  measured fill price/qty, fee rate + amount, spread, slippage, latency chain
 //  (signal → decision → event). No intent, no writes.
 // =============================================================================
-import type { FillsListResponse, PaperFillItem } from '~~/types/fills'
-import { formatPrice } from '../utils/marketFeed'
-import { getErrorMessage, isAuthError } from '../shared/utils/errors'
+import type { FillsListResponse, PaperFillItem } from '#shared/types/fills'
+import { formatPrice } from '../../utils/marketFeed'
+import { getErrorMessage, isAuthError } from '../../shared/utils/errors'
 
 defineProps<{
   reload?: number

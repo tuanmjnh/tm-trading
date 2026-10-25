@@ -1,4 +1,4 @@
-import type { IndicatorMeta } from '~~/types/indicators'
+import type { IndicatorMeta } from '#shared/types/indicators'
 
 // =============================================================================
 //  useIndicators — read-only indicator catalog (§30.3, roadmap §58.9 Slice 2).

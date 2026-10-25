@@ -1,4 +1,4 @@
-import type { JournalEntry, JournalListResponse, JournalStats } from '~~/types/journal'
+import type { JournalEntry, JournalListResponse, JournalStats } from '#shared/types/journal'
 
 // =============================================================================
 //  Central journal API (Nitro internal route — Phase 13). Fail-soft: Mongo and

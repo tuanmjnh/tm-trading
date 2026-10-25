@@ -256,7 +256,9 @@ export function buildEvidenceBundle(o = {}) {
       orderKeys: orders.map((x) => String(x?.clientOrderId ?? x?._id ?? '')).filter(Boolean),
       fillKeys: fills.map((x) => String(x?.fillId ?? x?._id ?? '')).filter(Boolean),
       positionKeys: trades.map((t) => t.key).filter(Boolean),
-      journalKeys: session?.journalKeys ?? [],
+      // Phase F: journal rows are linked by upstream fill identity, so the keys
+      // are facts about THIS session (an empty list means none were found).
+      journalKeys: Array.isArray(o.journalKeys) ? o.journalKeys.map(String) : (session?.journalKeys ?? []),
     },
     trades,
     metrics,
@@ -330,12 +332,18 @@ export function verifyEvidenceSet(doc) {
 }
 
 /** Sufficiency verdict for a set/bundle (metrics re-used, never re-derived). */
-export function evidenceSufficiency(doc, { minTrades = EVIDENCE_MIN_TRADES } = {}) {
+export function evidenceSufficiency(doc, { minTrades = EVIDENCE_MIN_TRADES, pit = null } = {}) {
   const metrics = doc?.metrics ?? outcomeMetrics(doc?.trades ?? [], { minTrades })
   const floor = Math.max(1, Number(minTrades) || EVIDENCE_MIN_TRADES)
   const reasons = []
   if (!metrics.sufficient) reasons.push(`trades ${metrics.trades} < floor ${floor}`)
   if (reasons.length === 0 && doc?.sealed === false) reasons.push('source session has not stopped')
+  // Phase F: a set that leaks records past its own cut-off is not sufficient,
+  // however many trades it contains.
+  if (pit && pit.ok === false && Array.isArray(pit.violations) && pit.violations.length > 0) {
+    const codes = [...new Set(pit.violations.map((v) => String(v?.code ?? 'VIOLATION')))]
+    reasons.push(`point-in-time violations: ${codes.join(', ')}`)
+  }
   return { sufficient: reasons.length === 0, trades: metrics.trades, minTrades: floor, reasons }
 }
 

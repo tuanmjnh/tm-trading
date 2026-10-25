@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { RunSeries } from '~~/types/runs'
-import type { BotInstance } from '~~/types/bots'
-import type { Proposal } from '~~/types/research'
-import type { RiskStatusData } from '~~/types/risk'
-import type { IntelData, IntelZone } from '~~/types/intel'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
+import type { RunSeries } from '#shared/types/runs'
+import type { BotInstance } from '#shared/types/bots'
+import type { Proposal } from '#shared/types/research'
+import type { RiskStatusData } from '#shared/types/risk'
+import type { IntelData, IntelZone } from '#shared/types/intel'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 import { formatTimeAgo } from '@vueuse/core'
 import { getErrorMessage } from '~/shared/utils/errors'
 
@@ -234,7 +234,7 @@ useHead({ title: computed(() => t('dashboard.title')) })
 <template>
   <BasePage id="home" :title="t('dashboard.title')" :description="t('dashboard.description')">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" />
+      <BasePageEyebrow :trail="trail" />
     </template>
 
     <template #right>
@@ -270,7 +270,7 @@ useHead({ title: computed(() => t('dashboard.title')) })
       />
 
       <!-- KPI -->
-      <MetricRibbon :items="cards" />
+      <SharedMetricRibbon :items="cards" />
 
       <!-- Live operations (mockup): sessions + AI proposals -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">

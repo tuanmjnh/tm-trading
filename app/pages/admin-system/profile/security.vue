@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as z from 'zod'
 import type { NavigationMenuItem } from '@nuxt/ui'
-import type { PasskeyInfo } from '~/types/webauthn'
+import type { PasskeyInfo } from '#shared/types/webauthn'
 import { getErrorMessage } from '~/shared/utils/errors'
 definePageMeta({
   alias: ['/profile/security']
@@ -231,7 +231,7 @@ useHead({ title: computed(() => t('profile.security')) })
 <template>
   <BasePage id="profile" :title="t('profile.security')" :description="t('settings.passwordDesc')">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" />
+      <BasePageEyebrow :trail="trail" />
     </template>
     <template #right>
       <UButton type="submit" form="security-form" icon="i-lucide-key-round" :label="t('profile.changePassword')"
@@ -327,7 +327,7 @@ useHead({ title: computed(() => t('profile.security')) })
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2">
-          <UButton color="neutral" variant="soft" :label="t('common.cancel')"
+          <UButton color="neutral" variant="ghost" :label="t('common.cancel')"
             @click="passkeyDeleteOpen = false; passkeyDeleteTarget = null" />
           <UButton color="error" :label="t('profile.passkeyDelete')" @click="confirmDeletePasskey" />
         </div>
@@ -359,7 +359,7 @@ useHead({ title: computed(() => t('profile.security')) })
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2">
-          <UButton color="neutral" variant="soft" :label="t('common.cancel')" @click="closeTotpSetup" />
+          <UButton color="neutral" variant="ghost" :label="t('common.cancel')" @click="closeTotpSetup" />
           <UButton v-if="totpSetupStep === 'scan'" color="primary" :label="t('profile.totpVerify')"
             :loading="totpSetupLoading" :disabled="totpSetupCode.trim().length < 6" @click="verifyTotpSetup" />
           <UButton v-else color="primary" :label="t('common.done')" @click="closeTotpSetup" />
@@ -377,7 +377,7 @@ useHead({ title: computed(() => t('profile.security')) })
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2">
-          <UButton color="neutral" variant="soft" :label="t('common.cancel')"
+          <UButton color="neutral" variant="ghost" :label="t('common.cancel')"
             @click="totpDisableOpen = false; totpDisableCode = ''" />
           <UButton color="error" :label="t('profile.totpDisable')" :loading="totpDisableLoading"
             :disabled="totpDisableCode.trim().length < 6" @click="disableTotp" />

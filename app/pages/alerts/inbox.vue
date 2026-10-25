@@ -409,7 +409,7 @@ useHead({ title })
 <template>
   <BasePage id="inbox" flush :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('inbox.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('inbox.pip')" />
     </template>
 
     <template #right>
@@ -498,8 +498,9 @@ useHead({ title })
     <InboxComposeModal v-model:open="isComposeOpen" :base="base" @sent="() => loadMessages(true)" />
 
     <!-- Trash Confirmation Modal -->
-    <BaseConfirmModal v-model:open="isTrashModalOpen" :title="t('inbox.deleteConfirm')"
+    <LazyBaseConfirmModal v-model:open="isTrashModalOpen" :title="t('inbox.deleteConfirm')"
       :description="t('inbox.deleteConfirmDesc', [trashTargetIds.length])" color="error" confirm-icon="i-lucide-trash-2"
       :confirm-label="t('inbox.batchTrash')" @confirm="executeTrash" />
   </BasePage>
 </template>
+

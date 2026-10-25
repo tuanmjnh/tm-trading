@@ -2,7 +2,7 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createError } from 'h3'
 import { Types } from 'mongoose'
-import type { AlertRule } from '../../types/alertRules'
+import type { AlertRule } from '#shared/types/alertRules'
 import { engineModel } from './engineModel'
 
 // =============================================================================

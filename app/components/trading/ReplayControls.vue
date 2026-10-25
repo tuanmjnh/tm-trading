@@ -8,7 +8,7 @@
 //  mirrors the SERVER cursor — what the client has actually received — never
 //  a locally guessed position (D17: no future data, even in a progress bar).
 // =============================================================================
-import type { ReplayMode } from '../../types/replay'
+import type { ReplayMode } from '#shared/types/replay'
 
 const props = defineProps<{
   mode: ReplayMode

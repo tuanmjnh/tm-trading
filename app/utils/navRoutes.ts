@@ -1,4 +1,19 @@
-import type { RouteTreeNode } from '~/types/rbac'
+import type { RouteTreeNode } from '#shared/types/rbac'
+
+/**
+ * Collapsed sidebar menus render group children as a flat link list (popover),
+ * so sub-groups deeper than one level would silently lose their descendants.
+ * This dissolves groups into an ordered list of their leaf links.
+ */
+export function flattenNavGroups<T>(groups: unknown = []): T[] {
+  const out: T[] = []
+  if (!Array.isArray(groups)) return out
+  for (const group of groups as Array<{ children?: unknown }>) {
+    if (Array.isArray(group.children)) out.push(...(flattenNavGroups<T>(group.children) as T[]))
+    else out.push(group as T)
+  }
+  return out
+}
 
 // =============================================================================
 //  P0-5 — One shared loader for the Hub route catalog.

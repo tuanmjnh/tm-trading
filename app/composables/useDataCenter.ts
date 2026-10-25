@@ -1,4 +1,4 @@
-import type { Dataset, DatasetQuality, LineageEntry, RecordingGroup } from '~~/types/data'
+import type { Dataset, DatasetQuality, LineageEntry, RecordingGroup } from '#shared/types/data'
 
 // =============================================================================
 //  useDataCenter — read-only Data Center projections (roadmap §58.9 Slice 4).

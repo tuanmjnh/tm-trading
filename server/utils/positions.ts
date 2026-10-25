@@ -1,5 +1,5 @@
 import { Types } from 'mongoose'
-import type { PositionItem } from '../../types/positions'
+import type { PositionItem } from '#shared/types/positions'
 import { engineModel } from './engineModel'
 
 // =============================================================================

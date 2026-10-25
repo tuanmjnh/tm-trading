@@ -82,23 +82,23 @@ function stampModule(): Promise<StampModule> {
 
 // -----------------------------------------------------------------------------
 //  Book types. Field names mirror simulation/engine.mjs positions so
-//  openFromFill/closeFill/fromPosition accept a ReplayPosition as-is.
+//  openFromFill/closeFill/fromPosition accept a ServerReplayPosition as-is.
 // -----------------------------------------------------------------------------
 
-export type ReplayOrderStatus = 'working' | 'filled' | 'rejected'
-export type ReplayOrderType = 'market' | 'limit' | 'stop'
+export type ServerReplayOrderStatus = 'working' | 'filled' | 'rejected'
+export type ServerReplayOrderType = 'market' | 'limit' | 'stop'
 
-export interface ReplayOrder {
+export interface ServerReplayOrder {
   id: string
   side: 'BUY' | 'SELL'
-  type: ReplayOrderType
+  type: ServerReplayOrderType
   /** Limit/stop level (market orders carry the reference price they were placed at). */
   price: number
   sl: number
   tps: number[]
   /** Risk-gate sized quantity (decision.qty) — the UI never sizes anything (D21). */
   qty: number
-  status: ReplayOrderStatus
+  status: ServerReplayOrderStatus
   rejectReason?: string
   /** Replay-clock ms (never wall time). */
   createdAt: number
@@ -108,7 +108,7 @@ export interface ReplayOrder {
   positionId?: string
 }
 
-export interface ReplayPosition {
+export interface ServerReplayPosition {
   id: string
   orderId: string
   account: string
@@ -122,7 +122,7 @@ export interface ReplayPosition {
   tps: number[]
   status: 'open' | 'closed'
   fees: number
-  orderType: ReplayOrderType
+  orderType: ServerReplayOrderType
   slippageBps: number | null
   alertKey: null
   /** Journal identity (D3/D4): unique per replay position, stable across reads. */
@@ -139,8 +139,8 @@ export interface ReplayPosition {
 
 export interface BrokerState {
   seq: number
-  orders: ReplayOrder[]
-  positions: ReplayPosition[]
+  orders: ServerReplayOrder[]
+  positions: ServerReplayPosition[]
 }
 
 export function createBrokerState(): BrokerState {
@@ -175,14 +175,14 @@ export interface AdvanceOpts {
 }
 
 export interface AdvanceResult {
-  opened: ReplayPosition[]
-  closed: ReplayPosition[]
+  opened: ServerReplayPosition[]
+  closed: ServerReplayPosition[]
   errors: string[]
 }
 
 export interface ReplayTicket {
   side: 'BUY' | 'SELL'
-  type: ReplayOrderType
+  type: ServerReplayOrderType
   price: number
   sl: number
   tps: number[]
@@ -193,9 +193,9 @@ export interface ReplayTicket {
  * (D7) — this function does not size, validate sides or check budgets; the
  * gate and validateTicket already did.
  */
-export function queueOrder(state: BrokerState, ticket: ReplayTicket, qty: number, now: number): ReplayOrder {
+export function queueOrder(state: BrokerState, ticket: ReplayTicket, qty: number, now: number): ServerReplayOrder {
   state.seq += 1
-  const order: ReplayOrder = {
+  const order: ServerReplayOrder = {
     id: `rpo_${state.seq}`,
     side: ticket.side,
     type: ticket.type,
@@ -217,8 +217,8 @@ export function queueOrder(state: BrokerState, ticket: ReplayTicket, qty: number
  * (auto-step timer vs. a place) can never tear the book.
  */
 export async function advanceBroker(state: BrokerState, opts: AdvanceOpts): Promise<AdvanceResult> {
-  const opened: ReplayPosition[] = []
-  const closed: ReplayPosition[] = []
+  const opened: ServerReplayPosition[] = []
+  const closed: ServerReplayPosition[] = []
   const errors: string[] = []
 
   const fill = await fillModule()
@@ -250,7 +250,7 @@ export async function advanceBroker(state: BrokerState, opts: AdvanceOpts): Prom
           alertKey: null
         })
         state.seq += 1
-        const pos: ReplayPosition = {
+        const pos: ServerReplayPosition = {
           ...base,
           status: 'open',
           id: `rpp_${state.seq}`,

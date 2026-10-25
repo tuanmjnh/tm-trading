@@ -184,7 +184,7 @@ collections are not touched.
    `archived: { $ne: true }`).
 3. **Account switcher.** `app/composables/useAccountScope.ts` persists the
    selected account (`tm-account:v1`, with an "All" sentinel) and
-   `app/components/AccountSwitcher.vue` renders it. The orders and positions
+   `app/components/trading/AccountSwitcher.vue` renders it. The orders and positions
    views scope their default query to the selection and re-fetch on change;
    `app/pages/trading/accounts.vue` manages the `paper_accounts` specs on top of
    the derived activity grid.

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import * as z from 'zod'
-import type { SystemRoute } from '~~/types'
+import type { RouteTreeNode } from '#shared/types/rbac'
 import { getErrorMessage } from '~/shared/utils/errors'
 import { MODULE_DEFINITIONS } from '#shared/rbac'
 
 const props = defineProps<{
   appId: string
-  routes: SystemRoute[]
+  routes: RouteTreeNode[]
   /** Prefill source for the row "Copy" action (nuxt4-cms duplicate pattern). */
   initialData?: Partial<Pick<Schema, 'id' | 'path' | 'name' | 'label' | 'icon' | 'sort' | 'isVisible' | 'parentId' | 'requiredPermission'>> | null
 }>()
@@ -49,11 +49,11 @@ const state = reactive<Schema>({
 
 // Target app can differ from the page's app — parent options must follow the selected app
 const selectedApp = ref(props.appId)
-const appRoutes = ref<SystemRoute[]>([])
+const appRoutes = ref<RouteTreeNode[]>([])
 const effRoutes = computed(() => selectedApp.value === props.appId ? props.routes : appRoutes.value)
 
 const loadRoutes = async (appId: string) => {
-  const res = await adminFetch<{ success: boolean, data: { routes: SystemRoute[] } }>(
+  const res = await adminFetch<{ success: boolean, data: { routes: RouteTreeNode[] } }>(
     `/api/v1/apps/${encodeURIComponent(appId)}/routes`
   )
   appRoutes.value = res.data?.routes || []

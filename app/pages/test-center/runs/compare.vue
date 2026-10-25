@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { RunSeries, RunSeriesDetail } from '~~/types/runs'
+import type { RunSeries, RunSeriesDetail } from '#shared/types/runs'
 import { buildOverlay, metricRows, paramsDiff, paramsValue } from '~~/shared/utils/compare'
 import { getErrorMessage } from '~/shared/utils/errors'
 
@@ -161,7 +161,7 @@ useHead({ title })
 <template>
   <BasePage id="runs-compare" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('testCenter.pips.compare')" />
+      <BasePageEyebrow :trail="trail" :pip="t('testCenter.pips.compare')" />
     </template>
 
     <template #right>

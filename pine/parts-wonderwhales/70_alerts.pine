@@ -1,0 +1,19 @@
+// =============================================================================
+//  WONDERWHALES — ALERTS & NOTIFICATIONS
+// =============================================================================
+
+// @part skip:wonderwhales-strategy
+// Dedicated alertcondition hooks for TradingView Create Alert dialog (Indicator only)
+alertcondition(ww_signalBuy,  title = "Wonderwhales BUY",  message = "Wonderwhales BUY | {{exchange}}:{{ticker}} | TF={{interval}} | Close={{close}}")
+alertcondition(ww_signalSell, title = "Wonderwhales SELL", message = "Wonderwhales SELL | {{exchange}}:{{ticker}} | TF={{interval}} | Close={{close}}")
+alertcondition(ww_signalBuy or ww_signalSell, title = "Wonderwhales Any Signal", message = "Wonderwhales Signal | {{exchange}}:{{ticker}} | TF={{interval}} | Close={{close}}")
+
+// Optional display alert: VSA Climax Volume Spike
+alertcondition(ww_isClimaxVol, title = "Wonderwhales VSA Climax", message = "Wonderwhales VSA Climax (Purple) | {{exchange}}:{{ticker}} | Vol={{volume}}")
+// @part skip:none
+
+// Runtime alert() calls
+if ww_signalBuy
+    alert("Wonderwhales BUY | " + syminfo.ticker + " | TF=" + timeframe.period + " | Close=" + str.tostring(close), alert.freq_once_per_bar_close)
+if ww_signalSell
+    alert("Wonderwhales SELL | " + syminfo.ticker + " | TF=" + timeframe.period + " | Close=" + str.tostring(close), alert.freq_once_per_bar_close)

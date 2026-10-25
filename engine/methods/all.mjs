@@ -23,3 +23,6 @@ import './trend.mjs'
 import './orderflow.mjs'
 // Phase 11 — liquidity sweep (quet thanh khoan + rau tu choi + volume VSA):
 import './sweep.mjs'
+// Phase 12 — wonderwhales (PSAR reversal / EMA cross + EMA/ATR filter):
+import './wonderwhales.mjs'
+

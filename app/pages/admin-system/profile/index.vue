@@ -87,7 +87,7 @@ useHead({ title: computed(() => t('profile.title')) })
 <template>
   <BasePage id="profile" :title="t('profile.title')" :description="t('profile.description')">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" />
+      <BasePageEyebrow :trail="trail" />
     </template>
     <template #right>
       <UButton icon="i-lucide-save" :label="t('settings.saveChanges')" color="primary" :loading="saving" variant="soft"

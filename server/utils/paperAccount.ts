@@ -1,5 +1,5 @@
 import { engineModel, simulationAccount, workspaceStore } from './engineModel'
-import type { LiveAccount } from '../../types/positions'
+import type { LiveAccount } from '#shared/types/positions'
 import type { LiveQuote } from './livePositions'
 
 /**
@@ -56,7 +56,7 @@ async function resolveAccount(
 }
 
 /** One row of GET /api/v1/paper/accounts (matches app/composables/usePaperAccounts.ts). */
-export interface PaperAccountSummary {
+export interface ServerPaperAccountSummary {
   accountId: string
   currency: string
   mode: string
@@ -73,7 +73,7 @@ export interface PaperAccountSummary {
  * seed row yet). Tenancy keeps this per owner — one hub account never lists
  * another's accounts.
  */
-export async function listPaperAccounts(ownerId: string): Promise<PaperAccountSummary[]> {
+export async function listPaperAccounts(ownerId: string): Promise<ServerPaperAccountSummary[]> {
   if (!ownerId) return []
   const [Position, Account] = await Promise.all([
     engineModel('position.mjs', 'Position'),
@@ -198,7 +198,7 @@ export interface PaperAccountMutation {
   ok: boolean
   /** i18n key (statusMessage) the route also uses as the HTTP status selector. */
   code?: string
-  account?: PaperAccountSummary
+  account?: ServerPaperAccountSummary
 }
 
 /** HTTP status per mutation code — the route throws it via createError(). */
@@ -215,7 +215,7 @@ export const ACCOUNT_ERROR_STATUS: Record<string, number> = {
 }
 
 /** Summarize one seed row the same way listPaperAccounts() does. */
-function summarize(row: any): PaperAccountSummary {
+function summarize(row: any): ServerPaperAccountSummary {
   return {
     accountId: String(row?.accountId ?? ''),
     currency: String(row?.currency ?? 'USDT'),

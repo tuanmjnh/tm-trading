@@ -94,11 +94,15 @@ export function getErrorMessage(err: unknown, t: (key: string) => string): strin
     }
   }
 
-  // 2. Check if statusMessage is an i18n key (e.g. error.invalidCredentials)
+  // 2. Check if statusMessage is an i18n key. Dotted codes are already full keys
+  // (e.g. `error.invalidCredentials`); bare codes are emitted under the `error.`
+  // namespace (e.g. `ai_failed`, `conflict`), so look them up there directly
+  // rather than probing the bare key (which only logs a missing-key warning).
   const code = e?.statusMessage || e?.data?.statusMessage
   if (code && /^[a-zA-Z0-9_.-]+$/.test(code)) {
-    const translated = t(code)
-    if (translated && translated !== code) return translated
+    const key = code.includes('.') ? code : `error.${code}`
+    const translated = t(key)
+    if (translated && translated !== key) return translated
   }
 
   // 3. Map backend / TM-Hub returned messages to i18n key

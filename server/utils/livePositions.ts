@@ -1,5 +1,5 @@
 import { simulationEngine, simulationFill, simulationMargin, simulationLiquidation } from './engineModel'
-import type { LiveAccount, LivePositionFields, PositionItem } from '../../types/positions'
+import type { LiveAccount, LivePositionFields, PositionItem } from '#shared/types/positions'
 
 // =============================================================================
 //  TM TRADING — LIVE position + account numbers (roadmap v3 §19/§20), PURE.
@@ -26,7 +26,6 @@ import type { LiveAccount, LivePositionFields, PositionItem } from '../../types/
 //  `pathToFileURL(join(process.cwd(), ...))` + `@vite-ignore` sidesteps that.
 // =============================================================================
 
-export type { LiveAccount, LivePositionFields } from '../../types/positions'
 
 /** Quote shape accepted by the enrichment (mirrors simulation normalizeQuote). */
 export interface LiveQuote {

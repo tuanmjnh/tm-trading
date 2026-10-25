@@ -30,6 +30,11 @@ export const SIGNAL_CONTRACT_VERSION = '1'
  * `engine/models/signal.mjs`; the match is pinned by tests/signalContract.test.ts
  * (this file deliberately does not import the model, keeping the engine layer
  * free of mongoose).
+ *
+ * SAR/EMA reversal events use the SAME vocabulary as every other entry signal:
+ * 'SAR FLIP LONG' is emitted as-is only by method consumers that read raw
+ * events; the signal layer maps direction to 'ST LONG'/'ST SHORT'
+ * (see signalEngine EVENT_DIRECTION and botMethodDriver's dir→type mapping).
  */
 export const SIGNAL_EVENT_TYPES = Object.freeze(['SV', 'BC', 'ST LONG', 'ST SHORT', 'NS', 'ND', 'EoM'])
 

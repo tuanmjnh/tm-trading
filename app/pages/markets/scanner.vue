@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { IntelRegime, IntelServiceRow } from '~~/types/intel'
+import type { IntelRegime, IntelServiceRow } from '#shared/types/intel'
 import type { ScannerCandidate, ScannerSignal } from '~/utils/scanner'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 
 // =============================================================================
 //  Scanner (roadmap §58.5 /markets/scanner) — one symbol-centric candidate list
@@ -135,7 +135,7 @@ useHead({ title })
 <template>
   <BasePage id="markets-scanner" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('marketScanner.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('marketScanner.pip')" />
     </template>
 
     <template #right>
@@ -170,7 +170,7 @@ useHead({ title })
 
     <template #toolbar>
       <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
-        <FilterChips v-model="typeFilter" :items="chips" />
+        <SharedFilterChips v-model="typeFilter" :items="chips" />
         <USeparator orientation="vertical" class="h-4" />
         <UBadge
           v-if="regime"
@@ -204,7 +204,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-3">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
       <LazyGridList
         :items="filtered"
         :columns="columns"

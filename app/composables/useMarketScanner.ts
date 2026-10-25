@@ -1,4 +1,4 @@
-import type { IntelRegime, IntelServiceRow } from '~~/types/intel'
+import type { IntelRegime, IntelServiceRow } from '#shared/types/intel'
 import type { ScannerCandidate } from '~/utils/scanner'
 
 // =============================================================================

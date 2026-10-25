@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
-import type { NativeSignalItem, SignalItem } from '~~/types/signals'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
+import type { NativeSignalItem, SignalItem } from '#shared/types/signals'
 import { formatTimeAgo } from '@vueuse/core'
 import { getErrorMessage } from '~/shared/utils/errors'
 
@@ -35,6 +35,8 @@ const mongoDown = ref(false)
 //  Each source keeps its own paginator; the ribbon/footer/toolbar follow the
 //  active one. The engine panel is a child that owns its own data + state.
 const source = ref<'alerts' | 'engine'>('alerts')
+const assistantOpen = ref(false)
+const assistantScope = ref<{ type: 'signal', id: string, source: 'alerts' | 'engine' } | null>(null)
 const sourceItems = computed(() => [
   { label: t('signals.source_alerts'), value: 'alerts' },
   { label: t('signals.source_engine'), value: 'engine' }
@@ -86,6 +88,12 @@ watch(workspaceVersion('signals'), refreshSignals)
 // ── Cross-module actions (D): a signal is only useful if it can be acted on.
 //  Both are pure deep links — no order is ever placed from a signal row (D7:
 //  the risk gate owns every entry), the user lands on the real surface prefilled.
+/** Explain one stored signal from its server-rebuilt bundle (read-only). */
+function askAssistant(item: SignalItem | NativeSignalItem) {
+  assistantScope.value = { type: 'signal', id: item.id, source: source.value }
+  assistantOpen.value = true
+}
+
 /** Open the terminal desk on this signal's symbol/timeframe (?instrument=&tf=). */
 function openInTerminal(s: SignalItem) {
   if (!s.symbol) return
@@ -229,7 +237,7 @@ useHead({ title })
 <template>
   <BasePage id="signals" :title="title" :description="pageDescription">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="source === 'engine' ? t('signals.pipEngine') : t('signals.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="source === 'engine' ? t('signals.pipEngine') : t('signals.pip')" />
     </template>
 
     <template #right>
@@ -272,7 +280,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
-      <MetricRibbon :items="activeMetrics" />
+      <SharedMetricRibbon :items="activeMetrics" />
 
       <TradingEngineSignalsPanel v-if="source === 'engine'" ref="nativePanel" />
 
@@ -369,6 +377,15 @@ useHead({ title })
               :title="t('signals.createAlert')"
               @click="createAlert(item)"
             />
+            <UButton
+              icon="i-lucide-sparkles"
+              variant="ghost"
+              color="primary"
+              size="xs"
+              :aria-label="t('assistant.title')"
+              :title="t('assistant.title')"
+              @click="askAssistant(item)"
+            />
           </div>
         </template>
 
@@ -410,6 +427,14 @@ useHead({ title })
               size="xs"
               @click="createAlert(item)"
             />
+            <UButton
+              icon="i-lucide-sparkles"
+              :label="t('assistant.title')"
+              variant="soft"
+              color="primary"
+              size="xs"
+              @click="askAssistant(item)"
+            />
           </div>
         </template>
 
@@ -431,5 +456,6 @@ useHead({ title })
       </LazyGridList>
       </template>
     </div>
+    <BaseModuleAssistantPanel v-model:open="assistantOpen" :scope="assistantScope" />
   </BasePage>
 </template>

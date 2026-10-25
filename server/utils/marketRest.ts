@@ -162,8 +162,8 @@ export async function fetchJson(
   fetchImpl: FetchLike = defaultFetch,
   opts: { throttleRetries?: number; throttleDelaysMs?: number[] } = {}
 ): Promise<unknown> {
-  const throttleRetries = opts.throttleRetries ?? 2
-  const delays = opts.throttleDelaysMs ?? [300, 900]
+  const throttleRetries = opts.throttleRetries ?? 5
+  const delays = opts.throttleDelaysMs ?? [1000, 3000, 10000, 30000, 60000]
   let res: { ok: boolean; status: number; text(): Promise<string> }
 
   for (let attempt = 0; ; attempt++) {

@@ -6,8 +6,8 @@
 //  by venue-native or engine symbol. No fetching, no recalculation (D1): every
 //  metric is what services/scanner.mjs already stored.
 // =============================================================================
-import type { IntelData, IntelFlow } from '~~/types/intel'
-import type { Instrument } from '~~/types/instruments'
+import type { IntelData, IntelFlow } from '#shared/types/intel'
+import type { Instrument } from '#shared/types/instruments'
 
 /** The scanner-service snapshot a candidate was detected in. */
 export type ScannerSignal = 'mover' | 'flow' | 'accum'

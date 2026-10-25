@@ -178,6 +178,13 @@ check('no order path in a successful review either', ready.orderPath === 'none' 
 check('review result carries the digest it was based on', ready.digest.overall.rSamples === 25)
 check('a prebuilt digest can be passed instead of entries', (await runReview({ digest: reviewDigest(big, { minTrades: 20 }), chatImpl: spy })).ok === true)
 
+// D35: a store-resolved provider cfg must be forwarded to the gateway (not env).
+let cfgSeen = null
+const spyCfg = async (messages, tools, opts) => { cfgSeen = opts?.cfg; return { text: '{"proposals":[{"title":"t","rule":"r"}]}', toolCalls: [], usage: { prompt: 1, completion: 1 }, model: 'm', ms: 2 } }
+const cfgPassed = { provider: 'google_ai', apiKey: 'k', baseUrl: 'b', model: 'gemini-3.5-flash-lite' }
+await runReview({ entries: big, minTrades: 20, chatImpl: spyCfg, cfg: cfgPassed })
+check('runReview forwards a store-resolved cfg to the gateway', cfgSeen === cfgPassed)
+
 let threw = null
 try {
   await runReview({ entries: big, minTrades: 20, chatImpl: async () => { const e = new Error('no key'); e.code = 'ai.no-key'; throw e } })

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { z } from 'zod'
-import type { RegisterRequest } from '~/types/auth'
+import type { RegisterRequest } from '#shared/types/auth'
 import { getErrorMessage } from '~/shared/utils/errors'
 import { useAuth } from '~/composables/useAuth'
 

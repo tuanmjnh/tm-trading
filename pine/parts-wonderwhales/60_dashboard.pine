@@ -1,0 +1,48 @@
+// =============================================================================
+//  WONDERWHALES — HUD DASHBOARD TABLE (v1.1.3)
+// =============================================================================
+
+var table ww_hud = na
+
+if barstate.islast and ww_showDash
+    if na(ww_hud)
+        ww_hud := table.new(ww_tablePos, 2, 7, bgcolor = color.new(#131722, 15), border_color = color.new(color.gray, 60), border_width = 1, force_overlay = true)
+    
+    // Header
+    table.cell(ww_hud, 0, 0, "WONDERWHALES", text_color = color.white, bgcolor = color.new(#2962ff, 30), text_size = ww_tableTextSize)
+    table.cell(ww_hud, 1, 0, "HUD v1.1",     text_color = color.yellow, bgcolor = color.new(#2962ff, 30), text_size = ww_tableTextSize)
+
+    // Row 1: PSAR Trend
+    table.cell(ww_hud, 0, 1, "PSAR Trend", text_color = color.gray, text_size = ww_tableTextSize)
+    string psarTxt = ww_sarBull ? "BULLISH ▲" : "BEARISH ▼"
+    color  psarClr = ww_sarBull ? color.rgb(34, 197, 94) : color.rgb(239, 68, 68)
+    table.cell(ww_hud, 1, 1, psarTxt, text_color = psarClr, text_size = ww_tableTextSize)
+
+    // Row 2: VSA Volume Bucket
+    table.cell(ww_hud, 0, 2, "VSA Volume", text_color = color.gray, text_size = ww_tableTextSize)
+    string volTxt = ww_volBucket + " (" + str.tostring(ww_volRatio, "#.##") + "x)"
+    table.cell(ww_hud, 1, 2, volTxt, text_color = ww_volCol, text_size = ww_tableTextSize)
+
+    // Row 3: RSI Momentum
+    table.cell(ww_hud, 0, 3, "RSI (14)", text_color = color.gray, text_size = ww_tableTextSize)
+    string rsiStatus = ww_rsiOverbought ? " (OB)" : ww_rsiOversold ? " (OS)" : " (Neutral)"
+    color  rsiClr    = ww_rsiOverbought ? color.rgb(239, 68, 68) : ww_rsiOversold ? color.rgb(34, 197, 94) : color.white
+    table.cell(ww_hud, 1, 3, str.tostring(ww_rsi, "#.#") + rsiStatus, text_color = rsiClr, text_size = ww_tableTextSize)
+
+    // Row 4: EMA Trend (20 / 50)
+    table.cell(ww_hud, 0, 4, "EMA (20/50)", text_color = color.gray, text_size = ww_tableTextSize)
+    string emaTxt = ww_emaBull ? "BULLISH (20 > 50)" : "BEARISH (20 < 50)"
+    color  emaClr = ww_emaBull ? color.rgb(34, 197, 94) : color.rgb(239, 68, 68)
+    table.cell(ww_hud, 1, 4, emaTxt, text_color = emaClr, text_size = ww_tableTextSize)
+
+    // Row 5: ATR Volatility %
+    table.cell(ww_hud, 0, 5, "ATR %", text_color = color.gray, text_size = ww_tableTextSize)
+    string atrTxt = str.tostring(ww_atrPct, "#.##") + "%" + (ww_volatilityOk ? " (Active)" : " (Chop)")
+    color  atrClr = ww_volatilityOk ? color.white : color.gray
+    table.cell(ww_hud, 1, 5, atrTxt, text_color = atrClr, text_size = ww_tableTextSize)
+
+    // Row 6: 200 EMA Baseline
+    table.cell(ww_hud, 0, 6, "200 EMA", text_color = color.gray, text_size = ww_tableTextSize)
+    string ema200Txt = ww_aboveEma200 ? "Above (Bullish Bias)" : "Below (Bearish Bias)"
+    color  ema200Clr = ww_aboveEma200 ? color.rgb(34, 197, 94) : color.rgb(239, 68, 68)
+    table.cell(ww_hud, 1, 6, ema200Txt, text_color = ema200Clr, text_size = ww_tableTextSize)

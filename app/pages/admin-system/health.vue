@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { SystemHealth } from '~~/types/health'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
+import type { SystemHealth } from '#shared/types/health'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 import { formatTimeAgo } from '@vueuse/core'
 
 // System Health (roadmap §58 acceptance #6). Aggregate platform health from the
@@ -70,7 +70,7 @@ useHead({ title })
 <template>
   <BasePage id="health" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('systemHealth.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('systemHealth.pip')" />
     </template>
 
     <template #right>
@@ -106,7 +106,7 @@ useHead({ title })
       />
 
       <template v-else>
-        <MetricRibbon :items="overview" cols="grid-cols-2 md:grid-cols-3 xl:grid-cols-6" />
+        <SharedMetricRibbon :items="overview" cols="grid-cols-2 md:grid-cols-3 xl:grid-cols-6" />
 
         <UCard :ui="{ body: 'p-0' }">
           <template #header>

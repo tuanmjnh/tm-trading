@@ -63,6 +63,7 @@
 //  live-paper session per boot (restart recovery included).
 // =============================================================================
 import { fetchKlines, TF_MS } from '../engine/data.mjs'
+import { atr } from '../engine/ta.mjs'
 import { createFeedHealth, candleGapUnresolved } from './feedHealth.mjs'
 import { beat as heartbeatBeat, readHeartbeat as heartbeatRead, HEARTBEAT_FILE } from '../services/heartbeat.mjs'
 import { clientOrderId } from '../engine/keys.mjs'
@@ -74,6 +75,8 @@ import {
   transition as transitionSession,
 } from '../engine/session.mjs'
 import { exitReasonOf, exitReasonFromHit } from '../engine/stamp.mjs'
+import { ENGINE_VERSION } from '../engine/version.mjs'
+import { buildManifest, riskFingerprint } from '../engine/manifest.mjs'
 import { attemptFill, loadFillConfig, ORDER_TYPES, FILL_DEFAULTS } from '../simulation/fill.mjs'
 import { applyFill, closeFill } from '../simulation/engine.mjs'
 import { createPaperOrder } from '../simulation/order.mjs'
@@ -254,6 +257,73 @@ export function followExitPrice(alert) {
 }
 
 /**
+ * Per-bot dynamic stop management (breakeven + ATR trailing) — PURE.
+ *
+ * `execution` (from the instance, set at launch):
+ *   - slBreakevenOn: once the favorable excursion since entry reaches
+ *     `slTriggerR` × initial risk, ratchet SL to the ENTRY price.
+ *   - slTrailOn: ratchet SL to `close ∓ slTrailAtrMult × ATR` every cycle,
+ *     only ever tightening (never loosening) the stop.
+ *
+ * The initial risk is |entry − current SL| — valid until the first move; after
+ * the SL is at/past breakeven the breakeven rule is inherently satisfied and
+ * the ratchet keeps the tightened stop, so both rules stay idempotent.
+ *
+ * @returns {{ newSl: number } | null} null = nothing to change (disabled,
+ *   unusable inputs, or the candidate does not improve the current stop).
+ */
+export function applyTrailingStop(pos, bars, execution) {
+  const ex = execution && typeof execution === 'object' ? execution : {}
+  const beOn = ex.slBreakevenOn === true
+  const trailOn = ex.slTrailOn === true
+  if (!beOn && !trailOn) return null
+
+  const dir = Number(pos?.dir)
+  const entry = Number(pos?.entryPrice)
+  const sl = Number(pos?.sl)
+  if ((dir !== 1 && dir !== -1) || !Number.isFinite(entry) || !Number.isFinite(sl) || sl <= 0) return null
+
+  const list = Array.isArray(bars) ? bars.filter((b) => Number.isFinite(Number(b?.close))) : []
+  const close = Number(list.at(-1)?.close)
+  if (!Number.isFinite(close) || close > 0 === false) return null
+
+  // Favorable extreme since entry (long: highest high, short: lowest low).
+  const entryMs = +new Date(pos.entryTime)
+  let extreme = close
+  for (const b of list) {
+    if (+new Date(b.time) < entryMs) continue
+    extreme = dir === 1 ? Math.max(extreme, Number(b.high)) : Math.min(extreme, Number(b.low))
+  }
+
+  const sign = dir === 1 ? 1 : -1
+  const improves = (candidate) => (dir === 1 ? candidate > sl : candidate < sl)
+  let best = sl
+
+  if (beOn) {
+    const risk0 = Math.abs(entry - sl)
+    if (risk0 > 0) {
+      const trigger = entry + sign * Number(ex.slTriggerR ?? 1) * risk0
+      const reached = dir === 1 ? extreme >= trigger : extreme <= trigger
+      if (reached) best = entry
+    }
+  }
+
+  if (trailOn) {
+    const mult = Number(ex.slTrailAtrMult ?? 1.5)
+    if (Number.isFinite(mult) && mult > 0 && list.length >= 15) {
+      const atrs = atr(list, Number(ex.slTrailAtrLen) || 14)
+      const a = Number(atrs.at(-1))
+      if (Number.isFinite(a) && a > 0) {
+        const candidate = close - sign * mult * a
+        if (dir === 1 ? candidate > best : candidate < best) best = candidate
+      }
+    }
+  }
+
+  return improves(best) ? { newSl: best } : null
+}
+
+/**
  * The TP ladder that is safe to STORE on a position, or a defect report.
  *
  * The exit scanner reads `tps[0]`, so a 0 there (exactly what `Number(null)`
@@ -424,6 +494,7 @@ export async function resolvePaperSession(m, config, opts = {}) {
   if (process.env.PAPER_SESSION === 'off') return null
   if (!m?.TradingSession) return null
   const ownerId = config.ownerId ?? null
+  const identity = opts.identity ?? {}
   const explicit = opts.sessionId || process.env.PAPER_SESSION_ID || null
   if (explicit) {
     const found = await m.TradingSession.findOne({
@@ -456,7 +527,36 @@ export async function resolvePaperSession(m, config, opts = {}) {
     accountId: config.account,
     ownerId,
     createdBy: 'paper-executor',
-    manifest: { account: config.account, source: 'paper-executor' }
+    // Phase F: the session declares its identity, so evidence can answer which
+    // engine/strategy/risk/data produced it without consulting other stores.
+    strategyVersionId: identity.strategyVersionId ?? config.strategyVersionId ?? null,
+    botProfileId: identity.botProfileId ?? null,
+    instruments: identity.instruments ?? [],
+    timeframes: identity.timeframes ?? [],
+    manifest: buildManifest({
+      kind: 'session',
+      source: identity.source ?? 'paper',
+      purpose: identity.purpose ?? 'paper-executor',
+      engineVersion: ENGINE_VERSION,
+      methods: identity.methods ?? (config.method ? [config.method] : []),
+      strategyVersionId: identity.strategyVersionId ?? config.strategyVersionId ?? null,
+      paramsHash: identity.paramsHash ?? config.paramsHash ?? null,
+      method: identity.method ?? config.method ?? null,
+      riskFingerprint: riskFingerprint(config),
+      riskSource: identity.riskSource ?? 'env',
+      dataSource: identity.dataSource ?? 'venue-rest',
+      qualityState: identity.qualityState ?? null,
+      datasetIds: identity.datasetIds ?? [],
+      account: config.account,
+      instruments: identity.instruments ?? [],
+      timeframes: identity.timeframes ?? [],
+      botProfileId: identity.botProfileId ?? null,
+      instanceId: identity.instanceId ?? null,
+      experimentId: identity.experimentId ?? null,
+      baselineVersionId: identity.baselineVersionId ?? null,
+      evidenceSetId: identity.evidenceSetId ?? null,
+      createdAt: Date.now(),
+    }),
   })
   await m.TradingSession.create(fresh)
   for (const s of stale) {
@@ -505,6 +605,10 @@ export async function runCycle(config = loadRiskConfig(), opts = {}) {
   const fidelity = fidelityRecord({ mode: 'paper', depthActive: false, tradeStreamActive: false, quoteAware: true, brokerSync: false })
   stats.fidelity = fidelity.code
   console.log(`[paper] fidelity: ${fidelity.banner}`)
+  // Test/replay hook (same rule as `opts.quoteFor`): inject the bar source so a
+  // full entry→exit cycle can be proven without a live feed. Production never
+  // passes it — the REST fetch below stays the only default.
+  const fetchBars = typeof opts.fetchKlines === 'function' ? opts.fetchKlines : fetchKlines
   const m = await getModels()
   if (!m) {
     stats.mongoDown = true
@@ -591,12 +695,30 @@ async function ensureAccountRow(m, config) {
   // gap detector (§35.1 candle_gap_unresolved) judges. Separate map so the
   // quote object passed to the fill model keeps its exact old shape.
   const barTimes = new Map()
+  // Test/replay hook: a caller may inject `quoteFor(symbol)` so the cycle can be
+  // proven end-to-end without a live feed (engine/test-db.mjs Phase E evidence).
+  // Production runs never pass it; the REST path below stays the only default.
+  const quoteOverride = typeof opts.quoteFor === 'function' ? opts.quoteFor : null
   const quoteFor = async (symbol) => {
     if (quotes.has(symbol)) return quotes.get(symbol)
     let q = null
     let dataAt = null
+    if (quoteOverride) {
+      try {
+        q = (await quoteOverride(symbol, { at: Date.now() })) || null
+      } catch {
+        q = null
+      }
+      if (q?.bar?.time != null) {
+        dataAt = Number(q.bar.time)
+        barTimes.set(symbol, [dataAt])
+      }
+      feedHealth.record(feedStreamOf(cfg.market, symbol), { ok: Boolean(q), dataAt, at: Date.now() })
+      quotes.set(symbol, q)
+      return q
+    }
     try {
-const { bars } = await fetchKlines({ symbol: apiSymbol(symbol), tf: '1', market: cfg.market, refresh: true, limit: 2 })
+const { bars } = await fetchBars({ symbol: apiSymbol(symbol), tf: '1', market: cfg.market, refresh: true, limit: 2 })
 const last = bars?.length ? bars[bars.length - 1] : null
 if (last && Number.isFinite(last.close) && last.close > 0) q = {
 last: last.close,
@@ -1041,7 +1163,7 @@ await m.PaperOrder.updateOne(
       if (price === null) {
         // TIME_CLOSE: fill at the latest market close
         try {
-          const { bars } = await fetchKlines({ symbol: apiSymbol(pos.symbol), tf: '1', market: cfg.market, refresh: true, limit: 2 })
+          const { bars } = await fetchBars({ symbol: apiSymbol(pos.symbol), tf: '1', market: cfg.market, refresh: true, limit: 2 })
           price = bars?.length ? bars[bars.length - 1].close : Number(f.price)
         } catch {
           price = Number(f.price)
@@ -1072,7 +1194,7 @@ await m.PaperOrder.updateOne(
       try {
         const oldest = Math.min(...positions.map((p) => +new Date(p.entryTime)))
         const needBars = Math.min(30000, Math.ceil((Date.now() - oldest) / 60000) + 10)
-        const { bars } = await fetchKlines({ symbol: apiSymbol(symbol), tf: '1', market: cfg.market, refresh: true, limit: needBars })
+        const { bars } = await fetchBars({ symbol: apiSymbol(symbol), tf: '1', market: cfg.market, refresh: true, limit: needBars })
         for (const pos of positions) {
           const tp1 = Array.isArray(pos.tps) && pos.tps.length ? Number(pos.tps[0]) : NaN
           if (!(Number.isFinite(tp1) && tp1 > 0)) {
@@ -1082,6 +1204,17 @@ await m.PaperOrder.updateOne(
             console.warn(`[paper] position ${pos._id} ${pos.symbol} has no usable TP1 (${JSON.stringify(pos.tps)}) — data exit scan skipped, close it manually or via a follow-up alert`)
             auditLog('paper_bad_tps1', { symbol: pos.symbol, positionId: String(pos._id), tps: pos.tps })
             continue
+          }
+          // Per-bot dynamic stop (breakeven / ATR trail) BEFORE the exit scan —
+          // the tightened SL is persisted and the SAME bars then decide whether
+          // it was hit this very cycle (conservative intra-bar ordering holds).
+          if (cfg.execution) {
+            const trail = applyTrailingStop(pos, bars, cfg.execution)
+            if (trail) {
+              await m.Position.updateOne({ _id: pos._id }, { $set: { sl: trail.newSl } })
+              auditLog('paper_sl_trailed', { symbol: pos.symbol, positionId: String(pos._id), from: Number(pos.sl), to: trail.newSl })
+              pos.sl = trail.newSl
+            }
           }
           const hit = findFirstExit(bars, { dir: pos.dir, sl: Number(pos.sl), tp1 }, +new Date(pos.entryTime))
           if (!hit) continue

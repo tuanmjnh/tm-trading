@@ -35,6 +35,9 @@ export async function persistAiProposal(proposal, { generation = null, ownerId =
     evidence: proposal.evidence ?? [],
     risks: proposal.risks ?? [],
     recommendedTest: proposal.recommendedTest ?? {},
+    // Phase F: a draft names the frozen set it read and the record ids it cites.
+    evidenceSetId: proposal.evidenceSetId ?? null,
+    citations: proposal.citations ?? [],
     generation,
     status: 'new',
     // Tenancy (roadmap §61.3): proposals belong to the user who recorded them.

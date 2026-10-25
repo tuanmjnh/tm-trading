@@ -1,5 +1,5 @@
-import type { LiveAccount } from '~~/types/positions'
-import type { RiskStatusData, RiskStatusResponse } from '~~/types/risk'
+import type { LiveAccount } from '#shared/types/positions'
+import type { RiskStatusData, RiskStatusResponse } from '#shared/types/risk'
 
 // =============================================================================
 //  usePaperAccounts — persistent paper account + risk gate projections

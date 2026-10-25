@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { MetricItem } from '~/components/MetricRibbon.vue'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 import type { TradingSession, SessionTimelineEvent } from '~/composables/useSessions'
-import type { PaperOrderItem } from '~~/types/orders'
-import type { PaperFillItem } from '~~/types/fills'
-import type { PositionItem } from '~~/types/positions'
+import type { PaperOrderItem } from '#shared/types/orders'
+import type { PaperFillItem } from '#shared/types/fills'
+import type { PositionItem } from '#shared/types/positions'
 import { formatTimeAgo } from '@vueuse/core'
 import { getErrorMessage } from '~/shared/utils/errors'
 
@@ -28,6 +28,9 @@ const positions = ref<PositionItem[]>([])
 const isLoading = ref(true)
 const isRefreshing = ref(false)
 const acting = ref(false)
+
+// Phase H (§61.12) — read-only contextual assistant over this session.
+const assistantOpen = ref(false)
 
 // Active tab
 const activeTab = ref<'timeline' | 'orders' | 'fills' | 'positions' | 'manifest'>('timeline')
@@ -251,7 +254,7 @@ useHead({ title })
 <template>
   <BasePage id="session-detail" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('sessions.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('sessions.pip')" />
     </template>
 
     <template #right>
@@ -304,6 +307,17 @@ useHead({ title })
           :ui="{ label: 'hidden md:block' }"
         />
 
+        <UButton
+          v-if="session"
+          icon="i-lucide-sparkles"
+          :label="t('assistant.title')"
+          variant="soft"
+          color="primary"
+          size="sm"
+          :ui="{ label: 'hidden md:block' }"
+          @click="assistantOpen = true"
+        />
+
         <UButton icon="i-lucide-refresh-cw" variant="soft" color="neutral" size="sm" :loading="isRefreshing" @click="refresh" />
       </div>
     </template>
@@ -329,7 +343,7 @@ useHead({ title })
     </div>
 
     <div v-else class="flex flex-col w-full h-full min-h-0 gap-4 pb-24 lg:pb-6">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
 
       <!-- Top Summary Cards -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -614,5 +628,8 @@ useHead({ title })
       color="error"
       @confirm="confirmMove"
     />
+
+    <!-- Phase H (§61.12) — read-only contextual assistant over this session -->
+    <BaseModuleAssistantPanel v-model:open="assistantOpen" :session-id="session?.sessionId || sessionId" />
   </BasePage>
 </template>

@@ -1,8 +1,8 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import type { MethodEvent, MethodLeague, MethodLeagueRow, MethodLeagueSummary, MethodMeta, ConfluenceDetail } from '../../types/methods'
-import type { IntelConfluence } from '../../types/intel'
+import type { MethodEvent, MethodLeague, MethodLeagueRow, MethodLeagueSummary, MethodMeta, ConfluenceDetail } from '#shared/types/methods'
+import type { IntelConfluence } from '#shared/types/intel'
 
 // =============================================================================
 //  Method events + league + confluence explanation for the dashboard.

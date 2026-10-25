@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { formatTimeAgo } from '@vueuse/core'
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { PaperAccountDetail, PaperAccountSummary } from '~~/types/paper'
-import type { PositionItem } from '~~/types/positions'
+import type { PaperAccountDetail, PaperAccountSummary } from '#shared/types/paper'
+import type { PositionItem } from '#shared/types/positions'
 
 // Forward test monitor (roadmap §58.9 Slice 3). A forward test IS a sustained
 // live-paper session, so this reads the existing §30.5 paper-account API (the
@@ -135,7 +135,7 @@ useHead({ title })
 <template>
   <BasePage id="forward-tests" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('testCenter.pips.forward')" />
+      <BasePageEyebrow :trail="trail" :pip="t('testCenter.pips.forward')" />
     </template>
 
     <template #right>

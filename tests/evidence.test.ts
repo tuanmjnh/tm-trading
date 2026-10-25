@@ -680,9 +680,13 @@ describe('paper-validation session — governed launch', () => {
     assert.equal(started?.kind, 'live-paper')
     assert.equal(started?.strategyVersionId, 'tm-vsa@2.0.0')
     assert.deepEqual(started?.instruments, ['BTCUSDT'])
-    assert.equal(started?.manifest?.purpose, 'paper-validation')
-    assert.equal(started?.manifest?.experimentId, 'exp:abc')
-    assert.equal(started?.manifest?.evidenceSetId, 'ev_paper-session_ses_1')
+    assert.equal(started?.manifest?.schema, 'manifest.v1')
+    assert.equal(started?.manifest?.scope?.purpose, 'paper-validation')
+    assert.equal(started?.manifest?.scope?.experimentId, 'exp:abc')
+    assert.equal(started?.manifest?.scope?.evidenceSetId, 'ev_paper-session_ses_1')
+    assert.equal(started?.manifest?.strategy?.versionId, 'tm-vsa@2.0.0')
+    // The launcher cannot know the executor's risk caps — an honest gap, not a guess.
+    assert.ok(started?.manifest?.gaps?.includes('risk.fingerprint'))
   })
 
   test('refuses an experiment that is not in paper_validation (409)', async () => {

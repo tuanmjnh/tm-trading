@@ -37,7 +37,7 @@ export interface ListNewsItemsQuery {
   since?: string
 }
 
-export interface NewsDeskMeta {
+export interface ServerNewsDeskMeta {
   mongo: 'up' | 'down'
   total: number
   generatedAt: string | null
@@ -68,7 +68,7 @@ async function displayableSourceIds(): Promise<string[] | null> {
   return rows.map((r: { _id: unknown }) => String(r._id))
 }
 
-export async function listNewsItems(q: ListNewsItemsQuery): Promise<{ items: unknown[]; meta: NewsDeskMeta }> {
+export async function listNewsItems(q: ListNewsItemsQuery): Promise<{ items: unknown[]; meta: ServerNewsDeskMeta }> {
   const NewsItem = await engineModel('newsItem.mjs', 'NewsItem')
   if (!NewsItem) {
     return { items: [], meta: { mongo: 'down', total: 0, generatedAt: null, degradedSources: [] } }
@@ -100,7 +100,7 @@ export async function listNewsItems(q: ListNewsItemsQuery): Promise<{ items: unk
   return { items, meta: { mongo: 'up', total, generatedAt, degradedSources: [] } }
 }
 
-export interface NewsSourcePublic {
+export interface ServerNewsSourcePublic {
   sourceId: string
   name: string
   transport: string
@@ -127,7 +127,7 @@ const isoOrNull = (v: unknown): string | null => {
   return Number.isNaN(d.getTime()) ? null : d.toISOString()
 }
 
-export async function listNewsSources(): Promise<{ sources: NewsSourcePublic[]; mongo: 'up' | 'down' }> {
+export async function listNewsSources(): Promise<{ sources: ServerNewsSourcePublic[]; mongo: 'up' | 'down' }> {
   const NewsSource = await engineModel('newsSource.mjs', 'NewsSource')
   if (!NewsSource) return { sources: [], mongo: 'down' }
   // Never expose feedUrl query internals beyond the public endpoint host;
@@ -139,7 +139,7 @@ export async function listNewsSources(): Promise<{ sources: NewsSourcePublic[]; 
   }
 }
 
-export function toPublicNewsSource(d: Record<string, any>): NewsSourcePublic {
+export function toPublicNewsSource(d: Record<string, any>): ServerNewsSourcePublic {
   return {
     sourceId: String(d.sourceId || d._id),
     name: d.name || '',
@@ -162,7 +162,7 @@ export function toPublicNewsSource(d: Record<string, any>): NewsSourcePublic {
   }
 }
 
-export async function getNewsSource(id: string, deps?: { NewsSourceModel?: any }): Promise<NewsSourcePublic> {
+export async function getNewsSource(id: string, deps?: { NewsSourceModel?: any }): Promise<ServerNewsSourcePublic> {
   const NewsSource = deps?.NewsSourceModel || (await engineModel('newsSource.mjs', 'NewsSource'))
   if (!NewsSource) {
     throw createError({ statusCode: 503, statusMessage: 'error.mongoDown', message: 'mongo offline' })
@@ -175,7 +175,7 @@ export async function getNewsSource(id: string, deps?: { NewsSourceModel?: any }
 }
 
 /** Operator enable/disable (§60.2 registry). Policy/rights fields are NOT writable here. */
-export async function setNewsSourceEnabled(id: string, enabled: unknown, deps?: { NewsSourceModel?: any }): Promise<NewsSourcePublic> {
+export async function setNewsSourceEnabled(id: string, enabled: unknown, deps?: { NewsSourceModel?: any }): Promise<ServerNewsSourcePublic> {
   if (typeof enabled !== 'boolean') {
     throw createError({ statusCode: 400, statusMessage: 'error.invalidArgs', message: 'enabled must be boolean' })
   }
@@ -241,7 +241,7 @@ export async function validateNewsSource(
   }
 }
 
-export interface MarketEventPublic {
+export interface ServerMarketEventPublic {
   id: string
   title: string
   marketGroup: string
@@ -259,7 +259,7 @@ export interface MarketEventPublic {
 }
 
 /** Allowlist projection of one MarketEvent doc (Slice C). */
-export function toPublicMarketEvent(d: Record<string, any>): MarketEventPublic {
+export function toPublicMarketEvent(d: Record<string, any>): ServerMarketEventPublic {
   return {
     id: String(d._id || ''),
     title: d.title || '',
@@ -290,7 +290,7 @@ export interface ListEventsQuery {
   symbol?: string
 }
 
-export async function listMarketEvents(q: ListEventsQuery): Promise<{ events: MarketEventPublic[]; meta: NewsDeskMeta }> {
+export async function listMarketEvents(q: ListEventsQuery): Promise<{ events: ServerMarketEventPublic[]; meta: ServerNewsDeskMeta }> {
   const MarketEvent = await engineModel('marketEvent.mjs', 'MarketEvent')
   if (!MarketEvent) {
     return { events: [], meta: { mongo: 'down', total: 0, generatedAt: null, degradedSources: [] } }
@@ -317,7 +317,7 @@ export async function listMarketEvents(q: ListEventsQuery): Promise<{ events: Ma
   }
 }
 
-export async function getMarketEvent(id: string): Promise<MarketEventPublic | null> {
+export async function getMarketEvent(id: string): Promise<ServerMarketEventPublic | null> {
   const d = await getMarketEventDoc(id)
   if (!d) return null
   return toPublicMarketEvent(d)

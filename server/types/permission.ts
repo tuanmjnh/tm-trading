@@ -1,4 +1,4 @@
-export type PermissionAction = 'read' | 'create' | 'update' | 'delete' | 'export' | 'import' | 'manage'
+export type ServerPermissionAction = 'read' | 'create' | 'update' | 'delete' | 'export' | 'import' | 'manage'
 export type PermissionScope = 'own' | 'team' | 'app' | 'global'
 
 export interface Permission {
@@ -7,7 +7,7 @@ export interface Permission {
   name: string
   description: string
   module: string
-  action: PermissionAction
+  action: ServerPermissionAction
   scope: PermissionScope
   isSystem: boolean
   createdAt: Date
@@ -18,7 +18,7 @@ export interface PermissionCreateInput {
   name: string
   description: string
   module: string
-  action: PermissionAction
+  action: ServerPermissionAction
   scope: PermissionScope
 }
 
@@ -54,7 +54,7 @@ export interface PermissionMatrix {
     permissionId: string
     permissionName: string
     module: string
-    action: PermissionAction
+    action: ServerPermissionAction
     scope: PermissionScope
     roles: string[]
   }>

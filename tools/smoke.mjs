@@ -206,6 +206,8 @@ build('pa-mtf')
 build('pa-mtf-strategy')
 build('fz')
 build('fz-strategy')
+build('wonderwhales')
+build('wonderwhales-strategy')
 
 const ACTIVE_DIST = [
   'LongKaco VSA.pine',
@@ -217,6 +219,8 @@ const ACTIVE_DIST = [
   'TM XAU Signals 2.pine',
   'TM Indicator 2.pine',
   'TM Indicator Strategy Lab 2.pine',
+  'Wonderwhales.pine',
+  'Wonderwhales Backtest.pine',
 ]
 
 for (const f of ACTIVE_DIST) {
@@ -228,7 +232,7 @@ for (const f of ACTIVE_DIST) {
   check(`${f} dong dau la //@version=6`, src.startsWith('//@version=6'), JSON.stringify(src.slice(0, 18)))
   check(`${f} co khai bao indicator/strategy`, /^(indicator|strategy)\(/m.test(src))
   check(`${f} da thay {{DECL}}/{{SHARED}}`, !src.includes('{{DECL}}') && !src.includes('{{SHARED}}'))
-  if (f !== 'TM Indicator Strategy Lab 2.pine') check(`${f} co alertcondition`, src.includes('alertcondition('))
+  if (!f.includes('Strategy') && !f.includes('Backtest')) check(`${f} co alertcondition`, src.includes('alertcondition('))
   check(`${f} ngoac doi chieu`, (src.match(/\(/g) || []).length === (src.match(/\)/g) || []).length)
   check(`${f} khong canh bao lint`, lint(src, f).length === 0, JSON.stringify(lint(src, f)))
 
@@ -475,6 +479,63 @@ check('fz: co Obstacle Gate chan opposing zone < TP1', fzSrc.includes('fz_obstac
 check('fz: webhook schema fz.signal.v1.0', fzSrc.includes('fz.signal.v1.0') && fzSrc.includes('version'))
 check('fz: alertcondition co o ca hai ban', fzSrc.includes('alertcondition(fz_signalLong') && fzBtSrc.includes('alertcondition(fz_signalLong'))
 check('fz twin: strategy cat khoi ban indicator', !fzSrc.includes('strategy.entry(') && fzBtSrc.includes('strategy.entry('))
+
+// =============================================================================
+section('2f. Wonderwhales — ban build rieng (parts-wonderwhales)')
+
+const wwSrc = readFileSync(join(ROOT, 'pine', 'dist', 'Wonderwhales.pine'), 'utf8')
+
+check('ww: indicator, khong phai strategy', /^indicator\("Wonderwhales"/m.test(wwSrc) && !wwSrc.includes('strategy.entry('))
+check('ww: shorttitle <= 10 ky tu', wwSrc.includes('shorttitle = "WWHALES"'))
+check('ww: overlay = false (ho tro Volume pane ben duoi)', wwSrc.includes('overlay = false'))
+check('ww: PSAR va cac plots tren gia co force_overlay = true',
+  wwSrc.includes('title = "Parabolic SAR", color = ww_psarColor, style = plot.style_cross, linewidth = 2, force_overlay = true') &&
+  wwSrc.includes('title = "Fast EMA", color = color.rgb(59, 130, 246), linewidth = 1, force_overlay = true'))
+check('ww: VSA Volume pane plots duoi chart (format.volume)',
+  wwSrc.includes('format = format.volume') && wwSrc.includes('title = "VSA Volume"') && wwSrc.includes('title = "Volume MA"'))
+check('ww: Signal icons ho tro Triangle va Label thu nho (Tiny default)',
+  wwSrc.includes('ww_iconStyle') && wwSrc.includes('style = shape.triangleup') && wwSrc.includes('size = size.tiny'))
+check('ww: PSAR inputs mac dinh 0.02 / 0.02 / 0.2',
+  wwSrc.includes('ww_psarStart = input.float(0.02') &&
+  wwSrc.includes('ww_psarInc   = input.float(0.02') &&
+  wwSrc.includes('ww_psarMax   = input.float(0.2'))
+check('ww: confirm on bar close mac dinh true', wwSrc.includes('ww_confirmOnClose = input.bool(true'))
+check('ww: 4 che do signal mode day du',
+  ['"Parabolic SAR Reversal"', '"EMA Crossover"', '"SAR + EMA Trend Filter"', '"SAR + EMA + ATR Filter"'].every((m) => wwSrc.includes(m)))
+check('ww: EMA filter + ATR filter co input / toggle',
+  wwSrc.includes('ww_fastEmaLen') && wwSrc.includes('ww_slowEmaLen') && wwSrc.includes('ww_atrLen') && wwSrc.includes('ww_minAtrPct'))
+check('ww: alertcondition cho BUY, SELL va Any Signal',
+  wwSrc.includes('alertcondition(ww_signalBuy,') &&
+  wwSrc.includes('alertcondition(ww_signalSell,') &&
+  wwSrc.includes('alertcondition(ww_signalBuy or ww_signalSell,'))
+check('ww: nhan BUY / SELL ngon ngu EN va CN',
+  wwSrc.includes('text = "BUY"') && wwSrc.includes('text = "SELL"') &&
+  wwSrc.includes('text = "买"') && wwSrc.includes('text = "卖"'))
+check('ww: VSA barcolor tat mac dinh de giu mau nen goc TradingView',
+  /ww_vsaBarColor\s*=\s*input\.bool\(false,/.test(wwSrc))
+check('ww: Secondary indicators va Dashboard tat mac dinh (Default OFF)',
+  /ww_showEma200\s*=\s*input\.bool\(false,/.test(wwSrc) &&
+  /ww_showBb\s*=\s*input\.bool\(false,/.test(wwSrc) &&
+  /ww_showDash\s*=\s*input\.bool\(false,/.test(wwSrc))
+check('ww: HUD Dashboard co table 2 cot va day du hang',
+  wwSrc.includes('table.new(ww_tablePos, 2, 7') &&
+  wwSrc.includes('table.cell(ww_hud, 0, 1, "PSAR Trend"') &&
+  wwSrc.includes('table.cell(ww_hud, 0, 2, "VSA Volume"'))
+
+const wwOvSrc = readFileSync(join(ROOT, 'pine', 'dist', 'Wonderwhales Overlay.pine'), 'utf8')
+check('ww-ov: indicator overlay = true tren chart gia', /^indicator\("Wonderwhales Overlay"/m.test(wwOvSrc) && wwOvSrc.includes('overlay = true'))
+check('ww-ov: cat volume pane de khong vo ty le chart gia', !wwOvSrc.includes('format = format.volume'))
+check('ww-ov: co Trend Highlight Candles ho tro hover', wwOvSrc.includes('title = "Trend Highlight Candles"'))
+
+const wwBtSrc = readFileSync(join(ROOT, 'pine', 'dist', 'Wonderwhales Backtest.pine'), 'utf8')
+
+check('ww-strategy: strategy, khong phai indicator', /^strategy\("Wonderwhales Backtest"/m.test(wwBtSrc) && !wwBtSrc.includes('indicator('))
+check('ww-strategy: shorttitle <= 10 ky tu', wwBtSrc.includes('shorttitle = "WWHALES BT"'))
+check('ww-strategy: overlay = true de hien thi trade tren chart', wwBtSrc.includes('overlay = true'))
+check('ww-strategy: co strategy.entry Long va Short', wwBtSrc.includes('strategy.entry("Long"') && wwBtSrc.includes('strategy.entry("Short"'))
+check('ww-strategy: co strategy.exit', wwBtSrc.includes('strategy.exit('))
+check('ww-strategy: cat volume pane de khong vo ty le chart gia', !wwBtSrc.includes('title = "VSA Volume"') && wwSrc.includes('title = "VSA Volume"'))
+check('ww twin: indicator khong goi strategy.entry', !wwSrc.includes('strategy.entry(') && wwBtSrc.includes('strategy.entry('))
 
 // =============================================================================
 section('3. webhook — validate payload')

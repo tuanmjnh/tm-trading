@@ -1,6 +1,6 @@
 import { getRouterParam, readBody } from 'h3'
 import { strategyService, strategyVersionModel } from '../../../../utils/engineModel'
-import type { ActivatePaperResult } from '~~/types/strategy'
+import type { ActivatePaperResult } from '#shared/types/strategy'
 
 /**
  * POST /api/v1/strategies/:id/activate-paper — set a version live (§30.4).

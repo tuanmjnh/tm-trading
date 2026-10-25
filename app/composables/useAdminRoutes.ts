@@ -1,14 +1,14 @@
-import type { SystemRoute } from '~~/types'
+import type { RouteTreeNode } from '#shared/types/rbac'
 import { buildRouteTree } from '#shared/utils/routeTree'
 
 export const useAdminRoutes = () => {
-  const tree = useState<SystemRoute[]>('admin:routes:tree', () => [])
+  const tree = useState<RouteTreeNode[]>('admin:routes:tree', () => [])
 
-  const list = useAdminList<SystemRoute>({
+  const list = useAdminList<RouteTreeNode>({
     limit: 50,
     stateKey: 'admin:routes',
     fetchPage: async ({ appId, cursor, limit }) => {
-      const res = await adminFetch<{ success: boolean, data: { routes: SystemRoute[], tree: SystemRoute[] }, nextCursor: string | null }>(
+      const res = await adminFetch<{ success: boolean, data: { routes: RouteTreeNode[], tree: RouteTreeNode[] }, nextCursor: string | null }>(
         `/api/v1/apps/${encodeURIComponent(appId)}/routes`,
         { query: { cursor: cursor || undefined, limit } }
       )
@@ -24,8 +24,8 @@ export const useAdminRoutes = () => {
     tree.value = buildRouteTree(list.items.value)
   }
 
-  const createRoute = async (appId: string, body: Partial<SystemRoute> & { id: string, path: string, name: string }) => {
-    const res = await adminFetch<{ success: boolean, data: SystemRoute }>(
+  const createRoute = async (appId: string, body: Partial<RouteTreeNode> & { id: string, path: string, name: string }) => {
+    const res = await adminFetch<{ success: boolean, data: RouteTreeNode }>(
       `/api/v1/apps/${encodeURIComponent(appId)}/routes`,
       { method: 'POST', body }
     )
@@ -36,8 +36,8 @@ export const useAdminRoutes = () => {
     return res.data
   }
 
-  const updateRoute = async (routeId: string, body: Partial<SystemRoute> & { parentId?: string | null }) => {
-    const res = await adminFetch<{ success: boolean, data?: SystemRoute }>(
+  const updateRoute = async (routeId: string, body: Partial<RouteTreeNode> & { parentId?: string | null }) => {
+    const res = await adminFetch<{ success: boolean, data?: RouteTreeNode }>(
       `/api/v1/apps/${encodeURIComponent(list.targetAppId.value)}/routes`,
       { method: 'PUT', query: { id: routeId }, body }
     )
@@ -45,7 +45,7 @@ export const useAdminRoutes = () => {
     if (idx !== -1) {
       list.items.value[idx] = res.data
         ? res.data
-        : ({ ...list.items.value[idx], ...body } as SystemRoute)
+        : ({ ...list.items.value[idx], ...body } as RouteTreeNode)
       syncTree()
     }
     return res.data

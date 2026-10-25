@@ -1,0 +1,83 @@
+// =============================================================================
+//  WONDERWHALES — VISUALS & RENDERING (v1.1.5)
+// =============================================================================
+
+// --- VSA Volume Bar Color (Default: ON) ---
+barcolor(ww_vsaBarColor ? ww_volCol : na, title = "VSA Bar Color")
+
+// --- VSA Climax Markers (Default: ON) ---
+plotshape(series = ww_vsaShowMarkers and ww_isClimaxVol, title = "VSA Climax Spike", style = shape.xcross, location = location.abovebar, color = color.fuchsia, size = size.tiny, force_overlay = true)
+
+// --- Parabolic SAR Dots (Overlay on Price Chart) ---
+plot(ww_showPsar ? ww_psar : na, title = "Parabolic SAR", color = ww_psarColor, style = plot.style_cross, linewidth = 2, force_overlay = true)
+
+// --- Signal & OHLC Status Line Outputs (Sync dynamic green/red/purple values on hover) ---
+plot(ww_signalBuy ? 1.0 : 0.0,  title = "BUY Status",  color = color.rgb(0, 255, 0), display = display.status_line, precision = 8)
+plot(ww_signalSell ? 1.0 : 0.0, title = "SELL Status", color = color.rgb(255, 0, 0), display = display.status_line, precision = 8)
+
+// @part skip:wonderwhales
+// [v1.2.0] Parabolic SAR Trend Regime Candles (from BUY to SELL = Neon Green, from SELL to BUY = Neon Red)
+// Exclusive to Wonderwhales Overlay: hovering over Parabolic SAR dots triggers TradingView hover focus,
+// illuminating the vibrant neon candles on top of the native price candles.
+ww_candleTrendCol = ww_sarDir == 1 ? color.rgb(0, 255, 0) : color.rgb(255, 0, 0)
+plotcandle(open, high, low, close, title = "Trend Highlight Candles", color = ww_showTrendCandles ? ww_candleTrendCol : na, wickcolor = ww_showTrendCandles ? ww_candleTrendCol : na, bordercolor = ww_showTrendCandles ? ww_candleTrendCol : na, display = display.all)
+// @part end
+
+// --- Optional Fast / Slow EMA Lines (Overlay on Price Chart) ---
+plot(ww_showEma ? ww_fastEma : na, title = "Fast EMA", color = color.rgb(59, 130, 246), linewidth = 1, force_overlay = true)
+plot(ww_showEma ? ww_slowEma : na, title = "Slow EMA", color = color.rgb(249, 115, 22), linewidth = 1, force_overlay = true)
+
+// --- Secondary Indicator: 200 EMA Trend Baseline (Overlay on Price Chart) ---
+plot(ww_showEma200 ? ww_ema200 : na, title = "200 EMA Baseline", color = color.rgb(234, 179, 8), linewidth = 2, force_overlay = true)
+
+// --- Secondary Indicator: Bollinger Bands (Overlay on Price Chart) ---
+p_bbUpper = plot(ww_showBb ? ww_bbUpper : na, title = "BB Upper", color = color.new(color.teal, 30), linewidth = 1, force_overlay = true)
+plot(ww_showBb ? ww_bbMid : na,   title = "BB Basis", color = color.new(color.gray, 50), linewidth = 1, force_overlay = true)
+p_bbLower = plot(ww_showBb ? ww_bbLower : na, title = "BB Lower", color = color.new(color.teal, 30), linewidth = 1, force_overlay = true)
+fill(p_bbUpper, p_bbLower, color = ww_showBb ? color.new(color.teal, 95) : na, title = "BB Background")
+
+// @part skip:wonderwhales-overlay,wonderwhales-strategy
+// --- Volume Overlay (VSA 6 Buckets + MA with format.volume) ---
+plot(ww_showVol ? ww_vol : na,     title = "VSA Volume", color = ww_volCol,                  style = plot.style_columns, format = format.volume)
+plot(ww_showVolMa ? ww_volMa : na, title = "Volume MA",  color = color.new(color.green, 0), linewidth = 1,              format = format.volume)
+// @part end
+
+// --- BUY Signals (Triangle - Compact Minimalist) ---
+plotshape(series = ww_showLabels and ww_isStyleTriangle and ww_signalBuy and ww_isLangEn and ww_isSizeTiny,   title = "BUY Triangle (Tiny)",   style = shape.triangleup, location = location.belowbar, color = color.rgb(34, 197, 94), text = "BUY", textcolor = color.rgb(34, 197, 94), size = size.tiny,   force_overlay = true)
+plotshape(series = ww_showLabels and ww_isStyleTriangle and ww_signalBuy and ww_isLangEn and ww_isSizeSmall,  title = "BUY Triangle (Small)",  style = shape.triangleup, location = location.belowbar, color = color.rgb(34, 197, 94), text = "BUY", textcolor = color.rgb(34, 197, 94), size = size.small,  force_overlay = true)
+plotshape(series = ww_showLabels and ww_isStyleTriangle and ww_signalBuy and ww_isLangEn and ww_isSizeNormal, title = "BUY Triangle (Normal)", style = shape.triangleup, location = location.belowbar, color = color.rgb(34, 197, 94), text = "BUY", textcolor = color.rgb(34, 197, 94), size = size.normal, force_overlay = true)
+
+plotshape(series = ww_showLabels and ww_isStyleTriangle and ww_signalBuy and ww_isLangCn and ww_isSizeTiny,   title = "买 Triangle (Tiny)",   style = shape.triangleup, location = location.belowbar, color = color.rgb(34, 197, 94), text = "买",  textcolor = color.rgb(34, 197, 94), size = size.tiny,   force_overlay = true)
+plotshape(series = ww_showLabels and ww_isStyleTriangle and ww_signalBuy and ww_isLangCn and ww_isSizeSmall,  title = "买 Triangle (Small)",  style = shape.triangleup, location = location.belowbar, color = color.rgb(34, 197, 94), text = "买",  textcolor = color.rgb(34, 197, 94), size = size.small,  force_overlay = true)
+plotshape(series = ww_showLabels and ww_isStyleTriangle and ww_signalBuy and ww_isLangCn and ww_isSizeNormal, title = "买 Triangle (Normal)", style = shape.triangleup, location = location.belowbar, color = color.rgb(34, 197, 94), text = "买",  textcolor = color.rgb(34, 197, 94), size = size.normal, force_overlay = true)
+
+// --- SELL Signals (Triangle - Compact Minimalist) ---
+plotshape(series = ww_showLabels and ww_isStyleTriangle and ww_signalSell and ww_isLangEn and ww_isSizeTiny,   title = "SELL Triangle (Tiny)",   style = shape.triangledown, location = location.abovebar, color = color.rgb(239, 68, 68), text = "SELL", textcolor = color.rgb(239, 68, 68), size = size.tiny,   force_overlay = true)
+plotshape(series = ww_showLabels and ww_isStyleTriangle and ww_signalSell and ww_isLangEn and ww_isSizeSmall,  title = "SELL Triangle (Small)",  style = shape.triangledown, location = location.abovebar, color = color.rgb(239, 68, 68), text = "SELL", textcolor = color.rgb(239, 68, 68), size = size.small,  force_overlay = true)
+plotshape(series = ww_showLabels and ww_isStyleTriangle and ww_signalSell and ww_isLangEn and ww_isSizeNormal, title = "SELL Triangle (Normal)", style = shape.triangledown, location = location.abovebar, color = color.rgb(239, 68, 68), text = "SELL", textcolor = color.rgb(239, 68, 68), size = size.normal, force_overlay = true)
+
+plotshape(series = ww_showLabels and ww_isStyleTriangle and ww_signalSell and ww_isLangCn and ww_isSizeTiny,   title = "卖 Triangle (Tiny)",   style = shape.triangledown, location = location.abovebar, color = color.rgb(239, 68, 68), text = "卖",   textcolor = color.rgb(239, 68, 68), size = size.tiny,   force_overlay = true)
+plotshape(series = ww_showLabels and ww_isStyleTriangle and ww_signalSell and ww_isLangCn and ww_isSizeSmall,  title = "卖 Triangle (Small)",  style = shape.triangledown, location = location.abovebar, color = color.rgb(239, 68, 68), text = "卖",   textcolor = color.rgb(239, 68, 68), size = size.small,  force_overlay = true)
+plotshape(series = ww_showLabels and ww_isStyleTriangle and ww_signalSell and ww_isLangCn and ww_isSizeNormal, title = "卖 Triangle (Normal)", style = shape.triangledown, location = location.abovebar, color = color.rgb(239, 68, 68), text = "卖",   textcolor = color.rgb(239, 68, 68), size = size.normal, force_overlay = true)
+
+// --- BUY Labels (Compact Label Box) ---
+plotshape(series = ww_showLabels and ww_isStyleLabel and ww_signalBuy and ww_isLangEn and ww_isSizeTiny,   title = "BUY Label (Tiny)",   style = shape.labelup, location = location.belowbar, color = color.rgb(34, 197, 94), text = "BUY", textcolor = color.white, size = size.tiny,   force_overlay = true)
+plotshape(series = ww_showLabels and ww_isStyleLabel and ww_signalBuy and ww_isLangEn and ww_isSizeSmall,  title = "BUY Label (Small)",  style = shape.labelup, location = location.belowbar, color = color.rgb(34, 197, 94), text = "BUY", textcolor = color.white, size = size.small,  force_overlay = true)
+plotshape(series = ww_showLabels and ww_isStyleLabel and ww_signalBuy and ww_isLangEn and ww_isSizeNormal, title = "BUY Label (Normal)", style = shape.labelup, location = location.belowbar, color = color.rgb(34, 197, 94), text = "BUY", textcolor = color.white, size = size.normal, force_overlay = true)
+
+plotshape(series = ww_showLabels and ww_isStyleLabel and ww_signalBuy and ww_isLangCn and ww_isSizeTiny,   title = "买 Label (Tiny)",   style = shape.labelup, location = location.belowbar, color = color.rgb(34, 197, 94), text = "买",  textcolor = color.white, size = size.tiny,   force_overlay = true)
+plotshape(series = ww_showLabels and ww_isStyleLabel and ww_signalBuy and ww_isLangCn and ww_isSizeSmall,  title = "买 Label (Small)",  style = shape.labelup, location = location.belowbar, color = color.rgb(34, 197, 94), text = "买",  textcolor = color.white, size = size.small,  force_overlay = true)
+plotshape(series = ww_showLabels and ww_isStyleLabel and ww_signalBuy and ww_isLangCn and ww_isSizeNormal, title = "买 Label (Normal)", style = shape.labelup, location = location.belowbar, color = color.rgb(34, 197, 94), text = "买",  textcolor = color.white, size = size.normal, force_overlay = true)
+
+// --- SELL Labels (Compact Label Box) ---
+plotshape(series = ww_showLabels and ww_isStyleLabel and ww_signalSell and ww_isLangEn and ww_isSizeTiny,   title = "SELL Label (Tiny)",   style = shape.labeldown, location = location.abovebar, color = color.rgb(239, 68, 68), text = "SELL", textcolor = color.white, size = size.tiny,   force_overlay = true)
+plotshape(series = ww_showLabels and ww_isStyleLabel and ww_signalSell and ww_isLangEn and ww_isSizeSmall,  title = "SELL Label (Small)",  style = shape.labeldown, location = location.abovebar, color = color.rgb(239, 68, 68), text = "SELL", textcolor = color.white, size = size.small,  force_overlay = true)
+plotshape(series = ww_showLabels and ww_isStyleLabel and ww_signalSell and ww_isLangEn and ww_isSizeNormal, title = "SELL Label (Normal)", style = shape.labeldown, location = location.abovebar, color = color.rgb(239, 68, 68), text = "SELL", textcolor = color.white, size = size.normal, force_overlay = true)
+
+plotshape(series = ww_showLabels and ww_isStyleLabel and ww_signalSell and ww_isLangCn and ww_isSizeTiny,   title = "卖 Label (Tiny)",   style = shape.labeldown, location = location.abovebar, color = color.rgb(239, 68, 68), text = "卖",   textcolor = color.white, size = size.tiny,   force_overlay = true)
+plotshape(series = ww_showLabels and ww_isStyleLabel and ww_signalSell and ww_isLangCn and ww_isSizeSmall,  title = "卖 Label (Small)",  style = shape.labeldown, location = location.abovebar, color = color.rgb(239, 68, 68), text = "卖",   textcolor = color.white, size = size.small,  force_overlay = true)
+plotshape(series = ww_showLabels and ww_isStyleLabel and ww_signalSell and ww_isLangCn and ww_isSizeNormal, title = "卖 Label (Normal)", style = shape.labeldown, location = location.abovebar, color = color.rgb(239, 68, 68), text = "卖",   textcolor = color.white, size = size.normal, force_overlay = true)
+
+// --- Blocked Signals (Debug) ---
+plotshape(series = ww_showDebug and ww_signalBlockedBuy,  title = "Blocked BUY (Debug)",  style = shape.diamond, location = location.belowbar, color = color.gray, size = size.tiny, force_overlay = true)
+plotshape(series = ww_showDebug and ww_signalBlockedSell, title = "Blocked SELL (Debug)", style = shape.diamond, location = location.abovebar, color = color.gray, size = size.tiny, force_overlay = true)

@@ -1,0 +1,53 @@
+// =============================================================================
+//  WONDERWHALES — CALCULATIONS (PSAR, VSA, EMAs, ATR, RSI, BB) (v1.1.4)
+// =============================================================================
+
+// --- Parabolic SAR ---
+ww_psar = ta.sar(ww_psarStart, ww_psarInc, psarMaxSafe)
+
+// Direction tracking: 1 = Bullish (SAR below price), -1 = Bearish (SAR above price)
+var int ww_sarDir = 0
+if not na(ww_psar)
+    ww_sarDir := ww_psar < close ? 1 : -1
+
+ww_sarBull = ww_sarDir == 1
+ww_sarBear = ww_sarDir == -1
+
+// Flip triggers: fire strictly on the transition bar
+ww_buyFlip  = ww_sarBull and ww_sarDir[1] == -1
+ww_sellFlip = ww_sarBear and ww_sarDir[1] == 1
+
+// --- Volume Spread Analysis (VSA) Engine ---
+ww_vol          = nz(volume)
+ww_volMa        = ta.sma(ww_vol, volMaLenSafe)
+ww_volCol       = f_vsaColor(ww_vol, ww_volMa, ww_volSpikeR, ww_volVeryHighR, ww_volHighR, ww_volNormalR, ww_volLowR)
+ww_volBucket    = f_vsaName(ww_vol, ww_volMa, ww_volSpikeR, ww_volVeryHighR, ww_volHighR, ww_volNormalR, ww_volLowR)
+ww_volRatio     = not na(ww_volMa) and ww_volMa > 0.0 ? ww_vol / ww_volMa : 0.0
+ww_isClimaxVol  = not na(ww_volMa) and ww_volMa > 0.0 and ww_vol >= ww_volMa * ww_volSpikeR
+ww_isHighVol    = not na(ww_volMa) and ww_volMa > 0.0 and ww_vol >= ww_volMa * ww_volHighR
+
+// --- Exponential Moving Averages ---
+ww_fastEma      = ta.ema(close, fastEmaSafe)
+ww_slowEma      = ta.ema(close, slowEmaSafe)
+ww_emaBull      = ww_fastEma > ww_slowEma
+ww_emaBear      = ww_fastEma < ww_slowEma
+ww_emaBuyCross  = ta.crossover(ww_fastEma, ww_slowEma)
+ww_emaSellCross = ta.crossunder(ww_fastEma, ww_slowEma)
+
+// 200 EMA Baseline
+ww_ema200       = ta.ema(close, ema200Safe)
+ww_aboveEma200  = close > ww_ema200
+
+// --- Average True Range & Percentage Volatility ---
+ww_atr          = ta.atr(atrLenSafe)
+ww_atrPct       = close > 0 and not na(ww_atr) ? (ww_atr / close) * 100.0 : 0.0
+ww_volatilityOk = ww_atrPct >= ww_minAtrPct
+
+// --- Relative Strength Index (RSI) ---
+ww_rsi           = ta.rsi(close, rsiLenSafe)
+ww_rsiOverbought = ww_rsi >= 70
+ww_rsiOversold   = ww_rsi <= 30
+ww_rsiBullish    = ww_rsi > 50
+
+// --- Bollinger Bands ---
+[ww_bbMid, ww_bbUpper, ww_bbLower] = ta.bb(close, bbLenSafe, ww_bbMult)

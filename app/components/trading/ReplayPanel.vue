@@ -9,15 +9,15 @@
 //  what the method would have fired at every replayed bar. Polling + session
 //  state live in pages/trade.vue; this component only emits intents.
 // =============================================================================
-import '../../engine/methods/all.mjs'
-import { getMethod } from '../../engine/methods/index.mjs'
-import { formatPrice, type CandleInput } from '../utils/marketFeed'
+import '../../../engine/methods/all.mjs'
+import { getMethod } from '../../../engine/methods/index.mjs'
+import { formatPrice, type CandleInput } from '../../utils/marketFeed'
 import type {
   ReplayCandle,
   ReplayOrder,
   ReplayPosition,
   ReplaySummary
-} from '~~/types/replay'
+} from '#shared/types/replay'
 
 const props = defineProps<{
   session: ReplaySummary | null

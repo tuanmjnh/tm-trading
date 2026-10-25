@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { AlertRule, AlertRuleDir } from '~~/types/alertRules'
+import type { AlertRule, AlertRuleDir } from '#shared/types/alertRules'
 import { getErrorMessage } from '~/shared/utils/errors'
 
 // =============================================================================
@@ -214,7 +214,7 @@ useHead({ title })
 <template>
   <BasePage id="alerts" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('alertRules.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('alertRules.pip')" />
     </template>
 
     <template #right>
@@ -243,7 +243,7 @@ useHead({ title })
 
     <template #toolbar>
       <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
-        <FilterChips v-model="statusFilter" :items="statusChips" />
+        <SharedFilterChips v-model="statusFilter" :items="statusChips" />
         <UButton
           icon="i-lucide-history"
           :label="t('alertRules.historyLink')"
@@ -261,7 +261,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
       <UAlert
         v-if="mongo === 'down'"
         color="warning"

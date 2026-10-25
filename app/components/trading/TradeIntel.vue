@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { IntelAccum, IntelFlow, IntelFunding, IntelRegime } from '~~/types/intel'
+import type { IntelAccum, IntelFlow, IntelFunding, IntelRegime } from '#shared/types/intel'
 import {
   flowTone,
   fmtSigned,
@@ -7,7 +7,7 @@ import {
   fundingTone,
   oiTrendTone,
   regimeTone
-} from '../utils/terminal'
+} from '../../utils/terminal'
 
 // =============================================================================
 //  TradeIntel — compact per-symbol intel strip for the trade terminal (roadmap

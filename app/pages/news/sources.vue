@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { NewsSourcePublic } from '~~/types/news'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
+import type { NewsSourcePublic } from '#shared/types/news'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 import type { SourceValidation } from '~/composables/useNewsDesk'
 
 // =============================================================================
@@ -93,7 +93,7 @@ useHead({ title })
 <template>
   <BasePage id="news-sources" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('newsSources.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('newsSources.pip')" />
     </template>
 
     <template #right>
@@ -123,7 +123,7 @@ useHead({ title })
          keep its CONTENT height — `h-full` + `min-h-0` pinned it to the viewport
          height and every card shrank to 0 px instead of overflowing. -->
     <div class="flex flex-col w-full pb-24 lg:pb-6 gap-3">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
 
       <UCard v-for="s in sources" :key="s.sourceId">
         <div class="flex flex-col gap-2">

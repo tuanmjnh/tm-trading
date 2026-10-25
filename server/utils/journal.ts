@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import type { JournalEntry, JournalStats } from '../../types/journal'
+import type { JournalEntry, JournalStats } from '#shared/types/journal'
 
 // =============================================================================
 //  READ JOURNAL FOR THE DASHBOARD — engine/journal.mjs only (D1: one source of

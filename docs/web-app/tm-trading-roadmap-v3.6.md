@@ -528,6 +528,28 @@ REST may be used for:
 
 WebSocket/stream is preferred for realtime market state.
 
+## D35 — AI providers are app-owned; the hub is a catalog, not a proxy
+
+Provider credentials, model choice, budgets and request audit belong to the app
+that spends the tokens. TM Hub may publish provider metadata and an optional
+enable/disable overlay, but it must not become a required credential broker or
+inference proxy for child apps.
+
+```text
+hub: provider catalog + app registration + optional kill switch
+app: connection secret (encrypted at rest) -> adapter -> provider
+```
+
+Consequences:
+
+- An app can ship and pass Phase G without a working hub connection.
+- The hub cannot revoke an app-owned secret; it can only ask the app to disable
+  the connection. Hub-owned connections (identity OAuth, shared storage, push)
+  remain hub-side and are consumed through grants, not by copying keys.
+- A fallback is allowed only within the same wire protocol and capability set;
+  cross-protocol fallback is a behavior change, not resilience.
+
+
 ---
 
 # 5. Market Data Provider Strategy
@@ -7242,7 +7264,7 @@ Acceptance: a fixture or replay bar can deterministically produce a signal whose
 - Make accounting idempotent; persist every accepted/rejected risk decision, order, fill, position and session event.
 - Remove seed-only data from operational views or add clear demo mode and fixtures.
 
-Acceptance: run an integration scenario through signal -> bot -> risk -> paper order -> fill -> position -> account metrics -> session evidence. Restart the worker mid-session and prove no duplicate order/fill occurs.
+Acceptance: run an integration scenario through signal -> bot -> risk -> paper order -> fill -> position -> account metrics -> session evidence. Restart the worker mid-session and prove no duplicate order/fill occurs. **DONE** — `engine/botSupervisor.mjs`, `services/botRuntimeStore.mjs`, `services/botWorker.mjs`, `services/botSignalBridge.mjs`, `tools/bot-worker.mjs`, commands API; evidence in `engine/test-db.mjs` sections 11–14 (138 checks, 0 fail).
 
 ### Phase F — Evidence storage and research feedback
 
@@ -7251,9 +7273,13 @@ Acceptance: run an integration scenario through signal -> bot -> risk -> paper o
 - Enable AI to analyze completed persisted sessions and create experiment drafts.
 - Add baseline-versus-candidate evaluations and strict point-in-time controls.
 
-Acceptance: one session can be reconstructed from persisted evidence and the AI analysis cites actual record IDs; experiments do not mutate the active strategy.
+Acceptance: one session can be reconstructed from persisted evidence and the AI analysis cites actual record IDs; experiments do not mutate the active strategy. **DONE** — ngine/manifest.mjs (v1 manifests on sessions/runs), ngine/evidenceGraph.mjs + GET /api/v1/sessions/[id]/evidence (journal/news/experiment links, deterministic digest, citation allowlist), POST /api/v1/sessions/[id]/analysis (advisory i_proposals draft bound to the frozen set), ngine/pointInTime.mjs (strict cut-off audit in sufficiency + graph), independentArms acceptance gate (candidate ≠ baseline); evidence in ngine/test-db.mjs §15 (156 checks, 0 fail).
 
 ### Phase G — AI provider gateway
+
+> Architecture: **D35** — connections are app-owned; TM Hub is catalog metadata
+> plus an optional enable/disable overlay, never a required key broker/proxy.
+> See `docs/web-app/adr-ai-providers-local-first.md` and `phase-g-plan.md`.
 
 - Implement provider adapter interface, secure credentials, capability registry, model catalog, health tests, profiles/budgets and request audit.
 - Connect OpenRouter, the exact configured FreeLLMAPI deployment, and OpenCode via its supported SDK/server or a verified API-compatible endpoint.

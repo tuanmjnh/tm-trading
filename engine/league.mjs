@@ -103,7 +103,7 @@ export async function league(argv = process.argv.slice(2)) {
   const market = String(a.market ?? 'fapi')
   const refresh = !!a.refresh
   const noWrite = !!a['no-write']
-  const out = String(a.out ?? join('docs', 'method-league.md'))
+  const out = String(a.out ?? join('docs', 'engine', 'method-league.md'))
   const outJson = String(a['out-json'] ?? '')
 
   const rows = []      // tung o: {method, symbol, tf, bars, row(summaryRow)}

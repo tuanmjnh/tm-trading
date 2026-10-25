@@ -8,7 +8,7 @@ This file records what was verified, what was fixed, and what remains to be done
 
 - App: tm-trading dashboard, dev server on `:4001` (`ssr: false`, SPA).
 - Hub: auth + routes + notifications served by `NUXT_PUBLIC_HUB_URL`
-  (`https://tm-hub-app.vercel.app`, app `tm-trading_8pmp33`).
+  (`https://tm-hub-app.vercel.app`, app `tm-trading_ghfseu`).
 - Session: `root@example.com`; the hub is the auth provider.
 - Mongo local; Redis **not** running (see F5).
 
@@ -18,7 +18,7 @@ This file records what was verified, what was fixed, and what remains to be done
 `useNotify()` (app/composables/useNotify.ts) was a per-caller factory: every one
 of its ~48 consumers created its own `notify` state **and** registered its own
 `onMounted(fetchNotify)` + `watch(auth.user) → refresh()`. Every page load
-therefore hit `GET /api/v1/apps/tm-trading_8pmp33/notifications` 2–3× (measured:
+therefore hit `GET /api/v1/apps/tm-trading_ghfseu/notifications` 2–3× (measured:
 111 calls / 348 network entries across a route sweep), which tripped the hub's
 rate limiter (HTTP 429) and produced browser console error storms.
 
@@ -102,7 +102,7 @@ app mounts. Verified by blocking the app JS (skeleton stays) and unblocking
 `.env` sets `NUXT_PUBLIC_HUB_URL=https://tm-hub-app.vercel.app`, but AGENTS.md
 documents `http://localhost:4000`. The locally-started hub rejects the app's
 login shape (`400 error.missingLoginFields`) and is seeded with a different appId
-(`tm-trading_wdr7mh` vs the active `tm-trading_8pmp33`), so the deployed hub is
+(`tm-trading_wdr7mh` vs the active `tm-trading_ghfseu`), so the deployed hub is
 the intentional active target.
 
 Resolved (docs only, no logic change): the `.env` comment block above
@@ -121,29 +121,34 @@ In the automated sweep `/news` and `/outlook` briefly reported the previous
 page's title. Believed to be a measurement artifact (title read before
 navigation settled); re-check interactively before acting.
 
-### F9 — No mid-session access-token refresh → 401 storms (medium/high)
+### F9 — No mid-session access-token refresh → 401 storms (medium/high — FIXED)
 The access token is a cookie with `maxAge = expiresIn` (short TTL; observed
-expiry ≈ 7–15 min into a session) plus in-memory `useState`. `refresh()` is
-called **only** from `fetchUser()`, which runs at boot — there is no periodic
-refresh timer and no 401 interceptor/retry. So when the cookie expires
-mid-session:
-- the local `/api/v1/*` proxy (which reads the `accessToken` cookie) starts
-  returning `401 error.tokenMissing` for **every** call — reads *and* writes;
-- no `POST /auth/refresh` is attempted;
-- mutations fail with no recovery UI (the trade ticket's `Send order` simply
-  did not POST, and the retry 401'd).
+expiry ≈ 7–15 min into a session) plus in-memory `useState`. `refresh()` ran
+**only** from `fetchUser()` at boot, so when the cookie expired mid-session the
+local `/api/v1/*` proxy returned `401 error.tokenMissing` for **every** call
+(reads *and* writes) and mutations failed with no recovery UI (the trade ticket's
+`Send order` simply did not POST; the retry 401'd).
 
-Observed live: at ~7 min a burst `GET /orders|/fills|/positions` → 401, then
-`POST /api/v1/orders` → 401; a manual page reload fired
-`POST /auth/refresh → 200` and restored the session (refreshToken cookie still
-valid), confirming the gap is the missing mid-session refresh, not the hub.
+Two independent fixes (both landed — see U5):
+1. **Proactive refresh timer** (`app/composables/useAuth.ts`,
+   `scheduleProactiveRefresh`): a single shared timer refreshes the token
+   shortly before `expiresIn` (lead = 15% of TTL clamped to [30s, 120s]), armed
+   on login, register, refresh and returning-user boot (from the JWT `exp`).
+   A 429 window re-arms the timer instead of dropping the session.
+2. **Server-side 401 self-heal** (`server/middleware/auth.ts` +
+   `server/utils/tokenRefresh.ts`): when the access token is missing/expired but
+   the `refreshToken` cookie is present, the guard does one **single-flight** hub
+   refresh and writes the fresh cookies back, then continues. This covers all
+   ~86 `$fetch('/api/v1/...')` call sites at once — a client `$fetch` interceptor
+   cannot, because Nuxt snapshots `globalThis.$fetch` into auto-imports before
+   plugins run (see the note in `app/plugins/auth.client.ts`).
 
-Fix options (needs a decision — touches auth plumbing): a 401 interceptor on the
-local `$fetch` that calls `refresh()` once and retries, and/or a timer that
-refreshes shortly before `expiresIn`. See U5.
+The client `refresh()`/`logout()` now read the refresh token **cookie-first** so
+a server-side rotation never desyncs the in-memory copy. Covered by
+`tests/tokenRefresh.test.ts` (success/4xx/429/malformed/network + single-flight).
 
 ### F10 — Trade ticket: empty TP slots blocked submit + misleading error (FIXED)
-`app/components/TradeTicket.vue` defaults to **two** TP slots
+`app/components/trading/TradeTicket.vue` defaults to **two** TP slots
 (`tps = ref(['', ''])`, line 39). `submit()` sent `tps: tps.value.map(Number)`,
 so an untouched slot became `0`. Both the client mirror (`clientError()`) and the
 server (`server/utils/orders.ts:74-78`, `tp must be > 0`) reject a `0`, so the
@@ -275,11 +280,14 @@ Pending a browser pass: `/shared-resources/{index,connections,import,queues}`,
 
 ## Remaining test plan
 
-1. **Mobile viewport** — responsive nav (`ActionsSheet`), `GridList`
-   `#mobile-content` cards, tables, forms, slideovers at ≤ 480 px and ~ 768 px.
-2. **Processing actions** — news desk (source enable/disable via
-   `PATCH /news/sources/:id`, retry ingestion), trading (paper order, position,
-   signal), strategy/test-center run create, CRUD modals, delete flows.
+1. **Mobile viewport** — DONE (round 6): responsive nav dialog, mobile
+   `#mobile-content` card grids, forms and slideovers at 390 px and ~ 768 px, with
+   `scrollWidth === clientWidth` everywhere (no horizontal overflow).
+2. **Processing actions** — DONE: news source enable/disable
+   (`PATCH /news/sources/:id`, verified desktop + 768 px) and the paper order
+   end-to-end (see “Processing actions exercised”). Trading position/signal and a
+   strategy/test-center run create are the only ones not exercised (no rows in this
+   dev DB for a live run).
 3. **Detail routes** — DONE for strategy, bots, bot instance, indicators (real
    data). Runs/experiments/evidence/sessions have no rows in this dev DB, so only
    the unknown-id (graceful) path was exercised (F11).
@@ -383,17 +391,17 @@ Three requested upgrades were implemented and verified live on `/trading`
   Only `binance`, `okx`, `kucoin` and `coinbase` have a brand mark in
   `@iconify-json/simple-icons`; every other venue degrades to its short text
   label instead of a fake icon.
-- `app/components/VenueChip.vue` — reusable chip (brand mark when available,
+- `app/components/trading/VenueChip.vue` — reusable chip (brand mark when available,
   otherwise the short label, `+N` for the extra venues, `title` lists them all,
   `data-testid="venue-chip"` + `data-venue`). `dense` mode (watchlist) keeps only
   the mark and drops the label and `+N`, so a narrow rail is not eaten by it.
-- `app/components/SymbolSearchModal.vue` — `SymbolRow` gained `source` and
+- `app/components/trading/SymbolSearchModal.vue` — `SymbolRow` gained `source` and
   `venues`; both the universe and the catalog-match branch render the chip.
 - `app/pages/trading/index.vue` — `pickerAllRows` forwards `source`/`venues`, and
   `PICKER_MAX_ROWS` was raised to `12_000` (the previous `slice(0, 2000)` would
   have silently hidden symbols now that the universe grew). `watchVenues`
   computes symbol → venues and is passed to the watchlist as `venue-index`.
-- `app/components/Watchlist.vue` — renders the dense chip next to the spread.
+- `app/components/trading/Watchlist.vue` — renders the dense chip next to the spread.
 
 Verified live: picker rows read `MXBTC MX/BTC MEXC`, `MXUSDT MX/USDT BITGET +1`,
 `BEAMXUSDC BEAMX/USDC ▣ BINANCE +1`; watchlist rows carry the Binance mark with
@@ -515,6 +523,123 @@ With the watchlist on and the right rail off, `chartCol` was `lg:col-span-10` �
 Changed to `lg:col-span-9`. Column rule: watchlist 3; chart 6 (both rails) / 9
 (watchlist or right rail only) / 12 (no rails); spans **must** sum to 12.
 
+## AI Providers settings — round 5 (FIXED)
+
+Live pass over `/admin-system/ai-providers` (desktop + 390 px mobile) against the
+deployed hub. Verified working: provider catalog (18 providers) + env fallback,
+add / edit / two-step delete, enable-disable toggle, health test, model discovery,
+import preview, export JSON, and the Phase H read-only assistant (with no enabled
+connection it falls back to env `google_ai` and answers; with an enabled but
+unreachable connection it fails closed to `502 ai_failed`).
+
+### F17 — `ai_failed` (and bare error codes) leaked the raw key/English (i18n, FIXED)
+The server sends `statusMessage` codes without the `error.` prefix
+(`ai_failed`, `ai_unconfigured`, `ai_unavailable`, `conflict`, …), while the
+locales only defined camelCase keys (`error.aiFailed`, `error.aiNotConfigured`).
+`getErrorMessage` looked up the bare code, missed, and fell through to the raw
+message — so the assistant showed the English `fetch failed` text and vue-i18n
+logged `[intlify] Not found 'ai_failed' key`.
+
+Fix:
+- `i18n/locales/{en,vi}.json` — added `error.ai_failed`, `error.ai_unconfigured`,
+  `error.ai_unavailable`.
+- `app/shared/utils/errors.ts` (`getErrorMessage` step 2) — a **dotted** code is
+  used as-is (`error.invalidCredentials`); a **bare** code is looked up under the
+  `error.` namespace in one shot. The single lookup avoids probing the missing
+  bare key (no more intlify warning) and still localizes the message.
+
+Verified live: the assistant failure panel now renders `Yêu cầu AI thất bại`
+(`error.ai_failed`) and the second failed request emitted no `[intlify]` warning.
+
+### F18 — switching the provider while editing kept the old base URL and allowed saving without a key (FIXED)
+`openEdit` set `editingId`, and `canSave` trusted `editingId` alone, so changing
+the provider on an existing connection preserved the previous `baseUrl`/`model`
+(e.g. Ollama → OpenAI kept `http://127.0.0.1:11434/v1`) and left **Save** enabled
+with no API key.
+
+Fix (`app/pages/admin-system/ai-providers.vue`):
+- Remember `originalProvider` on open and a `providerChanged` computed.
+- The provider `watch` now always resets `baseUrl` to the new provider default and
+  clears `model`/`modelOptions` when the provider changes (guarded by a
+  `suppressProviderWatch` flag during `openCreate`/`openEdit`).
+- `canSave` requires a key when `providerChanged` (the stored key no longer
+  applies); the “leave blank to keep the saved key” hint is hidden in that case.
+
+Verified live: editing the Ollama row and switching to OpenAI reset the base URL
+to `https://api.openai.com/v1`, cleared the model, revealed the key field, and
+disabled **Save** until a key is entered.
+
+### F19 — health-test / discovery failures showed a raw provider string (i18n, FIXED)
+The `/test` and `/discover` responses carried only a raw `error` string
+(`fetch failed`, `HTTP 500`), so the failure toast and the row's detail line were
+not localized. The store already classified the failure internally (`ai.network`,
+`ai.invalid-key`, `ai.rate-limited`, `ai.provider-unavailable`, `ai.timeout`,
+`ai.no-key`, `ai.http-error`) but never exposed it.
+
+Fix:
+- Persist `lastErrorCode` on the connection (`engine/models/aiProviderConnection.mjs`,
+  set in `ai/providerStore.mjs` `finish()` and exposed via `redactConnection`).
+- `AiProviders.vue` maps the code to `settings.aiProviders.err*` keys (en+vi) with
+  the raw string only as a last-resort fallback.
+
+Verified live: an unreachable Ollama endpoint now shows
+`Không kết nối được tới nhà cung cấp (lỗi mạng)` instead of `fetch failed`.
+
+### F20 — toggling enable/disable wiped the last health result (FIXED)
+`setEnabled` reset `status` to `untested` and cleared `lastError`, so a failed
+connection that was disabled and re-enabled silently became “Not tested”,
+contradicting the component's stated rule that a failure stays visible until the
+next test.
+
+Fix (`ai/providerStore.mjs`): `setEnabled` only writes `enabled`, preserving
+`status`/`lastError`/`lastErrorCode`; the UI renders the disabled state from the
+`enabled` flag.
+
+Verified live: test → fail (`Lỗi`) → toggle off → toggle on still shows `Lỗi`.
+
+### F21 — provider/model pickers had no search (UX, FIXED)
+`USelect` has no filter, so picking among 18 providers (or ~200 discovered
+models) meant scrolling. Switched both to `USelectMenu` with `searchInput`
+(`AiProviders.vue`), `value-key="value"`/`label-key="label"`.
+
+Verified live: typing `oll` in the provider picker filters to `Ollama (local)`
+only.
+
+### F22 — import preview reported duplicates as importable (FIXED)
+The preview counted every parsed row as “valid”, even rows that a non-overwrite
+import would skip, so the Import button stayed enabled for an all-duplicate file.
+
+Fix:
+- `ai/providerStore.mjs` `existingConnectionKeys({ ownerId, rows })` + server
+  wrapper `findExistingAiConnections`; `import.post.ts` preview now returns
+  `duplicates`, `willImport` and a per-row `duplicate` flag.
+- `AiProviders.vue` shows a duplicate badge + “N rows already exist …” note and
+  gates Import on `importableCount` (recomputed when the overwrite toggle flips).
+
+Verified live: re-importing the just-exported file showed `Đã tồn tại` on the row,
+the skip note, and Import **disabled**; enabling overwrite re-enabled it.
+
+## Responsive / mobile pass (round 6) — PASS
+
+Real browser, dev server `:4001`, against the deployed hub. No fixes needed.
+
+- **Responsive nav** — at 390 px “Mở thanh bên” opens the full navigation as a
+  dialog (`/alerts`); Escape closes it.
+- **ActionsSheet** — the bottom “Hành động” bar opens the sheet with
+  Menu / Quét mã / Hồ sơ của tôi / Quy tắc mới / Làm mới.
+- **Mobile card grid** — `/news/sources` renders its 13 sources as cards (not a
+  table) at 768 px, each with its own switch.
+- **Form dialog** — the create-alert-rule dialog at 390 px is 358 px wide inside a
+  390 px viewport and does not overflow.
+- **Slideover** — the AI-providers assistant slideover is full-width (390 px) at
+  390 px with no internal overflow.
+- **Processing action** — toggled `vnexpress` off/on at 768 px:
+  `PATCH /api/v1/news/sources/vnexpress → 200` both times, the “Đang bật” stat went
+  13 → 12 → 13 and the row’s switch followed. Reverted.
+- **Console** — zero errors, zero warnings across the pass.
+- **Overflow** — `document.documentElement.scrollWidth === clientWidth` at 390 px
+  and 768 px on every page touched.
+
 ## Upgrade proposals
 
 - **U1** — Client-side request budget: coalesce/throttle hub calls and honor
@@ -536,7 +661,9 @@ Changed to `lg:col-span-9`. Column rule: watchlist 3; chart 6 (both rails) / 9
   unchanged (see F4).
 - **U5** — Auth resilience: add a single-flight 401 → `refresh()` → retry
   interceptor for local `/api/v1` calls and/or a pre-expiry refresh timer
-  (fixes F9).
+  (fixes F9). **Done** — both: the `useAuth` proactive refresh timer and a
+  single-flight server-side self-heal in `server/middleware/auth.ts` /
+  `server/utils/tokenRefresh.ts` (tests: `tests/tokenRefresh.test.ts`). See F9.
 - **U6** — Ticket ergonomics: ignore empty trailing TP slots and surface a
   specific "fill or remove the empty TP" error — **done in F10** (empty slots are
   now dropped; `trade.ticketNoTp` covers the no-TP case).

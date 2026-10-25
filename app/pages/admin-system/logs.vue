@@ -185,7 +185,7 @@ useHead({ title })
 <template>
   <BasePage id="logs" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" />
+      <BasePageEyebrow :trail="trail" />
     </template>
     <template #right>
       <div class="flex items-center gap-2">

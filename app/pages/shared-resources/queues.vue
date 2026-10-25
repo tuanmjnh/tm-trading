@@ -2,7 +2,7 @@
 import { formatTimeAgo } from '@vueuse/core'
 import { getErrorMessage } from '~/shared/utils/errors'
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 import type { HeaderAction } from '~/components/base/HeaderActions.vue'
 
 const { t } = useI18n()
@@ -242,7 +242,7 @@ useHead({ title })
 <template>
   <BasePage id="queues" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" />
+      <BasePageEyebrow :trail="trail" />
     </template>
 
     <template #right>
@@ -288,7 +288,7 @@ useHead({ title })
       />
 
       <template v-if="enabled">
-        <MetricRibbon :items="statCards" cols="grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" />
+        <SharedMetricRibbon :items="statCards" cols="grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" />
 
         <div class="rounded bg-default ring ring-default overflow-x-auto">
           <table class="w-full text-sm">
@@ -362,7 +362,7 @@ useHead({ title })
       </template>
     </div>
 
-    <BaseConfirmModal
+    <LazyBaseConfirmModal
       v-model:open="isCancelOpen"
       :title="t('queues.cancelTitle')"
       :description="t('queues.cancelDesc', [cancellingJob?.summary || cancellingJob?.id || ''])"
@@ -373,7 +373,7 @@ useHead({ title })
       @confirm="confirmCancel"
     />
 
-    <BaseConfirmModal
+    <LazyBaseConfirmModal
       v-model:open="isCleanOpen"
       :title="t('queues.cleanTitle')"
       :description="t('queues.cleanDesc')"
@@ -382,6 +382,7 @@ useHead({ title })
       color="warning"
       icon="i-lucide-eraser"
       @confirm="confirmClean"
+    />
     />
   </BasePage>
 </template>

@@ -141,7 +141,7 @@ useHead({ title })
 <template>
   <BasePage id="notifications" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('notifications.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('notifications.pip')" />
     </template>
 
     <template #right>
@@ -170,7 +170,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
-      <MetricRibbon :items="metrics" cols="grid-cols-1 sm:grid-cols-3" />
+      <SharedMetricRibbon :items="metrics" cols="grid-cols-1 sm:grid-cols-3" />
       <UAlert v-if="!auth.user.value" color="info" variant="subtle" icon="i-lucide-info"
         :title="t('notifications.signInTitle')" :description="t('notifications.signInDesc')" />
 
@@ -233,7 +233,7 @@ useHead({ title })
 
     <NotificationsSendSlideover v-if="isRoot" v-model:open="isSendOpen" />
 
-    <BaseConfirmModal v-model:open="isDeleteOpen" :title="t('confirm.delete_title')"
+    <LazyBaseConfirmModal v-model:open="isDeleteOpen" :title="t('confirm.delete_title')"
       :description="t('confirm.delete_desc')" :confirm-label="t('common.delete')" :cancel-label="t('common.cancel')"
       color="error" icon="i-lucide-trash-2" @confirm="handleDelete" />
   </BasePage>

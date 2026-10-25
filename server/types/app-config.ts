@@ -1,4 +1,6 @@
 import { z } from 'zod'
+// Single source for the mail envelope address (also exported from ./mail).
+import type { EmailAddress } from './mail'
 
 export interface DeviceLimitConfig {
   enabled: boolean
@@ -45,11 +47,6 @@ export interface OAuthConfig {
   autoCreateUser: boolean
   allowedDomains: string[]
   requireEmailVerified: boolean
-}
-
-export interface EmailAddress {
-  email: string
-  name?: string
 }
 
 export interface SmtpConfig {

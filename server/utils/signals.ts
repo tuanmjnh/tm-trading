@@ -1,5 +1,5 @@
 import { Types } from 'mongoose'
-import type { SignalItem } from '../../types/signals'
+import type { SignalItem } from '#shared/types/signals'
 import { engineModel } from './engineModel'
 
 // =============================================================================
@@ -102,5 +102,21 @@ export async function listSignals(q: ListSignalsQuery): Promise<ListSignalsResul
   } catch {
     // Mat ket noi giua chung -> fail-soft giong webhook: khong 500, bao ro down.
     return { items: [], total: 0, mongo: 'down' }
+  }
+}
+
+/**
+ * One alert by id, scoped to its owner. Returns null on a foreign/unknown id so
+ * callers can answer 404 without revealing whether someone else's row exists.
+ */
+export async function getSignal(ownerId: string, id: string): Promise<SignalItem | null> {
+  if (!ownerId || !Types.ObjectId.isValid(id)) return null
+  const Alert = await engineModel('alert.mjs', 'Alert')
+  if (!Alert) return null
+  try {
+    const doc = await Alert.findOne({ _id: new Types.ObjectId(id), ownerId }).lean()
+    return doc ? toItem(doc) : null
+  } catch {
+    return null
   }
 }

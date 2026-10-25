@@ -10,12 +10,23 @@
 //   changes: Array<{ parameter: string, from: unknown, to: unknown }>,
 //   evidence: Array<{ metric: string, value: number, sampleSize: number }>,
 //   risks: string[],
-//   recommendedTest: { symbols?: string[], timeframes?: string[] }
+//   recommendedTest: { symbols?: string[], timeframes?: string[] },
+//   citations?: Array<{ kind: string, id: string }>   // Phase F: record ids read
 // }
 //
 // PURE, fail-soft (returns `{ok:false, errors}` for invalid proposals, never throws).
 
 export const PROPOSAL_SCHEMA_VERSION = 'proposal.v1'
+
+/**
+ * Record kinds an analysis may cite. `kind` is descriptive; the ID is what is
+ * checked against the evidence graph, so an unknown kind is kept (and labelled)
+ * rather than silently dropped.
+ */
+export const PROPOSAL_CITATION_KINDS = Object.freeze([
+  'evidence-set', 'session', 'order', 'fill', 'position', 'trade',
+  'journal', 'news', 'experiment', 'dataset', 'related-set', 'record',
+])
 
 const str = (v) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
 
@@ -65,6 +76,21 @@ export function validateProposal(input) {
 
   const risks = Array.isArray(input.risks) ? input.risks.map(str).filter(Boolean) : []
 
+  // Phase F: citations are OPTIONAL for hand-written proposals (the existing
+  // workflow never supplied them) but an AI draft must carry them — the caller
+  // enforces that. A citation without an id is not a citation and is dropped.
+  const citations = []
+  if (Array.isArray(input.citations)) {
+    for (let i = 0; i < input.citations.length; i++) {
+      const c = input.citations[i]
+      if (!c || typeof c !== 'object') { errors.push(`citations[${i}] must be an object`); continue }
+      const id = str(c.id)
+      if (!id) { errors.push(`citations[${i}].id is required`); continue }
+      const kind = str(c.kind) ?? 'record'
+      citations.push({ kind, id })
+    }
+  }
+
   const rec = input.recommendedTest && typeof input.recommendedTest === 'object' ? input.recommendedTest : {}
   const recommendedTest = {
     symbols: Array.isArray(rec.symbols) ? rec.symbols.map(str).filter(Boolean) : [],
@@ -83,6 +109,9 @@ export function validateProposal(input) {
       evidence,
       risks,
       recommendedTest,
+      // Phase F: the frozen set the draft was derived from (null = not linked).
+      evidenceSetId: str(input.evidenceSetId) ?? null,
+      citations,
       schemaVersion: PROPOSAL_SCHEMA_VERSION,
     },
   }

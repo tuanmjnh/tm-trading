@@ -22,6 +22,10 @@ const AiProposalSchema = new mongoose.Schema(
     evidence: { type: mongoose.Schema.Types.Mixed, default: [] },
     risks: { type: [String], default: [] },
     recommendedTest: { type: mongoose.Schema.Types.Mixed, default: {} },
+    // Phase F: which frozen evidence set the draft was derived from, and the
+    // record ids it cites. Optional for legacy hand-written proposals.
+    evidenceSetId: { type: String, default: null, index: true },
+    citations: { type: mongoose.Schema.Types.Mixed, default: [] },
 
     generation: { type: mongoose.Schema.Types.Mixed, default: null }, // { model, at, digestHash } when known
     status: { type: String, enum: AI_PROPOSAL_STATUSES, default: 'new', index: true },

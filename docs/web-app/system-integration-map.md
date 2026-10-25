@@ -25,7 +25,6 @@
 
 | Plugin | Role |
 |---|---|
-| `server/plugins/system-app.ts` | system app bootstrap |
 | `server/plugins/process-guard.ts` | process lifecycle guard |
 | `server/plugins/news-registry.ts` | seeds the default news source registry from `engine/newsIngest.mjs` `PILOT_SOURCES` |
 | `server/plugins/evidence-backfill.ts` | evidence backfill on boot |
@@ -42,7 +41,7 @@ or `nuxt.mjs dev --port 4001`, then start exactly one and confirm `0` "Restartin
   `event.context.auth = { sub, appId, email, name, roles[], permissions[] }`.
   Hub is the only identity source (§61.3). Login is performed client-side by
   `useAuth`/`useHub` against TM Hub `POST /api/v1/auth/login` with
-  `X-App-Id: tm-trading_8pmp33`.
+  `X-App-Id: tm-trading_ghfseu`.
 - **Tenancy helper:** `server/utils/owner.ts` — `ownerIdOrNull(event)`,
   `requireOwnerId(event)` (throws `401 error.unauthorized` on missing identity —
   fails closed), `ownerFilter(event)`. `requireOwnerId` is auto-imported inside
@@ -102,6 +101,9 @@ accept `ownerId` yet — Phase B gap.
 | `GET /api/v1/bots/instances`, `[id]` | `engineModel.botInstanceModel` | `bot_instances` | [U] ⚠ seed-only/fake `running` |
 | `GET/POST /api/v1/ai-agents`, `[id]/*` (start/pause/resume/...) | `aiAgents.*` | `ai_agents`, `ai_agent_versions`, `ai_agent_actions` | [U] ⚠ |
 | `GET /api/v1/ai/agents` | `aiAgents.aiAgentsStatus` | `ai_agents` | [U] ⚠ |
+| `GET /api/v1/ai/providers` | `aiProviders.*` | `ai_provider_connections` | [U] Phase G; redacted only |
+| `POST /api/v1/ai/providers/connections`, `PATCH/DELETE /connections/[id]` | `aiProviders.*` | `ai_provider_connections`, `ai_provider_audit` | [U] Phase G; secret is write-only |
+| `POST /api/v1/ai/providers/connections/[id]/test` | `aiProviders.*`, `ai/providerStore.mjs` | `ai_provider_connections`, `ai_provider_audit` | [U] Phase G; persists health |
 
 ⚠ `strategy_profiles`, `strategy_versions`, `bot_profiles`, `bot_instances`,
 `ai_agents` have **no `ownerId` field** today (Phase B gap).
@@ -112,6 +114,8 @@ accept `ownerId` yet — Phase B gap.
 |---|---|---|---|
 | `GET/POST /api/v1/research/experiments`, `[id]`, `[id]/run|move|decide` | `research.*` | `experiments`, `experiment_runs` | [U] ⚠ |
 | `GET/POST /api/v1/research/evidence-sets`, `[id]`, `[id]/export` | `evidenceSets.*`, `evidenceExport.*` | `research_evidence_sets` | [U] ⚠ |
+| `GET /api/v1/sessions/[id]/evidence` | `evidenceGraph.*`, `evidenceSets.*` | `trading_sessions`, `research_evidence_sets`, `journal`, `news_evidence_sets`, `experiments` | [U] ⚠ Phase F reconstruction + strict PIT |
+| `POST /api/v1/sessions/[id]/analysis` | `sessionAnalysis.*`, `evidenceGraph.*` | `ai_proposals` (draft only) | [U] ⚠ Phase F advisory; never writes a strategy |
 | `GET/POST /api/v1/research/news-evaluations`, `news-evidence/*` | `newsEvidence.*` | `news_model_evaluations`, `news_evidence_sets` | [U] ⚠ |
 | `GET /api/v1/research/proposals`, `trades`, `strategies/[id]` | `research.*` | `ai_proposals`, `trades` | [U] ⚠ |
 | `GET/POST /api/v1/runs`, `[id]`, `[id]/lineage` | `reports.*`, `testRuns.*`, `lineage.*` | `runs` (ndjson + collection) | [U] ⚠ products of `engine/store.mjs` |
@@ -188,11 +192,12 @@ intel 60 s; standalone pages fetch once on mount. `useVisibleInterval.ts` exists
 | Market data → canonical event/candle | **partial** | `market/index.mjs`, `market/candleBuilder.mjs` publish to in-process bus; not persisted per user |
 | Candle → indicator/method evaluation | **partial** | `engine/methods/*`, `indicators` registry exist; no service drives the whole stream |
 | Indicator → persisted signal (attributed) | **partial** | `engine/signalEngine.mjs` generates attributed signals from bars through the method contract; `services/signalStore.mjs` persists them idempotently on (ownerId, signalKey); the dashboard reads them via `server/utils/nativeSignals.ts` + `app/components/trading/EngineSignalsPanel.vue` (source switch, D5). Still missing: a service that drives the generator over the live stream |
-| Signal → bot decision | **missing** | no supervisor; bot instances are seed rows only |
+| Signal → bot decision | **done** (Phase E) | `services/botSignalBridge.mjs` maps native entry signals to `source:'bot'` alerts (`bot_<instanceId>_<signalKey>`); the owner supervisor (`services/botWorker.mjs`) runs `exec/paper.mjs`, so Risk Gate → order → fill → position → metrics stay on the one executor path |
 | Bot → Risk Gate → paper order | **partial** | `exec/risk.mjs`, `exec/paper.mjs`, `POST /api/v1/orders` / `paper/orders` exist; not driven by a bot runtime |
 | Order/fill → position/account | **partial** | `positions`, `paper_accounts`, `equity` updated on manual paper flow; accounting idempotency not proven |
-| Session → durable evidence/journal | **partial** | `trading_sessions` + session events endpoints exist; not fed by an automated runtime |
-| Session → research | **partial** | `research/experiments`, `evidence_sets` exist; not linked from an automated session |
+| Session → durable evidence/journal | **done** (Phase F) | the paper executor writes `trading_sessions` with a v1 manifest; journal rows link by upstream fill identity; a sealed session freezes into a hash-verified `research_evidence_sets` row |
+| Session → research | **done** (Phase F) | `GET /api/v1/sessions/[id]/evidence` reconstructs the graph (journal/news/experiments, deterministic digest); `POST /api/v1/sessions/[id]/analysis` writes an advisory `ai_proposals` draft whose citations are checked against that digest |
+| Provider connection → model request | **done** (Phase G request resolver) | stored owner-scoped row is decrypted inside `ai/providerStore.mjs`, filtered by adapter/capabilities, and returned only to the gateway; no route serializes it |
 | Events/outbox for UI invalidation | **done** | durable trading_domain_events outbox (Phase C) + workspace events/ack endpoints + `app/composables/useTradingWorkspace.ts` |
 
 ## 7. Feature status legend (used by `implementation-tracker.md`)

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { PaperOrderItem } from '~~/types/orders'
+import type { PaperOrderItem } from '#shared/types/orders'
 import { getErrorMessage } from '~/shared/utils/errors'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 
 // =============================================================================
 //  Paper Orders lifecycle + history (roadmap §17.2, §26.4, §58.5 /orders).
@@ -173,12 +173,12 @@ useHead({ title })
 <template>
   <BasePage id="paper-orders" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('paperOrders.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('paperOrders.pip')" />
     </template>
 
     <template #right>
       <div class="flex items-center gap-2">
-        <AccountSwitcher />
+        <TradingAccountSwitcher />
         <UBadge
           v-if="mongoDown"
           :label="t('paperOrders.mongoDown')"
@@ -244,7 +244,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
-      <MetricRibbon :items="metrics" cols="grid-cols-2 sm:grid-cols-3 xl:grid-cols-6" />
+      <SharedMetricRibbon :items="metrics" cols="grid-cols-2 sm:grid-cols-3 xl:grid-cols-6" />
 
       <SharedRefreshNotice
         :stale="isStale"

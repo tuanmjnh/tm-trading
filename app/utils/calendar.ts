@@ -5,7 +5,7 @@
 //  filters (level / source / free-text). No fetching, no re-scoring (D1): every
 //  headline is exactly what services/news.mjs already stored.
 // =============================================================================
-import type { IntelNewsItem } from '~~/types/intel'
+import type { IntelNewsItem } from '#shared/types/intel'
 
 export interface NewsDay {
   /** UTC calendar day, `YYYY-MM-DD`. */

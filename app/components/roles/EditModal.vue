@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as z from 'zod'
 import { isFullAccessRole, groupFlatPermissions } from '#shared/rbac'
-import type { Role, ModulePermission, PermissionAction, RouteTreeNode } from '~/types/rbac'
+import type { Role, ModulePermission, PermissionAction, RouteTreeNode } from '#shared/types/rbac'
 import { getErrorMessage } from '~/shared/utils/errors'
 
 const props = defineProps<{
@@ -128,7 +128,7 @@ async function onSubmit() {
       {{ t('admin.cannotDeleteSystem') }}
     </div>
 
-    <BaseConfirmModal v-model:open="isConfirmOpen" :title="t('admin.selfDowngradeTitle')"
+    <LazyBaseConfirmModal v-model:open="isConfirmOpen" :title="t('admin.selfDowngradeTitle')"
       :description="t('admin.selfDowngradeDesc')" color="warning" icon="i-lucide-triangle-alert"
       :confirm-label="t('common.save')" :cancel-label="t('common.cancel')" :loading="loading" @confirm="doSave" />
   </BaseFormModal>

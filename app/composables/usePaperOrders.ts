@@ -1,4 +1,4 @@
-import type { CancelOrderResult, OrdersListMeta, PaperOrderItem } from '~~/types/orders'
+import type { CancelOrderResult, OrdersListMeta, PaperOrderItem } from '#shared/types/orders'
 
 // =============================================================================
 //  Paper order lifecycle (roadmap §17.2, §26.4, §58.5 /orders). READ + CANCEL

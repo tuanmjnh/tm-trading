@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { Proposal, StrategyResearch } from '~~/types/research'
-import type { EvidenceSet } from '~~/types/research'
-import type { StrategyProfile } from '~~/types/strategy'
+import type { Proposal, StrategyResearch } from '#shared/types/research'
+import type { EvidenceSet } from '#shared/types/research'
+import type { StrategyProfile } from '#shared/types/strategy'
 import { getErrorMessage } from '~/shared/utils/errors'
 
 // AI Research workspace (roadmap §58.9 Slice 5, §27 / §57.9-N).
@@ -156,7 +156,7 @@ useHead({ title })
 <template>
   <BasePage id="research" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('research.pips.analyze')" />
+      <BasePageEyebrow :trail="trail" :pip="t('research.pips.analyze')" />
     </template>
 
     <template #right>
@@ -242,7 +242,7 @@ useHead({ title })
           </div>
         </template>
 
-        <MetricRibbon :items="evidenceMetrics" cols="grid-cols-2 sm:grid-cols-4" />
+        <SharedMetricRibbon :items="evidenceMetrics" cols="grid-cols-2 sm:grid-cols-4" />
 
         <UAlert
           class="mt-4"

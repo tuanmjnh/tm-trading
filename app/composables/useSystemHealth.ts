@@ -1,4 +1,4 @@
-import type { MarketSourceHealthResponse, SystemHealthResponse } from '~~/types/health'
+import type { MarketSourceHealthResponse, SystemHealthResponse } from '#shared/types/health'
 
 // =============================================================================
 //  useSystemHealth — read-only health projections (roadmap §58 acceptance #6).
@@ -18,5 +18,13 @@ export const useSystemHealth = () => {
     return await $fetch<SystemHealthResponse>('/api/v1/health')
   }
 
-  return { marketSources, system }
+  /** Trigger an immediate re-probe of all services (or one specific service). */
+  async function reprobeServices(service?: string): Promise<{ success: boolean; data?: any }> {
+    return await $fetch<{ success: boolean; data?: any }>('/api/v1/admin/health/services/reprobe', {
+      method: 'POST',
+      body: service ? { service } : {}
+    })
+  }
+
+  return { marketSources, system, reprobeServices }
 }

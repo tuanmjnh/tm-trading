@@ -29,6 +29,7 @@ import { runCrossScan } from './crossScan.mjs'
 import { runAlertRules } from './alertRules.mjs'
 import { runMacro } from './macro.mjs'
 import { runNewsExtract } from './newsExtract.mjs'
+import { runSignalProducer } from './signalProducer.mjs'
 import { notify } from '../notify/service.mjs'
 
 loadEnv()
@@ -59,6 +60,9 @@ const SERVICES = [
   // §60 Slice D/E — LLM extraction of eligible items (budget-capped, skips
   // cleanly without AI key; NEWS_EXTRACT=0 disables).
   { name: 'newsExtract', run: runNewsExtract, intervalSec: Number(process.env.NEWS_EXTRACT_INTERVAL || 86400), tag: '[news-extract]' },
+  // Live native-signal producer (Phase E/E4 missing link): closed bars ->
+  // generateSignals -> publishSignals, idempotent per ownerId+signalKey (D3).
+  { name: 'signals', run: runSignalProducer, intervalSec: Number(process.env.SIGNAL_PRODUCER_INTERVAL || 60), tag: '[signals]' },
 ]
 
 const log = (tag, msg) => console.log(`${new Date().toISOString()} ${tag} ${msg}`)

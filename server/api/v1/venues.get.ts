@@ -1,4 +1,4 @@
-import { VENUE_IDS, CATALOG_VENUES, INSTRUMENTS, type InstrumentVenue } from '../../utils/instruments'
+import { VENUE_IDS, CATALOG_VENUES, INSTRUMENTS, type ServerInstrumentVenue } from '../../utils/instruments'
 
 /**
  * GET /api/v1/venues — list all supported venues (§30.1).
@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
     id: v,
     inCatalog: catalog.includes(v),
     hasProvider: providers.includes(v),
-    instruments: INSTRUMENTS.filter((i: typeof INSTRUMENTS[0]) => i.venues.some((vv: InstrumentVenue) => vv.venue === v)).map((i: typeof INSTRUMENTS[0]) => i.id),
+    instruments: INSTRUMENTS.filter((i: typeof INSTRUMENTS[0]) => i.venues.some((vv: ServerInstrumentVenue) => vv.venue === v)).map((i: typeof INSTRUMENTS[0]) => i.id),
   }))
 
   return { success: true, data, meta: { count: data.length } }

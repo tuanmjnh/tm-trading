@@ -31,29 +31,10 @@ import {
 // =============================================================================
 
 // -----------------------------------------------------------------------------
-//  Read model (Slice B)
+//  Read model (Slice B) — contracts live in shared/types/ai.ts (single source).
 // -----------------------------------------------------------------------------
 
-export interface AiToolInfo {
-  name: string
-  description: string
-}
-
-export interface AiAgentsStatus {
-  gateway: {
-    provider: string
-    model: string
-    configured: boolean
-  }
-  tools: AiToolInfo[]
-  counts: {
-    proposals: number
-    experiments: number
-    agents: number
-    blockedActions: number
-  }
-  mongo: 'up' | 'down'
-}
+import type { AiAgentsStatus, AiToolInfo } from '#shared/types/ai'
 
 interface AgentModule {
   TOOLS: Record<string, { description?: unknown }>
@@ -334,19 +315,20 @@ export async function publishAgentVersion(agentId: string, input: PublishVersion
   }
 
   // Tenancy (roadmap §61.3): versions and actions inherit the owning agent's id.
-  doc.ownerId = ownerId
+  // The policy doc is frozen (D25 pure guards) — clone before stamping the owner.
+  const versionDoc: AnyDoc = { ...doc, ownerId }
   try {
-    await Version.create(doc)
+    await Version.create(versionDoc)
   } catch (err) {
     if ((err as { code?: unknown })?.code === 11000) throw new AgentError('version already exists', 409, 'version_exists')
     throw err
   }
   await Agent.updateOne(
     { agentId: agent.agentId, ownerId },
-    { $set: { activeVersionId: doc.versionId, versionCount: next, autonomy: doc.autonomy, lastEventAt: Date.now() } }
+    { $set: { activeVersionId: versionDoc.versionId, versionCount: next, autonomy: versionDoc.autonomy, lastEventAt: Date.now() } }
   )
   const updated = await getAgent(agent.agentId, ownerId)
-  return { version: doc, agent: updated }
+  return { version: versionDoc, agent: updated }
 }
 
 /**

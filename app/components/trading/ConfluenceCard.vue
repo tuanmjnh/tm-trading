@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { ConfluenceDetail, ConfluencePart } from '~~/types/methods'
-import { fmtSigned } from '../utils/terminal'
+import type { ConfluenceDetail, ConfluencePart } from '#shared/types/methods'
+import { fmtSigned } from '../../utils/terminal'
 
 // =============================================================================
 //  ConfluenceCard — weighted confluence explanation for a symbol (Phase 10).

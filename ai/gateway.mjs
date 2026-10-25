@@ -116,6 +116,9 @@ export function toOpenAIMessages(messages) {
           id: String(c.id || ''),
           type: 'function',
           function: { name: String(c.name || ''), arguments: JSON.stringify(c.args ?? {}) },
+          // Gemini 3.x requires the thought_signature from the model's tool_call
+          // to be echoed back verbatim, or the follow-up turn is rejected (400).
+          ...(c.extra_content ? { extra_content: c.extra_content } : {}),
         })),
       })
     } else {
@@ -184,6 +187,30 @@ export function buildRequest({ cfg = AI_CFG, messages = [], tools = [], temperat
   const maxTok = Number.isFinite(maxTokens) ? maxTokens : cfg.maxTokens
   const base = String(cfg.baseUrl || '').replace(/\/+$/, '')
 
+  // TM Hub relay: the app holds no key; auth is app-level (X-App-Id/Secret) and
+  // the hub addresses its own connection. Plain chat only — the relay does not
+  // forward tool schemas, so agent sessions must use a direct connection.
+  if (provider === 'hub') {
+    if (tools.length) {
+      throw new AIGatewayError('ai.relay-tools', 'TM Hub relay does not forward tool schemas — use a direct connection for agent mode', { provider })
+    }
+    return {
+      url: `${String(cfg.relayUrl || '').replace(/\/+$/, '')}/api/v1/apps/${cfg.relayAppId}/ai/relay/chat`,
+      headers: {
+        'content-type': 'application/json',
+        'x-app-id': String(cfg.relayAppId ?? ''),
+        'x-app-secret': String(cfg.relaySecret ?? ''),
+      },
+      body: {
+        connectionId: String(cfg.hubConnectionId || ''),
+        model: cfg.model,
+        messages: toOpenAIMessages(messages),
+        maxTokens: maxTok,
+        temperature: temp,
+      },
+    }
+  }
+
   if (provider === 'anthropic') {
     const url = base.endsWith('/v1') ? `${base}/messages` : `${base}/v1/messages`
     const { system, messages: ms } = toAnthropicMessages(messages)
@@ -214,6 +241,19 @@ export function parseResponse(provider, data) {
   if (data && typeof data === 'object' && data.error !== undefined) {
     const msg = typeof data.error === 'string' ? data.error : data.error?.message || JSON.stringify(data.error)
     throw new AIGatewayError('ai.api-error', msg, { provider })
+  }
+
+  // TM Hub relay success shape: { success, data: { content, usage? } }.
+  if (provider === 'hub') {
+    const d = data?.data
+    if (data?.success === true && d && typeof d === 'object' && typeof d.content === 'string') {
+      return {
+        text: d.content,
+        toolCalls: [],
+        usage: { prompt: num(d.usage?.inputTokens), completion: num(d.usage?.outputTokens) },
+      }
+    }
+    throw new AIGatewayError('ai.bad-shape', 'hub relay response missing data.content', { provider })
   }
 
   if (provider === 'anthropic') {
@@ -253,7 +293,9 @@ export function parseResponse(provider, data) {
         args = { __raw: String(raw) }
       }
     }
-    return { id: String(c?.id || `call_${i}`), name: String(c?.function?.name || ''), args }
+    // Preserve provider-specific tool_call extras (e.g. Gemini's extra_content
+    // thought_signature) so the next turn can echo them back verbatim.
+    return { id: String(c?.id || `call_${i}`), name: String(c?.function?.name || ''), args, ...(c?.extra_content ? { extra_content: c.extra_content } : {}) }
   })
   const text = typeof msg.content === 'string' ? msg.content : msg.content == null ? '' : JSON.stringify(msg.content)
   return {
@@ -300,7 +342,7 @@ export async function chat(messages, tools = [], opts = {}) {
   const now = opts.now || Date.now
   const provider = cfg.provider
 
-  if (provider !== 'ollama' && !cfg.apiKey) {
+  if (provider !== 'ollama' && provider !== 'hub' && !cfg.apiKey) {
     throw new AIGatewayError('ai.no-key', `AI_API_KEY missing for provider "${provider}" (set it in .env or use AI_PROVIDER=ollama)`)
   }
 
@@ -345,8 +387,12 @@ export async function chat(messages, tools = [], opts = {}) {
 
   if (!res?.ok) {
     const msg = raw?.error?.message || raw?.message || `HTTP ${res?.status ?? '?'}`
+    // The hub relay reports failure with stable `ai.*` codes in the message
+    // (ai.invalid-key, ai.rate-limited, ...) — surface them as the code instead
+    // of collapsing everything into ai.http-error.
+    const relayCode = typeof raw?.message === 'string' && /^ai\.[a-z-]+$/.test(raw.message) ? raw.message : null
     if (cfg.log) appendAiLog({ ...baseLog, ms, ok: false, status: res?.status, error: msg }, opts.logFile)
-    throw new AIGatewayError('ai.http-error', `HTTP ${res?.status}: ${msg}`, { provider, status: res?.status })
+    throw new AIGatewayError(relayCode ?? 'ai.http-error', `HTTP ${res?.status}: ${msg}`, { provider, status: res?.status })
   }
 
   try {

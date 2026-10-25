@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { MetricItem } from '~/components/MetricRibbon.vue'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 
 // =============================================================================
 //  News Impact Research (V3.5 §60.2 — /research/news-impact).
@@ -103,7 +103,7 @@ useHead({ title })
 <template>
   <BasePage id="news-impact" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('newsImpact.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('newsImpact.pip')" />
     </template>
 
     <template #right>
@@ -153,7 +153,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-3">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
       <UAlert
         v-if="runError"
         color="error"

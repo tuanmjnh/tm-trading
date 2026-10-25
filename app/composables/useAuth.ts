@@ -1,5 +1,5 @@
-import type { AuthResponse, AuthUser, ForgotPasswordRequest, LoginPlatform, LoginRequest, RegisterRequest, ResetPasswordRequest, TotpChallenge } from '~/types/auth'
-import type { LoginStartResponse } from '~/types/webauthn'
+import type { AuthResponse, AuthUser, ForgotPasswordRequest, LoginPlatform, LoginRequest, RegisterRequest, ResetPasswordRequest, TotpChallenge } from '#shared/types/auth'
+import type { LoginStartResponse } from '#shared/types/webauthn'
 
 // =============================================================================
 //  SATELLITE AUTH — tm-trading is a CLIENT of tm-hub, NOT the provider.
@@ -55,6 +55,7 @@ interface HubMeData {
 // call site. The timer id is module-scoped so repeated `useAuth()` calls share
 // one schedule.
 let proactiveRefreshTimer: ReturnType<typeof setTimeout> | null = null
+let isHandlingSessionExpired = false
 
 // Remaining lifetime (seconds) of a JWT access token, from its `exp` claim.
 function tokenRemainingSeconds(token: string): number | null {
@@ -326,7 +327,10 @@ export const useAuth = () => {
     if (hubRateLimitRemainingMs() > 0) return false
 
     refreshPromise = (async () => {
-      const rToken = refreshToken.value || useCookie('refreshToken').value
+      // Cookie first: the server-side self-heal (server/middleware/auth.ts) may
+      // have rotated the refresh token into the cookie already, and the in-memory
+      // copy would then be stale.
+      const rToken = useCookie('refreshToken').value || refreshToken.value
       if (!rToken) return false
 
       try {
@@ -416,9 +420,37 @@ export const useAuth = () => {
     }
   }
 
-  async function logout(): Promise<void> {
+  async function handleSessionExpired(): Promise<void> {
+    if (isHandlingSessionExpired) return
+    isHandlingSessionExpired = true
+
     try {
-      const rToken = refreshToken.value || useCookie('refreshToken').value
+      await logout({ redirect: false })
+      if (import.meta.client) {
+        const router = useRouter()
+        const currentPath = router.currentRoute.value.path
+        if (currentPath !== '/login' && currentPath !== '/register') {
+          const toast = useToast()
+          const { t } = useI18n()
+          toast.add({
+            title: t('auth.sessionExpired'),
+            description: t('auth.sessionExpiredDesc'),
+            color: 'error'
+          })
+          const redirect = router.currentRoute.value.fullPath
+          await navigateTo(redirect && redirect !== '/' ? { path: '/login', query: { redirect } } : '/login')
+        }
+      }
+    } finally {
+      setTimeout(() => {
+        isHandlingSessionExpired = false
+      }, 1000)
+    }
+  }
+
+  async function logout(options: { redirect?: boolean } = { redirect: true }): Promise<void> {
+    try {
+      const rToken = useCookie('refreshToken').value || refreshToken.value
       if (rToken) {
         await fetch(`${hubUrl}/api/v1/auth/logout`, {
           method: 'POST',
@@ -441,6 +473,13 @@ export const useAuth = () => {
       const cookieRefresh = useCookie('refreshToken', { path: '/' })
       cookieAccess.value = null
       cookieRefresh.value = null
+
+      if (options?.redirect !== false && import.meta.client) {
+        const router = useRouter()
+        if (router.currentRoute.value.path !== '/login') {
+          await navigateTo('/login')
+        }
+      }
     }
   }
 
@@ -456,6 +495,12 @@ export const useAuth = () => {
         user.value = null
         accessToken.value = null
         refreshToken.value = null
+        if (import.meta.client) {
+          const router = useRouter()
+          if (router.currentRoute.value.path !== '/login' && router.currentRoute.value.path !== '/register') {
+            await handleSessionExpired()
+          }
+        }
         return
       }
 
@@ -489,12 +534,18 @@ export const useAuth = () => {
         user.value = null
         accessToken.value = null
         refreshToken.value = null
+        if (import.meta.client) {
+          const router = useRouter()
+          if (router.currentRoute.value.path !== '/login' && router.currentRoute.value.path !== '/register') {
+            await handleSessionExpired()
+          }
+        }
       }
     }
   }
 
   async function revokeTokens(): Promise<void> {
-    await logout()
+    await logout({ redirect: true })
   }
 
   function setTokens(tokens: { accessToken: string, refreshToken: string, expiresIn: number }) {
@@ -526,6 +577,7 @@ export const useAuth = () => {
     logout,
     refresh,
     fetchUser,
+    handleSessionExpired,
     revokeTokens,
     setTokens
   }

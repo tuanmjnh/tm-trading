@@ -129,7 +129,7 @@ watch(open, (val) => {
     <template #footer>
       <div class="flex items-center justify-between w-full gap-2">
         <SharedListFooter :count="logs.length" :has-more="hasMore" :loading="isLoading" />
-        <UButton :label="t('common.close')" color="neutral" variant="soft" size="sm" @click="open = false" />
+        <UButton :label="t('common.close')" color="neutral" variant="ghost" size="sm" @click="open = false" />
       </div>
     </template>
   </BaseResponsiveSlideover>

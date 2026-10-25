@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
-import type { RunSeries } from '~~/types/runs'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
+import type { RunSeries } from '#shared/types/runs'
 import { formatTimeAgo } from '@vueuse/core'
 import { getErrorMessage } from '~/shared/utils/errors'
 
@@ -159,7 +159,7 @@ useHead({ title })
 <template>
   <BasePage id="runs" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('testCenter.pips.runs')" />
+      <BasePageEyebrow :trail="trail" :pip="t('testCenter.pips.runs')" />
     </template>
 
     <template #right>
@@ -193,7 +193,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-3">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
 
       <!-- Bang tong hop Symbol x TF -->
       <UCard v-if="matrix" class="shrink-0" :ui="{ body: 'p-3 sm:p-3' }">

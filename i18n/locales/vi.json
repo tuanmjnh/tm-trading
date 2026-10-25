@@ -1,4 +1,24 @@
 {
+  "assistant": {
+    "title": "Trợ lý",
+    "description": "Hỏi về {scope} — chỉ trả lời từ bản ghi do máy chủ đọc lại.",
+    "guardrail": "Chỉ đọc. Câu trả lời dựa trên bản ghi đã lưu; trợ lý không thể đặt hay thay đổi lệnh.",
+    "questionPlaceholder": "VD: Vì sao đang tạm dừng? Bằng chứng nào ủng hộ điều này?",
+    "ask": "Hỏi",
+    "failed": "Không trả lời được",
+    "citedRecords": "Bản ghi được trích dẫn",
+    "history": "Lịch sử",
+    "newConversation": "Hội thoại mới",
+    "conversationsEmpty": "Chưa có hội thoại nào được lưu.",
+    "deleteConversation": "Xóa hội thoại",
+    "hint": "Đặt câu hỏi dựa trên {scope}.",
+    "scope_session": "phiên này",
+    "scope_signal": "tín hiệu này",
+    "scope_provider": "cấu hình nhà cung cấp AI",
+    "scope_news": "tin tức này",
+    "scope_market_event": "sự kiện thị trường này",
+    "scope_outlook": "triển vọng này"
+  },
   "admin": {
     "export": {
       "started": "Xuất dữ liệu thành công - {records} bản ghi",
@@ -445,7 +465,11 @@
     "expand": "Mở rộng",
     "required": "Bắt buộc",
     "updated": "Cập nhật",
-    "showingCount": "Hiển thị {count}/{total} mục"
+    "showingCount": "Hiển thị {count}/{total} mục",
+    "start": "Chạy",
+    "pause": "Tạm dừng",
+    "resume": "Tiếp tục",
+    "stop": "Dừng"
   },
   "confirm": {
     "delete_desc_name": "Bạn có chắc chắn muốn xóa \"{0}\" không?",
@@ -646,6 +670,9 @@
     "messagesRequired": "Thiếu nội dung tin nhắn",
     "aiNotConfigured": "AI API key chưa được cấu hình",
     "aiFailed": "Yêu cầu AI thất bại",
+    "ai_failed": "Yêu cầu AI thất bại",
+    "ai_unconfigured": "AI chưa được cấu hình",
+    "ai_unavailable": "Dịch vụ AI không khả dụng",
     "chatNoPermission": "Bạn không có quyền sử dụng chat",
     "notRoot": "Chỉ root mới được thực hiện thao tác này",
     "required": "Không được để trống trường này",
@@ -671,7 +698,13 @@
     "userNotInApp": "Người dùng không thuộc ứng dụng này",
     "alreadyExists": "Tài nguyên đã tồn tại",
     "cannotDeleteSystem": "Không thể xóa tài nguyên hệ thống",
-    "inUse": "Tài nguyên đang được sử dụng"
+    "inUse": "Tài nguyên đang được sử dụng",
+    "bot_launch": "Không thể chạy bot",
+    "strategy_version": "Không thể tạo strategy version",
+    "bot_instance": "Không thể tạo bot instance",
+    "bad_request": "Yêu cầu không hợp lệ",
+    "bot_profile_missing": "Hồ sơ bot không còn tồn tại",
+    "bot_profile_active": "Hãy dừng các bot đang chạy trên hồ sơ này trước"
   },
   "global": {
     "cancel": "Hủy",
@@ -1143,7 +1176,9 @@
     "shared_resources": "Tài nguyên dùng chung",
     "admin_system": "Quản trị & Hệ thống",
     "market_data_sources": "Nguồn dữ liệu thị trường",
+    "ai_providers": "Nhà cung cấp AI",
     "health": "Sức khỏe hệ thống",
+    "health_enhanced": "Bảng điều khiển sức khỏe (Nâng cao)",
     "inbox": "Hộp thư",
     "customers": "Khách hàng",
     "chat": "Chat AI",
@@ -1171,6 +1206,8 @@
     "notifications": "Thông báo",
     "security": "Bảo mật",
     "connections": "Kết nối",
+    "hub_integration": "Kết Nối TM Hub",
+    "content": "Nội dung & Tài liệu",
     "configs": "Cấu hình",
     "media": "Media",
     "import": "Nhập dữ liệu",
@@ -1259,6 +1296,127 @@
       "ok": "OK",
       "unconfigured": "Chưa cấu hình",
       "error": "Lỗi"
+    }
+  },
+  "healthEnhanced": {
+    "title": "Bảng điều khiển sức khỏe hệ thống",
+    "desc": "Tổng quan thời gian thực: dịch vụ nền, bot, cảnh báo, AI agent, nguồn dữ liệu thị trường và risk gate.",
+    "pip": "Vận hành trực tiếp",
+    "refresh": "Làm mới",
+    "auto": "Tự động làm mới",
+    "updated": "Cập nhật",
+    "kpi": {
+      "services": "Dịch vụ",
+      "bots": "Bot đang quản lý",
+      "alerts": "Tín hiệu",
+      "agents": "AI Agents",
+      "ok": "ổn",
+      "overdue": "quá hạn",
+      "never": "chưa chạy",
+      "running": "đang chạy",
+      "paused": "tạm dừng",
+      "failed": "lỗi",
+      "entries": "vào lệnh",
+      "last": "gần nhất",
+      "active": "hoạt động",
+      "validated": "đã xác thực",
+      "draft": "nháp",
+      "gateway": "Gateway"
+    },
+    "viewAll": "Xem tất cả",
+    "openItem": "Mở",
+    "links": {
+      "services": "Chi tiết dịch vụ ở trang sức khỏe",
+      "bots": "Danh sách bot ở phòng chiến lược",
+      "alerts": "Luồng tín hiệu",
+      "agents": "AI agents",
+      "venues": "Nguồn dữ liệu thị trường",
+      "risk": "Vị thế đang mở",
+      "drift": "Báo cáo lệch preset",
+      "regime": "Thông tin thị trường",
+      "movers": "Bộ quét thị trường"
+    },
+    "servicesTitle": "Nhịp tim dịch vụ",
+    "servicesEmpty": "Chưa ghi nhận nhịp tim dịch vụ nào.",
+    "service": {
+      "runs": "Lượt chạy",
+      "last": "OK gần nhất",
+      "err": "Lỗi"
+    },
+    "serviceStates": {
+      "ok": "OK",
+      "stale": "TRỄ",
+      "overdue": "QUÁ HẠN"
+    },
+    "botsTitle": "Bot đang quản lý",
+    "botsEmpty": "Không có bot nào.",
+    "alertsTitle": "Cảnh báo gần đây",
+    "alertsEmpty": "Chưa nhận cảnh báo nào.",
+    "agentsTitle": "AI Agents",
+    "agentsEmpty": "Chưa có AI agent nào.",
+    "marketTitle": "Thị trường & Risk",
+    "market": {
+      "risk": "Risk",
+      "ok": "OK",
+      "halted": "ĐÃ HALT",
+      "breach": "VƯỢT NGƯỠNG",
+      "store": "Lưu trữ",
+      "openPositions": "Vị thế mở",
+      "dayPnl": "PnL ngày",
+      "drift": "Lệch preset",
+      "checked": "đã kiểm",
+      "diverged": "lệch",
+      "regime": "Regime",
+      "movers": "Biến động mạnh",
+      "symbols": "mã"
+    },
+    "cols": {
+      "instance": "Phiên chạy",
+      "bot": "Bot",
+      "state": "Trạng thái",
+      "health": "Sức khỏe",
+      "counts": "Sig/Ord/Trd",
+      "pnl": "PnL",
+      "started": "Bắt đầu",
+      "key": "Key",
+      "symbol": "Mã",
+      "tf": "Khung",
+      "action": "Hành động",
+      "side": "Chiều",
+      "price": "Giá",
+      "status": "Trạng thái",
+      "time": "Thời gian",
+      "name": "Tên",
+      "level": "Cấp",
+      "version": "Ver",
+      "actions": "Cho phép/Chặn",
+      "lastActive": "Hoạt động cuối"
+    },
+    "actions": {
+      "start": "Khởi động",
+      "pause": "Tạm dừng",
+      "resume": "Tiếp tục",
+      "stop": "Dừng",
+      "rerun": "Chạy lại",
+      "reprobe": "Dò lại",
+      "reprobeAll": "Dò lại tất cả",
+      "haltAll": "HALT khẩn cấp",
+      "startAllQueued": "Khởi động tất cả đang chờ",
+      "stopAllRunning": "Dừng tất cả đang chạy",
+      "confirmStart": "Khởi động phiên chạy này?",
+      "confirmPause": "Tạm dừng phiên chạy này?",
+      "confirmStop": "Dừng phiên chạy này?",
+      "confirmRerun": "Chạy lại phiên đã kết thúc? Một lần chạy mới sẽ được tạo.",
+      "confirmHaltAll": "HALT khẩn cấp tất cả bot đang chạy của chủ sở hữu này?",
+      "confirmDesc": "Thao tác này sẽ {action} phiên chạy \"{bot}\".",
+      "successStart": "Đã đưa lệnh khởi động vào hàng đợi",
+      "successPause": "Đã đưa lệnh tạm dừng vào hàng đợi",
+      "successStop": "Đã đưa lệnh dừng vào hàng đợi",
+      "successRerun": "Đã đưa lệnh chạy lại vào hàng đợi",
+      "successReprobe": "Đã kích hoạt dò lại",
+      "acknowledge": "Xác nhận",
+      "dismiss": "Khước từ",
+      "errorGeneric": "Thao tác thất bại"
     }
   },
   "marketExplorer": {
@@ -1810,6 +1968,112 @@
     "hubVersion": "Phiên bản TM Hub",
     "primaryDatabase": "Cơ sở dữ liệu chính",
     "defaultPort": "Cổng kết nối mặc định",
+    "aiProviders": {
+      "title": "Nhà cung cấp AI",
+      "description": "Các kết nối do ứng dụng này sở hữu. Khóa chỉ ghi và không bao giờ rời khỏi server.",
+      "add": "Thêm kết nối",
+      "provider": "Nhà cung cấp",
+      "name": "Nhãn",
+      "autoGenerateName": "Tự động tạo tên kết nối",
+      "model": "Model",
+      "baseUrl": "Base URL",
+      "apiKey": "API key",
+      "apiKeyHint": "Để trống để giữ khóa đã lưu.",
+      "enabled": "Bật",
+      "test": "Kiểm tra kết nối",
+      "ok": "Hoạt động",
+      "error": "Lỗi",
+      "untested": "Chưa kiểm tra",
+      "unconfigured": "Chưa cấu hình",
+      "disabled": "Đã tắt",
+      "lastTested": "Kiểm tra lần cuối",
+      "noConnections": "Chưa có kết nối nhà cung cấp. Hãy thêm mới, hoặc dùng cấu hình env bên dưới.",
+      "envFallback": "Đang dùng cấu hình env dự phòng",
+      "saved": "Đã lưu kết nối nhà cung cấp",
+      "deleted": "Đã xóa kết nối nhà cung cấp",
+      "testOk": "Kết nối hoạt động ({ms}ms)",
+      "testFailed": "Kiểm tra kết nối thất bại",
+      "import": "Nhập",
+      "export": "Xuất",
+      "importTitle": "Nhập kết nối nhà cung cấp",
+      "exportTitle": "Xuất kết nối nhà cung cấp",
+      "importHelp": "Hỗ trợ JSON (file xuất của tm-hub / tm-trading hoặc file keys FreeLLMAPI), ENV (dotenv) hoặc CSV. Khóa được ghi thẳng vào kho mã hóa.",
+      "exportHelp": "Tải kết nối của app này dưới dạng JSON, ENV hoặc CSV. API key chỉ được đưa vào nếu bạn chọn.",
+      "chooseFile": "Chọn file",
+      "format": "Định dạng",
+      "formatJson": "JSON",
+      "formatEnv": "ENV",
+      "formatCsv": "CSV",
+      "noFile": "Chưa chọn file",
+      "defaultModel": "Model mặc định",
+      "defaultModelHelp": "Dùng cho khóa nhập vào không có model. File FreeLLMAPI không chứa model.",
+      "overwrite": "Ghi đè tên đã có",
+      "overwriteHelp": "Khi tắt, các dòng trùng provider và nhãn sẽ bị bỏ qua.",
+      "preview": "Xem trước",
+      "previewSummary": "Hợp lệ: {valid} · Không hợp lệ: {invalid}",
+      "importNow": "Nhập",
+      "imported": "Đã nhập: {imported} · bỏ qua: {skipped} · lỗi: {failed}",
+      "importDone": "Nhập hoàn tất",
+      "includeSecrets": "Kèm API key",
+      "includeSecretsHelp": "File sẽ chứa khóa dạng văn bản. Hãy lưu trữ an toàn.",
+      "exportSecretsConfirm": "Xuất API key dạng văn bản? Bất kỳ ai có file đều có thể sử dụng.",
+      "exported": "Đã xuất {count} kết nối",
+      "exportUnreadable": "Không thể giải mã {count} khóa nên đã để trống.",
+      "exportDownload": "Tải về",
+      "exportEmpty": "Chưa có kết nối nào để export.",
+      "hasKey": "Có khóa",
+      "discoverModels": "Tìm model",
+      "discovered": "Đã tìm thấy {count} model",
+      "discoveredNone": "Nhà cung cấp không công bố model nào",
+      "discoverFailed": "Không thể tìm model",
+      "discoverNoKey": "Vui lòng nhập API key trước",
+      "searchProvider": "Tìm nhà cung cấp…",
+      "searchModel": "Tìm model…",
+      "duplicateRow": "Đã tồn tại",
+      "previewDuplicates": "{count} dòng đã tồn tại và sẽ bị bỏ qua — bật ghi đè để cập nhật.",
+      "importBlocked": "Không có gì được nhập: mọi dòng hợp lệ đều đã tồn tại. Bật ghi đè để thay thế, hoặc đổi tên các dòng trong file.",
+      "errNoKey": "Chưa cấu hình API key cho kết nối này",
+      "errInvalidKey": "API key bị nhà cung cấp từ chối",
+      "errRateLimited": "Nhà cung cấp đang giới hạn tần suất yêu cầu",
+      "errProviderUnavailable": "Nhà cung cấp báo lỗi nội bộ",
+      "errTimeout": "Nhà cung cấp không phản hồi kịp",
+      "errNetwork": "Không kết nối được tới nhà cung cấp (lỗi mạng)",
+      "errHttp": "Nhà cung cấp trả về lỗi",
+      "models": "Mô hình đã lưu",
+      "modelsEmpty": "Chưa có mô hình nào — dò hoặc thêm mới, sau đó bot đổi model chỉ với 1 click.",
+      "saveDiscovered": "Lưu {count} model đã dò",
+      "savedDiscovered": "Đã lưu {added} model mới",
+      "setPrimary": "Đặt làm model cho bot",
+      "primarySet": "Bot sẽ dùng {model}",
+      "primaryBadge": "model bot",
+      "deleteModel": "Xóa khỏi danh mục",
+      "modelDeleted": "Đã xóa {model}",
+      "modelsLoadFailed": "Không tải được danh mục mô hình",
+      "hubSync": "Đồng bộ từ TM Hub",
+      "hubSyncFailed": "Đồng bộ TM Hub thất bại",
+      "hubSyncDone": "Đồng bộ hoàn tất: thêm {created} · cập nhật {updated} · {added} model",
+      "hubNotConfigured": "Chưa cấu hình relay — hãy đặt NUXT_HUB_APP_SECRET trong môi trường của ứng dụng",
+      "viaHub": "qua relay TM Hub",
+      "errRelayTools": "Kết nối này không hỗ trợ tool call — chế độ agent cần kết nối trực tiếp có riêng API key",
+      "addModel": "Thêm model",
+      "addModelPlaceholder": "Model ID (vd: gpt-4o-mini)",
+      "addModelDisplayName": "Tên hiển thị (tùy chọn)",
+      "modelAdded": "Đã thêm {model}",
+      "sourceManual": "thủ công",
+      "sourceDiscovered": "dò được",
+      "modelsTitle": "Danh sách model đã lưu",
+      "unsetPrimary": "Bỏ chỉ định chính",
+      "primaryCleared": "Đã bỏ model chính ({model})",
+      "deleteConnectionTitle": "Xoá kết nối này?",
+      "deleteConnectionDesc": "Thao tác này sẽ xoá vĩnh viễn kết nối \"{name}\" và danh sách model đã lưu khỏi cơ sở dữ liệu.",
+      "deleteModelTitle": "Xoá model đã lưu?",
+      "deleteModelDesc": "Thao tác này sẽ xoá vĩnh viễn \"{model}\" khỏi danh sách model đã lưu.",
+      "revealKey": "Xem API key",
+      "copyKey": "Copy API key",
+      "keyCopied": "Đã copy API key vào clipboard",
+      "revealKeyFailed": "Không thể đọc API key đã lưu",
+      "deleteConnectionHubDesc": "Thao tác này chỉ xoá hàng relay \"{name}\" khỏi ứng dụng này — kết nối vẫn còn trên TM Hub và có thể xuất hiện lại ở lần sync sau nếu chưa bị thu hồi ở đó."
+    },
     "saveChanges": "Lưu thay đổi",
     "nameDesc": "Sẽ xuất hiện trên hóa đơn và các giao dịch khác.",
     "emailDesc": "Dùng để đăng nhập, nhận hóa đơn và cập nhật sản phẩm.",
@@ -2479,7 +2743,8 @@
       "rsi": "RSI",
       "macd": "MACD",
       "obv": "OBV",
-      "cmf": "CMF"
+      "cmf": "CMF",
+      "psar": "PSAR"
     },
     "methods": "Phương pháp",
     "methodsHint": "Chọn Phương pháp — dụng để lọc danh sách vị thế",
@@ -2899,7 +3164,8 @@
     "formatJson": "Định dạng JSON",
     "minifyJson": "Nén JSON",
     "invalidJson": "Cú pháp JSON không hợp lệ",
-    "validJson": "Cú pháp JSON hợp lệ"
+    "validJson": "Cú pháp JSON hợp lệ",
+    "desc": "Cấu hình key/value (kể cả AI provider key) — sửa giá trị trực tiếp, không cần deploy."
   },
   "connections": {
     "title": "Kết nối",
@@ -3325,7 +3591,8 @@
     "type": "Loại",
     "required": "Bắt buộc",
     "data": "Dữ liệu",
-    "use": "Áp dụng"
+    "use": "Áp dụng",
+    "desc": "Tạo hoặc cập nhật dữ liệu hàng loạt từ CSV, JSON, dữ liệu dán hoặc Google Sheets."
   },
   "inbox": {
     "attachments": "Đính kèm",
@@ -4237,7 +4504,153 @@
         "noError": "Không có lỗi",
         "source": "Nguồn",
         "riskState": "Trạng thái rủi ro"
-      }
+      },
+      "launchTitle": "Chạy bot",
+      "launchMethod": "Phương pháp (từ pine)",
+      "launchSymbol": "Cặp giao dịch",
+      "launchTimeframe": "Khung thời gian",
+      "launchParams": "Ghi đè tham số",
+      "launchParamsHint": "Điền sẵn theo mặc định của phương pháp — sửa và lưu thành strategy version bất biến mới.",
+      "launchRun": "Chạy",
+      "launched": "Đã khởi tạo bot",
+      "launchedHint": "Đã ghi lệnh start — worker giám sát (npm run bot:worker) sẽ áp dụng trong một tick.",
+      "launchedQueued": "Đã tạo instance. Lệnh start sẽ do worker giám sát áp dụng.",
+      "launchFailed": "Không thể chạy bot",
+      "paramsInvalidJson": "Ghi đè tham số không phải JSON hợp lệ",
+      "launchWorkerHint": "Bot runtime chạy nhúng cùng server dashboard (tắt bằng BOT_EMBEDDED=off). Trên deploy serverless, chạy worker ngoài: npm run bot:worker -- --owner YOUR_OWNER_ID.",
+      "launchName": "Tên",
+      "commandQueued": "Đã ghi lệnh \"{action}\"",
+      "commandQueuedHint": "Runtime nhúng (hoặc worker ngoài) sẽ áp dụng trong một hai tick.",
+      "commandFailed": "Lệnh bị từ chối",
+      "noActions": "Không có thao tác cho trạng thái này",
+      "launchAccount": "Tài khoản paper",
+      "launchAccountAuto": "Tự động (paper-main)",
+      "launchAccountHint": "Chưa có tài khoản live-paper — executor sẽ tự tạo \"paper-main\" (10.000 USDT) ở chu kỳ đầu tiên.",
+      "paramGroups": {
+        "signal": "Tín hiệu & vào lệnh",
+        "risk": "Rủi ro (SL / TP)",
+        "cost": "Chi phí mô phỏng"
+      },
+      "params": {
+        "atrLen": {
+          "label": "Chu kỳ ATR",
+          "desc": "Average True Range — đo biến động để tính buffer stop-loss."
+        },
+        "slBuf": {
+          "label": "Buffer SL (×ATR)",
+          "desc": "Stop-loss đặt cách cực trị của mẫu hình N × ATR."
+        },
+        "rrFb": {
+          "label": "R:R mục tiêu",
+          "desc": "Take-profit = giá vào + N × rủi ro (tỷ lệ lời:lỗ)."
+        },
+        "minRR": {
+          "label": "R:R tối thiểu",
+          "desc": "Tỷ lệ lời:lỗ tối thiểu để setup được vào lệnh."
+        },
+        "slMinAtr": {
+          "label": "SL tối thiểu (×ATR)",
+          "desc": "Sàn an toàn cho khoảng cách stop-loss."
+        },
+        "slMaxAtr": {
+          "label": "SL tối đa (×ATR)",
+          "desc": "Trần an toàn cho khoảng cách stop-loss."
+        },
+        "rP": {
+          "label": "R:R target",
+          "desc": "Tỷ lệ lời:lỗ dùng cho mục tiêu chốt lời."
+        },
+        "feePct": {
+          "label": "Phí (%)",
+          "desc": "Phí giao dịch giả định mỗi lệnh (%)."
+        },
+        "slipPct": {
+          "label": "Trượt giá (%)",
+          "desc": "Slippage giả định khi khớp lệnh (%)."
+        },
+        "volLen": {
+          "label": "Cửa sổ MA volume",
+          "desc": "Số nến tính đường trung bình volume làm mốc so sánh."
+        },
+        "spikeMult": {
+          "label": "Ngưỡng spike (×MA)",
+          "desc": "Volume ≥ N × MA volume = nến bất thường."
+        },
+        "deltaTh": {
+          "label": "Ngưỡng taker",
+          "desc": "Tỷ lệ delta taker / volume ≥ N (taker ≥ ~65%) — cần dữ liệu taker_buy thật."
+        },
+        "divLen": {
+          "label": "Cửa sổ divergence",
+          "desc": "Số nến so sánh giá/delta để phát hiện phân kỳ."
+        },
+        "psarStart": {
+          "label": "PSAR AF khởi đầu",
+          "desc": "Hệ số gia tốc khởi đầu của Parabolic SAR."
+        },
+        "psarInc": {
+          "label": "PSAR bước AF",
+          "desc": "Bước tăng hệ số gia tốc khi tạo cực điểm mới."
+        },
+        "psarMax": {
+          "label": "PSAR AF tối đa",
+          "desc": "Trần của hệ số gia tốc."
+        },
+        "fast": {
+          "label": "MA nhanh",
+          "desc": "Chu kỳ EMA nhanh (phía trend / lọc)."
+        },
+        "slow": {
+          "label": "MA chậm",
+          "desc": "Chu kỳ EMA chậm — phải lớn hơn MA nhanh."
+        },
+        "minAtrPct": {
+          "label": "ATR tối thiểu (%)",
+          "desc": "Chặn tín hiệu khi ATR% giá thấp hơn ngưỡng (lọc thị trường phẳng)."
+        },
+        "entryMode": {
+          "label": "Kiểu vào lệnh",
+          "desc": "market = vào ngay nến quét; retest = chờ test lại volume thấp; confirm = chờ nến xác nhận đảo chiều."
+        }
+      },
+      "slSection": "Quản lý lệnh (SL động)",
+      "slBreakeven": "Dời SL về giá vào (breakeven)",
+      "slBreakevenHint": "Khi giá chạy thuận đủ mức kích hoạt bên dưới, stop-loss được dời về đúng giá vào lệnh.",
+      "slTriggerR": "Kích hoạt khi đạt (×R)",
+      "slTriggerRHint": "Lợi nhuận đạt bao nhiêu lần rủi ro ban đầu thì SL được dời về giá vào.",
+      "slTrail": "Trailing SL (ATR)",
+      "slTrailHint": "Mỗi chu kỳ, stop-loss được kéo theo giá cách close N × ATR — chỉ siết chặt, không nới lỏng.",
+      "slTrailAtrMult": "Hệ số ATR",
+      "slTrailAtrMultHint": "Khoảng cách stop trailing so với giá close gần nhất, theo đơn vị ATR.",
+      "rerun": "Chạy lại",
+      "rerunQueued": "Đã tái khởi tạo bot",
+      "instanceDeleted": "Đã xoá bản ghi bot",
+      "instanceDeletedHint": "Đã xoá \"{id}\" và lịch sử lệnh khỏi cơ sở dữ liệu.",
+      "deleteInstanceTitle": "Xoá bản ghi bot?",
+      "deleteInstanceDesc": "Thao tác này xoá vĩnh viễn lần chạy \"{id}\" (và lịch sử lệnh) khỏi cơ sở dữ liệu.",
+      "tabInstances": "Bot",
+      "tabProfiles": "Hồ sơ đã lưu",
+      "launchFrom": "Chạy bot mới từ hồ sơ này",
+      "duplicate": "Nhân bản",
+      "rename": "Đổi tên",
+      "renamed": "Đã đổi tên hồ sơ",
+      "renamedOk": "Đã đổi tên thành \"{name}\"",
+      "enable": "Bật",
+      "disable": "Tắt",
+      "profileEnabled": "Đã bật hồ sơ",
+      "profileDisabled": "Đã tắt hồ sơ — không thể chạy bot từ hồ sơ này",
+      "profileDeleted": "Đã xoá hồ sơ",
+      "profileDeletedOk": "Đã xoá \"{name}\"",
+      "deleteProfileTitle": "Xoá hồ sơ bot?",
+      "deleteProfileDesc": "Thao tác này xoá vĩnh viễn hồ sơ \"{name}\". Các lần chạy đã xong vẫn giữ data; cấu hình bị xoá hẳn.",
+      "instanceArchived": "Đã lưu trữ bot",
+      "instanceArchivedHint": "\"{id}\" đã ẩn khỏi danh sách — data vẫn được giữ.",
+      "exportRun": "Xuất data lần chạy (JSON)",
+      "exported": "Export sẵn sàng",
+      "exportedHint": "Đã tải \"{id}-export.json\".",
+      "archive": "Lưu trữ",
+      "renameTitle": "Đổi tên hồ sơ bot",
+      "liveSignals": "Tín hiệu method trực tiếp"
     }
   },
   "aiAgents": {
@@ -4749,5 +5162,9 @@
     "coverage": "{n} snapshot chấm · {x} loại · {s}",
     "empty": "Chưa có đánh giá",
     "emptyHint": "Chạy đánh giá khi snapshot triển vọng đã hết hạn quá kỳ hạn."
+  },
+  "hub_integration": {
+    "desc": "Hướng dẫn chi tiết và kiểm tra trực tiếp cơ chế tải dữ liệu động từ TM Hub Control Plane về TM Trading",
+    "runTest": "Kiểm tra kết nối"
   }
 }

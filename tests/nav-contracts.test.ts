@@ -34,7 +34,7 @@ const EXPECTED_VISIBLE_LEAF_PATHS = [
   '/strategy-lab/indicators',
   '/strategy-lab/methods',
   '/strategy-lab/bots',
-  '/strategy-lab/bots/instances',
+  // '/strategy-lab/bots/instances' — merged into /strategy-lab/bots (tabbed view)
   // 5. Test Center
   '/test-center',
   '/test-center/runs',

@@ -7,9 +7,9 @@
 //  Everything here is read-polls + one confirmable intent — the executor keeps
 //  full ownership of every other transition.
 // =============================================================================
-import type { OrdersListResponse, PaperOrderItem } from '~~/types/orders'
-import { formatPrice } from '../utils/marketFeed'
-import { getErrorMessage, isAuthError } from '../shared/utils/errors'
+import type { OrdersListResponse, PaperOrderItem } from '#shared/types/orders'
+import { formatPrice } from '../../utils/marketFeed'
+import { getErrorMessage, isAuthError } from '../../shared/utils/errors'
 
 const props = defineProps<{
   /** bump to force one refresh immediately (e.g. after a ticket submit). */

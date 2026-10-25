@@ -21,18 +21,36 @@ import { startSession } from './sessions'
 //  failure so a reviewer is told the evidence could not be frozen.
 // =============================================================================
 
-type EvidenceModule = typeof import('../../engine/evidence.mjs')
+// Engine modules are imported through Vite-ignored dynamic imports, so TS only
+// sees their inferred signatures (optional params widened to `null`/`never[]`).
+// Loose keeps the exports but makes every function callable with plain data.
+type Loose<T> = { [K in keyof T]: T[K] extends (...a: any[]) => infer R ? (...a: any[]) => R : T[K] }
+type EvidenceModule = Loose<typeof import('../../engine/evidence.mjs')>
+type ManifestModule = Loose<typeof import('../../engine/manifest.mjs')>
+type VersionModule = Loose<typeof import('../../engine/version.mjs')>
+type PointInTimeModule = Loose<typeof import('../../engine/pointInTime.mjs')>
 
 let evidenceModP: Promise<EvidenceModule> | null = null
+let manifestModP: Promise<ManifestModule> | null = null
+let versionModP: Promise<VersionModule> | null = null
 
-function evidenceModule(): Promise<EvidenceModule> {
-  if (!evidenceModP) {
-    const href = pathToFileURL(join(process.cwd(), 'engine', 'evidence.mjs')).href
-    // @vite-ignore — engine/ lives outside server/ (docs/app-inheritance.md).
-    evidenceModP = import(/* @vite-ignore */ href) as Promise<EvidenceModule>
+/** Load an engine module, caching the promise (engine/ lives outside server/). */
+function lazyEngine<T>(file: string): () => Promise<T> {
+  let cached: Promise<T> | null = null
+  return () => {
+    if (!cached) {
+      const href = pathToFileURL(join(process.cwd(), 'engine', file)).href
+      // @vite-ignore — engine/ lives outside server/ (docs/app-inheritance.md).
+      cached = import(/* @vite-ignore */ href) as Promise<T>
+    }
+    return cached
   }
-  return evidenceModP
 }
+
+const evidenceModule = lazyEngine<EvidenceModule>('evidence.mjs')
+const manifestModule = lazyEngine<ManifestModule>('manifest.mjs')
+const versionModule = lazyEngine<VersionModule>('version.mjs')
+const pointInTimeModule = lazyEngine<PointInTimeModule>('pointInTime.mjs')
 
 export class EvidenceError extends Error {
   statusCode: number
@@ -77,6 +95,8 @@ export interface EvidenceDeps {
   runModel?: ModelLoader
   tradeModel?: ModelLoader
   datasetModel?: ModelLoader
+  /** Phase F — journal rows are linked by upstream identity, never re-keyed. */
+  journalModel?: ModelLoader
   /** Run-series reader (reports/*.ndjson) — injected so tests stay offline. */
   runsSeries?: () => Promise<{ series: AnyDoc[] }>
   evidence?: () => Promise<EvidenceModule>
@@ -98,7 +118,8 @@ function modelLoaders(deps: EvidenceDeps) {
     Experiment: loadModel(deps, 'experimentModel', () => engineModel('experiment.mjs', 'Experiment')),
     Run: loadModel(deps, 'runModel', () => engineModel('run.mjs', 'Run')),
     Trade: loadModel(deps, 'tradeModel', () => engineModel('trade.mjs', 'Trade')),
-    Dataset: loadModel(deps, 'datasetModel', () => engineModel('dataset.mjs', 'Dataset'))
+    Dataset: loadModel(deps, 'datasetModel', () => engineModel('dataset.mjs', 'Dataset')),
+    Journal: loadModel(deps, 'journalModel', () => engineModel('journal.mjs', 'Journal'))
   }
 }
 
@@ -235,7 +256,7 @@ async function hydrateSource(
 ): Promise<Record<string, unknown>> {
   const own = ownerId ? { ownerId } : {}
   if (SESSION_KINDS.includes(kind)) {
-    const { Session, Order, Fill, Position } = loaders
+    const { Session, Order, Fill, Position, Journal } = loaders
     const SessionM = await Session()
     if (!SessionM) throw new EvidenceError('evidence store unavailable', 503, 'mongo_down')
 
@@ -243,13 +264,29 @@ async function hydrateSource(
     if (!session) throw new EvidenceError(`trading session not found: ${sourceId}`, 404, 'session_not_found')
 
     const sessionKey = String(session.sessionId ?? session._id)
-    const [OrderM, FillM, PositionM] = await Promise.all([Order(), Fill(), Position()])
+    const [OrderM, FillM, PositionM, JournalM] = await Promise.all([Order(), Fill(), Position(), Journal()])
     const [orders, fills, positions] = await Promise.all([
       OrderM ? OrderM.find({ sessionId: sessionKey, ...own }).limit(500).lean().catch(() => []) : Promise.resolve([]),
       FillM ? FillM.find({ sessionId: sessionKey, ...own }).limit(500).lean().catch(() => []) : Promise.resolve([]),
       PositionM ? PositionM.find({ sessionId: sessionKey, ...own }).limit(500).lean().catch(() => []) : Promise.resolve([])
     ])
-    return { session, orders, fills, positions, datasetIds: manifestDatasetIds(session.manifest) }
+    // Phase F: journal rows point at the upstream fill identity (`sourceId` =
+    // positions.externalId or _id), so the link is derived, never a second key.
+    const refs = (positions as AnyDoc[])
+      .flatMap((p) => [p?.externalId, p?._id])
+      .filter((x) => x !== null && x !== undefined && String(x).trim() !== '')
+      .map(String)
+    const journal = JournalM && refs.length
+      ? await JournalM.find({ sourceId: { $in: [...new Set(refs)] }, ...own }).limit(500).lean().catch(() => []) as AnyDoc[]
+      : []
+    return {
+      session,
+      orders,
+      fills,
+      positions,
+      journalKeys: journal.map((j) => String(j?.key ?? '')).filter(Boolean),
+      datasetIds: manifestDatasetIds(session.manifest)
+    }
   }
 
   if (kind === 'backtest-run') {
@@ -438,6 +475,36 @@ export async function createEvidenceSet(input: CreateEvidenceInput, deps: Eviden
 }
 
 // -----------------------------------------------------------------------------
+// Read-only preview (Phase F) — the same hydration the freezer uses, WITHOUT
+// writing a set. A live session's graph is reconstructible before it seals, but
+// the result is marked unfrozen so nothing can mistake it for evidence.
+// -----------------------------------------------------------------------------
+
+/** Deterministic id a source's set will (or does) have. */
+export async function expectedSetId(kind: string, sourceId: string): Promise<string> {
+  const m = await evidenceModule()
+  return String(m.evidenceSetIdFor({ kind, sourceId }))
+}
+
+export async function previewEvidence(
+  kind: string,
+  sourceId: string,
+  deps: EvidenceDeps = {},
+  ownerId?: string | null
+): Promise<AnyDoc> {
+  const loaders = modelLoaders(deps)
+  const mod = await (deps.evidence ?? evidenceModule)()
+  const source = await hydrateSource(kind, sourceId, { sourceId }, loaders, deps, ownerId)
+  return mod.buildEvidenceBundle({
+    kind,
+    sourceId,
+    ...source,
+    ownerId: ownerId ?? null,
+    frozenAt: Date.now()
+  } as never) as AnyDoc
+}
+
+// -----------------------------------------------------------------------------
 // Auto-freeze on completion (§59.15) — a sealed session's evidence is frozen the
 // moment it reaches a terminal state, so an AI proposal always has a citable,
 // hash-verified set to point at instead of a run nobody remembered to freeze.
@@ -574,8 +641,35 @@ export async function backfillTerminalSessionEvidence(
   return out
 }
 
-export interface ListEvidenceQuery {
-  kind?: string
+/**
+ * Journal rows linked to a session. The journal keys on the upstream fill
+ * identity (`sourceId` = positions.externalId or _id), so the session's
+ * positions ARE the join — no re-keying, no second identity scheme (D4).
+ */
+export async function loadSessionJournal(
+  sessionKey: string,
+  deps: EvidenceDeps = {},
+  ownerId?: string | null
+): Promise<AnyDoc[]> {
+  const key = String(sessionKey ?? '').trim()
+  if (!key) return []
+  const loaders = modelLoaders(deps)
+  const [PositionM, JournalM] = await Promise.all([loaders.Position(), loaders.Journal()])
+  if (!PositionM || !JournalM) return []
+  const own = ownerId ? { ownerId } : {}
+  const positions = await PositionM.find({ sessionId: key, ...own }).limit(500).lean().catch(() => []) as AnyDoc[]
+  const refs = positions
+    .flatMap((p) => [p?.externalId, p?._id])
+    .filter((x) => x !== null && x !== undefined && String(x).trim() !== '')
+    .map(String)
+  if (refs.length === 0) return []
+  return await JournalM.find({ sourceId: { $in: [...new Set(refs)] }, ...own })
+    .limit(500)
+    .lean()
+    .catch(() => []) as AnyDoc[]
+}
+
+export interface ListEvidenceQuery {  kind?: string
   sessionId?: string
   strategyVersionId?: string
   limit?: number
@@ -608,11 +702,16 @@ export async function getEvidenceSet(id: string, deps: EvidenceDeps = {}, ownerI
     const doc = await Evidence.findOne({ $or: [{ _id: key }, { setId: key }], ...(ownerId ? { ownerId } : {}) }).lean() as AnyDoc | null
     if (!doc) return null
     const integrity = mod.verifyEvidenceSet(doc) as { ok: boolean; code?: string; hash?: string }
-    const sufficiency = mod.evidenceSufficiency(doc) as { sufficient: boolean; reasons: string[] }
+    // Phase F: strict point-in-time audit — a set that references records
+    // outside its own freeze moment is reported and no longer "sufficient".
+    const pitMod = await pointInTimeModule()
+    const pit = pitMod.pitAudit({ bundle: doc }) as AnyDoc
+    const sufficiency = mod.evidenceSufficiency(doc, { pit }) as { sufficient: boolean; reasons: string[] }
     return {
       ...doc,
       integrity: { ok: integrity.ok, code: integrity.ok ? 'OK' : integrity.code },
-      sufficiency
+      sufficiency,
+      pointInTimeAudit: pit
     }
   } catch {
     return null
@@ -713,21 +812,38 @@ export async function createPaperValidationSession(
   }
 
   const start = deps.startSession ?? (startSession as unknown as (input: Record<string, unknown>) => Promise<AnyDoc>)
+  const [mm, vm] = await Promise.all([manifestModule(), versionModule()])
+  const instruments = input.instruments ?? experiment.recommendedTest?.symbols ?? []
+  const timeframes = input.timeframes ?? experiment.recommendedTest?.timeframes ?? []
+  const accountId = input.accountId ?? experiment.accountId ?? 'default'
   const session = await start({
     kind: 'live-paper',
     strategyVersionId: candidateVersionId,
-    accountId: input.accountId ?? experiment.accountId ?? 'default',
-    instruments: input.instruments ?? experiment.recommendedTest?.symbols ?? [],
-    timeframes: input.timeframes ?? experiment.recommendedTest?.timeframes ?? [],
+    accountId,
+    instruments,
+    timeframes,
     // The session manifest carries the provenance of WHY this run exists — the
-    // experiment and the frozen evidence it was derived from (Slice C + E).
-    manifest: {
+    // experiment and the frozen evidence it was derived from (Slice C + E) —
+    // inside the same versioned identity document sessions and runs share
+    // (Phase F). Risk is not declared here: the launcher does not own the
+    // executor's risk configuration, so `risk.fingerprint` stays an honest gap.
+    manifest: mm.buildManifest({
+      kind: 'session',
+      source: 'paper',
       purpose: 'paper-validation',
+      engineVersion: vm.ENGINE_VERSION,
+      strategyVersionId: candidateVersionId,
+      paramsHash: experiment.paramsHash ?? null,
+      method: experiment.method ?? null,
+      dataSource: 'venue-rest',
+      account: accountId,
+      instruments,
+      timeframes,
       experimentId: String(experiment.experimentId ?? experiment._id),
-      candidateVersionId,
       baselineVersionId: experiment.baselineVersionId ?? null,
-      evidenceSetId: input.evidenceSetId ?? experiment.evidenceSetId ?? null
-    },
+      evidenceSetId: input.evidenceSetId ?? experiment.evidenceSetId ?? null,
+      createdAt: Date.now()
+    }),
     createdBy: input.createdBy ?? null,
     ownerId: ownerId ?? null
   })

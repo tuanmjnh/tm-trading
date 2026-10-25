@@ -1,4 +1,4 @@
-import type { RunSeries, RunSeriesDetail, RunsListResponse } from '~~/types/runs'
+import type { RunSeries, RunSeriesDetail, RunsListResponse } from '#shared/types/runs'
 
 // =============================================================================
 // API documentation for backtesting from reports/*.ndjson (TM Trading's Nitro route).

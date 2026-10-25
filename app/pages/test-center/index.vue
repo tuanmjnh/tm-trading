@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { getErrorMessage } from '~/shared/utils/errors'
-import type { MethodMeta } from '~~/types/methods'
-import type { ReplaySummary } from '~~/types/replay'
-import type { TestRunResult } from '~~/types/runs'
-import type { StrategyProfile, StrategyVersion } from '~~/types/strategy'
+import type { MethodMeta } from '#shared/types/methods'
+import type { ReplaySummary } from '#shared/types/replay'
+import type { TestRunResult } from '#shared/types/runs'
+import type { StrategyProfile, StrategyVersion } from '#shared/types/strategy'
 
 // Test Builder (roadmap §58.9 Slice 3). One page, three launch modes backed by
 // real contracts: BACKTEST -> POST /api/v1/runs (engine runOne + D1 stamp),
@@ -190,7 +190,7 @@ useHead({ title })
 <template>
   <BasePage id="lab-new" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('testCenter.pips.builder')" />
+      <BasePageEyebrow :trail="trail" :pip="t('testCenter.pips.builder')" />
     </template>
 
     <template #right>

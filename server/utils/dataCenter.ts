@@ -1,6 +1,6 @@
 import type { PipelineStage } from 'mongoose'
-import type { Dataset, DatasetQuality, DatasetKind, LineageDatasetRef, LineageEntry, QualityVerdict, RecordingGroup } from '../../types/data'
-import type { RunSeriesDetail } from '../../types/runs'
+import type { Dataset, DatasetQuality, DatasetKind, LineageDatasetRef, LineageEntry, QualityVerdict, RecordingGroup } from '#shared/types/data'
+import type { RunSeriesDetail } from '#shared/types/runs'
 import { candleModel, datasetModel, marketFeedModel } from './engineModel'
 import { loadRunSeries } from './reports'
 
@@ -8,7 +8,7 @@ import { loadRunSeries } from './reports'
 //  DATA CENTER READ MODEL (roadmap §58.9 Slice 4, §23.4).
 //
 //  Read-only projections over the SAME persistence the recorder writes:
-//    - datasets manifest     -> Dataset / Quality / Lineage
+//    - datasets manifest     -> ServerDataset / Quality / Lineage
 //    - candles / market_feed -> Recordings
 //  We never recompute engine numbers here (D1); coverage is derived from the
 //  manifest's measured start/end/count (D12), never guessed.
@@ -262,8 +262,8 @@ export interface DataCenterDeps {
 }
 
 async function loadDatasetRows(q: DatasetQuery): Promise<{ rows: Dataset[], mongo: 'up' | 'down' }> {
-  const Dataset = await datasetModel()
-  if (!Dataset) return { rows: [], mongo: 'down' }
+  const DatasetModel = await datasetModel()
+  if (!DatasetModel) return { rows: [], mongo: 'down' }
   const limit = Math.min(Math.max(Number(q.limit) || 200, 1), 1000)
   const filter: Record<string, unknown> = {}
   if (q.kind) filter.kind = q.kind
@@ -271,7 +271,7 @@ async function loadDatasetRows(q: DatasetQuery): Promise<{ rows: Dataset[], mong
   if (q.timeframe) filter.timeframe = q.timeframe
   if (q.symbol) filter.symbol = { $regex: `^${escapeRegex(q.symbol)}`, $options: 'i' }
   try {
-    let rows = (await (Dataset as AnyModel).find(filter).sort({ updatedAt: -1, count: -1 }).limit(limit).lean()) as unknown as Dataset[]
+    let rows = (await (DatasetModel as AnyModel).find(filter).sort({ updatedAt: -1, count: -1 }).limit(limit).lean()) as unknown as Dataset[]
     const text = q.q ? String(q.q).trim().toLowerCase() : ''
     if (text) {
       rows = rows.filter(r =>
@@ -339,4 +339,3 @@ export async function listLineage(deps?: DataCenterDeps): Promise<{ data: Lineag
   return { data: buildLineage(seriesRes.series, rows), mongo, filesMissing: seriesRes.filesMissing }
 }
 
-export type { Dataset, DatasetKind }

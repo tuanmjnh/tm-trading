@@ -1,4 +1,4 @@
-import type { PositionItem, PositionsListResponse } from '~~/types/positions'
+import type { PositionItem, PositionsListResponse } from '#shared/types/positions'
 
 // =============================================================================
 //  Positions API (Nitro internal route — no tm-hub hop). Fail-soft: Mongo down

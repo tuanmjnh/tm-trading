@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AcceptanceGate, ArmComparison, ArmMetrics, Experiment, ExperimentResearch } from '~~/types/research'
+import type { AcceptanceGate, ArmComparison, ArmMetrics, Experiment, ExperimentResearch } from '#shared/types/research'
 import { getErrorMessage } from '~/shared/utils/errors'
 
 // Experiment detail (roadmap §58.9 Slice 5, §28). One candidate's full trail:
@@ -166,7 +166,7 @@ useHead({ title })
 <template>
   <BasePage id="research-experiment" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('research.pips.detail')" />
+      <BasePageEyebrow :trail="trail" :pip="t('research.pips.detail')" />
     </template>
 
     <template #right>

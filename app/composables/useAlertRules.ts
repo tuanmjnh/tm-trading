@@ -3,7 +3,7 @@ import type {
   AlertRuleInput,
   AlertRuleListResponse,
   AlertRuleResponse
-} from '~~/types/alertRules'
+} from '#shared/types/alertRules'
 
 // =============================================================================
 //  useAlertRules — alert rule definitions client (roadmap §58.5 /alerts).

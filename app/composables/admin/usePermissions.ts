@@ -1,5 +1,5 @@
 import type { Permission, PermissionScope } from '#server/types/permission'
-import type { Role, ModulePermission } from '~/types/rbac'
+import type { Role, ModulePermission } from '#shared/types/rbac'
 import { adminFetch } from '~/composables/useAdminList'
 
 export interface PermissionRow {

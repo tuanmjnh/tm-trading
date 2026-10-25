@@ -18,6 +18,9 @@ const AlertSchema = new mongoose.Schema(
     ownerId: { type: String, default: null, index: true },
 
     source: { type: String, default: 'tradingview' },
+    // Phase E: native signal -> bot instance -> paper order traceability.
+    instanceId: { type: String, default: null, index: true },
+    signalKey: { type: String, default: null, index: true },
     v: { type: Number, default: 1 },
 
     ts: { type: Date, required: true },

@@ -107,7 +107,7 @@ export async function listResearchTrades(q: ListJournalQuery): Promise<ListJourn
 //  those versions. Fail-soft: Mongo down => empty collections + meta.mongo.
 // -----------------------------------------------------------------------------
 
-export interface StrategyResearch {
+export interface ServerStrategyResearch {
   profile: Record<string, unknown> | null
   versions: Record<string, unknown>[]
   experiments: Record<string, unknown>[]
@@ -116,16 +116,16 @@ export interface StrategyResearch {
 }
 
 /** Injectable model loaders (tests pass fakes; production omits for the real ones). */
-export interface StrategyResearchDeps {
+export interface ServerStrategyResearchDeps {
   profileModel?: typeof strategyProfileModel
   versionModel?: typeof strategyVersionModel
   experimentModel?: typeof experimentModel
   proposalModel?: typeof aiProposalModel
 }
 
-export async function getStrategyResearch(id: string, deps: StrategyResearchDeps = {}, ownerId?: string | null): Promise<StrategyResearch> {
+export async function getStrategyResearch(id: string, deps: ServerStrategyResearchDeps = {}, ownerId?: string | null): Promise<ServerStrategyResearch> {
   const human = String(id ?? '').trim()
-  const empty: StrategyResearch = { profile: null, versions: [], experiments: [], proposals: [], mongo: 'down' }
+  const empty: ServerStrategyResearch = { profile: null, versions: [], experiments: [], proposals: [], mongo: 'down' }
   if (!human) return empty
 
   const Profile = await (deps.profileModel ?? strategyProfileModel)()
@@ -281,18 +281,18 @@ export async function createExperiment(body: unknown, deps: CreateExperimentDeps
 //  runs, the §28.2 comparison and the §28.3 acceptance report.
 // -----------------------------------------------------------------------------
 
-export interface ExperimentResearch {
+export interface ServerExperimentResearch {
   experiment: Record<string, unknown> | null
   comparison: unknown
   acceptance: unknown
   mongo: 'up' | 'down'
 }
 
-export interface ExperimentResearchDeps {
+export interface ServerExperimentResearchDeps {
   service?: ExperimentService
 }
 
-export async function getExperimentResearch(id: string, deps: ExperimentResearchDeps = {}, ownerId?: string | null): Promise<ExperimentResearch> {
+export async function getExperimentResearch(id: string, deps: ServerExperimentResearchDeps = {}, ownerId?: string | null): Promise<ServerExperimentResearch> {
   const human = String(id ?? '').trim()
   if (!human) return { experiment: null, comparison: null, acceptance: null, mongo: 'down' }
   const service = deps.service ?? await experimentService()

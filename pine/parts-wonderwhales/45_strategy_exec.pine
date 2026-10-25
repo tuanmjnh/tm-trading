@@ -1,0 +1,206 @@
+// @part skip:wonderwhales,wonderwhales-overlay
+// =============================================================================
+//  WONDERWHALES — STRATEGY EXECUTION BRIDGE (TradingView Backtest)
+//  Marker "@part skip:wonderwhales" ensures this file only builds into wonderwhales-strategy.
+// =============================================================================
+
+// --- Strategy Execution Inputs ---
+ww_strat_on       = input.bool(true, "Enable Auto Strategy Trading", group = "Wonderwhales · Strategy", tooltip = "Enable simulated automated order placement for backtesting.")
+ww_strat_dir      = input.string("Long + Short", "Trade Direction", options = ["Long + Short", "Long Only", "Short Only"], group = "Wonderwhales · Strategy", tooltip = "Allowed trading direction for backtest.")
+ww_strat_exitMode = input.string("TP / SL + Auto Break-Even", "Exit Strategy", options = ["TP / SL + Auto Break-Even", "Ladder 50/50 (TP1 BE + TP2)", "Trailing SAR", "Reversal (SAR Flip)"], group = "Wonderwhales · Strategy", tooltip = "TP / SL + Auto Break-Even: Take Profit at target, automatically move SL to Entry upon reaching BE trigger.\nLadder 50/50: Take 50% at TP1, move remaining 50% SL to Entry, close at TP2.\nTrailing SAR: Trail Stop Loss with Parabolic SAR.\nReversal: Only close position on opposite SAR flip.")
+
+// --- Stop Loss & Take Profit Models ---
+ww_strat_slType   = input.string("ATR Multiplier", "Stop Loss Model", options = ["ATR Multiplier", "Parabolic SAR Dot", "Swing High/Low"], group = "Wonderwhales · Risk & Exits", tooltip = "ATR Multiplier: Dynamic SL based on ATR volatility (tight and bounded, prevents huge drawdowns).\nParabolic SAR Dot: Use Parabolic SAR dot level.\nSwing High/Low: Lowest low or highest high of last N bars.")
+ww_strat_slAtrMul = input.float(1.5, "SL ATR Multiplier", minval = 0.5, step = 0.1, group = "Wonderwhales · Risk & Exits", tooltip = "Multiplier applied to ATR when calculating Stop Loss.")
+ww_strat_swingLen = input.int(5, "Swing Lookback (Bars)", minval = 2, maxval = 50, group = "Wonderwhales · Risk & Exits", tooltip = "Bars back to detect Swing Low (for Long) or Swing High (for Short).")
+ww_strat_rr1      = input.float(1.5, "Take Profit 1 R:R", minval = 0.5, step = 0.1, group = "Wonderwhales · Risk & Exits", tooltip = "Target 1 Reward-to-Risk ratio.")
+ww_strat_rr2      = input.float(3.0, "Take Profit 2 R:R (Ladder Mode)", minval = 1.0, step = 0.2, group = "Wonderwhales · Risk & Exits", tooltip = "Target 2 Reward-to-Risk ratio for Runner.")
+
+// --- Break-Even (Dời SL về Entry) Configuration ---
+ww_strat_beOn        = input.bool(true, "Enable Auto Break-Even (SL to Entry)", group = "Wonderwhales · Break-Even", tooltip = "Automatically move Stop Loss to Entry price (plus fee buffer) when trade is in profit.")
+ww_strat_beTrigger   = input.string("At 1.0 R:R Profit", "Break-Even Trigger", options = ["At 1.0 R:R Profit", "At 50% TP1 Progress", "At 1.0x ATR Profit"], group = "Wonderwhales · Break-Even", tooltip = "Profit threshold required to activate Break-Even protection.")
+ww_strat_beOffsetAtr = input.float(0.05, "Break-Even Buffer (x ATR)", minval = 0.0, step = 0.05, group = "Wonderwhales · Break-Even", tooltip = "Buffer added to Entry price to cover exchange fees and slippage.")
+
+// --- Position Sizing & Visuals ---
+ww_strat_pct       = input.float(100.0, "Position Sizing (% of Equity)", minval = 1.0, maxval = 100.0, step = 5.0, group = "Wonderwhales · Sizing & Display", tooltip = "Percentage of portfolio equity allocated per trade.")
+ww_strat_showLines = input.bool(true, "Show Active TP/SL/BE Lines on Chart", group = "Wonderwhales · Sizing & Display", tooltip = "Plot visual Entry, TP, SL, and Break-Even levels directly on chart while trade is open.")
+
+bool ww_allowLong  = ww_strat_dir == "Long + Short" or ww_strat_dir == "Long Only"
+bool ww_allowShort = ww_strat_dir == "Long + Short" or ww_strat_dir == "Short Only"
+
+float ww_calcAtr = nz(ww_atr, ta.atr(14))
+if na(ww_calcAtr) or ww_calcAtr <= 0.0
+    ww_calcAtr := close * 0.01
+
+float ww_stratQty = (ww_strat_pct / 100.0 * strategy.equity) / close
+bool  ww_stratQtyOk = ww_stratQty > 0.0 and not na(close) and close > 0.0
+
+// Unconditional series calculations for consistency (avoids compiler warnings)
+float ww_swingLow  = ta.lowest(low, ww_strat_swingLen)
+float ww_swingHigh = ta.highest(high, ww_strat_swingLen)
+
+// Persistent trade variables
+var float ww_posEntry   = na
+var float ww_posSl      = na
+var float ww_posTp1     = na
+var float ww_posTp2     = na
+var float ww_posRisk    = na
+var bool  ww_isBeActive = false
+var int   ww_posDir     = 0  // +1: Long, -1: Short, 0: Flat
+var bool  ww_isLadder   = false
+
+// Reset tracking when completely flat
+if strategy.position_size == 0
+    ww_posEntry   := na
+    ww_posSl      := na
+    ww_posTp1     := na
+    ww_posTp2     := na
+    ww_posRisk    := na
+    ww_isBeActive := false
+    ww_posDir     := 0
+    ww_isLadder   := false
+
+// Entry Triggers (Only trigger initial entry when flat to prevent repainting/drifting levels)
+bool ww_longCond  = ww_strat_on and ww_stratQtyOk and ww_signalBuy and ww_allowLong and strategy.position_size == 0
+bool ww_shortCond = ww_strat_on and ww_stratQtyOk and ww_signalSell and ww_allowShort and strategy.position_size == 0
+
+// Calculate Long Entry Levels
+if ww_longCond
+    ww_posEntry := close
+    ww_posDir   := 1
+    ww_isLadder := ww_strat_exitMode == "Ladder 50/50 (TP1 BE + TP2)"
+
+    // Stop Loss calculation
+    float rawSl = na
+    if ww_strat_slType == "ATR Multiplier"
+        rawSl := close - (ww_strat_slAtrMul * ww_calcAtr)
+    else if ww_strat_slType == "Parabolic SAR Dot"
+        rawSl := not na(ww_psar) and ww_psar < close ? ww_psar : close - (ww_strat_slAtrMul * ww_calcAtr)
+    else // Swing High/Low
+        rawSl := ww_swingLow - (0.2 * ww_calcAtr)
+
+    ww_posRisk := ww_posEntry - rawSl
+    if na(ww_posRisk) or ww_posRisk <= 0.0
+        ww_posRisk := ww_strat_slAtrMul * ww_calcAtr
+        rawSl := ww_posEntry - ww_posRisk
+
+    ww_posSl      := rawSl
+    ww_posTp1     := ww_posEntry + (ww_strat_rr1 * ww_posRisk)
+    ww_posTp2     := ww_posEntry + (ww_strat_rr2 * ww_posRisk)
+    ww_isBeActive := false
+
+    if ww_isLadder
+        float q1 = ww_stratQty * 0.50
+        float q2 = ww_stratQty - q1
+        strategy.entry("Long1", strategy.long, qty = q1, comment = "WW L1")
+        strategy.entry("Long2", strategy.long, qty = q2, comment = "WW L2")
+    else
+        strategy.entry("Long", strategy.long, qty = ww_stratQty, comment = "WW LONG")
+
+// Calculate Short Entry Levels
+if ww_shortCond
+    ww_posEntry := close
+    ww_posDir   := -1
+    ww_isLadder := ww_strat_exitMode == "Ladder 50/50 (TP1 BE + TP2)"
+
+    // Stop Loss calculation
+    float rawSl = na
+    if ww_strat_slType == "ATR Multiplier"
+        rawSl := close + (ww_strat_slAtrMul * ww_calcAtr)
+    else if ww_strat_slType == "Parabolic SAR Dot"
+        rawSl := not na(ww_psar) and ww_psar > close ? ww_psar : close + (ww_strat_slAtrMul * ww_calcAtr)
+    else // Swing High/Low
+        rawSl := ww_swingHigh + (0.2 * ww_calcAtr)
+
+    ww_posRisk := rawSl - ww_posEntry
+    if na(ww_posRisk) or ww_posRisk <= 0.0
+        ww_posRisk := ww_strat_slAtrMul * ww_calcAtr
+        rawSl := ww_posEntry + ww_posRisk
+
+    ww_posSl      := rawSl
+    ww_posTp1     := ww_posEntry - (ww_strat_rr1 * ww_posRisk)
+    ww_posTp2     := ww_posEntry - (ww_strat_rr2 * ww_posRisk)
+    ww_isBeActive := false
+
+    if ww_isLadder
+        float q1 = ww_stratQty * 0.50
+        float q2 = ww_stratQty - q1
+        strategy.entry("Short1", strategy.short, qty = q1, comment = "WW S1")
+        strategy.entry("Short2", strategy.short, qty = q2, comment = "WW S2")
+    else
+        strategy.entry("Short", strategy.short, qty = ww_stratQty, comment = "WW SHORT")
+
+// Dynamic Exit Management (Auto Break-Even, Trailing Stop, TP Hit, SL Hit)
+if ww_strat_on and strategy.position_size > 0
+    // 1. Check Break-Even trigger condition for Long
+    if ww_strat_beOn and not ww_isBeActive and not na(ww_posEntry) and not na(ww_posRisk)
+        float beThresh = na
+        if ww_strat_beTrigger == "At 1.0 R:R Profit"
+            beThresh := ww_posEntry + ww_posRisk
+        else if ww_strat_beTrigger == "At 50% TP1 Progress"
+            beThresh := ww_posEntry + 0.5 * (ww_posTp1 - ww_posEntry)
+        else // At 1.0x ATR Profit
+            beThresh := ww_posEntry + (1.0 * ww_calcAtr)
+
+        if high >= beThresh
+            ww_isBeActive := true
+            float beSl = ww_posEntry + (ww_strat_beOffsetAtr * ww_calcAtr)
+            ww_posSl := math.max(ww_posSl, beSl)
+
+    // 2. Trailing SAR update for Long
+    if ww_strat_exitMode == "Trailing SAR" and not na(ww_psar) and ww_psar > ww_posSl
+        ww_posSl := ww_psar
+
+    // 3. Submit Exits
+    if ww_strat_exitMode == "Reversal (SAR Flip)"
+        if ww_signalSell
+            strategy.close("Long", comment = "SAR Reversal")
+    else if ww_isLadder
+        strategy.exit("Exit L1", from_entry = "Long1", stop = ww_posSl, limit = ww_posTp1, comment_profit = "TP1 Hit", comment_loss = ww_isBeActive ? "BE Hit" : "SL Hit")
+        strategy.exit("Exit L2", from_entry = "Long2", stop = ww_posSl, limit = ww_posTp2, comment_profit = "TP2 Hit", comment_loss = ww_isBeActive ? "BE Hit" : "SL Hit")
+    else
+        strategy.exit("Exit Long", from_entry = "Long", stop = ww_posSl, limit = ww_posTp1, comment_profit = "TP Hit", comment_loss = ww_isBeActive ? "BE Hit" : "SL Hit")
+
+if ww_strat_on and strategy.position_size < 0
+    // 1. Check Break-Even trigger condition for Short
+    if ww_strat_beOn and not ww_isBeActive and not na(ww_posEntry) and not na(ww_posRisk)
+        float beThresh = na
+        if ww_strat_beTrigger == "At 1.0 R:R Profit"
+            beThresh := ww_posEntry - ww_posRisk
+        else if ww_strat_beTrigger == "At 50% TP1 Progress"
+            beThresh := ww_posEntry - 0.5 * (ww_posEntry - ww_posTp1)
+        else // At 1.0x ATR Profit
+            beThresh := ww_posEntry - (1.0 * ww_calcAtr)
+
+        if low <= beThresh
+            ww_isBeActive := true
+            float beSl = ww_posEntry - (ww_strat_beOffsetAtr * ww_calcAtr)
+            ww_posSl := math.min(ww_posSl, beSl)
+
+    // 2. Trailing SAR update for Short
+    if ww_strat_exitMode == "Trailing SAR" and not na(ww_psar) and ww_psar < ww_posSl
+        ww_posSl := ww_psar
+
+    // 3. Submit Exits
+    if ww_strat_exitMode == "Reversal (SAR Flip)"
+        if ww_signalBuy
+            strategy.close("Short", comment = "SAR Reversal")
+    else if ww_isLadder
+        strategy.exit("Exit S1", from_entry = "Short1", stop = ww_posSl, limit = ww_posTp1, comment_profit = "TP1 Hit", comment_loss = ww_isBeActive ? "BE Hit" : "SL Hit")
+        strategy.exit("Exit S2", from_entry = "Short2", stop = ww_posSl, limit = ww_posTp2, comment_profit = "TP2 Hit", comment_loss = ww_isBeActive ? "BE Hit" : "SL Hit")
+    else
+        strategy.exit("Exit Short", from_entry = "Short", stop = ww_posSl, limit = ww_posTp1, comment_profit = "TP Hit", comment_loss = ww_isBeActive ? "BE Hit" : "SL Hit")
+
+// --- Visual Level Plots on Chart (Active Positions) ---
+float ww_lvlEntry = ww_strat_showLines and strategy.position_size != 0 ? ww_posEntry : na
+float ww_lvlSl    = ww_strat_showLines and strategy.position_size != 0 ? ww_posSl : na
+float ww_lvlTp1   = ww_strat_showLines and strategy.position_size != 0 ? ww_posTp1 : na
+float ww_lvlTp2   = ww_strat_showLines and strategy.position_size != 0 and ww_isLadder ? ww_posTp2 : na
+
+color ww_slColor = ww_isBeActive ? color.rgb(250, 204, 21) : color.rgb(239, 68, 68)
+
+plot(ww_lvlEntry, title = "Strategy Entry",   color = color.rgb(148, 163, 184), linewidth = 1, style = plot.style_linebr)
+plot(ww_lvlTp1,   title = "Strategy TP1",     color = color.rgb(34, 197, 94),   linewidth = 2, style = plot.style_linebr)
+plot(ww_lvlTp2,   title = "Strategy TP2",     color = color.rgb(16, 185, 129),  linewidth = 2, style = plot.style_linebr)
+plot(ww_lvlSl,    title = "Strategy SL / BE", color = ww_slColor,              linewidth = 2, style = plot.style_linebr)
+

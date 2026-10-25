@@ -1,5 +1,5 @@
-import type { PaperAccountDetail, PaperAccountsListResponse, PaperAccountDetailResponse, PaperAccountSummary } from '~~/types/paper'
-import type { PositionItem, PositionsListResponse } from '~~/types/positions'
+import type { PaperAccountDetail, PaperAccountsListResponse, PaperAccountDetailResponse, PaperAccountSummary } from '#shared/types/paper'
+import type { PositionItem, PositionsListResponse } from '#shared/types/positions'
 
 // =============================================================================
 //  useForwardTests — the Forward test monitor data source (§58.9 Slice 3).

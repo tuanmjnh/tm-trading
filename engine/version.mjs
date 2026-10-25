@@ -88,19 +88,35 @@ function coerce(name, type, value) {
  *  - sort key        (bay 2)
  *  - ep kieu schema  (bay 3)
  *  - nem loi ten sai (bay 4)
+ *
+ * `methodDefaults` (optional): schema cua method khac VSA (wonderwhales,
+ * priceAction, ...). PARAM_SCHEMA duoc derive tu DEFAULTS cua VSA, nen method
+ * khac bi tu choi o bay 4 — league.mjs da phai dung hashOf vi le do. Khi truyen
+ * defaults cua chinh method, schema duoc derive cung kieu (typeof) va identity
+ * van on dinh voi chinh method do. Khong truyen -> han vi EXACTLY nhu cu
+ * (PARAM_SCHEMA + DEFAULTS toan cuc), moi paramsHash luu tru khong doi.
  */
-export function canonicalParams(params = {}) {
+export function canonicalParams(params = {}, methodDefaults = null) {
   if (params === null || typeof params !== 'object' || Array.isArray(params)) {
     throw new TypeError('params phai la object')
   }
-  const unknown = Object.keys(params).filter((k) => !(k in PARAM_SCHEMA))
+  const defaults = methodDefaults && typeof methodDefaults === 'object' && !Array.isArray(methodDefaults)
+    ? methodDefaults
+    : DEFAULTS
+  const schema = Object.fromEntries(
+    Object.entries(defaults).map(([k, v]) => [
+      k,
+      typeof v === 'boolean' ? BOOLEAN : typeof v === 'number' ? NUMBER : STRING,
+    ]),
+  )
+  const unknown = Object.keys(params).filter((k) => !(k in schema))
   if (unknown.length) {
     throw new Error(`tham so khong ton tai trong engine: ${unknown.sort().join(', ')}`)
   }
   const out = {}
-  for (const name of Object.keys(PARAM_SCHEMA).sort()) {
-    const raw = params[name] === undefined ? DEFAULTS[name] : params[name]
-    out[name] = coerce(name, PARAM_SCHEMA[name], raw)
+  for (const name of Object.keys(schema).sort()) {
+    const raw = params[name] === undefined ? defaults[name] : params[name]
+    out[name] = coerce(name, schema[name], raw)
   }
   return out
 }
@@ -116,9 +132,10 @@ export function stableStringify(value) {
 
 const sha256 = (s) => createHash('sha256').update(s).digest('hex')
 
-/** Hash cua mot bo tham so - hai cau hinh tuong duong LUON cho cung hash. */
-export function paramsHash(params) {
-  return sha256(stableStringify(canonicalParams(params)))
+/** Hash cua mot bo tham so - hai cau hinh tuong duong LUON cho cung hash.
+ *  `methodDefaults` (optional): xem canonicalParams. Khong truyen -> hash y het nhu cu. */
+export function paramsHash(params, methodDefaults = null) {
+  return sha256(stableStringify(canonicalParams(params, methodDefaults)))
 }
 
 /** Hash bat ky gia tri nao (dung cho dataHash, universeSnapshot, ...). */

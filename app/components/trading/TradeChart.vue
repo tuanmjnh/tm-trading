@@ -34,17 +34,17 @@ import {
   type CandleInput,
   type CandleMessage,
   type ChartBar
-} from '../utils/marketFeed'
+} from '../../utils/marketFeed'
 import {
   INDICATOR_MAP,
   calculateIndicator,
   type IndicatorDefinition,
   type IndicatorOutputDef,
   type IndicatorSelection
-} from '../utils/indicators'
-import type { ReplayCandle, ReplaySummary } from '~~/types/replay'
-import type { IntelNewsItem, IntelZone } from '~~/types/intel'
-import type { MethodEvent } from '~~/types/methods'
+} from '../../utils/indicators'
+import type { ReplayCandle, ReplaySummary } from '#shared/types/replay'
+import type { IntelNewsItem, IntelZone } from '#shared/types/intel'
+import type { MethodEvent } from '#shared/types/methods'
 
 const props = defineProps<{
   symbol: string

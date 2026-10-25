@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { Experiment, ExperimentState } from '~~/types/research'
+import type { Experiment, ExperimentState } from '#shared/types/research'
 import { getErrorMessage } from '~/shared/utils/errors'
 
 // Experiments (roadmap §58.9 Slice 5, §28). The human review queue for AI
@@ -148,7 +148,7 @@ useHead({ title })
 <template>
   <BasePage id="research-experiments" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('research.pips.experiments')" />
+      <BasePageEyebrow :trail="trail" :pip="t('research.pips.experiments')" />
     </template>
 
     <template #right>
@@ -193,7 +193,7 @@ useHead({ title })
 
     <template #toolbar>
       <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
-        <FilterChips v-model="statusFilter" :items="statusChips" />
+        <SharedFilterChips v-model="statusFilter" :items="statusChips" />
       </div>
     </template>
 
@@ -202,7 +202,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
       <LazyGridList
         :items="filtered"
         :columns="columns"

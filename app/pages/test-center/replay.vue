@@ -12,7 +12,7 @@
 //  While mode === 'playing' the page polls GET :id?cursor=N every 700ms;
 //  manual actions (create/step/play/pause) return their own fresh payload.
 // =============================================================================
-import type { ReplayCandle, ReplayCreateInput, ReplayMode, ReplayPosition, ReplaySummary } from '../../../types/replay'
+import type { ReplayCandle, ReplayCreateInput, ReplayMode, ReplayPosition, ReplaySummary } from '#shared/types/replay'
 import { getErrorMessage } from '~/shared/utils/errors'
 import { challengeLevels, challengeScore } from '../../../simulation/challenge.mjs'
 
@@ -220,7 +220,7 @@ const trail = computed(() => [
 <template>
   <BasePage id="replay" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('testCenter.pips.replay')" />
+      <BasePageEyebrow :trail="trail" :pip="t('testCenter.pips.replay')" />
     </template>
 
     <div class="flex flex-col w-full gap-3 pb-24 lg:pb-6">
@@ -336,7 +336,7 @@ const trail = computed(() => [
             </UButton>
           </div>
         </div>
-        <ReplayControls
+        <TradingReplayControls
           :mode="mode"
           :speed="session.speed"
           :cursor="session.cursor"

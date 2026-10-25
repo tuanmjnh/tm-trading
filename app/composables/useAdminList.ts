@@ -1,6 +1,6 @@
-import type { AuthUser } from '~/types/auth'
-import type { Role, ModulePermission } from '~/types/rbac'
-import type { SystemRoute } from '~/types/rbac'
+import type { AuthUser } from '#shared/types/auth'
+import type { Role, ModulePermission } from '#shared/types/rbac'
+import type { SystemRoute } from '#shared/types/rbac'
 
 export interface AdminListState<T> {
   items: T[]

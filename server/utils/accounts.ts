@@ -1,4 +1,4 @@
-import type { AccountItem } from '../../types/accounts'
+import type { AccountItem } from '#shared/types/accounts'
 import { engineModel } from './engineModel'
 
 // =============================================================================

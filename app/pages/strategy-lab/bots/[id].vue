@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
-import type { BotInstance, BotProfile } from '~~/types/bots'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
+import type { BotInstance, BotProfile } from '#shared/types/bots'
 import { formatTimeAgo } from '@vueuse/core'
 import { getErrorMessage } from '~/shared/utils/errors'
 
@@ -103,7 +103,7 @@ useHead({ title })
 <template>
   <BasePage id="bot-profile-detail" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('strategyLab.pips.botProfileDetail')" />
+      <BasePageEyebrow :trail="trail" :pip="t('strategyLab.pips.botProfileDetail')" />
     </template>
 
     <template #right>
@@ -126,7 +126,7 @@ useHead({ title })
       />
 
       <template v-else>
-        <MetricRibbon :items="metrics" cols="grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" />
+        <SharedMetricRibbon :items="metrics" cols="grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" />
 
         <UCard>
           <template #header>

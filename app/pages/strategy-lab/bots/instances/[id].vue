@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { MetricItem } from '~/components/MetricRibbon.vue'
-import type { BotInstance } from '~~/types/bots'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
+import type { BotInstance } from '#shared/types/bots'
 import { formatTimeAgo } from '@vueuse/core'
 import { getErrorMessage } from '~/shared/utils/errors'
 
@@ -43,7 +43,7 @@ const description = computed(() => {
 
 const trail = computed(() => [
   { label: t('nav.strategy_lab'), to: '/strategy-lab' },
-  { label: t('nav.bot_instances'), to: '/strategy-lab/bots/instances' },
+  { label: t('nav.bot_profiles'), to: '/strategy-lab/bots' },
   { label: title.value }
 ])
 
@@ -107,7 +107,7 @@ useHead({ title })
 <template>
   <BasePage id="bot-instance-detail" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('strategyLab.pips.botInstanceDetail')" />
+      <BasePageEyebrow :trail="trail" :pip="t('strategyLab.pips.botInstanceDetail')" />
     </template>
 
     <template #right>
@@ -130,7 +130,7 @@ useHead({ title })
       />
 
       <template v-else>
-        <MetricRibbon :items="metrics" cols="grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" />
+        <SharedMetricRibbon :items="metrics" cols="grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" />
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Session contract -->

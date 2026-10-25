@@ -1,4 +1,4 @@
-import type { SignalItem, SignalsListResponse } from '~~/types/signals'
+import type { SignalItem, SignalsListResponse } from '#shared/types/signals'
 
 // =============================================================================
 //  Webhook signal API (TM Trading's Nitro route — does NOT go to tm-hub).

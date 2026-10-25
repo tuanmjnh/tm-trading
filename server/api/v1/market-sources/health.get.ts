@@ -1,7 +1,7 @@
 import {
   VENUE_IDS,
   INSTRUMENTS,
-  type InstrumentVenue,
+  type ServerInstrumentVenue,
 } from '../../../utils/instruments'
 import { fetchJson } from '../../../utils/marketRest'
 
@@ -10,8 +10,14 @@ import { fetchJson } from '../../../utils/marketRest'
  *
  * Performs a lightweight probe against each venue's public REST endpoint.
  * Returns { venue, status, latencyMs, error? } for each.
+ * 
+ * Cached for 5 minutes to avoid Binance -1003 rate limits.
  */
-export default defineEventHandler(async (event) => {
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+let cachedResult: { data: any; meta: any; success: boolean } | null = null
+let cachedAt = 0
+
+async function probeVenues() {
   const results = await Promise.all(
     VENUE_IDS.map(async (venue: string) => {
       const start = Date.now()
@@ -48,9 +54,21 @@ export default defineEventHandler(async (event) => {
   // Add instrument coverage per venue
   const coverage = results.map((r: typeof results[0]) => ({
     ...r,
-    instruments: INSTRUMENTS.filter((i: typeof INSTRUMENTS[0]) => i.venues.some((v: InstrumentVenue) => v.venue === r.venue)).length,
+    instruments: INSTRUMENTS.filter((i: typeof INSTRUMENTS[0]) => i.venues.some((v: ServerInstrumentVenue) => v.venue === r.venue)).length,
   }))
 
   const healthy = coverage.filter((c: typeof coverage[0]) => c.status === 'up').length
   return { success: true, data: coverage, meta: { total: coverage.length, healthy } }
+}
+
+export default defineEventHandler(async (event) => {
+  const now = Date.now()
+  if (cachedResult && now - cachedAt < 5 * 60 * 1000) {
+    return cachedResult
+  }
+  
+  const result = await probeVenues()
+  cachedResult = result
+  cachedAt = now
+  return result
 })

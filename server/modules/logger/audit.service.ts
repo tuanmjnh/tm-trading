@@ -1,6 +1,7 @@
 import type { Model } from 'mongoose'
 import { HistorySchema, type IHistoryDocument } from './model'
 import { getMongoLogConnection } from './mongodb'
+import { getAuditTtlDays } from './ttl'
 
 export interface LogActor {
   id?: string
@@ -172,6 +173,9 @@ export class AuditService {
         }
       }
 
+      // Per-doc TTL (audit.retention -> env -> 90 days); 0 = keep forever.
+      const ttlDays = await getAuditTtlDays(appId)
+
       const logEntry = {
         appId,
         docId,
@@ -182,7 +186,8 @@ export class AuditService {
         ip: ip || undefined,
         userAgent: userAgent || undefined,
         at: Date.now(),
-        changes: changes || undefined
+        changes: changes || undefined,
+        expiresAt: ttlDays > 0 ? new Date(Date.now() + ttlDays * 86_400_000) : undefined
       }
 
       const model = await this.getModel()

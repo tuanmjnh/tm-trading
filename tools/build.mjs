@@ -88,6 +88,28 @@ const TARGETS = {
     shared: ['common.pine'],
     decl: `strategy("TM Fusion Zones Backtest", shorttitle = "TM FZ BT", overlay = true, pyramiding = 0, calc_on_order_fills = true, process_orders_on_close = true, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 1000, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, commission_value = 0.05, slippage = 0)`,
   },
+  // Wonderwhales (parts-wonderwhales)
+  wonderwhales: {
+    file: 'Wonderwhales.pine',
+    dir: 'parts-wonderwhales',
+    version: '1.2.0',
+    shared: ['common.pine'],
+    decl: `indicator("Wonderwhales", shorttitle = "WWHALES", overlay = false, max_labels_count = 500, max_lines_count = 500, max_bars_back = 1000)`,
+  },
+  'wonderwhales-overlay': {
+    file: 'Wonderwhales Overlay.pine',
+    dir: 'parts-wonderwhales',
+    version: '1.2.0',
+    shared: ['common.pine'],
+    decl: `indicator("Wonderwhales Overlay", shorttitle = "WWHALES OV", overlay = true, max_labels_count = 500, max_lines_count = 500, max_bars_back = 1000)`,
+  },
+  'wonderwhales-strategy': {
+    file: 'Wonderwhales Backtest.pine',
+    dir: 'parts-wonderwhales',
+    version: '1.2.0',
+    shared: ['common.pine'],
+    decl: `strategy("Wonderwhales Backtest", shorttitle = "WWHALES BT", overlay = true, pyramiding = 0, calc_on_order_fills = true, calc_on_every_tick = true, process_orders_on_close = true, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 1000, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, commission_value = 0.05, slippage = 0)`,
+  },
 }
 
 const ALIASES = {
@@ -96,6 +118,14 @@ const ALIASES = {
   'tm2-strategy': 'tm-strategy',
   xau: 'xau-indicator',
   xau2: 'xau-indicator',
+  ww: 'wonderwhales',
+  wonderwhales: 'wonderwhales',
+  'ww-overlay': 'wonderwhales-overlay',
+  'ww-ov': 'wonderwhales-overlay',
+  'wonderwhales-overlay': 'wonderwhales-overlay',
+  'ww-strategy': 'wonderwhales-strategy',
+  'ww-bt': 'wonderwhales-strategy',
+  'wonderwhales-strategy': 'wonderwhales-strategy',
 }
 
 export function resolveTarget(t) {
@@ -132,10 +162,15 @@ function filterMarkerLines(src, rawTarget) {
   let n = 0
   for (const line of src.split('\n')) {
     n++
-    const m = line.match(/^\s*\/\/\s*@part\s+skip:([\w-]+)/)
+    const m = line.match(/^\s*\/\/\s*@part\s+skip:([^\s]+)/)
     if (m) {
-      const skipTarget = m[1]
-      skipping = skipTarget === target || skipTarget === rawTarget || resolveTarget(skipTarget) === target
+      const skipTargets = m[1].split(',').map((s) => s.trim())
+      skipping = skipTargets.some((t) => t === target || t === rawTarget || resolveTarget(t) === target)
+      continue
+    }
+    const endM = line.match(/^\s*\/\/\s*@part\s+(?:end|skip:none)/)
+    if (endM) {
+      skipping = false
       continue
     }
     if (!skipping) out.push({ t: line, n })

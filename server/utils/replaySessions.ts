@@ -17,7 +17,7 @@ import {
   createBrokerState,
   queueOrder
 } from './replayBroker'
-import type { BrokerState, ReplayOrder, ReplayPosition } from './replayBroker'
+import type { BrokerState, ServerReplayOrder, ServerReplayPosition } from './replayBroker'
 
 // =============================================================================
 //  REPLAY SESSIONS — server-side player manager (Phase 7R2, roadmap §17).
@@ -197,7 +197,7 @@ export type CheckOrderFn = (ticket: {
  */
 export interface ReplayDeps {
   getCandles?: typeof getCandles
-  journalSync?: (pos: ReplayPosition) => Promise<void>
+  journalSync?: (pos: ServerReplayPosition) => Promise<void>
   checkOrder?: CheckOrderFn
 }
 
@@ -216,7 +216,7 @@ async function defaultCheckOrder(ticket: Parameters<CheckOrderFn>[0]): Promise<G
   return risk.checkOrder(ticket, risk.loadRiskConfig()) as Promise<GateDecision>
 }
 
-async function defaultJournalSync(pos: ReplayPosition): Promise<void> {
+async function defaultJournalSync(pos: ServerReplayPosition): Promise<void> {
   const j = await journalMod()
   // The SAME projection paper rows go through: ndjson always, Mongo when up,
   // key-deduped (D4 in spirit) — a replay row lands with source 'replay'.
@@ -227,7 +227,7 @@ async function defaultJournalSync(pos: ReplayPosition): Promise<void> {
 const SESSIONS = new Map<string, SessionRec>()
 const MAX_SESSIONS = 20
 
-export interface ReplaySummary {
+export interface ServerReplaySummary {
   id: string
   symbol: string
   timeframe: string
@@ -242,15 +242,15 @@ export interface ReplaySummary {
 }
 
 export interface ReplayRead {
-  session: ReplaySummary
+  session: ServerReplaySummary
   events: CandleEvent[]
   /** Working/filled/rejected orders of this session (book state, no future bars). */
-  orders: ReplayOrder[]
+  orders: ServerReplayOrder[]
   /** Open + closed replay positions; closed rows carry the journal projection fields. */
-  positions: ReplayPosition[]
+  positions: ServerReplayPosition[]
 }
 
-function summaryOf(rec: SessionRec): ReplaySummary {
+function summaryOf(rec: SessionRec): ServerReplaySummary {
   const s = rec.player.state()
   return {
     id: rec.id,
@@ -272,7 +272,7 @@ function summaryOf(rec: SessionRec): ReplaySummary {
  * first. Sessions die with the process (Slice C makes them durable) — the
  * list is empty after a restart, honestly so, never backfilled.
  */
-export function listReplaySessions(ownerId?: string | null): ReplaySummary[] {
+export function listReplaySessions(ownerId?: string | null): ServerReplaySummary[] {
   return [...SESSIONS.values()]
     .filter((rec) => (ownerId ? rec.ownerId === ownerId : true))
     .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))
@@ -324,7 +324,7 @@ async function advanceAfterStep(rec: SessionRec, events: CandleEvent[]): Promise
     for (const e of res.errors) console.warn(`[replay:${rec.id}] ${e}`)
     for (const pos of res.closed) {
       try {
-        await rec.deps.journalSync({ ...pos, ownerId: rec.ownerId } as ReplayPosition)
+        await rec.deps.journalSync({ ...pos, ownerId: rec.ownerId } as ServerReplayPosition)
       } catch (e) {
         console.warn(`[replay:${rec.id}] journal write failed for ${pos.id}: ${e instanceof Error ? e.message : String(e)}`)
       }
@@ -366,7 +366,7 @@ export async function createReplaySession(
   input: CreateSessionInput,
   deps: ReplayDeps = {},
   ownerId?: string | null
-): Promise<ReplaySummary> {
+): Promise<ServerReplaySummary> {
   if (SESSIONS.size >= MAX_SESSIONS) {
     throw new ReplayError(`replay limit reached (${MAX_SESSIONS} sessions) — restart the dev server to clear`, 409, 'replay_limit')
   }
@@ -415,7 +415,7 @@ export function readReplaySession(id: string, cursor = 0, ownerId?: string | nul
   }
 }
 
-export function playReplaySession(id: string, speed: unknown = undefined, ownerId?: string | null): ReplaySummary {
+export function playReplaySession(id: string, speed: unknown = undefined, ownerId?: string | null): ServerReplaySummary {
   const rec = getRec(id, ownerId)
   if (speed !== undefined && speed !== null) {
     try {
@@ -434,7 +434,7 @@ export function playReplaySession(id: string, speed: unknown = undefined, ownerI
   return summaryOf(rec)
 }
 
-export function pauseReplaySession(id: string, ownerId?: string | null): ReplaySummary {
+export function pauseReplaySession(id: string, ownerId?: string | null): ServerReplaySummary {
   const rec = getRec(id, ownerId)
   rec.player.pause()
   clearTimer(rec)
@@ -470,7 +470,7 @@ export async function stepReplaySession(id: string, candles: number, ownerId?: s
 //  so play/step/reset never race. Unknown id -> 404 replay_not_found.
 // -----------------------------------------------------------------------------
 
-export async function resetReplaySession(id: string, ownerId?: string | null): Promise<ReplaySummary> {
+export async function resetReplaySession(id: string, ownerId?: string | null): Promise<ServerReplaySummary> {
   const rec = getRec(id, ownerId)
   clearTimer(rec)
   const mod = await replayMod()
@@ -501,7 +501,7 @@ export async function placeReplayOrder(
   id: string,
   body: unknown,
   ownerId?: string | null
-): Promise<{ order: ReplayOrder; session: ReplaySummary }> {
+): Promise<{ order: ServerReplayOrder; session: ServerReplaySummary }> {
   const rec = getRec(id, ownerId)
   const st = rec.player.state()
   if (st.mode === 'done') throw new ReplayError('session already finished', 409, 'replay_done')
@@ -535,7 +535,7 @@ export async function placeReplayOrder(
   // (an ABSENT type on a live ticket means limit-at-SIGNAL for TV alerts —
   // there is no signal bar here, and a limit at the current price of a
   // healthy market would never fill).
-  const type: ReplayOrder['type'] = t.type === 'limit' || t.type === 'stop' ? t.type : 'market'
+  const type: ServerReplayOrder['type'] = t.type === 'limit' || t.type === 'stop' ? t.type : 'market'
   const quote = rec.player.quote()
   const now = quote?.time ?? st.now
   const order = queueOrder(

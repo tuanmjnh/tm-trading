@@ -64,7 +64,7 @@ useHead({ title: computed(() => t('notifications.pushTitle')) })
 <template>
   <BasePage id="profile" :title="t('notifications.pushTitle')" :description="t('notifications.pushDesc')">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" />
+      <BasePageEyebrow :trail="trail" />
     </template>
     <BaseSectionNav :items="navItems">
       <UCard>
@@ -100,7 +100,7 @@ useHead({ title: computed(() => t('notifications.pushTitle')) })
         </UCard>
     </BaseSectionNav>
 
-    <BaseConfirmModal
+    <LazyBaseConfirmModal
       v-model:open="isPushConfirmOpen"
       :title="pushAction === 'enable' ? t('notifications.enablePushTitle') : t('notifications.disablePushTitle')"
       :description="pushAction === 'enable' ? t('notifications.enablePushDesc') : t('notifications.disablePushDesc')"

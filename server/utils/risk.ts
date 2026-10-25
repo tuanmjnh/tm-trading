@@ -1,4 +1,4 @@
-import type { DriftStatus, RiskAccountDay, RiskStatusData } from '../../types/risk'
+import type { DriftStatus, RiskAccountDay, RiskStatusData } from '#shared/types/risk'
 import { closeSync, existsSync, openSync, readSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { engineModel } from './engineModel'

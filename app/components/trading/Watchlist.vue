@@ -8,7 +8,7 @@
 //  are added from the symbol picker (emits `add`, the page opens the search).
 //  Click a row to switch the active symbol on /trading (no reload).
 // =============================================================================
-import { formatPrice, formatQty, spreadOf } from '../utils/marketFeed'
+import { formatPrice, formatQty, spreadOf } from '../../utils/marketFeed'
 
 const props = defineProps<{
   symbol: string
@@ -117,7 +117,7 @@ const fmtChangePct = (v: number | null): string =>
             {{ row.symbol }}
           </span>
           <span class="flex items-center gap-1.5 min-w-0 font-mono text-[10px] text-muted">
-            <VenueChip :venues="row.venues" dense />
+            <TradingVenueChip :venues="row.venues" dense />
             <span class="truncate">
               <template v-if="row.spread !== null">{{ t('trade.spread') }} {{ formatPrice(row.spread) }}</template>
               <template v-else>—</template>

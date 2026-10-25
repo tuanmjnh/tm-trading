@@ -1,4 +1,4 @@
-import type { NativeSignalItem, NativeSignalsListResponse } from '~~/types/signals'
+import type { NativeSignalItem, NativeSignalsListResponse } from '#shared/types/signals'
 
 // =============================================================================
 //  Native (engine) signal API — TM Trading's Nitro route (does NOT go to tm-hub).

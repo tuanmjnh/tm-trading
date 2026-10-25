@@ -72,11 +72,12 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
   })
 
-  // NOTE (F9): the auto-imported `$fetch` is bound to the original instance
-  // (`.nuxt/imports.d.ts` -> `export const $fetch = globalThis.$fetch`) before
-  // this plugin runs, so this override only affects explicit `globalThis.$fetch`
+  // NOTE (F9/U5): the auto-imported `$fetch` is bound to the original instance
+  // (`#build/fetch` -> `export const $fetch = globalThis.$fetch`) before this
+  // plugin runs, so this override only affects explicit `globalThis.$fetch`
   // calls — NOT the app's `/api/v1` composables. Session freshness is handled by
-  // the proactive refresh timer in `useAuth` (`scheduleProactiveRefresh`).
+  // the proactive refresh timer in `useAuth` (`scheduleProactiveRefresh`) plus
+  // the server-side 401 self-heal in `server/middleware/auth.ts`.
   globalThis.$fetch = customFetch
   nuxtApp.$fetch = customFetch
 

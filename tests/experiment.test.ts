@@ -17,10 +17,11 @@ const summary = (o = {}) => ({
   netPct: 25, maxDrawdownPct: 8, degenerateRisk: 0,
   paramsHash: 'ph-base', engineVersion: '0.9.0', ...o,
 })
-const expWith = (arms = {}) => ({
+const expWith = (arms = {}, extra = {}) => ({
   _id: 'exp:x', status: 'proposed',
   arms: Object.fromEntries(Object.entries(arms).map(([name, s]) => [name, { name, metrics: armMetrics(s) }])),
   history: [],
+  ...extra,
 })
 
 describe('lifecycle (§28.1)', () => {
@@ -184,5 +185,26 @@ describe('acceptance gate (§28.3)', () => {
       holdout: summary({ expectancy: 0.05 }),
     })
     assert.equal(acceptanceReport(e).ok, false)
+  })
+
+  test('a candidate that IS the baseline version can never be accepted', () => {
+    const e = expWith({
+      baseline: summary(),
+      candidate: summary({ expectancy: 0.4, avgRr: 0.4, maxDrawdownPct: 9, paramsHash: 'ph-cand' }),
+      holdout: summary({ expectancy: 0.4 }),
+    }, { baselineVersionId: 'tm-vsa@1.4.0', strategyVersionId: 'tm-vsa@1.4.0' })
+    const r = acceptanceReport(e)
+    assert.equal(r.ok, false)
+    const gate = r.gates.find((x) => x.key === 'independentArms')
+    assert.ok(gate && gate.pass === false)
+  })
+
+  test('distinct recorded versions pass the independence gate', () => {
+    const e = expWith({
+      baseline: summary(),
+      candidate: summary({ expectancy: 0.4, avgRr: 0.4, maxDrawdownPct: 9, paramsHash: 'ph-cand' }),
+      holdout: summary({ expectancy: 0.4 }),
+    }, { baselineVersionId: 'tm-vsa@1.4.0', strategyVersionId: 'tm-vsa@2.0.0' })
+    assert.equal(acceptanceReport(e).ok, true)
   })
 })

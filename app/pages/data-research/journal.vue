@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { JournalEntry, JournalStats } from '~~/types/journal'
+import type { JournalEntry, JournalStats } from '#shared/types/journal'
 import { formatTimeAgo } from '@vueuse/core'
 import { getErrorMessage } from '~/shared/utils/errors'
 
@@ -151,7 +151,7 @@ useHead({ title })
 <template>
   <BasePage id="journal" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('journal.pips.journal')" />
+      <BasePageEyebrow :trail="trail" :pip="t('journal.pips.journal')" />
     </template>
 
     <template #right>
@@ -219,7 +219,7 @@ useHead({ title })
 
     <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
       <!-- Whole-set metrics (D12 gate shown as a badge in the header). -->
-      <MetricRibbon :items="statCards" cols="grid-cols-2 md:grid-cols-4 xl:grid-cols-7" />
+      <SharedMetricRibbon :items="statCards" cols="grid-cols-2 md:grid-cols-4 xl:grid-cols-7" />
 
       <p
         v-if="stats?.insufficient && stats.insufficientReason"

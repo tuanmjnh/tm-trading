@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
-import type { FilterChip } from '~/components/FilterChips.vue'
-import type { IndicatorMeta } from '~~/types/indicators'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
+import type { FilterChip } from '~/components/shared/FilterChips.vue'
+import type { IndicatorMeta } from '#shared/types/indicators'
 
 // Indicator Library (roadmap §58.9 Slice 2 §57.4 C). Canonical definitions from
 // the engine registry (D1) — the dashboard only reads meta, never the math.
@@ -92,7 +92,7 @@ useHead({ title })
 <template>
   <BasePage id="indicators" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('strategyLab.pips.indicators')" />
+      <BasePageEyebrow :trail="trail" :pip="t('strategyLab.pips.indicators')" />
     </template>
 
     <template #right>
@@ -116,7 +116,7 @@ useHead({ title })
           :placeholder="t('strategyLab.indicators.search')"
           class="w-full sm:w-64"
         />
-        <FilterChips v-model="kindFilter" :items="kindChips" />
+        <SharedFilterChips v-model="kindFilter" :items="kindChips" />
       </div>
     </template>
 
@@ -125,7 +125,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
 
       <div class="flex-1 min-h-0">
         <LazyGridList

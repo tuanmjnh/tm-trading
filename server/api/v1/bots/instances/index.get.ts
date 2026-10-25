@@ -12,6 +12,7 @@ export default defineEventHandler(async (event) => {
   const state = q.state ? String(q.state) : ''
   const botProfileId = q.botProfileId ? String(q.botProfileId) : ''
   const mode = q.mode ? String(q.mode) : ''
+  const includeArchived = q.includeArchived === '1'
 
   const BotInstance = await botInstanceModel()
   if (!BotInstance) return { success: true, data: [], meta: { count: 0, mongo: 'down' } }
@@ -21,6 +22,7 @@ export default defineEventHandler(async (event) => {
     if (state) filter.state = state
     if (botProfileId) filter.botProfileId = botProfileId
     if (mode) filter.mode = mode
+    if (!includeArchived) filter.archived = { $ne: true }
     const rows = await BotInstance.find(filter).sort({ createdAt: -1 }).limit(limit).lean()
     return { success: true, data: rows, meta: { count: rows.length, mongo: 'up' } }
   } catch {

@@ -9,10 +9,10 @@
 //  Optional method filter (shared selection with MethodControls) applies
 //  client-side on the current page. Polls every 15s.
 // =============================================================================
-import type { PositionItem, PositionsListResponse } from '../../types/positions'
-import type { PositionModifyPatch } from '../composables/usePositions'
+import type { PositionItem, PositionsListResponse } from '#shared/types/positions'
+import type { PositionModifyPatch } from '../../composables/usePositions'
 import { getErrorMessage, isAuthError } from '~/shared/utils/errors'
-import { dirTone, fmtPct, fmtQty, fmtSigned, fmtUtcTime, mongoTone, pnlTone } from '../utils/terminal'
+import { dirTone, fmtPct, fmtQty, fmtSigned, fmtUtcTime, mongoTone, pnlTone } from '../../utils/terminal'
 
 const props = defineProps<{ method: string }>()
 const emit = defineEmits<{ 'clear-method': [] }>()

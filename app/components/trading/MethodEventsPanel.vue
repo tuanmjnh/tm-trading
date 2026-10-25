@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { MethodEvent, MethodLeague, MethodMeta } from '~~/types/methods'
-import { fmtSigned } from '../utils/terminal'
+import type { MethodEvent, MethodLeague, MethodMeta } from '#shared/types/methods'
+import { fmtSigned } from '../../utils/terminal'
 
 // =============================================================================
 //  MethodEventsPanel — Phase 10 UI ("method event inspector").

@@ -5,7 +5,7 @@
 //  it. This module only maps server read-models (types/positions, types/
 //  signals, types/risk) to presentation tones/formats. No fetching, no state.
 // =============================================================================
-import type { DriftStatus } from '../../types/risk'
+import type { DriftStatus } from '#shared/types/risk'
 
 export type Tone = 'primary' | 'success' | 'warning' | 'error' | 'info' | 'neutral'
 

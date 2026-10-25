@@ -1,6 +1,6 @@
-import type { NewsDeskItem, NewsDeskMeta, NewsDeskResponse, NewsSourcePublic } from '~~/types/news'
-import type { MarketEventPublic } from '~~/types/news'
-import type { IntelNewsItem } from '~~/types/intel'
+import type { NewsDeskItem, NewsDeskMeta, NewsDeskResponse, NewsSourcePublic } from '#shared/types/news'
+import type { MarketEventPublic } from '#shared/types/news'
+import type { IntelNewsItem } from '#shared/types/intel'
 import { baseAssetOf, eventToMarker } from '~/utils/newsMarkers'
 
 // =============================================================================

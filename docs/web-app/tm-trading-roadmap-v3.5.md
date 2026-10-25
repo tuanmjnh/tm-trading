@@ -4302,15 +4302,15 @@ The single most important rule is:
 ## Terminal
 
 - [x] `/trade` — `app/pages/trading/index.vue`
-- [x] watchlist — `app/components/Watchlist.vue`
-- [x] chart — `app/components/TradeChart.vue`
-- [x] orderbook — `app/components/OrderBook.vue`
+- [x] watchlist — `app/components/trading/Watchlist.vue`
+- [x] chart — `app/components/trading/TradeChart.vue`
+- [x] orderbook — `app/components/trading/OrderBook.vue`
 - [ ] trade tape — no dedicated tape component exists
-- [x] indicator panel — `app/components/MethodControls.vue`, `app/components/MethodEventsPanel.vue`
-- [x] signal panel — `app/components/SignalPanel.vue`
-- [x] trade ticket — `app/components/TradeTicket.vue`
-- [x] position panel — `app/components/PositionPanel.vue`
-- [x] risk panel — `app/components/RiskPanel.vue`
+- [x] indicator panel — `app/components/trading/MethodControls.vue`, `app/components/trading/MethodEventsPanel.vue`
+- [x] signal panel — `app/components/trading/SignalPanel.vue`
+- [x] trade ticket — `app/components/trading/TradeTicket.vue`
+- [x] position panel — `app/components/trading/PositionPanel.vue`
+- [x] risk panel — `app/components/trading/RiskPanel.vue`
 - [ ] workspace persistence — no workspace/layout persistence module exists
 
 ## Simulation

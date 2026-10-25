@@ -1,4 +1,24 @@
 {
+  "assistant": {
+    "title": "Assistant",
+    "description": "Ask about {scope} — answered only from records re-read by the server.",
+    "guardrail": "Read-only. Answers are grounded in stored records; the assistant cannot place or change orders.",
+    "questionPlaceholder": "e.g. Why is this paused? What evidence supports this?",
+    "ask": "Ask",
+    "failed": "Could not answer",
+    "citedRecords": "Cited records",
+    "history": "History",
+    "newConversation": "New conversation",
+    "conversationsEmpty": "No saved conversations yet.",
+    "deleteConversation": "Delete conversation",
+    "hint": "Ask a question grounded in {scope}.",
+    "scope_session": "this session",
+    "scope_signal": "this signal",
+    "scope_provider": "AI provider settings",
+    "scope_news": "this news item",
+    "scope_market_event": "this market event",
+    "scope_outlook": "this outlook"
+  },
   "admin": {
     "export": {
       "started": "Export completed - {records} records",
@@ -445,7 +465,11 @@
     "expand": "Expand",
     "required": "Required",
     "updated": "Updated",
-    "showingCount": "Showing {count} of {total} items"
+    "showingCount": "Showing {count} of {total} items",
+    "start": "Start",
+    "pause": "Pause",
+    "resume": "Resume",
+    "stop": "Stop"
   },
   "confirm": {
     "delete_desc_name": "Are you sure you want to delete \"{0}\"? This action cannot be undone.",
@@ -646,6 +670,9 @@
     "messagesRequired": "Messages are required",
     "aiNotConfigured": "AI API key is not configured",
     "aiFailed": "AI request failed",
+    "ai_failed": "AI request failed",
+    "ai_unconfigured": "AI is not configured",
+    "ai_unavailable": "AI service is unavailable",
     "chatNoPermission": "You do not have permission to use the chat",
     "notRoot": "Only root can perform this action",
     "required": "This field cannot be left blank",
@@ -671,7 +698,13 @@
     "userNotInApp": "User does not belong to this application",
     "alreadyExists": "Resource already exists",
     "cannotDeleteSystem": "Cannot delete system resources",
-    "inUse": "Resource is currently in use"
+    "inUse": "Resource is currently in use",
+    "bot_launch": "Could not launch the bot",
+    "strategy_version": "Could not create the strategy version",
+    "bot_instance": "Could not create the bot instance",
+    "bad_request": "Invalid request",
+    "bot_profile_missing": "Bot profile no longer exists",
+    "bot_profile_active": "Stop the active bot(s) on this profile first"
   },
   "global": {
     "cancel": "Cancel",
@@ -1143,7 +1176,9 @@
     "shared_resources": "Shared Resources",
     "admin_system": "Administration & System",
     "market_data_sources": "Market Data Sources",
+    "ai_providers": "AI Providers",
     "health": "System Health",
+    "health_enhanced": "Health Dashboard (Enhanced)",
     "inbox": "Inbox",
     "customers": "Customers",
     "chat": "AI Chat",
@@ -1171,6 +1206,8 @@
     "notifications": "Notifications",
     "security": "Security",
     "connections": "Connections",
+    "hub_integration": "TM Hub Integration",
+    "content": "Content & Docs",
     "configs": "Configs",
     "media": "Media",
     "import": "Import",
@@ -1259,6 +1296,127 @@
       "ok": "OK",
       "unconfigured": "Unconfigured",
       "error": "Error"
+    }
+  },
+  "healthEnhanced": {
+    "title": "System Health Dashboard",
+    "desc": "Real-time overview of services, bot instances, alerts, AI agents, market sources and the risk gate.",
+    "pip": "Live operations",
+    "refresh": "Refresh",
+    "auto": "Auto refresh",
+    "updated": "Updated",
+    "kpi": {
+      "services": "Services",
+      "bots": "Bot Instances",
+      "alerts": "Signals",
+      "agents": "AI Agents",
+      "ok": "ok",
+      "overdue": "overdue",
+      "never": "never",
+      "running": "running",
+      "paused": "paused",
+      "failed": "failed",
+      "entries": "entries",
+      "last": "last",
+      "active": "active",
+      "validated": "validated",
+      "draft": "draft",
+      "gateway": "Gateway"
+    },
+    "viewAll": "View all",
+    "openItem": "Open",
+    "links": {
+      "services": "Service details on the health page",
+      "bots": "Bot instances on the strategy lab",
+      "alerts": "Signal feed",
+      "agents": "AI agents",
+      "venues": "Market data sources",
+      "risk": "Open positions",
+      "drift": "Preset drift report",
+      "regime": "Market intel",
+      "movers": "Market scanner"
+    },
+    "servicesTitle": "Service Heartbeats",
+    "servicesEmpty": "No service heartbeats recorded yet.",
+    "service": {
+      "runs": "Runs",
+      "last": "Last OK",
+      "err": "Err"
+    },
+    "serviceStates": {
+      "ok": "OK",
+      "stale": "STALE",
+      "overdue": "OVERDUE"
+    },
+    "botsTitle": "Bot Instances",
+    "botsEmpty": "No bot instances.",
+    "alertsTitle": "Recent Alerts",
+    "alertsEmpty": "No alerts received yet.",
+    "agentsTitle": "AI Agents",
+    "agentsEmpty": "No AI agents registered.",
+    "marketTitle": "Market & Risk",
+    "market": {
+      "risk": "Risk",
+      "ok": "OK",
+      "halted": "HALTED",
+      "breach": "BREACH",
+      "store": "Store",
+      "openPositions": "Open positions",
+      "dayPnl": "Day PnL",
+      "drift": "Preset Drift",
+      "checked": "checked",
+      "diverged": "diverged",
+      "regime": "Regime",
+      "movers": "Top Movers",
+      "symbols": "symbols"
+    },
+    "cols": {
+      "instance": "Instance",
+      "bot": "Bot",
+      "state": "State",
+      "health": "Health",
+      "counts": "Sig/Ord/Trd",
+      "pnl": "PnL",
+      "started": "Started",
+      "key": "Key",
+      "symbol": "Symbol",
+      "tf": "TF",
+      "action": "Action",
+      "side": "Side",
+      "price": "Price",
+      "status": "Status",
+      "time": "Time",
+      "name": "Name",
+      "level": "Level",
+      "version": "Ver",
+      "actions": "Allowed/Blocked",
+      "lastActive": "Last Active"
+    },
+    "actions": {
+      "start": "Start",
+      "pause": "Pause",
+      "resume": "Resume",
+      "stop": "Stop",
+      "rerun": "Rerun",
+      "reprobe": "Re-probe",
+      "reprobeAll": "Re-probe All",
+      "haltAll": "Emergency HALT",
+      "startAllQueued": "Start All Queued",
+      "stopAllRunning": "Stop All Running",
+      "confirmStart": "Start this bot instance?",
+      "confirmPause": "Pause this bot instance?",
+      "confirmStop": "Stop this bot instance?",
+      "confirmRerun": "Rerun this completed instance? A new run will be created.",
+      "confirmHaltAll": "Emergency HALT all running bots for this owner?",
+      "confirmDesc": "This will {action} the bot instance \"{bot}\".",
+      "successStart": "Start command enqueued",
+      "successPause": "Pause command enqueued",
+      "successStop": "Stop command enqueued",
+      "successRerun": "Rerun command enqueued",
+      "successReprobe": "Re-probe triggered",
+      "acknowledge": "Acknowledge",
+      "dismiss": "Dismiss",
+      "errorGeneric": "Action failed"
     }
   },
   "marketExplorer": {
@@ -1810,6 +1968,112 @@
     "hubVersion": "TM Hub Version",
     "primaryDatabase": "Primary Database",
     "defaultPort": "Default Port",
+    "aiProviders": {
+      "title": "AI providers",
+      "description": "Connections this app owns. Keys are write-only and never leave the server.",
+      "add": "Add connection",
+      "provider": "Provider",
+      "name": "Label",
+      "autoGenerateName": "Auto-generate connection name",
+      "model": "Model",
+      "baseUrl": "Base URL",
+      "apiKey": "API key",
+      "apiKeyHint": "Leave blank to keep the stored key.",
+      "enabled": "Enabled",
+      "test": "Test connection",
+      "ok": "Healthy",
+      "error": "Failed",
+      "untested": "Not tested",
+      "unconfigured": "Not configured",
+      "disabled": "Disabled",
+      "lastTested": "Last tested",
+      "noConnections": "No provider connections yet. Add one, or rely on the env fallback below.",
+      "envFallback": "Environment fallback in use",
+      "saved": "Provider connection saved",
+      "deleted": "Provider connection deleted",
+      "testOk": "Connection healthy ({ms}ms)",
+      "testFailed": "Connection test failed",
+      "import": "Import",
+      "export": "Export",
+      "importTitle": "Import provider connections",
+      "exportTitle": "Export provider connections",
+      "importHelp": "Accepts JSON (tm-hub / tm-trading export or a FreeLLMAPI keys file), ENV (dotenv) or CSV. Keys are written straight to the encrypted store.",
+      "exportHelp": "Downloads this app's connections as JSON, ENV or CSV. API keys are omitted unless you opt in.",
+      "chooseFile": "Choose file",
+      "format": "Format",
+      "formatJson": "JSON",
+      "formatEnv": "ENV",
+      "formatCsv": "CSV",
+      "noFile": "No file selected",
+      "defaultModel": "Default model",
+      "defaultModelHelp": "Used for imported keys without a model. FreeLLMAPI exports do not include one.",
+      "overwrite": "Overwrite existing names",
+      "overwriteHelp": "When off, rows with the same provider and label are skipped.",
+      "preview": "Preview",
+      "previewSummary": "Valid: {valid} · Invalid: {invalid}",
+      "importNow": "Import",
+      "imported": "Imported: {imported} · skipped: {skipped} · failed: {failed}",
+      "importDone": "Import complete",
+      "includeSecrets": "Include API keys",
+      "includeSecretsHelp": "The file will contain plaintext keys. Store it securely.",
+      "exportSecretsConfirm": "Export plaintext API keys? Anyone with the file can use them.",
+      "exported": "Exported {count} connections",
+      "exportUnreadable": "{count} keys could not be decrypted and were left empty.",
+      "exportDownload": "Download",
+      "exportEmpty": "No connections to export yet.",
+      "hasKey": "Key included",
+      "discoverModels": "Discover models",
+      "discovered": "{count} models discovered",
+      "discoveredNone": "The provider advertised no models",
+      "discoverFailed": "Model discovery failed",
+      "discoverNoKey": "Enter an API key first",
+      "searchProvider": "Search providers…",
+      "searchModel": "Search models…",
+      "duplicateRow": "Already exists",
+      "previewDuplicates": "{count} row(s) already exist and will be skipped — enable overwrite to update them.",
+      "importBlocked": "Nothing would be imported: every valid row already exists. Enable overwrite to replace them, or rename the rows in the file.",
+      "errNoKey": "No API key is configured for this connection",
+      "errInvalidKey": "The API key was rejected by the provider",
+      "errRateLimited": "The provider is rate-limiting requests",
+      "errProviderUnavailable": "The provider reported an internal error",
+      "errTimeout": "The provider did not respond in time",
+      "errNetwork": "Could not reach the provider (network error)",
+      "errHttp": "The provider returned an error",
+      "models": "Saved models",
+      "modelsEmpty": "No saved models yet — discover or add one, then the bot can switch with one click.",
+      "saveDiscovered": "Save {count} discovered",
+      "savedDiscovered": "Saved {added} new model(s)",
+      "setPrimary": "Set as the bot's model",
+      "primarySet": "Bot will use {model}",
+      "primaryBadge": "bot model",
+      "deleteModel": "Remove from catalogue",
+      "modelDeleted": "Removed {model}",
+      "modelsLoadFailed": "Could not load the model catalogue",
+      "hubSync": "Sync from TM Hub",
+      "hubSyncFailed": "TM Hub sync failed",
+      "hubSyncDone": "Hub sync complete: {created} added · {updated} updated · {added} model(s)",
+      "hubNotConfigured": "Relay is not configured — set NUXT_HUB_APP_SECRET in this app's environment",
+      "viaHub": "proxied via TM Hub",
+      "errRelayTools": "This connection does not support tool calls — agent mode needs a direct connection with its own key",
+      "addModel": "Add model",
+      "addModelPlaceholder": "Model ID (e.g. gpt-4o-mini)",
+      "addModelDisplayName": "Display name (optional)",
+      "modelAdded": "Added {model}",
+      "sourceManual": "manual",
+      "sourceDiscovered": "discovered",
+      "modelsTitle": "Saved models",
+      "unsetPrimary": "Unset primary",
+      "primaryCleared": "Primary model cleared ({model})",
+      "deleteConnectionTitle": "Delete connection?",
+      "deleteConnectionDesc": "This permanently removes the \"{name}\" connection and its saved model list from the database.",
+      "deleteModelTitle": "Delete saved model?",
+      "deleteModelDesc": "This permanently removes \"{model}\" from the saved model list.",
+      "revealKey": "Show API key",
+      "copyKey": "Copy API key",
+      "keyCopied": "API key copied to clipboard",
+      "revealKeyFailed": "Could not load the stored API key",
+      "deleteConnectionHubDesc": "This removes the \"{name}\" relay row from THIS app only — the connection stays on TM Hub and may reappear on the next sync unless revoked there."
+    },
     "saveChanges": "Save changes",
     "nameDesc": "Will appear on receipts, invoices, and other communication.",
     "emailDesc": "Used to sign in, for email receipts and product updates.",
@@ -2461,9 +2725,9 @@
     "time": "Time",
     "price": "Price",
     "qty": "Qty",
-      "loading": "Loading history…",
-      "loadingOlder": "Loading older candles…",
-      "chartError": "Could not load chart history",
+    "loading": "Loading history…",
+    "loadingOlder": "Loading older candles…",
+    "chartError": "Could not load chart history",
     "retry": "Retry",
     "indicators": "Indicators",
     "ind": {
@@ -2479,7 +2743,8 @@
       "rsi": "RSI",
       "macd": "MACD",
       "obv": "OBV",
-      "cmf": "CMF"
+      "cmf": "CMF",
+      "psar": "PSAR"
     },
     "methods": "Methods",
     "methodsHint": "Select a method — filters the position list",
@@ -2899,7 +3164,8 @@
     "formatJson": "Format JSON",
     "minifyJson": "Minify JSON",
     "invalidJson": "Invalid JSON syntax",
-    "validJson": "Valid JSON format"
+    "validJson": "Valid JSON format",
+    "desc": "Key/value configuration overrides (including AI provider keys) — edit values live, no redeploy."
   },
   "connections": {
     "title": "Connections",
@@ -3325,7 +3591,8 @@
     "type": "Type",
     "required": "Required",
     "data": "Data",
-    "use": "Use"
+    "use": "Use",
+    "desc": "Bulk-create or update records from CSV, JSON, pasted data or Google Sheets."
   },
   "inbox": {
     "attachments": "Attachments",
@@ -4237,7 +4504,153 @@
         "noError": "No errors recorded",
         "source": "Source",
         "riskState": "Risk state"
-      }
+      },
+      "launchTitle": "Launch bot",
+      "launchMethod": "Method (pine-derived)",
+      "launchSymbol": "Symbol",
+      "launchTimeframe": "Timeframe",
+      "launchParams": "Parameter overrides",
+      "launchParamsHint": "Pre-filled with the method defaults — edit and save as a new immutable strategy version.",
+      "launchRun": "Run",
+      "launched": "Bot launched",
+      "launchedHint": "Start command enqueued — the supervisor worker (npm run bot:worker) will pick it up within a tick.",
+      "launchedQueued": "Instance created. The start command will be applied by the supervisor worker.",
+      "launchFailed": "Could not launch the bot",
+      "paramsInvalidJson": "Parameter overrides are not valid JSON",
+      "launchWorkerHint": "The bot runtime runs embedded with the dashboard server (disable with BOT_EMBEDDED=off). On serverless deploys, run the external worker instead: npm run bot:worker -- --owner YOUR_OWNER_ID.",
+      "launchName": "Name",
+      "commandQueued": "\"{action}\" command queued",
+      "commandQueuedHint": "The embedded runtime (or an external worker) applies it within a tick or two.",
+      "commandFailed": "Command rejected",
+      "noActions": "No actions for this state",
+      "launchAccount": "Paper account",
+      "launchAccountAuto": "Auto (paper-main)",
+      "launchAccountHint": "No live-paper account yet — the executor auto-creates \"paper-main\" (10,000 USDT) on the first cycle.",
+      "paramGroups": {
+        "signal": "Signal & entry",
+        "risk": "Risk (SL / TP)",
+        "cost": "Simulated costs"
+      },
+      "params": {
+        "atrLen": {
+          "label": "ATR length",
+          "desc": "Average True Range lookback — measures volatility for the stop buffer."
+        },
+        "slBuf": {
+          "label": "SL buffer (×ATR)",
+          "desc": "Stop-loss placed N × ATR beyond the setup extreme."
+        },
+        "rrFb": {
+          "label": "Target R:R",
+          "desc": "Take-profit = entry + N × risk (reward:risk ratio)."
+        },
+        "minRR": {
+          "label": "Min R:R",
+          "desc": "Minimum reward:risk ratio for a setup to be tradable."
+        },
+        "slMinAtr": {
+          "label": "Min SL (×ATR)",
+          "desc": "Sanity floor for the stop distance."
+        },
+        "slMaxAtr": {
+          "label": "Max SL (×ATR)",
+          "desc": "Sanity ceiling for the stop distance."
+        },
+        "rP": {
+          "label": "R:R target",
+          "desc": "Reward:risk ratio used for the take-profit target."
+        },
+        "feePct": {
+          "label": "Fee (%)",
+          "desc": "Simulated trading fee per order (%)."
+        },
+        "slipPct": {
+          "label": "Slippage (%)",
+          "desc": "Simulated slippage applied to fills (%)."
+        },
+        "volLen": {
+          "label": "Volume MA window",
+          "desc": "Lookback for the volume moving average baseline."
+        },
+        "spikeMult": {
+          "label": "Spike threshold (×MA)",
+          "desc": "Volume ≥ N × MA volume marks an abnormal bar."
+        },
+        "deltaTh": {
+          "label": "Taker dominance",
+          "desc": "Taker delta / volume ratio ≥ N (taker ≥ ~65%) — requires real taker-buy data."
+        },
+        "divLen": {
+          "label": "Divergence window",
+          "desc": "Bars compared for price/delta divergence."
+        },
+        "psarStart": {
+          "label": "PSAR initial AF",
+          "desc": "Starting acceleration factor of Parabolic SAR."
+        },
+        "psarInc": {
+          "label": "PSAR AF step",
+          "desc": "AF increment added on each new extreme point."
+        },
+        "psarMax": {
+          "label": "PSAR max AF",
+          "desc": "Upper ceiling of the acceleration factor."
+        },
+        "fast": {
+          "label": "Fast MA length",
+          "desc": "Fast EMA period (trend / filter side)."
+        },
+        "slow": {
+          "label": "Slow MA length",
+          "desc": "Slow EMA period — must exceed the fast length."
+        },
+        "minAtrPct": {
+          "label": "Min ATR (%)",
+          "desc": "Signals blocked when ATR% of price falls below this (chop filter)."
+        },
+        "entryMode": {
+          "label": "Entry mode",
+          "desc": "market = enter on the sweep bar; retest = wait for a low-volume retest; confirm = wait for the reversal bar."
+        }
+      },
+      "slSection": "Stop management (dynamic SL)",
+      "slBreakeven": "Move SL to entry (breakeven)",
+      "slBreakevenHint": "Once price moves in favor by the trigger below, the stop-loss is tightened to the entry price.",
+      "slTriggerR": "Trigger (×R)",
+      "slTriggerRHint": "How many multiples of the initial risk the trade must gain before SL moves to entry.",
+      "slTrail": "Trailing SL (ATR)",
+      "slTrailHint": "Every cycle the stop-loss ratchets to close ± N × ATR — only ever tightening, never loosening.",
+      "slTrailAtrMult": "ATR multiple",
+      "slTrailAtrMultHint": "Distance of the trailing stop from the latest close, in ATR units.",
+      "rerun": "Run again",
+      "rerunQueued": "Bot re-armed",
+      "instanceDeleted": "Bot record deleted",
+      "instanceDeletedHint": "Removed \"{id}\" and its command history from the database.",
+      "deleteInstanceTitle": "Delete bot record?",
+      "deleteInstanceDesc": "This permanently removes the finished run \"{id}\" (and its command history) from the database.",
+      "tabInstances": "Bots",
+      "tabProfiles": "Saved profiles",
+      "launchFrom": "Launch new bot from this profile",
+      "duplicate": "Duplicate",
+      "rename": "Rename",
+      "renamed": "Profile renamed",
+      "renamedOk": "Renamed to \"{name}\"",
+      "enable": "Enable",
+      "disable": "Disable",
+      "profileEnabled": "Profile enabled",
+      "profileDisabled": "Profile disabled — launches from it are blocked",
+      "profileDeleted": "Profile deleted",
+      "profileDeletedOk": "Deleted \"{name}\"",
+      "deleteProfileTitle": "Delete bot profile?",
+      "deleteProfileDesc": "This permanently removes the profile \"{name}\". Finished runs keep their data; its config is gone for good.",
+      "instanceArchived": "Bot archived",
+      "instanceArchivedHint": "\"{id}\" is hidden from the list — its data is kept.",
+      "exportRun": "Export run data (JSON)",
+      "exported": "Export ready",
+      "exportedHint": "Downloaded \"{id}-export.json\".",
+      "archive": "Archive",
+      "renameTitle": "Rename bot profile",
+      "liveSignals": "Live method signals"
     }
   },
   "aiAgents": {
@@ -4749,5 +5162,9 @@
     "coverage": "{n} snapshots scored · {x} excluded · {s}",
     "empty": "No evaluations",
     "emptyHint": "Run an evaluation once outlook snapshots have expired past their horizon."
+  },
+  "hub_integration": {
+    "desc": "Step-by-step guide and live checks for the TM Hub dynamic-data integration",
+    "runTest": "Run connection test"
   }
 }

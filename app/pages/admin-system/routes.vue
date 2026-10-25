@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useModuleExport, buildExportChildren } from '~/composables/admin/useModuleExport'
-import type { Role } from '~/types/rbac'
-import type { SystemRoute } from '~~/types'
+import type { Role } from '#shared/types/rbac'
+import type { RouteTreeNode } from '#shared/types/rbac'
 import type { HeaderAction } from '~/components/base/HeaderActions.vue'
 import { hasAllRoutes } from '#shared/rbac'
 import { getErrorMessage } from '~/shared/utils/errors'
@@ -38,13 +38,13 @@ const copySource = ref<{
 } | null>(null)
 const isEditOpen = ref(false)
 const isDeleteOpen = ref(false)
-const editingRoute = ref<SystemRoute | null>(null)
+const editingRoute = ref<RouteTreeNode | null>(null)
 const deletingId = ref('')
 const searchQuery = ref('')
 const treeRef = ref()
 const allRoles = ref<Role[]>([])
 
-const tree = ref<SystemRoute[]>([])
+const tree = ref<RouteTreeNode[]>([])
 const selectedRoutes = ref<Set<string>>(new Set())
 
 watchEffect(() => {
@@ -76,15 +76,15 @@ const rolesForRoute = (routeId: string): Role[] =>
   allRoles.value.filter(r => hasAllRoutes(r.allowedRoutes) || (r.allowedRoutes || []).includes(routeId))
 
 watch(() => routesAdmin.tree.value, (newVal) => {
-  tree.value = (newVal || []) as unknown as SystemRoute[]
+  tree.value = (newVal || []) as unknown as RouteTreeNode[]
 }, { deep: true, immediate: true })
 
-const filteredTree = computed<SystemRoute[]>(() => {
+const filteredTree = computed<RouteTreeNode[]>(() => {
   if (!searchQuery.value) return tree.value
 
   const query = searchQuery.value.trim().toLowerCase()
-  const filter = (nodes: SystemRoute[]): SystemRoute[] => {
-    return nodes.reduce((acc: SystemRoute[], node) => {
+  const filter = (nodes: RouteTreeNode[]): RouteTreeNode[] => {
+    return nodes.reduce((acc: RouteTreeNode[], node) => {
       const match = (node.label || '').toLowerCase().includes(query)
         || translateRouteLabel(node.label, node.name).toLowerCase().includes(query)
         || (node.name || '').toLowerCase().includes(query)
@@ -99,9 +99,9 @@ const filteredTree = computed<SystemRoute[]>(() => {
   return filter(tree.value)
 })
 
-const saveOrder = async (val: SystemRoute[]) => {
+const saveOrder = async (val: RouteTreeNode[]) => {
   const updates: Array<{ id: string, sort: number, parentId: string | null }> = []
-  const walk = (nodes: SystemRoute[], parentId: string | null = null) => {
+  const walk = (nodes: RouteTreeNode[], parentId: string | null = null) => {
     let index = 0
     nodes.forEach((n) => {
       if (!n?.id) return
@@ -120,12 +120,12 @@ const saveOrder = async (val: SystemRoute[]) => {
   }
 }
 
-const onTreeUpdate = (val: SystemRoute[]) => {
+const onTreeUpdate = (val: RouteTreeNode[]) => {
   tree.value = val
   if (!searchQuery.value && val?.length) saveOrder(val)
 }
 
-const openEdit = (route: SystemRoute) => {
+const openEdit = (route: RouteTreeNode) => {
   editingRoute.value = route
   isEditOpen.value = true
 }
@@ -135,7 +135,7 @@ const openCreate = () => {
   isCreateOpen.value = true
 }
 
-const openCopy = (route: SystemRoute) => {
+const openCopy = (route: RouteTreeNode) => {
   copySource.value = {
     id: `${route.id}_copy`,
     path: route.path === '/' ? '/copy' : `${route.path.replace(/\/$/, '')}-copy`,
@@ -167,13 +167,13 @@ const handleDelete = async () => {
   }
 }
 
-const rowActions = (route: SystemRoute) => buildRowActions([
+const rowActions = (route: RouteTreeNode) => buildRowActions([
   { type: 'edit', onSelect: () => openEdit(route) },
   { type: 'copy', onSelect: () => openCopy(route) },
   { type: 'delete', onSelect: () => confirmDelete(route.id) }
 ])
 
-const onNodeSelect = ({ node, isSelected }: { node: SystemRoute, isSelected: boolean }) => {
+const onNodeSelect = ({ node, isSelected }: { node: RouteTreeNode, isSelected: boolean }) => {
   if (isSelected) selectedRoutes.value.add(node.id)
   else selectedRoutes.value.delete(node.id)
 }
@@ -232,7 +232,7 @@ useHead({ title })
 <template>
   <BasePage id="routes" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" />
+      <BasePageEyebrow :trail="trail" />
     </template>
     <template #right>
       <div class="flex items-center gap-2">
@@ -278,9 +278,9 @@ useHead({ title })
           <SharedHeTreeMenu ref="treeRef" :model-value="searchQuery ? filteredTree : tree" class="w-full"
             :field-names="{ id: 'id', label: 'label', children: 'children' }" :selected-keys="selectedRoutes"
             :default-expand-all="!!searchQuery" :draggable="!searchQuery"
-            :action-options="(node: SystemRoute) => rowActions(node)"
+            :action-options="(node: RouteTreeNode) => rowActions(node)"
             @update:model-value="onTreeUpdate" @node:select="onNodeSelect"
-            @node:click="(node: SystemRoute) => openEdit(node)">
+            @node:click="(node: RouteTreeNode) => openEdit(node)">
             <template #title="{ node }">
               <div class="flex items-center gap-2">
                 <span class="text-xs font-medium truncate">{{ translateRouteLabel(node.label, node.name) }}</span>
@@ -315,7 +315,7 @@ useHead({ title })
 
     <RoutesCreateModal v-model:open="isCreateOpen" :app-id="targetApp" :routes="flat" :initial-data="copySource" />
     <RoutesEditModal v-model:open="isEditOpen" :route="editingRoute" :app-id="targetApp" :routes="flat" />
-    <BaseConfirmModal v-model:open="isDeleteOpen" :title="t('routes.deleteConfirm')"
+    <LazyBaseConfirmModal v-model:open="isDeleteOpen" :title="t('routes.deleteConfirm')"
       :description="t('routes.deleteConfirmDesc', { id: deletingId })" :confirm-label="t('common.delete')"
       :cancel-label="t('common.cancel')" color="error" icon="i-lucide-alert-triangle" @confirm="handleDelete" />
   </BasePage>

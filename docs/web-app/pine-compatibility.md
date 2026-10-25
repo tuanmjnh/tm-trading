@@ -11,9 +11,9 @@ pinned separately by the `engine/test.mjs` golden fixtures (`npm run indicator:p
 
 ## Summary
 
-- Scripts: 9 (covered: 2, with gaps: 7)
-- MISSING ta.* primitives: dmi
-- UNCLASSIFIED ta.* primitives: barssince, hma, tr
+- Scripts: 12 (covered: 5, with gaps: 7)
+- MISSING ta.* primitives: barssince, dmi, hma, tr
+- UNCLASSIFIED ta.* primitives: none
 
 ## Per-script matrix
 
@@ -23,17 +23,21 @@ pinned separately by the `engine/test.mjs` golden fixtures (`npm run indicator:p
 | LongKaco VSA.pine | indicator | atr, change, highest, lowest, pivothigh, pivotlow, rma | no | no | no | no | no | no | covered |
 | Price Action MTF Backtest.pine | strategy | atr, bb, change, crossover, crossunder, dmi, ema, highest, lowest, macd, pivothigh, pivotlow, rma, rsi, sma, vwap | yes | yes | no | yes | no | no | gaps: dmi |
 | Price Action MTF.pine | indicator | atr, bb, change, crossover, crossunder, dmi, ema, highest, lowest, macd, pivothigh, pivotlow, rma, rsi, sma, vwap | yes | yes | no | yes | no | no | gaps: dmi |
-| TM Fusion Zones Backtest.pine | strategy | atr, barssince, change, ema, highest, hma, lowest, pivothigh, pivotlow, rma, sma, tr | yes | yes | no | yes | no | no | unknown: barssince, hma, tr |
-| TM Fusion Zones.pine | indicator | atr, barssince, change, ema, highest, hma, lowest, pivothigh, pivotlow, rma, sma, tr | yes | yes | no | yes | no | no | unknown: barssince, hma, tr |
+| TM Fusion Zones Backtest.pine | strategy | atr, barssince, change, ema, highest, hma, lowest, pivothigh, pivotlow, rma, sma, tr | yes | yes | no | yes | no | no | gaps: barssince, hma, tr |
+| TM Fusion Zones.pine | indicator | atr, barssince, change, ema, highest, hma, lowest, pivothigh, pivotlow, rma, sma, tr | yes | yes | no | yes | no | no | gaps: barssince, hma, tr |
 | TM Indicator 2.pine | indicator | atr, change, crossover, crossunder, dmi, ema, highest, lowest, macd, pivothigh, pivotlow, rma, rsi, sma, stdev | yes | yes | no | yes | no | no | gaps: dmi |
 | TM Indicator Strategy Lab 2.pine | strategy | atr, change, crossover, crossunder, dmi, ema, highest, lowest, macd, pivothigh, pivotlow, rma, rsi, sma, stdev | yes | yes | no | yes | no | no | gaps: dmi |
 | TM XAU Signals 2.pine | indicator | atr, bb, change, crossover, crossunder, dmi, ema, highest, lowest, macd, pivothigh, pivotlow, rma, rsi, sma, vwap | yes | yes | no | yes | no | no | gaps: dmi |
+| Wonderwhales Backtest.pine | strategy | atr, bb, change, crossover, crossunder, ema, highest, lowest, rsi, sar, sma | no | no | no | no | no | no | covered |
+| Wonderwhales Overlay.pine | indicator | atr, bb, change, crossover, crossunder, ema, rsi, sar, sma | no | no | no | no | no | no | covered |
+| Wonderwhales.pine | indicator | atr, bb, change, crossover, crossunder, ema, rsi, sar, sma | no | no | no | no | no | no | covered |
 
 ## ta.* primitive coverage (engine surface)
 
 | Pine primitive | Engine coverage |
 | --- | --- |
 | `ta.atr` | present |
+| `ta.barssince` | MISSING - no ta.barssince in engine |
 | `ta.bb` | present (indicators registry) |
 | `ta.change` | composable: close - close[1] |
 | `ta.crossover` | composable: cross of two series |
@@ -41,15 +45,18 @@ pinned separately by the `engine/test.mjs` golden fixtures (`npm run indicator:p
 | `ta.dmi` | MISSING - no ta.dmi in engine |
 | `ta.ema` | present |
 | `ta.highest` | present |
+| `ta.hma` | MISSING - no ta.hma in engine |
 | `ta.lowest` | present |
 | `ta.macd` | present |
 | `ta.pivothigh` | present (pivotHigh) |
 | `ta.pivotlow` | present (pivotLow) |
 | `ta.rma` | present |
 | `ta.rsi` | present |
+| `ta.sar` | present (Wilder PSAR, ta.mjs) |
 | `ta.sma` | present |
 | `ta.stdev` | present |
 | `ta.stoch` | MISSING - no ta.stoch in engine |
+| `ta.tr` | MISSING - no ta.tr in engine (use trueRange) |
 | `ta.vwap` | present |
 
 ## Notes
@@ -70,9 +77,7 @@ runtime.** The engine core is dependency-free (AGENTS.md), and a Pine runtime
 would break that rule and the Pine↔engine parity discipline (risk #1).
 
 To mirror the 7 script(s) that are not yet covered natively,
-port the missing primitive(s) into `engine/ta.mjs` first: **dmi**.
-Classify the unclassified primitive(s) in the COVERAGE table above before any
-port: **barssince, hma, tr**.
+port the missing primitive(s) into `engine/ta.mjs` first: **barssince, dmi, hma, tr**.
 
 Until then those scripts stay reference-only; the scripts marked `covered` may be
 mirrored as native methods immediately.

@@ -15,8 +15,12 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-/** File trạng thái — cùng chỗ với các log khác (logs/). */
-export const HEARTBEAT_FILE = join(ROOT, 'logs', 'services.json')
+/**
+ * File trạng thái — nằm trong node_modules/.cache (NGOÀI vùng watch của dev
+ * server): services beat file này mỗi vài giây; nếu nó nằm trong dự án, dev
+ * watcher sẽ reload server liên tục.
+ */
+export const HEARTBEAT_FILE = join(ROOT, 'node_modules', '.cache', 'tm-trading', 'services.json')
 
 /** Chu kỳ mặc định (giây) — orchestrator ghi lại vào file lúc beat(). */
 export const DEFAULT_INTERVALS = Object.freeze({

@@ -22,7 +22,7 @@ const panelUi = computed(() => ({
     <template #header>
       <div class="shrink-0">
         <slot name="eyebrow" />
-        <UDashboardNavbar :title="title"
+        <UDashboardNavbar :title="title" :toggle="false"
           :ui="{ title: description ? 'flex flex-col items-start justify-center gap-px h-full truncate' : undefined, ...navbarUi }">
           <template v-if="description" #title>
             <span class="truncate">{{ title }}</span>
@@ -30,7 +30,8 @@ const panelUi = computed(() => ({
           </template>
           <template #leading>
             <slot name="leading">
-              <UDashboardSidebarCollapse />
+              <!-- Mobile opens the sidebar from the bottom bar ☰; the navbar keeps the desktop-only collapse. -->
+              <UDashboardSidebarCollapse class="hidden lg:inline-flex" />
             </slot>
           </template>
           <template v-if="$slots.left" #left>
@@ -38,7 +39,9 @@ const panelUi = computed(() => ({
           </template>
           <template #right>
             <div class="hidden lg:flex items-center gap-2">
-              <slot name="right" />
+              <slot name="right">
+                <BasePageActions />
+              </slot>
               <DashboardBellButton />
               <UButton v-if="auth.isAuthenticated.value" icon="i-lucide-settings" color="neutral" variant="ghost" square
                 :aria-label="t('settings.title')" :ui="{ leadingIcon: 'text-dimmed' }"

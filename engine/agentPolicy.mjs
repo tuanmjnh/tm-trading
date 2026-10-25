@@ -163,6 +163,34 @@ export function checkTool(level, tool) {
   return { ok: true, level, tool: name }
 }
 
+/**
+ * Phase H (§61.12) — the read tools the in-module assistant may call at A0.
+ *
+ * These are deliberately SEPARATE from `READ_TOOLS` (the live `ai/agent.mjs`
+ * surface): the assistant's tools are owner-scoped, so the server injects the
+ * caller's owner id and the model can only choose WHICH owned record, never
+ * whose. Keeping them here (next to the rest of the autonomy policy) means a new
+ * assistant tool is one reviewed diff, and the `READ_TOOLS === ai/agent.mjs
+ * TOOL_NAMES` invariant (tests/aiAgents.test.ts) is untouched.
+ */
+export const ASSISTANT_READ_TOOLS = Object.freeze([
+  'listSessions',
+  'getSession',
+  'listSignals',
+  'listPositions',
+  'listOrders',
+])
+
+/** Is this tool callable by the A0 assistant? Owner scoping is the caller's job. */
+export function checkAssistantTool(tool) {
+  const name = String(tool ?? '').trim()
+  if (!name) return fail('TOOL_REQUIRED', 'tool name is required')
+  if (!ASSISTANT_READ_TOOLS.includes(name)) {
+    return fail('TOOL_NOT_ALLOWED', `tool "${name}" is not allowed for the assistant (allowed: ${ASSISTANT_READ_TOOLS.join(', ')})`)
+  }
+  return { ok: true, level: 'A0', tool: name }
+}
+
 /** Full policy table — what the dashboard renders (never hand-maintained in the UI). */
 export function describePolicy() {
   return AUTONOMY_LEVELS.map((level) => {

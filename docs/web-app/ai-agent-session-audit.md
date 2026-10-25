@@ -45,7 +45,7 @@
 
 ### Hub route/auth integration
 
-TM Hub owns auth/session/RBAC/route registry (`X-App-Id: tm-trading_8pmp33`); the app reads `system_routes` via `GET /api/v1/auth/routes`. Local dev currently runs its own hub (:4000) while `.env` points at production — see open question in §5 below.
+TM Hub owns auth/session/RBAC/route registry (`X-App-Id: tm-trading_ghfseu`); the app reads `system_routes` via `GET /api/v1/auth/routes`. Local dev currently runs its own hub (:4000) while `.env` points at production — see open question in §5 below.
 
 ## 2. Route / API ownership map (Q4)
 

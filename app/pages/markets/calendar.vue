@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { IntelNewsItem, IntelRegime } from '~~/types/intel'
-import type { MacroCalendarEvent } from '~~/types/macro'
+import type { IntelNewsItem, IntelRegime } from '#shared/types/intel'
+import type { MacroCalendarEvent } from '#shared/types/macro'
 import type { NewsDay } from '~/utils/calendar'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 
 // =============================================================================
 //  Market Calendar (roadmap §58.5 /markets/calendar) — two complementary halves:
@@ -114,7 +114,7 @@ useHead({ title })
 <template>
   <BasePage id="markets-calendar" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('marketCalendar.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('marketCalendar.pip')" />
     </template>
 
     <template #right>
@@ -135,7 +135,7 @@ useHead({ title })
 
     <template #toolbar>
       <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
-        <FilterChips v-model="levelFilter" :items="chips" />
+        <SharedFilterChips v-model="levelFilter" :items="chips" />
         <USeparator orientation="vertical" class="h-4" />
         <UInput
           v-model="search"
@@ -162,7 +162,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-3">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
       <UAlert
         v-if="mongo === 'down'"
         color="warning"

@@ -28,6 +28,7 @@ import {
   obv,
   rma,
   rsi,
+  sar,
   sma,
   stdev,
   vwap,
@@ -178,6 +179,19 @@ export const INDICATORS = [
     warmup: 20,
     outputs: [line('cmf', '#14b8a6')],
     calculate: (bars, p) => ({ cmf: cmf(bars, num(p, 'length')) }),
+  },
+  {
+    id: 'psar',
+    version: '1',
+    kind: 'overlay',
+    paramsSchema: {
+      start: { default: 0.02, min: 0.001, max: 0.1 },
+      inc: { default: 0.02, min: 0.001, max: 0.1 },
+      max: { default: 0.2, min: 0.01, max: 1.0 },
+    },
+    warmup: 2,
+    outputs: [line('psar', '#d946ef')],
+    calculate: (bars, p) => ({ psar: sar(bars, num(p, 'start'), num(p, 'inc'), num(p, 'max')) }),
   },
 ]
 

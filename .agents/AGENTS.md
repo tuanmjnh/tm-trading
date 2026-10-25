@@ -120,9 +120,9 @@ overfitting. Read `docs/indicator/vsa-wyckoff/vsa-optimization.md` before propos
 `tm-hub` (Port 4000) is the central IAM, route catalog, configuration store, and notification hub:
 
 - **Satellite Connection**:
-  - Connects to TM Hub via `useHub()` (wrapping `tm-hub-client`) with `X-App-Id: tm-trading_8pmp33`.
+  - Connects to TM Hub via `useHub()` (wrapping `tm-hub-client`) with `X-App-Id: tm-trading_ghfseu`.
   - Login/auth requests go directly to Hub (`POST /api/v1/auth/login`).
-  - Configure via `.env`: `NUXT_PUBLIC_HUB_URL=http://localhost:4000`, `NUXT_PUBLIC_HUB_APP_ID=tm-trading_8pmp33`.
+  - Configure via `.env`: `NUXT_PUBLIC_HUB_URL=http://localhost:4000`, `NUXT_PUBLIC_HUB_APP_ID=tm-trading_ghfseu`.
 - **Dynamic Menu Catalog**:
   - Navigation menu is fetched from TM Hub via `GET /api/v1/apps/:appId/routes` (`system_routes` table) filtered by `isVisible !== false`.
   - Route labels map to i18n keys (`nav.*`).
@@ -142,8 +142,11 @@ overfitting. Read `docs/indicator/vsa-wyckoff/vsa-optimization.md` before propos
 - **GridList & Batch Deletion**:
   - Prefer `LazyGridList` over `BaseTable`. Always provide a `#mobile-content` slot for responsive cards.
   - Delete operations support batch removal using `LazyBaseConfirmModal`.
+- **Tailwind CSS Conventions**:
+  - Explicit pixel values using arbitrary brackets (e.g. max-h-[200px], w-[320px]) are acceptable for clarity. Shorthand scale enforcement (	ailwindcss/enforces-shorthand) and canonical class warnings are disabled.
 - **i18n Mandatory**:
   - All user-facing strings MUST be defined in both `i18n/locales/en.json` and `i18n/locales/vi.json`.
+  - **No Inline i18n Fallbacks**: NEVER pass fallback text as a second string argument to `t()` (e.g. `t('key', 'Fallback text')` is strictly forbidden). Always define keys directly in both `i18n/locales/en.json` and `i18n/locales/vi.json`, and invoke `t('key')` without inline fallback string arguments.
   - Never hardcode raw English or Vietnamese in template markup.
 - **Language Policy**:
   - All NEW code, comments, log/error strings, CLI output and docs MUST be in English.

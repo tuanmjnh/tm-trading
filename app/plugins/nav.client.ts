@@ -1,4 +1,4 @@
-import type { RouteTreeNode } from '~/types/rbac'
+import type { RouteTreeNode } from '#shared/types/rbac'
 import { clearNavCache, isNavCacheStale, readNavCache } from '~/utils/navCache'
 import { loadAllowedRoutes } from '~/utils/navRoutes'
 

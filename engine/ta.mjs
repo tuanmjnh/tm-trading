@@ -66,6 +66,63 @@ export function rma(values, length) {
   return out
 }
 
+/**
+ * ta.sar — Parabolic SAR (Wilder). Pine: ta.sar(start, inc, max).
+ *
+ * Canonical Wilder state machine: SAR advances toward the extreme point (EP)
+ * with an acceleration factor (AF) that starts at `start`, steps by `inc` on
+ * each new EP and is capped at `max`. SAR is clamped to the prior two bars'
+ * extremes on the trend side, a close beyond SAR flips the trend and SAR jumps
+ * to the previous EP. Direction convention (matches pine usage): SAR below the
+ * low = bullish (1), above the high = bearish (-1).
+ *
+ * @param {{high:number,low:number,close:number}[]} bars
+ * @returns {(number|null)[]} SAR series; the direction must be derived by the
+ *   caller (sar[i] < low[i] => up) exactly like the pine scripts do.
+ */
+export function sar(bars, start = 0.02, inc = 0.02, max = 0.2) {
+  const n = Array.isArray(bars) ? bars.length : 0
+  const out = new Array(n).fill(null)
+  if (n < 2 || !(start > 0) || !(inc > 0) || !(max >= start)) return out
+
+  let up = bars[1].close >= bars[0].close
+  let ep = up ? bars[0].high : bars[0].low
+  let s = up ? bars[0].low : bars[0].high
+  let af = start
+  out[1] = s
+
+  for (let i = 2; i < n; i++) {
+    const b = bars[i]
+    const p1 = bars[i - 1]
+    const p2 = bars[i - 2]
+    if (!b || !p1 || !p2) continue
+
+    // Advance toward EP, clamped so SAR never penetrates the last two bars.
+    s = s + af * (ep - s)
+    if (up) s = Math.min(s, p1.low, p2.low)
+    else s = Math.max(s, p1.high, p2.high)
+
+    let flipped = false
+    if (up && b.low < s) flipped = true
+    else if (!up && b.high > s) flipped = true
+
+    if (flipped) {
+      up = !up
+      s = ep
+      ep = up ? b.high : b.low
+      af = start
+    } else if (up && b.high > ep) {
+      ep = b.high
+      af = Math.min(max, af + inc)
+    } else if (!up && b.low < ep) {
+      ep = b.low
+      af = Math.min(max, af + inc)
+    }
+    out[i] = s
+  }
+  return out
+}
+
 /** ta.tr(handle_na = true) - bar dau tien (khong co close[1]) tra high-low. */
 export function trueRange(bars) {
   return bars.map((b, i) => {

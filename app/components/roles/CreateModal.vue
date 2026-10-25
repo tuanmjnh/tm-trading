@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as z from 'zod'
 import { groupFlatPermissions } from '#shared/rbac'
-import type { ModulePermission, PermissionAction, RouteTreeNode } from '~/types/rbac'
+import type { ModulePermission, PermissionAction, RouteTreeNode } from '#shared/types/rbac'
 import { getErrorMessage } from '~/shared/utils/errors'
 
 const props = defineProps<{

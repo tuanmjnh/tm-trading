@@ -7,7 +7,7 @@ import type {
   PaperValidationLaunch,
   Proposal,
   StrategyResearch
-} from '~~/types/research'
+} from '#shared/types/research'
 
 // =============================================================================
 //  useResearch — AI Research workspace client (roadmap §27 / §28 / §58.9 Slice 5).

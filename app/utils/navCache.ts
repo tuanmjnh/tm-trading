@@ -1,4 +1,4 @@
-import type { RouteTreeNode } from '~/types/rbac'
+import type { RouteTreeNode } from '#shared/types/rbac'
 
 // =============================================================================
 //  P0-4 — Sidebar catalog cache.

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { App } from '~~/types'
+import type { App } from '#shared/types/apps'
 import { getErrorMessage } from '~/shared/utils/errors'
 
 const PAGE_SIZE = 20

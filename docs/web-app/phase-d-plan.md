@@ -124,7 +124,7 @@ indicator:parity`) are fully integrated into the verify gate.
 - `server/utils/nativeSignals.ts`, `server/api/v1/signals/native.get.ts`,
   `app/composables/useNativeSignals.ts`,
   `app/components/trading/EngineSignalsPanel.vue`, `app/pages/trading/signals.vue`,
-  `types/signals.ts`, `i18n/locales/en.json`, `i18n/locales/vi.json` (D5).
+  `shared/types/signals.ts`, `i18n/locales/en.json`, `i18n/locales/vi.json` (D5).
 - `server/webhook.mjs` (D5, legacy banner only).
 - `scripts/pine-parity.mjs`, `docs/web-app/pine-compatibility.md` (D6).
 - `tests/signalContract.test.ts`, `tests/signalEngine.test.ts`,

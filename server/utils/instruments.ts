@@ -1,11 +1,11 @@
 // =============================================================================
-//  TM TRADING — Canonical Instrument Catalog (roadmap §26, §30.1).
+//  TM TRADING — Canonical ServerInstrument Catalog (roadmap §26, §30.1).
 //
 //  This is the SINGLE SOURCE of truth for instrument metadata. It maps the
 //  engine's internal symbols (e.g. 'BTCUSDT') to canonical identifiers
 //  (e.g. 'crypto:perp:BTC/USDT') and declares which venues serve each.
 //
-//  §30.1 Instrument APIs serve this catalog.
+//  §30.1 ServerInstrument APIs serve this catalog.
 //  §36 Cross-Exchange Scanner reads the `venues` array for native symbols.
 // =============================================================================
 
@@ -20,27 +20,27 @@ export const VENUE_IDS = Object.freeze([
 ])
 
 /** One venue mapping for an instrument. */
-export interface InstrumentVenue {
+export interface ServerInstrumentVenue {
   venue: string
   native: string
   market?: 'spot' | 'futures'
 }
 
 /** Canonical instrument definition. */
-export interface Instrument {
+export interface ServerInstrument {
   id: string // e.g. 'crypto:perp:BTC/USDT'
   symbol: string // e.g. 'BTC/USDT' (human-readable)
   type: 'spot' | 'perp' | 'future' | 'option'
   base: string // e.g. 'BTC'
   quote: string // e.g. 'USDT'
-  venues: InstrumentVenue[]
+  venues: ServerInstrumentVenue[]
   status: 'active' | 'inactive' | 'delisted'
   /** Engine-internal symbol (e.g. 'BTCUSDT') for backward compat. */
   engineSymbol?: string
 }
 
 /** The master instrument catalog. Single source of truth. */
-export const INSTRUMENTS: Instrument[] = [
+export const INSTRUMENTS: ServerInstrument[] = [
   {
     id: 'crypto:perp:BTC/USDT',
     symbol: 'BTC/USDT',
@@ -169,17 +169,17 @@ export const CATALOG_VENUES = Object.freeze(
 )
 
 /** Lookup by id (returns undefined if not found). */
-export function getInstrument(id: string): Instrument | undefined {
+export function getInstrument(id: string): ServerInstrument | undefined {
   return INSTRUMENT_BY_ID[id]
 }
 
 /** Lookup by engine symbol (e.g. 'BTCUSDT'). */
-export function getInstrumentByEngineSymbol(sym: string): Instrument | undefined {
+export function getInstrumentByEngineSymbol(sym: string): ServerInstrument | undefined {
   return INSTRUMENT_BY_ENGINE_SYMBOL[sym]
 }
 
 /** All active instruments (optionally filtered by type). */
-export function listInstruments(opts: { type?: string; status?: string } = {}): Instrument[] {
+export function listInstruments(opts: { type?: string; status?: string } = {}): ServerInstrument[] {
   return INSTRUMENTS.filter((i) => {
     if (opts.type && i.type !== opts.type) return false
     if (opts.status && i.status !== opts.status) return false
@@ -188,6 +188,6 @@ export function listInstruments(opts: { type?: string; status?: string } = {}): 
 }
 
 /** Venues for a given instrument id. */
-export function getInstrumentVenues(id: string): InstrumentVenue[] {
+export function getInstrumentVenues(id: string): ServerInstrumentVenue[] {
   return getInstrument(id)?.venues ?? []
 }

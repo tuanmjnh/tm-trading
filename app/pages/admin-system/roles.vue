@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useModuleExport, buildExportChildren } from '~/composables/admin/useModuleExport'
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { Role } from '~/types/rbac'
+import type { Role } from '#shared/types/rbac'
 import type { HeaderAction } from '~/components/base/HeaderActions.vue'
 import { isFullAccessRole, hasAllRoutes } from '#shared/rbac'
 import { getErrorMessage } from '~/shared/utils/errors'
@@ -170,7 +170,7 @@ useHead({ title })
 <template>
   <BasePage id="roles" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" />
+      <BasePageEyebrow :trail="trail" />
     </template>
     <template #right>
       <div class="flex items-center gap-2">
@@ -275,7 +275,7 @@ useHead({ title })
       :initial-data="copySource" :route-tree="roles.routeTree.value" @created="roles.refresh()" />
     <RolesEditModal v-model:open="isEditOpen" :role="editingRole" :app-id="appId" :routes="roles.routes.value"
       :route-tree="roles.routeTree.value" @updated="roles.refresh()" />
-    <BaseConfirmModal v-model:open="isDeleteOpen" :title="t('admin.deleteRoleConfirm')"
+    <LazyBaseConfirmModal v-model:open="isDeleteOpen" :title="t('admin.deleteRoleConfirm')"
       :description="t('admin.deleteRoleConfirmDesc', { name: deletingNames })" :confirm-label="t('common.delete')"
       :cancel-label="t('common.cancel')" color="error" icon="i-lucide-alert-triangle" :loading="roles.mutating.value"
       @confirm="handleDelete" />

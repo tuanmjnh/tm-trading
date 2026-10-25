@@ -17,6 +17,8 @@ export interface IHistoryDocument extends mongoose.Document {
   userAgent?: string
   at: number
   changes?: Record<string, { old: any, new: any }>
+  /** TTL marker — Mongo deletes the doc when this passes (see the TTL index). */
+  expiresAt?: Date
 }
 
 export const HistorySchema = new mongoose.Schema<IHistoryDocument>({
@@ -35,7 +37,8 @@ export const HistorySchema = new mongoose.Schema<IHistoryDocument>({
   ip: { type: String },
   userAgent: { type: String },
   at: { type: Number, required: true, index: true },
-  changes: { type: mongoose.Schema.Types.Mixed }
+  changes: { type: mongoose.Schema.Types.Mixed },
+  expiresAt: { type: Date }
 }, {
   timestamps: { currentTime: () => Date.now() },
   collection: 'histories'
@@ -45,3 +48,5 @@ HistorySchema.index({ appId: 1, at: -1 })
 HistorySchema.index({ appId: 1, docId: 1, at: -1 })
 HistorySchema.index({ appId: 1, action: 1, at: -1 })
 HistorySchema.index({ 'by._id': 1 })
+// TTL: documents missing expiresAt (retention disabled) are never deleted by Mongo.
+HistorySchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 })

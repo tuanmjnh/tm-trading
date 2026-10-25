@@ -5,7 +5,7 @@
     :description="t('utilities.subtitle')"
   >
     <template #eyebrow>
-      <PageEyebrow :trail="trail" />
+      <BasePageEyebrow :trail="trail" />
     </template>
 
     <div class="space-y-4">

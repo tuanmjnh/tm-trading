@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { EvidenceSet } from '~~/types/research'
+import type { EvidenceSet } from '#shared/types/research'
 import { getErrorMessage } from '~/shared/utils/errors'
 
 // Evidence Set detail (roadmap §59.15 Slice E).
@@ -163,7 +163,7 @@ useHead({ title })
 <template>
   <BasePage id="research-evidence-detail" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('research.pips.evidence')" />
+      <BasePageEyebrow :trail="trail" :pip="t('research.pips.evidence')" />
     </template>
 
     <template #right>
@@ -211,7 +211,7 @@ useHead({ title })
     </div>
 
     <div v-else class="flex flex-col gap-6 w-full pb-24 lg:pb-6">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
 
       <!-- Integrity: the whole reason this document is hashed -->
       <UAlert
@@ -281,7 +281,7 @@ useHead({ title })
                 <h3 class="font-semibold text-sm">{{ t('research.sets.detail.counts') }}</h3>
               </div>
             </template>
-            <MetricRibbon :items="counts" cols="grid-cols-3" />
+            <SharedMetricRibbon :items="counts" cols="grid-cols-3" />
 
             <div class="mt-4 pt-4 border-t border-default space-y-2 text-xs">
               <div class="flex items-center justify-between gap-3">

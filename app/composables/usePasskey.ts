@@ -1,4 +1,4 @@
-import type { PasskeyInfo, RegisterStartResponse } from '~/types/webauthn'
+import type { PasskeyInfo, RegisterStartResponse } from '#shared/types/webauthn'
 
 type CredentialResponseJSON = {
   clientDataJSON: string

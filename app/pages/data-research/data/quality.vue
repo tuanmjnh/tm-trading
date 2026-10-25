@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { DatasetQuality, QualityVerdict } from '~~/types/data'
+import type { DatasetQuality, QualityVerdict } from '#shared/types/data'
 import { formatTimeAgo } from '@vueuse/core'
 
 // Data Quality (roadmap §58.9 Slice 4). Coverage/gap/staleness verdict derived
@@ -90,7 +90,7 @@ useHead({ title })
 <template>
   <BasePage id="data-quality" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('dataCenter.pips.quality')" />
+      <BasePageEyebrow :trail="trail" :pip="t('dataCenter.pips.quality')" />
     </template>
 
     <template #right>
@@ -109,7 +109,7 @@ useHead({ title })
 
     <template #toolbar>
       <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
-        <FilterChips v-model="verdictFilter" :items="verdictChips" />
+        <SharedFilterChips v-model="verdictFilter" :items="verdictChips" />
       </div>
     </template>
 
@@ -118,7 +118,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
       <LazyGridList
         :items="filtered"
         :columns="columns"

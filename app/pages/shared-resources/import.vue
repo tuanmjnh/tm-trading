@@ -248,9 +248,9 @@ const trail = computed(() => [{ label: t('nav.shared_resources') }, { label: t('
 </script>
 
 <template>
-  <BasePage id="admin-import" :title="$t('import.title')">
+  <BasePage id="admin-import" :title="$t('import.title')" :description="$t('import.desc')">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" />
+      <BasePageEyebrow :trail="trail" />
     </template>
 
     <template #right>

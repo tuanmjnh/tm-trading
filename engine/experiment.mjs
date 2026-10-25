@@ -162,7 +162,7 @@ export function armMetrics(run) {
  * `delta` (candidate vs baseline) on each numeric metric so no reader has to
  * re-derive "did the candidate beat baseline" by eye.
  */
-export function compareArms(arms, { requireRandom = false, requireHoldout = true } = {}) {
+export function compareArms(arms, { requireRandom = false, requireHoldout = true, baselineVersionId = null, candidateVersionId = null } = {}) {
   const byName = new Map((Array.isArray(arms) ? arms : []).filter(Boolean).map((a) => [a.name, a]))
   const ordered = ARM_NAMES.map((name) => byName.get(name)).filter(Boolean)
   const present = ordered.map((a) => a.name)
@@ -171,6 +171,17 @@ export function compareArms(arms, { requireRandom = false, requireHoldout = true
   if (requireHoldout && !present.includes('holdout')) missing.push('holdout')
   const baseline = byName.get('baseline')?.metrics ?? null
   const candidate = byName.get('candidate')?.metrics ?? null
+
+  // Phase F: the arms must be DIFFERENT versions. Comparing a candidate with
+  // itself is not an evaluation, and accepting it would be a silent promotion.
+  const bv = String(baselineVersionId ?? '').trim() || null
+  const cv = String(candidateVersionId ?? '').trim() || null
+  const identity = {
+    baselineVersionId: bv,
+    candidateVersionId: cv,
+    // null = not recorded (neither proven distinct nor equal)
+    distinct: bv && cv ? bv !== cv : null,
+  }
 
   const metrics = ['winRate', 'profitFactor', 'expectancyR', 'medianR', 'netPct', 'maxDrawdownPct']
   const delta = {}
@@ -184,6 +195,7 @@ export function compareArms(arms, { requireRandom = false, requireHoldout = true
     present,
     missing,
     delta,
+    identity,
     complete: missing.length === 0,
   }
 }
@@ -217,32 +229,39 @@ export function acceptanceReport(exp, o = {}) {
   const g = (key, pass, detail) => gates.push({ key, pass: !!pass, detail: detail ?? null })
 
   g('hasArms', !!(baseline && candidate), 'baseline and candidate arms must be recorded')
+  // Phase F: candidate and baseline must be different versions when both are
+  // recorded. A self-comparison can never be accepted (D31: no silent promotion).
+  const bv = String(exp?.baselineVersionId ?? '').trim()
+  const cv = String(exp?.strategyVersionId ?? '').trim()
+  g('independentArms',
+    !(bv && cv) || bv !== cv,
+    bv && cv ? `candidate ${cv} vs baseline ${bv}` : 'baseline/candidate version not both recorded')
   g('beatBaseline',
-    candidate?.expectancyR !== null && baseline?.expectancyR !== null
+    candidate?.expectancyR != null && baseline?.expectancyR != null
       && candidate.expectancyR > baseline.expectancyR,
     `candidate expectancy ${candidate?.expectancyR} vs baseline ${baseline?.expectancyR}`)
   g('beatRandom',
-    random === null || random.expectancyR === null
+    random === null || random.expectancyR == null
       ? true // random baseline not run: neutral (not an acceptance input on its own)
-      : candidate?.expectancyR !== null && candidate.expectancyR > random.expectancyR,
-    random === null || random.expectancyR === null
+      : candidate?.expectancyR != null && candidate.expectancyR > random.expectancyR,
+    random === null || random.expectancyR == null
       ? 'random baseline not run'
       : `candidate ${candidate?.expectancyR} vs random ${random.expectancyR}`)
   g('sampleSize',
-    candidate?.trades !== null && candidate.trades >= minTrades,
+    candidate?.trades != null && candidate.trades >= minTrades,
     `candidate trades ${candidate?.trades ?? 'n/a'} >= min ${minTrades}`)
   g('holdout',
-    holdout !== null && candidate?.expectancyR !== null && holdout.expectancyR !== null
+    holdout != null && candidate?.expectancyR != null && holdout.expectancyR != null
       ? holdout.expectancyR >= candidate.expectancyR - 1e-12
       : false,
     holdout === null
       ? 'holdout arm missing'
       : `holdout ${holdout?.expectancyR} vs candidate ${candidate?.expectancyR}`)
   g('noDegeneracy',
-    candidate?.degenerateRisk !== null && candidate.degenerateRisk <= maxDeg,
+    candidate?.degenerateRisk != null && candidate.degenerateRisk <= maxDeg,
     `candidate degenerateRisk ${candidate?.degenerateRisk ?? 'n/a'} <= ${maxDeg}`)
   g('riskPreserved',
-    baseline?.maxDrawdownPct !== null && candidate?.maxDrawdownPct !== null
+    baseline?.maxDrawdownPct != null && candidate?.maxDrawdownPct != null
       ? candidate.maxDrawdownPct <= baseline.maxDrawdownPct + ddSlack
       : false,
     `candidate DD ${candidate?.maxDrawdownPct ?? 'n/a'} <= baseline ${baseline?.maxDrawdownPct ?? 'n/a'} + ${ddSlack}`)

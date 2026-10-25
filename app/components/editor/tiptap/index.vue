@@ -34,7 +34,7 @@ onMounted(async () => {
     { TextAlign },
     { Table, TableRow, TableCell, TableHeader },
     { Youtube },
-    // { EditorLinkPopover },
+    { Link },
     { MediaGallery },
     { EditorImage },
     { gitHubEmojis }
@@ -42,7 +42,7 @@ onMounted(async () => {
     import('@tiptap/extension-text-align'),
     import('@tiptap/extension-table'),
     import('@tiptap/extension-youtube'),
-    // import('./EditorLinkPopover'),
+    import('@tiptap/extension-link'),
     import('./EditorMediaGallery'),
     import('./EditorImage'),
     import('@tiptap/extension-emoji')
@@ -61,7 +61,8 @@ onMounted(async () => {
       controls: false,
       autoplay: false,
       nocookie: false
-    })
+    }),
+    Link.configure({ openOnClick: false })
   ]
 
   // Populate Emojis

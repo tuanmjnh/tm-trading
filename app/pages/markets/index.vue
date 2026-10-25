@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { IntelData, IntelZone, IntelFlow, IntelNewsItem } from '~~/types/intel'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
+import type { IntelData, IntelZone, IntelFlow, IntelNewsItem } from '#shared/types/intel'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 import { getErrorMessage } from '~/shared/utils/errors'
 
 // =============================================================================
@@ -118,7 +118,7 @@ useHead({ title })
 <template>
   <BasePage id="intel" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('intel.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('intel.pip')" />
     </template>
 
     <template #right>
@@ -184,7 +184,7 @@ useHead({ title })
           <span v-if="intel.regime.ts" class="text-[10px] text-dimmed font-mono">{{ fmtUtc(intel.regime.ts) }}</span>
         </div>
 
-        <MetricRibbon :items="metrics" />
+        <SharedMetricRibbon :items="metrics" />
 
         <div v-if="intel.regime.flags.length || intel.regime.unlocks48h.length" class="flex flex-col gap-2">
           <div class="flex flex-wrap gap-1.5">

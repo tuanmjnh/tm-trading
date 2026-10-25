@@ -310,7 +310,7 @@ useHead({ title })
 <template>
   <BasePage id="connections" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" />
+      <BasePageEyebrow :trail="trail" />
     </template>
 
     <template #right>
@@ -416,7 +416,7 @@ useHead({ title })
       </UFormField>
     </BaseFormModal>
 
-    <BaseConfirmModal v-model:open="isDisconnectOpen" :title="t('connections.disconnect_title')"
+    <LazyBaseConfirmModal v-model:open="isDisconnectOpen" :title="t('connections.disconnect_title')"
       :description="t('connections.disconnect_desc', [disconnectProvider?.name || ''])"
       :confirm-label="t('connections.disconnect')" :cancel-label="t('common.cancel')" color="error"
       icon="i-lucide-unplug" @confirm="doDisconnect" />

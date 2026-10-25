@@ -1,4 +1,4 @@
-import type { IntelNewsItem } from '../../types/intel'
+import type { IntelNewsItem } from '#shared/types/intel'
 import { engineModel } from './engineModel'
 import { toNews } from './intel'
 

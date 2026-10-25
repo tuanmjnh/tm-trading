@@ -102,7 +102,7 @@ export async function runBrief(o = {}) {
   const sendImpl = o.sendImpl || sendTelegram
   const hours = o.hours ?? (process.env.AI_BRIEF_HOURS || '6-10')
 
-  if (cfg.provider !== 'ollama' && !cfg.apiKey) {
+  if (cfg.provider !== 'ollama' && cfg.provider !== 'hub' && !cfg.apiKey) {
     return { skipped: 'no-key', provider: cfg.provider, at: now.toISOString() }
   }
   if (!force && !inBriefWindow(now, hours)) {

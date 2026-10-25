@@ -75,6 +75,11 @@ async function prepare() {
     if (child.exitCode !== null && child.exitCode !== 0) {
       throw new Error(`prepare loi (exit ${child.exitCode})`)
     }
+    // Nuxt only rewrites tsconfigs whose content changed, so a steady-state
+    // prepare DOES exit cleanly without touching all four files. A clean exit
+    // is therefore enough — the fresh-mtime check stays as a fast exit for the
+    // hang case where prepare never finishes.
+    if (child.exitCode === 0) break
     const fresh = PROJECTS.every((p) => isFreshJson(tsconfigOf(p), since))
     if (fresh) break
     await sleep(POLL_MS)

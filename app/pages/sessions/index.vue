@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
-import type { BotInstance } from '~~/types/bots'
-import type { ReplaySummary } from '~~/types/replay'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
+import type { BotInstance } from '#shared/types/bots'
+import type { ReplaySummary } from '#shared/types/replay'
 import type { TradingSession } from '~/composables/useSessions'
 import { formatTimeAgo } from '@vueuse/core'
 import { getErrorMessage } from '~/shared/utils/errors'
@@ -12,6 +12,10 @@ import { getErrorMessage } from '~/shared/utils/errors'
 //  evidence (bot instances, ephemeral replays) below, each labeled for what
 //  it is. State transitions stay server-guarded (D25) and human-driven (D7):
 //  the UI only offers legal next states and surfaces 409s honestly.
+//
+//  Tab layout: a UButton group switches between the three surfaces. The
+//  content lives in three sibling UCards (v-if / v-else-if) — UTabs slots
+//  proved fragile with deeply-nested content in this page.
 // =============================================================================
 const { t } = useI18n()
 const notify = useNotify()
@@ -48,6 +52,9 @@ const filteredSessions = computed(() => {
   }
   return sessions.value
 })
+
+// Active tab (durable | bots | replays)
+const activeTab = ref<'durable' | 'bots' | 'replays'>('durable')
 
 async function load() {
   isLoading.value = true
@@ -166,7 +173,7 @@ const fmtMoney = (v: number | null) =>
   v === null || !Number.isFinite(v) ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(2)}`
 
 function openInstance(item: BotInstance) {
-  navigateTo(`/strategy-lab/bots/instances/${encodeURIComponent(item._id)}`)
+  navigateTo('/strategy-lab/bots/instances/' + encodeURIComponent(item._id))
 }
 
 const mobileBar = useMobileBar()
@@ -185,28 +192,15 @@ useHead({ title })
 <template>
   <BasePage id="sessions" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('sessions.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('sessions.pip')" />
     </template>
 
     <template #right>
       <div class="flex items-center gap-2">
-        <UButton
-          icon="i-lucide-cpu"
-          :label="t('nav.bot_instances')"
-          variant="soft"
-          color="primary"
-          size="sm"
-          to="/strategy-lab/bots/instances"
-          :ui="{ label: 'hidden md:block' }"
-        />
-        <UButton
-          icon="i-lucide-refresh-cw"
-          variant="soft"
-          color="neutral"
-          size="sm"
-          :loading="isLoading"
-          @click="load"
-        />
+        <UButton icon="i-lucide-cpu" :label="t('nav.bot_instances')" variant="soft" color="primary" size="sm"
+          to="/strategy-lab/bots/instances" :ui="{ label: 'hidden md:block' }" />
+        <UButton icon="i-lucide-refresh-cw" variant="soft" color="neutral" size="sm" :loading="isLoading"
+          @click="load" />
       </div>
     </template>
 
@@ -215,175 +209,119 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
 
-      <p class="text-[11px] text-dimmed">{{ t('sessions.preSessionHint') }}</p>
+      <!-- Tab bar: button group switching between the three surfaces -->
+      <div class="flex flex-wrap items-center gap-1.5">
+        <UButton v-for="tab in [
+          { key: 'durable', label: t('sessions.durable'), icon: 'i-lucide-layers', count: sessions.length },
+          { key: 'bots', label: t('sessions.botSessions'), icon: 'i-lucide-cpu', count: instances.length },
+          { key: 'replays', label: t('sessions.replaySessions'), icon: 'i-lucide-history', count: replays.length }
+        ]" :key="tab.key" :icon="tab.icon" :label="tab.label" :color="activeTab === tab.key ? 'primary' : 'neutral'"
+          :variant="activeTab === tab.key ? 'soft' : 'ghost'" size="sm"
+          @click="activeTab = tab.key as typeof activeTab">
+          <template #trailing>
+            <UBadge :label="String(tab.count)" color="neutral" variant="subtle" size="xs" />
+          </template>
+        </UButton>
+      </div>
 
-      <!-- Durable trading sessions (Slice C) + start form -->
-      <UCard :ui="{ body: 'p-3 sm:p-3' }">
-        <template #header>
-          <div class="flex items-center justify-between gap-2 flex-wrap">
-            <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-layers" class="w-4 h-4 text-primary" />
-              <h3 class="font-semibold text-sm">{{ t('sessions.durable') }}</h3>
-              <UBadge :label="String(sessions.length)" variant="subtle" size="xs" />
+      <!-- ======================= Tab 1: Durable Sessions ======================= -->
+      <UCard v-if="activeTab === 'durable'" class="w-full">
+        <div class="p-3 sm:p-3 space-y-4">
+          <!-- Start form -->
+          <div class="flex flex-col gap-3">
+            <div class="flex flex-col sm:flex-row gap-2 sm:items-end">
+              <div class="flex flex-col gap-1">
+                <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('sessions.kind') }}</span>
+                <div class="flex items-center gap-1.5" role="group" :aria-label="t('sessions.kind')">
+                  <UButton v-for="k in (['live-paper', 'replay'] as const)" :key="k" size="xs"
+                    :color="newKind === k ? 'primary' : 'neutral'" :variant="newKind === k ? 'soft' : 'outline'"
+                    @click="newKind = k">
+                    {{ k }}
+                  </UButton>
+                </div>
+              </div>
+              <UFormField :label="t('sessions.strategyVersion')" class="flex-1">
+                <UInput v-model="newStrategyVersion" size="sm" placeholder="tm-vsa-core@1.3.0"
+                  class="w-full font-mono" />
+              </UFormField>
+              <UFormField :label="t('sessions.account')" class="sm:w-36">
+                <UInput v-model="newAccount" size="sm" class="w-full font-mono" />
+              </UFormField>
+              <UButton icon="i-lucide-play" :label="t('sessions.start')" color="primary" variant="soft" size="sm"
+                class="self-start sm:self-auto shrink-0" :loading="starting" @click="startSession" />
             </div>
-            <span class="text-[10px] text-dimmed">{{ t('sessions.durableHint') }}</span>
-          </div>
-        </template>
 
-        <div class="flex flex-col gap-3">
-          <div class="flex flex-col sm:flex-row gap-2 sm:items-end">
-            <div class="flex flex-col gap-1">
-              <span class="text-[10px] text-muted uppercase tracking-wider">{{ t('sessions.kind') }}</span>
-              <div class="flex items-center gap-1.5" role="group" :aria-label="t('sessions.kind')">
-                <UButton
-                  v-for="k in (['live-paper', 'replay'] as const)"
-                  :key="k"
-                  size="xs"
-                  :color="newKind === k ? 'primary' : 'neutral'"
-                  :variant="newKind === k ? 'soft' : 'outline'"
-                  @click="newKind = k"
-                >
-                  {{ k }}
-                </UButton>
+            <!-- Filter: All / Active / Terminal -->
+            <UTabs v-model="sessionFilter" variant="link" size="xs" :content="false" class="w-full" :items="[
+              { label: t('sessions.filterAll'), value: 'all', badge: String(sessions.length) },
+              { label: t('sessions.filterActive'), value: 'active', badge: String(activeSessions) },
+              { label: t('sessions.filterTerminal'), value: 'terminal', badge: String(sessions.length - activeSessions) }
+            ]"></UTabs>
+
+            <div v-if="filteredSessions.length" class="flex flex-col max-h-100 overflow-y-auto">
+              <div v-for="s in filteredSessions" :key="s.sessionId"
+                class="flex items-center justify-between gap-2 py-2 px-1.5 min-w-0 rounded border-t border-default/50 first:border-t-0 hover:bg-elevated/40"
+                :class="selectedId === s.sessionId ? 'bg-primary/10 ring-1 ring-primary/30' : ''">
+                <button type="button" class="flex items-center gap-2 min-w-0 flex-1 text-left"
+                  @click="selectedId = selectedId === s.sessionId ? null : s.sessionId">
+                  <UBadge :label="s.state" :color="stateColor(s.state)" variant="subtle" size="xs" class="shrink-0" />
+                  <span class="font-mono text-xs text-highlighted font-medium truncate">{{ s.sessionId }}</span>
+                  <UBadge :label="s.kind" color="neutral" variant="subtle" size="xs" class="shrink-0" />
+                  <span v-if="s.strategyVersionId" class="text-[10px] text-muted font-mono truncate hidden sm:inline">
+                    {{ s.strategyVersionId }}
+                  </span>
+                  <span class="text-[10px] text-dimmed font-mono shrink-0 ml-auto">
+                    {{ s.counts.orders }}o · {{ s.counts.fills }}f · {{ s.counts.positions }}p
+                  </span>
+                </button>
+
+                <div class="flex items-center gap-1 shrink-0">
+                  <UButton icon="i-lucide-arrow-up-right" size="xs" color="primary" variant="ghost"
+                    :to="'/sessions/' + encodeURIComponent(s.sessionId)" :title="t('sessions.viewDetail')" />
+                </div>
               </div>
             </div>
-            <UFormField :label="t('sessions.strategyVersion')" class="flex-1">
-              <UInput v-model="newStrategyVersion" size="sm" placeholder="tm-vsa-core@1.3.0" class="w-full font-mono" />
-            </UFormField>
-            <UFormField :label="t('sessions.account')" class="sm:w-36">
-              <UInput v-model="newAccount" size="sm" class="w-full font-mono" />
-            </UFormField>
-            <UButton
-              icon="i-lucide-play"
-              :label="t('sessions.start')"
-              color="primary"
-              variant="soft"
-              size="sm"
-              class="self-start sm:self-auto shrink-0"
-              :loading="starting"
-              @click="startSession"
-            />
-          </div>
+            <AdminEmptyState v-else-if="!isLoading" :title="t('sessions.noDurable')" icon="i-lucide-layers" />
 
-          <!-- Filter tabs for sessions -->
-          <div v-if="sessions.length" class="flex items-center justify-between gap-2 flex-wrap pt-1">
-            <div class="flex items-center gap-1">
-              <UButton
-                size="xs"
-                :color="sessionFilter === 'all' ? 'primary' : 'neutral'"
-                :variant="sessionFilter === 'all' ? 'soft' : 'ghost'"
-                @click="sessionFilter = 'all'"
-              >
-                {{ t('sessions.filterAll') }} ({{ sessions.length }})
-              </UButton>
-              <UButton
-                size="xs"
-                :color="sessionFilter === 'active' ? 'primary' : 'neutral'"
-                :variant="sessionFilter === 'active' ? 'soft' : 'ghost'"
-                @click="sessionFilter = 'active'"
-              >
-                {{ t('sessions.filterActive') }} ({{ activeSessions }})
-              </UButton>
-              <UButton
-                size="xs"
-                :color="sessionFilter === 'terminal' ? 'primary' : 'neutral'"
-                :variant="sessionFilter === 'terminal' ? 'soft' : 'ghost'"
-                @click="sessionFilter = 'terminal'"
-              >
-                {{ t('sessions.filterTerminal') }} ({{ sessions.length - activeSessions }})
-              </UButton>
-            </div>
-          </div>
-
-          <div v-if="filteredSessions.length" class="flex flex-col">
-            <div
-              v-for="s in filteredSessions"
-              :key="s.sessionId"
-              class="flex items-center justify-between gap-2 py-2 px-1.5 min-w-0 rounded border-t border-default/50 first:border-t-0 hover:bg-elevated/40"
-              :class="selectedId === s.sessionId ? 'bg-primary/10 ring-1 ring-primary/30' : ''"
-            >
-              <button
-                type="button"
-                class="flex items-center gap-2 min-w-0 flex-1 text-left"
-                @click="selectedId = selectedId === s.sessionId ? null : s.sessionId"
-              >
-                <UBadge :label="s.state" :color="stateColor(s.state)" variant="subtle" size="xs" class="shrink-0" />
-                <span class="font-mono text-xs text-highlighted font-medium truncate">{{ s.sessionId }}</span>
-                <UBadge :label="s.kind" color="neutral" variant="subtle" size="xs" class="shrink-0" />
-                <span v-if="s.strategyVersionId" class="text-[10px] text-muted font-mono truncate hidden sm:inline">
-                  {{ s.strategyVersionId }}
-                </span>
-                <span class="text-[10px] text-dimmed font-mono shrink-0 ml-auto">
-                  {{ s.counts.orders }}o · {{ s.counts.fills }}f · {{ s.counts.positions }}p
-                </span>
-              </button>
-
-              <div class="flex items-center gap-1 shrink-0">
-                <UButton
-                  icon="i-lucide-arrow-up-right"
-                  size="xs"
-                  color="primary"
-                  variant="ghost"
-                  :to="`/sessions/${encodeURIComponent(s.sessionId)}`"
-                  :title="t('sessions.viewDetail')"
-                />
+            <!-- Selected session: timeline + legal moves + detail link -->
+            <div v-if="selected" class="rounded border border-default bg-elevated/30 p-2.5 flex flex-col gap-2">
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="font-mono text-xs text-highlighted font-semibold truncate">{{ selected.sessionId
+                    }}</span>
+                  <UBadge :label="selected.state" :color="stateColor(selected.state)" variant="subtle" size="xs" />
+                </div>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <UButton v-for="to in (NEXT[selected.state] ?? [])" :key="to" size="xs" color="primary" variant="soft"
+                    :loading="acting" @click="moveSelected(to)">
+                    → {{ to }}
+                  </UButton>
+                  <span v-if="!(NEXT[selected.state] ?? []).length" class="text-[10px] text-dimmed">{{
+                    t('sessions.terminal') }}</span>
+                  <UButton icon="i-lucide-arrow-up-right" :label="t('sessions.viewDetail')" size="xs" color="primary"
+                    variant="outline" :to="'/sessions/' + encodeURIComponent(selected.sessionId)" />
+                </div>
               </div>
-            </div>
-          </div>
-          <AdminEmptyState v-else-if="!isLoading" :title="t('sessions.noDurable')" icon="i-lucide-layers" />
-
-          <!-- Selected session: timeline + legal moves + detail link -->
-          <div v-if="selected" class="rounded border border-default bg-elevated/30 p-2.5 flex flex-col gap-2">
-            <div class="flex items-center justify-between gap-2 flex-wrap">
-              <div class="flex items-center gap-2 min-w-0">
-                <span class="font-mono text-xs text-highlighted font-semibold truncate">{{ selected.sessionId }}</span>
-                <UBadge :label="selected.state" :color="stateColor(selected.state)" variant="subtle" size="xs" />
+              <div v-if="selected.timeline.length" class="flex flex-col max-h-48 overflow-y-auto">
+                <div v-for="(e, i) in [...selected.timeline].reverse()" :key="'${e.t}-${i}'"
+                  class="flex items-baseline gap-2 py-0.5 text-[11px] border-t border-default/30 first:border-t-0">
+                  <time class="font-mono text-dimmed shrink-0">{{ fmtTime(e.t) }}</time>
+                  <UBadge :label="e.kind" color="neutral" variant="subtle" size="xs" class="shrink-0" />
+                  <span class="text-muted truncate">{{ e.message }}</span>
+                </div>
               </div>
-              <div class="flex items-center gap-1.5 flex-wrap">
-                <UButton
-                  v-for="to in (NEXT[selected.state] ?? [])"
-                  :key="to"
-                  size="xs"
-                  color="primary"
-                  variant="soft"
-                  :loading="acting"
-                  @click="moveSelected(to)"
-                >
-                  → {{ to }}
-                </UButton>
-                <span v-if="!(NEXT[selected.state] ?? []).length" class="text-[10px] text-dimmed">{{ t('sessions.terminal') }}</span>
-                <UButton
-                  icon="i-lucide-arrow-up-right"
-                  :label="t('sessions.viewDetail')"
-                  size="xs"
-                  color="primary"
-                  variant="outline"
-                  :to="`/sessions/${encodeURIComponent(selected.sessionId)}`"
-                />
-              </div>
+              <p v-if="selected.timelineDropped > 0" class="text-[10px] text-dimmed">
+                {{ t('sessions.dropped', { n: selected.timelineDropped }) }}
+              </p>
             </div>
-            <div v-if="selected.timeline.length" class="flex flex-col max-h-48 overflow-y-auto">
-              <div
-                v-for="(e, i) in [...selected.timeline].reverse()"
-                :key="`${e.t}-${i}`"
-                class="flex items-baseline gap-2 py-0.5 text-[11px] border-t border-default/30 first:border-t-0"
-              >
-                <time class="font-mono text-dimmed shrink-0">{{ fmtTime(e.t) }}</time>
-                <UBadge :label="e.kind" color="neutral" variant="subtle" size="xs" class="shrink-0" />
-                <span class="text-muted truncate">{{ e.message }}</span>
-              </div>
-            </div>
-            <p v-if="selected.timelineDropped > 0" class="text-[10px] text-dimmed">
-              {{ t('sessions.dropped', { n: selected.timelineDropped }) }}
-            </p>
           </div>
         </div>
       </UCard>
 
-      <!-- Bot sessions (bot-scoped evidence) -->
-      <UCard :ui="{ body: 'p-3 sm:p-3 pr-0 sm:pr-0' }">
+      <!-- ======================= Tab 2: Bot Sessions ======================= -->
+      <UCard v-else-if="activeTab === 'bots'" class="w-full">
         <template #header>
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
@@ -395,18 +333,10 @@ useHead({ title })
           </div>
         </template>
 
-        <div class="relative h-80">
-          <LazyGridList
-            :items="instances"
-            :columns="columns"
-            :loading="isLoading"
-            :can-load-more="false"
-            v-model:view-mode="viewMode"
-            item-key="_id"
-            storage-key="sessions-view-mode"
-            @refresh="load"
-            @click="openInstance"
-          >
+        <div class="relative max-h-130 overflow-y-auto">
+          <LazyGridList :items="instances" :columns="columns" :loading="isLoading" :can-load-more="false"
+            v-model:view-mode="viewMode" item-key="_id" storage-key="sessions-view-mode" @refresh="load"
+            @click="openInstance">
             <template #instanceId="{ item }">
               <span class="text-[11px] font-mono text-highlighted truncate">{{ item.instanceId }}</span>
             </template>
@@ -414,47 +344,48 @@ useHead({ title })
               <UBadge :label="item.state" :color="stateColor(item.state)" variant="subtle" size="xs" />
             </template>
             <template #startedAt="{ item }">
-              <time v-if="item.startedAt" :datetime="new Date(item.startedAt).toISOString()" class="text-[11px] text-muted">
+              <time v-if="item.startedAt" :datetime="new Date(item.startedAt).toISOString()"
+                class="text-[11px] text-muted">
                 {{ formatTimeAgo(new Date(item.startedAt)) }}
               </time>
               <span v-else class="text-[11px] text-dimmed">—</span>
             </template>
             <template #counts="{ item }">
-              <span class="text-[11px] text-muted">{{ item.counts?.signals ?? 0 }} / {{ item.counts?.orders ?? 0 }} / {{ item.counts?.trades ?? 0 }}</span>
+              <span class="text-[11px] text-muted">{{ item.counts?.signals ?? 0 }} / {{ item.counts?.orders ?? 0 }} / {{
+                item.counts?.trades ?? 0 }}</span>
             </template>
             <template #paperPnl="{ item }">
-              <span
-                class="text-[11px] font-mono"
-                :class="item.paperPnl === null ? 'text-dimmed' : item.paperPnl >= 0 ? 'text-success' : 'text-error'"
-              >{{ fmtMoney(item.paperPnl) }}</span>
+              <span class="text-[11px] font-mono"
+                :class="item.paperPnl === null ? 'text-dimmed' : item.paperPnl >= 0 ? 'text-success' : 'text-error'">{{
+                  fmtMoney(item.paperPnl) }}</span>
             </template>
             <template #mobile-content="{ item }">
               <div class="flex items-start gap-3">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2 text-xs">
                     <span class="font-semibold text-highlighted font-mono truncate">{{ item.instanceId }}</span>
-                    <UBadge :label="item.state" :color="stateColor(item.state)" variant="subtle" size="xs" class="shrink-0" />
+                    <UBadge :label="item.state" :color="stateColor(item.state)" variant="subtle" size="xs"
+                      class="shrink-0" />
                   </div>
-                  <div class="text-[11px] text-dimmed mt-0.5 truncate">{{ item.botProfileId || '—' }} · {{ item.mode }}</div>
+                  <div class="text-[11px] text-dimmed mt-0.5 truncate">{{ item.botProfileId || '—' }} · {{ item.mode }}
+                  </div>
                 </div>
-                <div class="text-right shrink-0 text-[11px] font-mono" :class="item.paperPnl === null ? 'text-dimmed' : item.paperPnl >= 0 ? 'text-success' : 'text-error'">
+                <div class="text-right shrink-0 text-[11px] font-mono"
+                  :class="item.paperPnl === null ? 'text-dimmed' : item.paperPnl >= 0 ? 'text-success' : 'text-error'">
                   {{ fmtMoney(item.paperPnl) }}
                 </div>
               </div>
             </template>
             <template #empty>
-              <AdminEmptyState
-                :title="t('strategyLab.bots.instancesEmpty')"
-                :description="t('strategyLab.bots.instancesEmptyHint')"
-                icon="i-lucide-cpu"
-              />
+              <AdminEmptyState :title="t('strategyLab.bots.instancesEmpty')"
+                :description="t('strategyLab.bots.instancesEmptyHint')" icon="i-lucide-cpu" />
             </template>
           </LazyGridList>
         </div>
       </UCard>
 
-      <!-- Replay actives (in-memory, die with the server process) -->
-      <UCard :ui="{ body: 'p-3 sm:p-3' }">
+      <!-- ======================= Tab 3: Replay Sessions ======================= -->
+      <UCard v-else class="w-full">
         <template #header>
           <div class="flex items-center justify-between gap-2 flex-wrap">
             <div class="flex items-center gap-2">
@@ -462,35 +393,22 @@ useHead({ title })
               <h3 class="font-semibold text-sm">{{ t('sessions.replaySessions') }}</h3>
               <UBadge :label="String(replays.length)" variant="subtle" size="xs" />
             </div>
-            <UButton
-              icon="i-lucide-arrow-up-right"
-              :label="t('testCenter.builder.openReplay')"
-              variant="ghost"
-              color="primary"
-              size="xs"
-              to="/test-center/replay"
-            />
+            <UButton icon="i-lucide-arrow-up-right" :label="t('testCenter.builder.openReplay')" variant="ghost"
+              color="primary" size="xs" to="/test-center/replay" />
           </div>
         </template>
 
-        <div v-if="replays.length" class="flex flex-col">
-          <NuxtLink
-            v-for="r in replays"
-            :key="r.id"
-            to="/test-center/replay"
-            class="flex items-center gap-2 py-1.5 px-1 min-w-0 rounded border-t border-default/50 first:border-t-0 hover:bg-elevated/40"
-          >
+        <div v-if="replays.length" class="flex flex-col max-h-90 overflow-y-auto">
+          <NuxtLink v-for="r in replays" :key="r.id" to="/test-center/replay"
+            class="flex items-center gap-2 py-1.5 px-1 min-w-0 rounded border-t border-default/50 first:border-t-0 hover:bg-elevated/40">
             <UBadge :label="r.mode" color="info" variant="subtle" size="xs" class="shrink-0" />
-            <span class="flex-1 min-w-0 font-mono text-[11px] text-highlighted truncate">{{ r.symbol }} · {{ r.interval }}</span>
+            <span class="flex-1 min-w-0 font-mono text-[11px] text-highlighted truncate">{{ r.symbol }} · {{ r.interval
+              }}</span>
             <span class="text-[10px] text-dimmed font-mono shrink-0">{{ r.cursor }}/{{ r.total }}</span>
           </NuxtLink>
         </div>
-        <AdminEmptyState
-          v-else-if="!isLoading"
-          :title="t('sessions.noReplays')"
-          :description="t('sessions.noReplaysHint')"
-          icon="i-lucide-history"
-        />
+        <AdminEmptyState v-else-if="!isLoading" :title="t('sessions.noReplays')"
+          :description="t('sessions.noReplaysHint')" icon="i-lucide-history" />
       </UCard>
     </div>
   </BasePage>

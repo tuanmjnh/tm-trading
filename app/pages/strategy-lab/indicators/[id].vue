@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { MetricItem } from '~/components/MetricRibbon.vue'
-import type { IndicatorMeta, IndicatorOutputDef } from '~~/types/indicators'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
+import type { IndicatorMeta, IndicatorOutputDef } from '#shared/types/indicators'
 import { getErrorMessage } from '~/shared/utils/errors'
 
 // Indicator detail (roadmap §57.4 D / §58.9 Slice 2). Read-only registry entry:
@@ -76,7 +76,7 @@ useHead({ title })
 <template>
   <BasePage id="indicator-detail" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('strategyLab.pips.indicatorDetail')" />
+      <BasePageEyebrow :trail="trail" :pip="t('strategyLab.pips.indicatorDetail')" />
     </template>
 
     <template #right>
@@ -99,7 +99,7 @@ useHead({ title })
       />
 
       <template v-else>
-        <MetricRibbon :items="metrics" :cols="'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'" />
+        <SharedMetricRibbon :items="metrics" :cols="'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'" />
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Params schema -->

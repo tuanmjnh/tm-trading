@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { LineageEntry } from '~~/types/data'
+import type { LineageEntry } from '#shared/types/data'
 import { formatTimeAgo } from '@vueuse/core'
 
 // Test Data Lineage (roadmap §58.9 Slice 4, acceptance: traceable links).
@@ -73,7 +73,7 @@ useHead({ title })
 <template>
   <BasePage id="data-lineage" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('dataCenter.pips.lineage')" />
+      <BasePageEyebrow :trail="trail" :pip="t('dataCenter.pips.lineage')" />
     </template>
 
     <template #right>
@@ -102,7 +102,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
       <LazyGridList
         :items="filtered"
         :columns="columns"

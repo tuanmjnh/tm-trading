@@ -6,8 +6,8 @@ import { validateProposal, PROPOSAL_SCHEMA_VERSION } from '../ai/proposal.mjs'
 import { mergeScannerCandidates } from '../app/utils/scanner'
 import { filterNews, groupNewsByDay } from '../app/utils/calendar'
 import { emptyRuleForm, ruleToForm, formToInput, validateRuleForm, ruleFacets, parseList } from '../app/utils/alertRules'
-import type { IntelAccum, IntelFlow, IntelMover, IntelNewsItem } from '../types/intel'
-import type { AlertRule } from '../types/alertRules'
+import type { IntelAccum, IntelFlow, IntelMover, IntelNewsItem } from '../shared/types/intel'
+import type { AlertRule } from '../shared/types/alertRules'
 
 // =============================================================================
 //  §58.10 acceptance lock — the criteria the migration must keep true.
@@ -86,7 +86,7 @@ describe('§58.10 #8 — every test run is identified by engine + params (D1 sta
   })
 
   test('TestRunResult exposes engineVersion + paramsHash + runId + seriesId', () => {
-    const src = read('types/runs.ts')
+    const src = read('shared/types/runs.ts')
     for (const field of ['engineVersion', 'paramsHash', 'runId', 'seriesId']) {
       assert.match(src, new RegExp(`\\b${field}\\b`), `TestRunResult must carry ${field}`)
     }

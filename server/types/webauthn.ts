@@ -14,18 +14,6 @@ export interface WebAuthnCredential {
   lastUsedAt?: string
 }
 
-export interface PasskeyConfig {
-  enabled: boolean
-  mode: 'passwordless' | '2fa'
-  requireUserVerification: 'required' | 'preferred' | 'discouraged'
-  rpName: string
-  rpId?: string
-  timeout: number
-  attestation: 'none' | 'indirect' | 'direct'
-  authenticatorAttachment?: 'platform' | 'cross-platform'
-  residentKey: 'required' | 'preferred' | 'discouraged'
-}
-
 export interface WebAuthnChallenge {
   challenge: string
   userId: string
@@ -34,7 +22,7 @@ export interface WebAuthnChallenge {
   expiresAt: number
 }
 
-export interface RegisterStartResponse {
+export interface ServerRegisterStartResponse {
   challenge: string
   user: {
     id: string
@@ -60,7 +48,7 @@ export interface RegisterFinishRequest {
   credential: PublicKeyCredentialCreationOptionsJSON
 }
 
-export interface LoginStartResponse {
+export interface ServerLoginStartResponse {
   challenge: string
   allowCredentials: Array<{
     id: string
@@ -76,7 +64,7 @@ export interface LoginFinishRequest {
   credential: PublicKeyCredentialRequestOptionsJSON
 }
 
-export interface PasskeyInfo {
+export interface ServerPasskeyInfo {
   id: string
   /** WebAuthn credential id (base64url) - used for delete. */
   credentialId: string

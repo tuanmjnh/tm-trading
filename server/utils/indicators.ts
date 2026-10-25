@@ -5,7 +5,7 @@ import type {
   IndicatorOutputDef,
   IndicatorParamDef,
   IndicatorRun
-} from '../../types/indicators'
+} from '#shared/types/indicators'
 import { engineModel } from './engineModel'
 import type { EngineBar } from './methods'
 

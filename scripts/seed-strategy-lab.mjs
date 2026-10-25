@@ -82,6 +82,22 @@ const VSA_PARAMS = {
 
 const REAL_PARAMS_HASH = hashOfParams(VSA_PARAMS) // equals the runs.ndjson hash
 
+const WW_PARAMS = {
+  mode: 'sar-ema-atr',
+  psarStart: 0.02,
+  psarInc: 0.02,
+  psarMax: 0.2,
+  fast: 20,
+  slow: 50,
+  atrLen: 14,
+  minAtrPct: 0.5,
+  slBuf: 0.5,
+  rrFb: 2.0,
+  feePct: 0.05,
+  slipPct: 0.02,
+}
+const WW_PARAMS_HASH = hashOfParams(WW_PARAMS)
+
 // --- fixed timestamps (UTC ms) so re-runs are deterministic -----------------
 
 const DAY = 86_400_000
@@ -180,6 +196,18 @@ const VERSIONS = [
     paperTrades: null, createdBy: 'seed', createdAt: T0 + 15 * DAY,
     fingerprint: null, schemaVersion: 'strategy.v1',
   },
+  {
+    _id: 'ww-core@1.0.0', strategyVersionId: 'ww-core@1.0.0', strategyId: 'ww-core',
+    version: '1.0.0', engineVersion: ENGINE_VERSION,
+    paramsHash: WW_PARAMS_HASH, referenceHash: null,
+    indicatorVersions: { psar: '1', ema: '1', atr: '1' }, methodVersions: { wonderwhales: '1' },
+    parameters: WW_PARAMS, supersedes: null,
+    changes: changes('Wonderwhales Core (SAR + EMA + ATR% filter) published profile.'),
+    status: 'backtest', backtestRunId: null, holdoutRunId: null, acceptedExperimentId: null,
+    paperTrades: null, createdBy: 'seed', createdAt: T0 + 16 * DAY,
+    fingerprint: hashOf({ strategyId: 'ww-core', version: '1.0.0', paramsHash: WW_PARAMS_HASH }),
+    schemaVersion: 'strategy.v1',
+  },
 ]
 
 for (const v of VERSIONS) await upsert(StrategyVersion, v)
@@ -203,6 +231,14 @@ const PROFILES = [
     riskProfileId: null, history: [],
     createdAt: T0 + 15 * DAY, schemaVersion: 'strategyProfile.v1',
   },
+  {
+    _id: 'ww-core', profileId: 'ww-core',
+    name: 'Wonderwhales — PSAR / EMA Trend Filter',
+    status: 'active', strategyVersionId: 'ww-core@1.0.0',
+    instruments: ['BTCUSDT.P', 'ETHUSDT.P'], timeframes: ['15', '60'],
+    riskProfileId: 'risk-default', history: [],
+    createdAt: T0 + 16 * DAY, schemaVersion: 'strategyProfile.v1',
+  },
 ]
 
 for (const p of PROFILES) await upsert(StrategyProfile, p)
@@ -221,6 +257,18 @@ const BOT_PROFILES = [
     effectiveParamsHash: REAL_PARAMS_HASH, sessionRules: {}, notificationPolicy: {},
     enabled: true, status: 'enabled', history: [], createdBy: 'seed',
     createdAt: T0 + 14 * DAY, schemaVersion: 'botProfile.v1',
+  },
+  {
+    _id: 'bot-ww-bt', profileId: 'bot-ww-bt',
+    name: 'Wonderwhales Backtest & Paper',
+    description: 'Backtest & Paper harness for Wonderwhales Core @1.0.0.',
+    strategyVersionId: 'ww-core@1.0.0', mode: 'BACKTEST',
+    instruments: ['BTCUSDT.P', 'ETHUSDT.P'], timeframes: ['15', '60'],
+    riskProfileId: 'risk-default', simulatedAccountId: 'paper-main',
+    maxConcurrentPositions: 2, paramOverrides: null,
+    effectiveParamsHash: WW_PARAMS_HASH, sessionRules: {}, notificationPolicy: {},
+    enabled: true, status: 'enabled', history: [], createdBy: 'seed',
+    createdAt: T0 + 16 * DAY, schemaVersion: 'botProfile.v1',
   },
   {
     _id: 'bot-swing-bt', profileId: 'bot-swing-bt',
@@ -256,7 +304,7 @@ const INSTANCES = [
     paperEquity: 10_231.55, paperPnl: 231.55,
     riskState: { dailyLossUsedPct: 12, halted: false, openPositions: 1 },
     health: 'ok', lastError: null, createdBy: 'seed',
-    createdAt: NOW - 3 * DAY, schemaVersion: 'botInstance.v1',
+    createdAt: NOW - 3 * DAY, demo: true, schemaVersion: 'botInstance.v1',
   },
   {
     _id: 'bot-core-live-20261001', instanceId: 'bot-core-live-20261001',
@@ -271,7 +319,7 @@ const INSTANCES = [
     paperEquity: 10_118.4, paperPnl: 118.4,
     riskState: { dailyLossUsedPct: 0, halted: false, openPositions: 0 },
     health: 'ok', lastError: null, createdBy: 'seed',
-    createdAt: T0 + 10 * DAY, schemaVersion: 'botInstance.v1',
+    createdAt: T0 + 10 * DAY, demo: true, schemaVersion: 'botInstance.v1',
   },
   {
     _id: 'bot-swing-bt-20261013', instanceId: 'bot-swing-bt-20261013',
@@ -285,7 +333,7 @@ const INSTANCES = [
     paperEquity: null, paperPnl: null,
     riskState: {},
     health: 'error', lastError: 'risk gate: maxDailyLoss exceeded (paper)',
-    createdBy: 'seed', createdAt: T0 + 15 * DAY, schemaVersion: 'botInstance.v1',
+    createdBy: 'seed', createdAt: T0 + 15 * DAY, demo: true, schemaVersion: 'botInstance.v1',
   },
 ]
 

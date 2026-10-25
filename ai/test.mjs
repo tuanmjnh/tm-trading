@@ -15,6 +15,7 @@ import {
   buildRequest, parseResponse, appendAiLog, chat,
 } from './gateway.mjs'
 import { TOOLS, TOOL_NAMES, toolSpecs, executeTool, defaultSystem } from './agent.mjs'
+import { parseConnectionImport, resolveProviderKey } from '../engine/aiProviders.mjs'
 
 let pass = 0
 let fail = 0
@@ -102,6 +103,9 @@ check('openai: assistant.tool_calls shape + arguments as JSON string', at(at(oa,
 check('openai: role tool -> tool_call_id + string content', oa[3].role === 'tool' && oa[3].tool_call_id === 'c1' && oa[3].content === '{"ok":true}')
 const oaEmptyArgs = toOpenAIMessages([{ role: 'assistant', content: 'x', toolCalls: [{ id: 'c2', name: 't' }] }])
 check('openai: missing args -> "{}"', at(at(oaEmptyArgs, 0)?.tool_calls, 0)?.function.arguments === '{}')
+const oaSig = toOpenAIMessages([{ role: 'assistant', content: '', toolCalls: [{ id: 'c3', name: 'getKlines', args: { symbol: 'BTCUSDT' }, extra_content: { google: { thought_signature: 'SIG' } } }] }])
+check('openai: provider tool_call extras (extra_content) echoed verbatim', at(at(oaSig, 0)?.tool_calls, 0)?.extra_content?.google?.thought_signature === 'SIG')
+check('openai: no extra_content -> key stays absent', !('extra_content' in at(at(oa, 2)?.tool_calls, 0)))
 check('openai: empty/undefined messages -> []', toOpenAIMessages([]).length === 0 && toOpenAIMessages().length === 0 && toOpenAIMessages(null).length === 0)
 
 // =============================================================================
@@ -186,6 +190,9 @@ check('openai parse: arguments JSON -> args object', at(pOA.toolCalls, 0)?.name 
 check('openai parse: broken arguments -> {__raw} (no throw)', at(pOA.toolCalls, 1)?.args?.__raw === '{{{ broken')
 check('openai parse: missing id -> call_<i>, missing args -> {}', at(pOA.toolCalls, 1)?.id === 'call_1' && at(pOA.toolCalls, 2)?.id === 'call_2' && JSON.stringify(at(pOA.toolCalls, 2)?.args) === '{}')
 check('openai parse: usage prompt/completion', pOA.usage.prompt === 11 && pOA.usage.completion === 22)
+const pSig = parseResponse('openai', { choices: [{ message: { content: '', tool_calls: [{ id: 'call_x', type: 'function', function: { name: 'getKlines', arguments: '{}' }, extra_content: { google: { thought_signature: 'SIG' } } }] } }] })
+check('openai parse: tool_call extra_content (Gemini thought_signature) preserved', at(pSig.toolCalls, 0)?.extra_content?.google?.thought_signature === 'SIG')
+check('openai parse: no extra_content -> key stays absent', !('extra_content' in at(pOA.toolCalls, 0)))
 check('openai parse: missing usage -> 0', parseResponse('openai', { choices: [{ message: { content: 'x' } }] }).usage.prompt === 0)
 check('openai parse: content null -> text ""', parseResponse('openai', { choices: [{ message: { content: null } }] }).text === '')
 check('openai parse: non-string content -> JSON.stringify', parseResponse('openai', { choices: [{ message: { content: [{ type: 'text', text: 'x' }] } }] }).text === '[{"type":"text","text":"x"}]')
@@ -443,6 +450,66 @@ check('executeTool queryDB: intel without kind -> ok:false (never reaches Mongo)
 // Fresh symbol on purpose: a cached symbol would be served from cache and the throwing dep would never run.
 const errTool = await executeTool('getKlines', { symbol: ZERR, tf: '60' }, { fetchImpl: async () => { throw new Error('dep is down') } })
 check('executeTool: throwing dep -> {ok:false, error} (does not propagate)', errTool.ok === false && String(errTool.error).includes('dep is down'))
+
+// =============================================================================
+section('13. import/export parsing (FreeLLMAPI + tm-trading)')
+
+check('provider aliases map Google/GitHub onto catalog keys', resolveProviderKey('google') === 'google_ai'
+  && resolveProviderKey('github') === 'github_models' && resolveProviderKey('custom') === 'custom_openai')
+check('unknown providers require a baseUrl to become a custom endpoint', resolveProviderKey('nope') === null
+  && resolveProviderKey('nope', 'https://example.test/v1') === 'custom_openai')
+
+const freePayload = {
+  version: 1,
+  source: 'freellmapi',
+  keys: [
+    { platform: 'openrouter', key: 'sk-or-test-123456', label: 'OpenRouter' },
+    { platform: 'google', key: 'AIza-test-123456', label: 'Google AI Studio' },
+    { platform: 'custom', key: 'sk-custom-test-123456', label: 'tokenharbor.ai', baseUrl: 'https://tokenharbor.ai/v1' },
+    { platform: 'unknown-platform', key: 'sk-unknown-test-123456', label: 'Unknown' },
+  ],
+}
+const freeParsed = parseConnectionImport(freePayload, { defaultModel: 'gpt-4o-mini' })
+check('FreeLLMAPI keys parse into rows and report unsupported rows', freeParsed.ok === true
+  && freeParsed.rows.length === 3 && freeParsed.errors.length === 1)
+check('FreeLLMAPI aliases and custom base URL are resolved', freeParsed.rows[0].provider === 'openrouter'
+  && freeParsed.rows[1].provider === 'google_ai' && freeParsed.rows[2].provider === 'custom_openai'
+  && freeParsed.rows[2].baseUrl === 'https://tokenharbor.ai/v1')
+check('import names are sanitised and the default model fills gaps', freeParsed.rows[0].name === 'openrouter'
+  && freeParsed.rows[1].model === 'gpt-4o-mini' && freeParsed.rows[2].name === 'tokenharbor.ai')
+check('parse errors never echo the API key', !JSON.stringify(freeParsed.errors).includes('sk-unknown-test-123456'))
+
+const missingModel = parseConnectionImport({ keys: freePayload.keys.slice(0, 3) }, { defaultModel: '' })
+check('a missing model is reported per row instead of invented', missingModel.ok === false
+  && missingModel.errors.length === 3 && missingModel.errors.every((e) => e.message.includes('model is required')))
+
+const missingKey = parseConnectionImport([{ provider: 'openai', name: 'main', model: 'gpt-4o-mini' }], { defaultModel: 'gpt-4o-mini' })
+check('a missing apiKey is rejected for a keyed provider', missingKey.ok === false
+  && missingKey.rows.length === 0 && missingKey.errors[0].message.includes('apiKey'))
+
+const duplicates = parseConnectionImport([
+  { provider: 'openai', name: 'Main Account', model: 'gpt-4o-mini', apiKey: 'sk-a-123456' },
+  { provider: 'openai', name: 'Main Account', model: 'gpt-4o-mini', apiKey: 'sk-b-123456' },
+], {})
+check('duplicate provider/label pairs get a stable suffix', duplicates.rows.length === 2
+  && duplicates.rows[0].name === 'main-account' && duplicates.rows[1].name === 'main-account-2')
+
+const tradingPayload = {
+  version: 1,
+  source: 'tm-trading',
+  connections: [{ provider: 'groq', name: 'main', model: 'llama-3.1-8b-instant', baseUrl: 'https://api.groq.com/openai/v1', enabled: false, apiKey: 'sk-groq-test-123456' }],
+}
+const tradingParsed = parseConnectionImport(tradingPayload, {})
+check('a tm-trading export round-trips its enabled flag', tradingParsed.rows.length === 1
+  && tradingParsed.rows[0].provider === 'groq' && tradingParsed.rows[0].enabled === false)
+
+const embeddedKey = parseConnectionImport([{ provider: 'custom', name: 'bad', model: 'x', baseUrl: 'https://example.test/v1?api_key=sk-leak', apiKey: 'sk-ok-123456' }], {})
+check('a base URL carrying an API key is rejected', embeddedKey.ok === false
+  && embeddedKey.errors[0].message.includes('baseUrl must not embed an API key'))
+
+const noPayload = parseConnectionImport({ nope: true }, {})
+check('an unknown payload shape is rejected explicitly', noPayload.ok === false
+  && noPayload.errors[0].message.includes('no connections or keys'))
 
 // =============================================================================
 // Leave no trace: fetchKlines writes a cache file under repo data/fapi.

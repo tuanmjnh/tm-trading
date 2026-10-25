@@ -1,6 +1,6 @@
 import { getRouterParam, readBody } from 'h3'
 import { strategyService } from '../../../../utils/engineModel'
-import type { CreateVersionResult } from '~~/types/strategy'
+import type { CreateVersionResult } from '#shared/types/strategy'
 
 /**
  * POST /api/v1/strategies/:id/versions — create a new strategy version (§30.4).

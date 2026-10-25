@@ -44,6 +44,7 @@ const COVERAGE = {
   change: 'composable: close - close[1]',
   crossover: 'composable: cross of two series',
   crossunder: 'composable: cross of two series (inverted)',
+  sar: 'present (Wilder PSAR, ta.mjs)',
   dmi: 'MISSING - no ta.dmi in engine',
   stoch: 'MISSING - no ta.stoch in engine',
   barssince: 'MISSING - no ta.barssince in engine',

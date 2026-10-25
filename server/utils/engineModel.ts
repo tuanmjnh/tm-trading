@@ -180,6 +180,37 @@ export function botInstanceModel(): Promise<AnyModel | null> {
 }
 
 // -----------------------------------------------------------------------------
+//  Bot supervisor contracts (§61.7 / Phase E). The lifecycle write path lives in
+//  services/botRuntimeStore.mjs behind the owner lease; the HTTP layer may only
+//  enqueue durable commands, never mutate state directly. Same dynamic-import-
+//  from-cwd rule as the models above.
+// -----------------------------------------------------------------------------
+
+type BotSupervisorModule = typeof import('../../engine/botSupervisor.mjs')
+
+let botSupervisorPromise: Promise<BotSupervisorModule> | null = null
+
+export function botSupervisorRules(): Promise<BotSupervisorModule> {
+  if (!botSupervisorPromise) {
+    const file = pathToFileURL(join(process.cwd(), 'engine', 'botSupervisor.mjs')).href
+    botSupervisorPromise = import(/* @vite-ignore */ file) as Promise<BotSupervisorModule>
+  }
+  return botSupervisorPromise
+}
+
+type BotRuntimeStoreModule = typeof import('../../services/botRuntimeStore.mjs')
+
+let botRuntimeStorePromise: Promise<BotRuntimeStoreModule> | null = null
+
+export function botRuntimeStore(): Promise<BotRuntimeStoreModule> {
+  if (!botRuntimeStorePromise) {
+    const file = pathToFileURL(join(process.cwd(), 'services', 'botRuntimeStore.mjs')).href
+    botRuntimeStorePromise = import(/* @vite-ignore */ file) as Promise<BotRuntimeStoreModule>
+  }
+  return botRuntimeStorePromise
+}
+
+// -----------------------------------------------------------------------------
 //  Research models (§30.7) — Experiment Engine §28 + AI Research §27.3.
 // -----------------------------------------------------------------------------
 

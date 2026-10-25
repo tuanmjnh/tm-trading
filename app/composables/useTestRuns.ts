@@ -1,4 +1,4 @@
-import type { TestRunRequest, TestRunResult, TestRunResponse } from '~~/types/runs'
+import type { TestRunRequest, TestRunResult, TestRunResponse } from '#shared/types/runs'
 
 // =============================================================================
 //  useTestRuns — launch a backtest from the Test Builder (§58.9 Slice 3).

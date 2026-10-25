@@ -2,7 +2,7 @@ import { createError } from 'h3'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { buildSeriesId } from './reports'
-import type { TestRunResult } from '../../types/runs'
+import type { TestRunResult } from '#shared/types/runs'
 
 // =============================================================================
 //  TEST RUN launcher (roadmap §58.9 Slice 3) — POST /api/v1/runs.

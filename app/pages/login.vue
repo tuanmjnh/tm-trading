@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { z } from 'zod'
-import type { LoginRequest, TotpChallenge } from '~/types/auth'
-import { isTotpChallenge } from '~/types/auth'
+import type { LoginRequest, TotpChallenge } from '#shared/types/auth'
+import { isTotpChallenge } from '#shared/types/auth'
 import { getErrorMessage } from '~/shared/utils/errors'
 
 definePageMeta({ layout: false })

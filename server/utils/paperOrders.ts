@@ -5,7 +5,7 @@ import type {
   PaperOrderItem,
   PaperOrderSide,
   PaperOrderType
-} from '../../types/orders'
+} from '#shared/types/orders'
 import { simulationOrder } from './engineModel'
 import { engineModel } from './engineModel'
 

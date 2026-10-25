@@ -75,7 +75,7 @@ Inspected, not assumed:
 | Capability | Owner / source of truth | Where consumed | Evidence |
 |---|---|---|---|
 | Login / session / tokens | TM Hub | App shell (no local duplicate page) | `app/composables/useAuth.ts`, `app/middleware/auth.global.ts` → `useHub().hubFetch('/api/v1/auth/*')` |
-| App identity / registry | TM Hub | `X-App-Id: tm-trading_8pmp33` | `AGENTS.md`; `.env` `NUXT_PUBLIC_HUB_APP_ID` |
+| App identity / registry | TM Hub | `X-App-Id: tm-trading_ghfseu` | `AGENTS.md`; `.env` `NUXT_PUBLIC_HUB_APP_ID` |
 | Users / roles / permissions (RBAC) | TM Hub | `/admin-system/{users,roles,permissions}` | `app/pages/admin-system/*` + Hub API |
 | Dynamic routes / menu registry | TM Hub `system_routes` via `GET /api/v1/auth/routes` | sidebar + middleware | `useNavMenu.ts`, `auth.global.ts`, Hub `routes.get.ts` |
 | Remote configuration | TM Hub `app_configs` | `/administration/configs`, `/configs/public` | `server/api/v1/configs/public.get.ts` |

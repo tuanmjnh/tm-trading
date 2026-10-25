@@ -16,7 +16,7 @@
 | Filtering | `services/news.mjs` runner | Only `med`+`high` persisted (`low` dropped as noise) |
 | Alerting | `services/news.mjs` + `services/telegram.mjs` | Telegram digest for NEW `high` items only |
 | Display | `app/pages/markets/calendar.vue` + `app/utils/calendar.ts` | Intel `news` stream grouped into UTC-day buckets, level + text filter; pure projections, no rescoring |
-| Types | `types/intel.ts` `IntelNewsItem` | Shared shape for intel payload, calendar and terminal overlays |
+| Types | `shared/types/intel.ts` `IntelNewsItem` | Shared shape for intel payload, calendar and terminal overlays |
 
 ## 2. Per-source record
 

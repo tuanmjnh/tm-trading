@@ -2,7 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { enrichPosition, summarizeLive } from '../server/utils/livePositions'
 import { MARGIN_DEFAULTS } from '../simulation/margin.mjs'
-import type { PositionItem } from '../types/positions'
+import type { PositionItem } from '../shared/types/positions'
 
 // =============================================================================
 //  LIVE position + account enrichment (roadmap v3 §19/§20) — golden numbers.

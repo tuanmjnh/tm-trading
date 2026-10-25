@@ -1,0 +1,14 @@
+//@version=6
+{{DECL}}
+
+// =============================================================================
+//  WONDERWHALES — Parabolic SAR Reversal Signals with VSA & Multi-Indicators
+//  Architecture: Pine Script v6 Modular Build System (tools/build.mjs)
+//  Version: 1.2.0 | Target: wonderwhales
+//  Components: Parabolic SAR Flip Engine, Anti-Repainting Bar Confirmation,
+//              Volume Spread Analysis (VSA 6-Bucket Barcolor & Climax Markers),
+//              Optional Filters (EMA 20/50/200, ATR %, RSI 14, Bollinger Bands),
+//              Compact HUD Dashboard Table, Multi-Condition Alerts
+// =============================================================================
+
+{{SHARED}}

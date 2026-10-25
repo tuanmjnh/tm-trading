@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { groupFlatPermissions, computeAccessibleRouteIds, isFullAccessRole } from '#shared/rbac'
-import type { RouteTreeNode } from '~/types/rbac'
+import type { RouteTreeNode } from '#shared/types/rbac'
 
 const props = withDefaults(defineProps<{
   permissions?: string[]

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { Instrument } from '~~/types/instruments'
-import type { MarketSourceHealth } from '~~/types/health'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
+import type { Instrument } from '#shared/types/instruments'
+import type { MarketSourceHealth } from '#shared/types/health'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 
 // =============================================================================
 //  Market Explorer (roadmap §57.4 B, §58.5 /markets). Search + discovery over
@@ -138,7 +138,7 @@ useHead({ title })
 <template>
   <BasePage id="markets-explorer" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('marketExplorer.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('marketExplorer.pip')" />
     </template>
 
     <template #right>
@@ -167,7 +167,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-3">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
       <LazyGridList :items="filtered" :columns="columns" :loading="isLoading" :can-load-more="false"
         v-model:view-mode="viewMode" item-key="id" storage-key="markets-explorer-view-mode" @refresh="refresh">
         <template #symbol="{ item }">

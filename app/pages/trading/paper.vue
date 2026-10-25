@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { LiveAccount } from '~~/types/positions'
-import type { RiskAccountDay } from '~~/types/risk'
+import type { LiveAccount } from '#shared/types/positions'
+import type { RiskAccountDay } from '#shared/types/risk'
 import { getErrorMessage } from '~/shared/utils/errors'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 
 // =============================================================================
 //  Paper Account overview (roadmap §20, §21, §58.5 /paper). Account-level
@@ -91,7 +91,7 @@ useHead({ title })
 <template>
   <BasePage id="paper" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('paper.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('paper.pip')" />
     </template>
 
     <template #right>
@@ -153,7 +153,7 @@ useHead({ title })
       </div>
 
       <!-- Key metrics grid -->
-      <MetricRibbon v-if="account" :items="metrics" />
+      <SharedMetricRibbon v-if="account" :items="metrics" />
 
       <!-- Risk gate status (D7 kill-switch) -->
       <section class="rounded bg-default ring ring-default p-3 flex flex-col gap-2">

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { MetricItem } from '~/components/MetricRibbon.vue'
-import type { MethodLeague, MethodMeta } from '~~/types/methods'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
+import type { MethodLeague, MethodMeta } from '#shared/types/methods'
 
 // Method Library (roadmap §58.9 Slice 2 §57.4 D). Read-only view of the engine
 // method registry (id/name/version/defaults) plus the pooled league snapshot.
@@ -87,7 +87,7 @@ useHead({ title })
 <template>
   <BasePage id="methods" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('strategyLab.pips.methods')" />
+      <BasePageEyebrow :trail="trail" :pip="t('strategyLab.pips.methods')" />
     </template>
 
     <template #right>
@@ -102,7 +102,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 pb-24 lg:pb-6 gap-3 overflow-y-auto">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
 
       <!-- Registry -->
       <UCard :ui="{ body: 'p-3 sm:p-3' }">
@@ -120,11 +120,13 @@ useHead({ title })
             :key="m.id"
             class="rounded border border-default p-3 flex flex-col gap-1"
           >
-            <div class="flex items-center justify-between gap-2">
-              <span class="font-semibold text-xs text-highlighted truncate">{{ m.name || m.id }}</span>
-              <span class="text-[10px] font-mono text-dimmed shrink-0">v{{ m.version }}</span>
+            <div class="flex items-start justify-between gap-2">
+              <span class="min-w-0 flex-1 font-semibold text-xs text-highlighted break-words">{{ m.name || m.id }}</span>
+              <!-- m.version is a 64-char sha — show a short sha, full value on hover. -->
+              <span class="text-[10px] font-mono text-dimmed shrink-0"
+                :title="m.version">v{{ m.version.slice(0, 7) }}</span>
             </div>
-            <span class="text-[10px] text-dimmed font-mono truncate">{{ m.id }}</span>
+            <span class="text-[10px] text-dimmed font-mono break-all">{{ m.id }}</span>
             <span class="text-[10px] text-dimmed">
               {{ Object.keys(m.defaults).length }} {{ t('strategyLab.methods.defaults').toLowerCase() }}
             </span>
@@ -133,8 +135,6 @@ useHead({ title })
         <AdminEmptyState
           v-else
           :title="t('strategyLab.methods.empty')"
-          :description="t('strategyLab.methods.emptyHint')"
-          icon="i-lucide-git-merge"
         />
       </UCard>
 

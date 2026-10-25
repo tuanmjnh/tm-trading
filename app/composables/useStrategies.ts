@@ -1,4 +1,4 @@
-import type { StrategyProfile, StrategyVersion } from '~~/types/strategy'
+import type { StrategyProfile, StrategyVersion } from '#shared/types/strategy'
 
 // =============================================================================
 //  useStrategies — read-only strategy library (§30.4, roadmap §58.9 Slice 2).

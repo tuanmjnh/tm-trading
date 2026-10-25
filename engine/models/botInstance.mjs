@@ -20,6 +20,9 @@ const BotInstanceSchema = new mongoose.Schema(
     botProfileId: { type: String, default: null, index: true },
     // Tenancy (roadmap §61.3): bot sessions are user-scoped.
     ownerId: { type: String, default: null, index: true },
+    // Sub-book inside one owner (docs/web-app/user-tenancy-plan.md). Commands
+    // and paper execution are scoped to it.
+    accountId: { type: String, default: null, index: true },
     // Exact immutable strategy version + fingerprint for traceability (§57.4 H).
     strategyVersionId: { type: String, default: null },
     strategyFingerprint: { type: String, default: null },
@@ -41,8 +44,33 @@ const BotInstanceSchema = new mongoose.Schema(
     paperEquity: { type: Number, default: null },
     paperPnl: { type: Number, default: null },
     riskState: { type: mongoose.Schema.Types.Mixed, default: {} },
+    // Per-bot stop management (breakeven / ATR trailing), copied from the
+    // profile at instance creation and handed to the paper executor.
+    execution: { type: mongoose.Schema.Types.Mixed, default: null },
+    // Soft-hidden from the default list (D1 data never deleted by archiving).
+    archived: { type: Boolean, default: false, index: true },
     health: { type: String, default: 'unknown' },
+    // Why health is not 'ok' (stable English reason code from botSupervisor.mjs).
+    healthReason: { type: String, default: null },
     lastError: { type: String, default: null },
+    // --- Phase E: durable supervisor state (additive, all nullable) ----------
+    // Exclusive lease: only the holder may transition/beat this instance.
+    lease: {
+      supervisorId: { type: String, default: null },
+      claimedAt: { type: Number, default: null },
+      beatAt: { type: Number, default: null },
+      expiresAt: { type: Number, default: null },
+    },
+    engineVersion: { type: String, default: null },
+    // Instrument/timeframe subscriptions the runtime is observing.
+    subscriptions: { type: [String], default: [] },
+    // Last native signal processed (bridge watermark); replay-safe cursor.
+    lastSignalKey: { type: String, default: null },
+    lastSignalTs: { type: Number, default: null },
+    // The live-paper session this instance currently drives.
+    sessionId: { type: String, default: null },
+    // Seed/demo separation (§61.7): demo rows never appear in operational lists.
+    demo: { type: Boolean, default: false, index: true },
     createdBy: { type: String, default: null },
     createdAt: { type: Number, default: null },
     schemaVersion: { type: String, default: 'botInstance.v1' },
@@ -51,6 +79,8 @@ const BotInstanceSchema = new mongoose.Schema(
 )
 
 BotInstanceSchema.index({ state: 1, botProfileId: 1 })
+BotInstanceSchema.index({ ownerId: 1, state: 1 })
+BotInstanceSchema.index({ demo: 1, ownerId: 1, createdAt: -1 })
 
 export const BotInstance =
   mongoose.models.bot_instances || mongoose.model('bot_instances', BotInstanceSchema)

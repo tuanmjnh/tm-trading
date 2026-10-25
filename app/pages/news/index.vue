@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { MarketEventPublic, NewsDeskItem } from '~~/types/news'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
+import type { MarketEventPublic, NewsDeskItem } from '#shared/types/news'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 
 // =============================================================================
 //  News Desk (V3.5 §60 Slice B — /news, read-only).
@@ -102,7 +102,7 @@ useHead({ title })
 <template>
   <BasePage id="news-desk" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('news.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('news.pip')" />
     </template>
 
     <template #right>
@@ -119,10 +119,10 @@ useHead({ title })
 
     <template #toolbar>
       <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
-        <FilterChips v-model="levelFilter"
+        <SharedFilterChips v-model="levelFilter"
           :items="LEVELS.map((lv) => ({ value: lv, label: lv ? t(`intel.level_${lv}`) : t('news.allLevels') }))" />
         <USeparator orientation="vertical" class="h-4" />
-        <FilterChips v-model="sourceFilter"
+        <SharedFilterChips v-model="sourceFilter"
           :items="[{ value: '', label: t('news.allSources') }, ...sources.filter((s) => s.enabled).map((s) => ({ value: s.sourceId, label: s.name }))]" />
         <USeparator orientation="vertical" class="h-4" />
         <UInput v-model="search" :placeholder="t('news.search')" icon="i-lucide-search" size="xs" class="w-52"
@@ -153,7 +153,7 @@ useHead({ title })
          keep its CONTENT height — `h-full` + `min-h-0` pinned it to the viewport
          height and every card shrank to 0 px instead of overflowing. -->
     <div class="flex flex-col w-full pb-24 lg:pb-6 gap-3">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
 
       <template v-if="isPilotGroup">
         <div v-if="events.length" class="flex flex-col gap-2">

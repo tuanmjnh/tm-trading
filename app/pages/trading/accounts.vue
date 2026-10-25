@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { AccountItem } from '~~/types/accounts'
+import type { AccountItem } from '#shared/types/accounts'
 import type { PaperAccountSummary } from '~/composables/usePaperAccounts'
 import { getErrorMessage } from '~/shared/utils/errors'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 
 // =============================================================================
 //  Accounts (roadmap §61.17 Phase B). Two complementary views:
@@ -203,7 +203,7 @@ useHead({ title })
 <template>
   <BasePage id="accounts" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('accounts.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('accounts.pip')" />
     </template>
 
     <template #right>
@@ -235,7 +235,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full gap-3 pb-24 lg:pb-6">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
 
       <SharedRefreshNotice
         :stale="isStale"
@@ -244,34 +244,30 @@ useHead({ title })
         @retry="refreshAll"
       />
 
-      <!-- Create account -->
-      <div v-if="createOpen" class="rounded bg-default ring ring-primary/40 p-3 flex flex-col gap-3">
-        <p class="text-xs font-semibold text-highlighted">{{ t('accounts.createTitle') }}</p>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <UInput
-            v-model="createForm.accountId"
-            :placeholder="t('accounts.accountIdPlaceholder')"
-            :aria-label="t('accounts.accountId')"
-            size="sm"
-            class="w-full"
-          />
-          <UInput
-            v-model="createForm.currency"
-            :placeholder="t('accounts.currency')"
-            :aria-label="t('accounts.currency')"
-            size="sm"
-            class="w-full"
-          />
-          <UInput
-            v-model="createForm.initialBalance"
-            type="number"
-            :placeholder="t('accounts.initialBalancePlaceholder')"
-            :aria-label="t('accounts.initialBalance')"
-            size="sm"
-            class="w-full"
-          />
+      <!-- Create account modal (lazy — chunked until first open) -->
+      <LazyBaseResponsiveModal v-model:open="createOpen" :title="t('accounts.createTitle')" icon="i-lucide-plus">
+        <div class="grid grid-cols-1 gap-3">
+          <UFormField :label="t('accounts.accountId')">
+            <UInput
+              v-model="createForm.accountId"
+              :placeholder="t('accounts.accountIdPlaceholder')"
+              class="w-full"
+            />
+          </UFormField>
+          <UFormField :label="t('accounts.currency')">
+            <UInput v-model="createForm.currency" :placeholder="t('accounts.currency')" class="w-full" />
+          </UFormField>
+          <UFormField :label="t('accounts.initialBalance')">
+            <UInput
+              v-model="createForm.initialBalance"
+              type="number"
+              :placeholder="t('accounts.initialBalancePlaceholder')"
+              class="w-full"
+            />
+          </UFormField>
         </div>
-        <div class="flex items-center gap-2">
+        <template #footer>
+          <UButton :label="t('common.cancel')" variant="ghost" color="neutral" size="sm" @click="createOpen = false" />
           <UButton
             :label="t('accounts.createSubmit')"
             color="primary"
@@ -281,15 +277,8 @@ useHead({ title })
             :disabled="!createForm.accountId.trim()"
             @click="submitCreate"
           />
-          <UButton
-            :label="t('common.cancel')"
-            variant="ghost"
-            color="neutral"
-            size="sm"
-            @click="createOpen = false"
-          />
-        </div>
-      </div>
+        </template>
+      </LazyBaseResponsiveModal>
 
       <!-- Managed paper accounts -->
       <div class="rounded bg-default ring ring-default p-3 flex flex-col gap-3">
@@ -371,17 +360,23 @@ useHead({ title })
         />
       </div>
 
-      <!-- Rename confirm -->
-      <div v-if="renameTarget" class="rounded bg-default ring ring-primary/40 p-3 flex flex-col gap-3">
-        <p class="text-xs font-semibold text-highlighted">{{ t('accounts.renameTitle', { id: renameTarget.accountId }) }}</p>
-        <UInput
-          v-model="renameValue"
-          :placeholder="t('accounts.accountIdPlaceholder')"
-          :aria-label="t('accounts.accountId')"
-          size="sm"
-          class="w-full sm:w-64"
-        />
-        <div class="flex items-center gap-2">
+      <!-- Rename modal (lazy — chunked until first open) -->
+      <LazyBaseResponsiveModal
+        :open="!!renameTarget"
+        :title="t('accounts.renameTitle', { id: renameTarget?.accountId || '' })"
+        icon="i-lucide-pencil"
+        @update:open="value => !value && (renameTarget = null)"
+      >
+        <UFormField :label="t('accounts.accountId')">
+          <UInput
+            v-model="renameValue"
+            :placeholder="t('accounts.accountIdPlaceholder')"
+            :aria-label="t('accounts.accountId')"
+            class="w-full"
+          />
+        </UFormField>
+        <template #footer>
+          <UButton :label="t('common.cancel')" variant="ghost" color="neutral" size="sm" @click="renameTarget = null" />
           <UButton
             :label="t('accounts.renameSubmit')"
             color="primary"
@@ -391,9 +386,8 @@ useHead({ title })
             :disabled="!renameValue.trim()"
             @click="submitRename"
           />
-          <UButton :label="t('common.cancel')" variant="ghost" color="neutral" size="sm" @click="renameTarget = null" />
-        </div>
-      </div>
+        </template>
+      </LazyBaseResponsiveModal>
 
       <!-- Delete confirm -->
       <div v-if="deleteTarget" class="rounded bg-default ring ring-error/50 p-3">

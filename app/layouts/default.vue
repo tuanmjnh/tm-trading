@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { CommandPaletteGroup } from '@nuxt/ui'
 
+const route = useRoute()
 const open = ref(false)
 const { t } = useI18n()
 const auth = useAuth()
@@ -25,11 +26,22 @@ const navItems = computed<NavItem[]>(() => {
 })
 const links = computed(() => [navItems.value])
 
+/** Variant for the collapsed sidebar: popover child lists are flat, so groups are dissolved into leaves. */
+const collapsedNavItems = computed<NavItem[]>(() =>
+  navItems.value.map(item => (item.children?.length ? { ...item, children: flattenNavGroups<NavItem>(item.children) } : item)))
+
 // Non-force: hydrate from the cached/shared catalog immediately and only hit the
 // Hub when there is nothing to render (P0-4/P0-5). A forced fetch here duplicated
 // the boot request that the nav plugin already issues.
 watch(() => auth.isAuthenticated.value, async (ok) => {
-  if (ok) await fetchRoutes()
+  if (ok) {
+    await fetchRoutes()
+  } else {
+    if (route.path !== '/login' && route.path !== '/register') {
+      const redirect = route.fullPath !== '/' ? route.fullPath : undefined
+      await navigateTo(redirect ? { path: '/login', query: { redirect } } : '/login')
+    }
+  }
 }, { immediate: true })
 
 const groups = computed<CommandPaletteGroup[]>(() => [
@@ -76,8 +88,8 @@ const groups = computed<CommandPaletteGroup[]>(() => [
 
 <template>
   <UDashboardGroup unit="rem" class="pb-14 lg:pb-0">
-    <UDashboardSidebar id="default" v-model:open="open" collapsible resizable class="bg-muted"
-      :ui="{ footer: 'lg:border-t lg:border-default' }">
+    <UDashboardSidebar id="default" v-model:open="open" collapsible resizable class="bg-muted" :toggle="false"
+      :menu="{ close: false }" :ui="{ footer: 'lg:border-t lg:border-default' }">
       <template #header="{ collapsed }">
         <LazyDashboardTeamsMenu :collapsed="collapsed" />
       </template>
@@ -86,16 +98,22 @@ const groups = computed<CommandPaletteGroup[]>(() => [
         <UDashboardSearchButton :collapsed="collapsed" :label="t('common.search')"
           class="bg-transparent ring-default" />
 
-        <UNavigationMenu v-if="links[0]?.length" :collapsed="collapsed" :items="links[0]" orientation="vertical" tooltip
-          popover
-          :ui="{
+        <UNavigationMenu v-if="links[0]?.length" :collapsed="collapsed" :items="collapsed ? collapsedNavItems : links[0]"
+          orientation="vertical" tooltip
+          popover :ui="{
             link: 'data-[active]:bg-elevated data-[active]:text-highlighted! data-[active]:border-l-2 data-[active]:border-l-primary! data-[state=open]:bg-elevated data-[state=open]:text-highlighted! data-[state=open]:border-l-2 data-[state=open]:border-l-primary!',
             childLink: 'data-[active]:bg-elevated data-[active]:text-highlighted! data-[active]:border-l-2 data-[active]:border-l-primary!'
           }" />
       </template>
 
       <template #footer="{ collapsed }">
-        <LazyDashboardUserMenu :collapsed="collapsed" />
+        <div class="flex flex-1 items-center gap-2">
+          <!-- Back to the app — on mobile the bottom bar owns navigation actions, so no ✕ in the header. -->
+          <UButton icon="i-lucide-arrow-left" color="neutral" variant="ghost" square size="sm"
+            :aria-label="t('common.back')" :ui="{ leadingIcon: 'text-dimmed' }" class="lg:hidden"
+            @click="open = false" />
+          <LazyDashboardUserMenu :collapsed="collapsed" class="flex-1 lg:ps-0" />
+        </div>
       </template>
     </UDashboardSidebar>
 

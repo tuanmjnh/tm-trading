@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { buildOverlay, metricRows, paramsDiff, paramsValue } from '../shared/utils/compare'
-import type { EquityPoint, RunSeriesDetail, RunSummary } from '../types/runs'
+import type { EquityPoint, RunSeriesDetail, RunSummary } from '../shared/types/runs'
 
 const baseSummary: RunSummary = {
   runs: 1,

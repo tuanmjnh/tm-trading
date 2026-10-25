@@ -1,0 +1,57 @@
+// =============================================================================
+//  WONDERWHALES — CONFIGURATION & USER INPUTS
+//  Clean signal core + Display overlays for VSA, Indicators & HUD
+// =============================================================================
+
+// --- Parabolic SAR Settings ---
+ww_psarStart = input.float(0.02, "Initial Acceleration Factor", minval = 0.001, step = 0.005, group = "Parabolic SAR", tooltip = "Starting acceleration factor (AF) for Parabolic SAR calculation.")
+ww_psarInc   = input.float(0.02, "Increment",                   minval = 0.001, step = 0.005, group = "Parabolic SAR", tooltip = "Acceleration factor step increment added each time a new extreme price is reached.")
+ww_psarMax   = input.float(0.2,  "Maximum Acceleration Factor", minval = 0.01,  step = 0.05,  group = "Parabolic SAR", tooltip = "Upper ceiling limit for the acceleration factor.")
+
+// --- Signal & Mode Settings (100% Unchanged) ---
+ww_mode           = input.string("Parabolic SAR Reversal", "Signal Mode", options = ["Parabolic SAR Reversal", "EMA Crossover", "SAR + EMA Trend Filter", "SAR + EMA + ATR Filter"], group = "Signal Settings", tooltip = "Parabolic SAR Reversal: Pure PSAR reversal flips.\nEMA Crossover: Fast EMA crossing Slow EMA.\nSAR + EMA Trend Filter: PSAR flips aligned with EMA direction.\nSAR + EMA + ATR Filter: PSAR flips aligned with EMA direction and ATR% volatility.", display = display.none)
+ww_confirmOnClose = input.bool(true, "Confirm signals on bar close", group = "Signal Settings", tooltip = "When enabled, signals and alerts only finalize once the bar has officially closed (barstate.isconfirmed) to avoid repainting. When disabled, signals trigger mid-bar in real time.", display = display.none)
+ww_lang           = input.string("EN (BUY/SELL)", "Label Language", options = ["EN (BUY/SELL)", "CN (买/卖)"], group = "Signal Settings", tooltip = "Language text displayed inside signal labels.", display = display.none)
+
+// --- Volume VSA Display (Subpane Default ON, Candle Color Default OFF) ---
+ww_showVol        = input.bool(true,  "Show VSA Volume Pane",     group = "Volume VSA (Display)", tooltip = "Render VSA colored volume histogram columns in lower pane.", display = display.none)
+ww_showVolMa      = input.bool(true,  "Show Volume MA Line",      group = "Volume VSA (Display)", tooltip = "Render Volume moving average line in lower pane.", display = display.none)
+ww_vsaBarColor    = input.bool(false, "Color Bars by VSA Volume", group = "Volume VSA (Display)", tooltip = "Color candles based on 6 VSA volume buckets: Purple (Climax >= 2.5x MA), Red (Very High >= 2.0x), Orange (High >= 1.5x), Green (Normal >= 1.0x), Blue (Low >= 0.5x), Silver (Ultra Low < 0.5x). Default OFF to keep TradingView default candle colors.", display = display.none)
+ww_vsaShowMarkers = input.bool(false, "Show VSA Climax Markers", group = "Volume VSA (Display)", tooltip = "Display small marker above candles with Climax volume spike (Purple).", display = display.none)
+ww_volMaLen       = input.int(20,     "Volume MA Length",         minval = 1,   group = "Volume VSA (Display)", tooltip = "Lookback period for calculating average volume.", display = display.none)
+ww_volSpikeR      = input.float(2.5,  "Climax / Spike Ratio",     minval = 1.0, step = 0.1, group = "Volume VSA (Display - Default ON)", tooltip = "Volume >= MA * Ratio triggers Climax (Purple).", display = display.none)
+ww_volVeryHighR   = input.float(2.0,  "Very High Ratio",          minval = 1.0, step = 0.1, group = "Volume VSA (Display - Default ON)", tooltip = "Volume >= MA * Ratio triggers Very High (Red).", display = display.none)
+ww_volHighR       = input.float(1.5,  "High Ratio",               minval = 1.0, step = 0.1, group = "Volume VSA (Display - Default ON)", tooltip = "Volume >= MA * Ratio triggers High (Orange).", display = display.none)
+ww_volNormalR     = input.float(1.0,  "Normal Ratio",             minval = 0.5, step = 0.1, group = "Volume VSA (Display - Default ON)", tooltip = "Volume >= MA * Ratio triggers Normal (Green).", display = display.none)
+ww_volLowR        = input.float(0.5,  "Low Ratio",                minval = 0.1, step = 0.1, group = "Volume VSA (Display - Default ON)", tooltip = "Volume >= MA * Ratio triggers Low (Blue). Below this is Ultra Low (Silver).", display = display.none)
+
+// --- Optional EMA Filter Settings ---
+ww_fastEmaLen  = input.int(20,    "Fast EMA Length", minval = 1, group = "EMA Filter (Optional)", tooltip = "Period length for fast Exponential Moving Average.", display = display.none)
+ww_slowEmaLen  = input.int(50,    "Slow EMA Length", minval = 2, group = "EMA Filter (Optional)", tooltip = "Period length for slow Exponential Moving Average. Must exceed Fast EMA length.", display = display.none)
+ww_showEma     = input.bool(false, "Show Fast/Slow EMA Lines",   group = "EMA Filter (Optional)", tooltip = "Toggle display of Fast (20) and Slow (50) EMA curves on chart.", display = display.none)
+
+// --- Optional ATR Volatility Filter Settings ---
+ww_atrLen    = input.int(14,     "ATR Length",                minval = 1,    group = "ATR Volatility Filter (Optional)", tooltip = "Lookback period for Average True Range.", display = display.none)
+ww_minAtrPct = input.float(0.5,  "Minimum ATR as % of Price", minval = 0.01, step = 0.1, group = "ATR Volatility Filter (Optional)", tooltip = "ATR % = (ATR / Close) * 100. Signals are blocked if ATR% is below this threshold to filter out low-volatility chop.", display = display.none)
+ww_showDebug = input.bool(false, "Show Blocked Signals (Debug)", group = "Visual Settings", tooltip = "Display neutral markers where raw signals were filtered out by EMA or ATR gates.", display = display.none)
+
+// --- Secondary Indicators (Display - Default: OFF) ---
+ww_showEma200 = input.bool(false, "Show 200 EMA Baseline",      group = "Secondary Indicators (Display)", tooltip = "Toggle display of 200 EMA long-term trend baseline on chart.", display = display.none)
+ww_ema200Len  = input.int(200,   "200 EMA Length",  minval = 10, group = "Secondary Indicators (Display)", tooltip = "Period length for long-term baseline EMA.", display = display.none)
+ww_showBb     = input.bool(false, "Show Bollinger Bands",      group = "Secondary Indicators (Display)", tooltip = "Toggle display of Bollinger Bands on chart.", display = display.none)
+ww_bbLen      = input.int(20,     "BB Length", minval = 1,      group = "Secondary Indicators (Display)", tooltip = "Moving average period for Bollinger Bands.", display = display.none)
+ww_bbMult     = input.float(2.0,  "BB StdDev Multiplier", minval = 0.1, step = 0.1, group = "Secondary Indicators (Display)", tooltip = "Standard deviation multiplier for Bollinger Bands.", display = display.none)
+
+// --- Visual & Display Settings ---
+ww_showTrendCandles = input.bool(true, "Show SAR Trend Candles (BUY=Neon Green, SELL=Neon Red)", group = "Visual Settings", tooltip = "When enabled (default), candles are rendered by Parabolic SAR regime: Neon Green (#00ff00) from BUY until SELL, and Neon Red (#ff0000) from SELL until BUY (like 3.PNG). With overlay = true, hovering over the Parabolic SAR dots brings the neon candles to the front (hover elevation).", display = display.none)
+ww_showPsar   = input.bool(true, "Show Parabolic SAR", group = "Visual Settings", tooltip = "Toggle display of Parabolic SAR dots/crosses on chart.", display = display.none)
+ww_psarColor  = input.color(color.rgb(234, 91, 247), "PSAR Color", group = "Visual Settings", tooltip = "Color tint for Parabolic SAR markers.", display = display.none)
+ww_showLabels = input.bool(true, "Show Buy/Sell Labels", group = "Visual Settings", tooltip = "Toggle display of BUY and SELL signal shapes on chart.", display = display.none)
+ww_iconStyle  = input.string("Triangle", "Signal Icon Style", options = ["Triangle", "Compact Label"], group = "Visual Settings", tooltip = "Triangle: Minimalist compact triangle icon with small text (clean & unobtrusive).\nCompact Label: Traditional rounded speech-bubble box.", display = display.none)
+ww_labelSize  = input.string("Tiny", "Signal Size", options = ["Tiny", "Small", "Normal"], group = "Visual Settings", tooltip = "Visual size of BUY and SELL signal shapes and text.", display = display.none)
+
+// --- HUD Dashboard (Display - Default: OFF) ---
+ww_showDash = input.bool(false, "Show HUD Dashboard", group = "HUD Dashboard (Display)", tooltip = "Toggle display of on-chart multi-metric status HUD table (shows PSAR Trend, VSA Volume, RSI, EMA, ATR).", display = display.none)
+ww_dashPos  = input.string("Top Right", "Dashboard Position", options = ["Top Right", "Bottom Right", "Top Left", "Bottom Left"], group = "HUD Dashboard (Display)", tooltip = "Anchor location of the HUD table on chart.", display = display.none)
+ww_dashSize = input.string("Small", "Dashboard Text Size", options = ["Tiny", "Small", "Normal"], group = "HUD Dashboard (Display)", tooltip = "Font sizing inside HUD cells.", display = display.none)
+ww_rsiLen   = input.int(14, "RSI Length for HUD", minval = 1, group = "HUD Dashboard (Display)", tooltip = "RSI period length shown in HUD dashboard.", display = display.none)

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
-import type { FilterChip } from '~/components/FilterChips.vue'
-import type { StrategyProfile } from '~~/types/strategy'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
+import type { FilterChip } from '~/components/shared/FilterChips.vue'
+import type { StrategyProfile } from '#shared/types/strategy'
 import { formatTimeAgo } from '@vueuse/core'
 
 // Strategy Library (roadmap §58.9 Slice 2 §57.4 F). Reusable strategy profiles
@@ -101,7 +101,7 @@ useHead({ title })
 <template>
   <BasePage id="strategies" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('strategyLab.pips.strategies')" />
+      <BasePageEyebrow :trail="trail" :pip="t('strategyLab.pips.strategies')" />
     </template>
 
     <template #right>
@@ -120,8 +120,8 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
-      <MetricRibbon :items="metrics" />
-      <FilterChips v-model="statusFilter" :items="statusChips" />
+      <SharedMetricRibbon :items="metrics" />
+      <SharedFilterChips v-model="statusFilter" :items="statusChips" />
 
       <div class="flex-1 min-h-0">
         <LazyGridList

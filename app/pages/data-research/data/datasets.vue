@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { Dataset } from '~~/types/data'
+import type { Dataset } from '#shared/types/data'
 import { formatTimeAgo } from '@vueuse/core'
 
 // Dataset Library (roadmap §58.9 Slice 4, §23.4). The retention manifest the
@@ -85,7 +85,7 @@ useHead({ title })
 <template>
   <BasePage id="data-datasets" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('dataCenter.pips.datasets')" />
+      <BasePageEyebrow :trail="trail" :pip="t('dataCenter.pips.datasets')" />
     </template>
 
     <template #right>
@@ -112,7 +112,7 @@ useHead({ title })
 
     <template #toolbar>
       <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
-        <FilterChips v-model="kindFilter" :items="kindChips" />
+        <SharedFilterChips v-model="kindFilter" :items="kindChips" />
         <UInput
           v-model="symbolFilter"
           :placeholder="t('dataCenter.searchSymbol')"
@@ -130,7 +130,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
       <LazyGridList
         :items="filtered"
         :columns="columns"

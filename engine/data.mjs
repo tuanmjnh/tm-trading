@@ -76,9 +76,15 @@ export class DataError extends Error {
   }
 }
 
+/** Normalize symbol for cache: strip .P suffix for perpetual contracts. */
+function cacheSymbol(symbol) {
+  return symbol.replace(/\.P$/, '')
+}
+
 /** Duong file cache cho 1 (market, symbol, tf). */
 export function cachePath(dataDir, market, symbol, tf) {
-  return join(dataDir, market, `${symbol}-${tf}.json`)
+  const cacheSym = cacheSymbol(symbol)
+  return join(dataDir, market, `${cacheSym}-${tf}.json`)
 }
 
 /** Doc cache. Tra ve null neu khong co hoac hong (khong nem - cache khong phai su that). */
@@ -179,10 +185,32 @@ export async function fetchKlines(o = {}) {
     u.searchParams.set('limit', String(Math.min(1500, target - bars.length + 1)))
     if (endTime !== undefined) u.searchParams.set('endTime', String(endTime))
 
-    const payload = await doFetch(u.toString())
+    let payload
+    try {
+      payload = await doFetch(u.toString())
+    } catch (e) {
+      // Handle rate limiting (418/429) - fall back to cached data if available
+      if (e instanceof DataError && (e.code === 'ai.rate-limited' || (e.message && e.message.includes('418')))) {
+        const cached = readCache(dataDir, market, o.symbol, o.tf)
+        if (cached && cached.bars.length > 0) {
+          console.warn(`[fetchKlines] Rate limited (418/429), falling back to cached data for ${o.symbol} ${o.tf}`)
+          return { ...cached, fromCache: true }
+        }
+      }
+      throw e
+    }
+
     // Binance tra loi JSON {code, msg} thay vi mang kline -> bao ro, khong doc
     // thanh bar (neu khong, `Array.isArray` sai va chung se in "khong phai mang").
     if (payload && typeof payload === 'object' && !Array.isArray(payload) && (payload.code !== undefined || payload.msg !== undefined)) {
+      // Check for rate limiting (418/429) - fall back to cached data if available
+      if (payload.code === -1003 || payload.code === 429 || payload.code === 418) {
+        const cached = readCache(dataDir, market, o.symbol, o.tf)
+        if (cached && cached.bars.length > 0) {
+          console.warn(`[fetchKlines] Rate limited (${payload.code}), falling back to cached data for ${o.symbol} ${o.tf}`)
+          return { ...cached, fromCache: true }
+        }
+      }
       throw new DataError(`Binance loi ${payload.code ?? '?'}: ${payload.msg ?? 'khong ro'}`, { code: payload.code, url: u.toString() })
     }
     if (!Array.isArray(payload)) throw new DataError('response khong phai mang kline', { url: u.toString(), payload })
@@ -228,6 +256,10 @@ async function defaultFetch(url) {
     json = JSON.parse(text)
   } catch {
     throw new DataError(`response khong phai JSON (HTTP ${res.status})`, { url, body: text.slice(0, 200) })
+  }
+  // For rate limiting (418/429), don't throw - let caller handle Binance error payload
+  if (res.status === 418 || res.status === 429) {
+    return json
   }
   if (!res.ok) throw new DataError(`HTTP ${res.status}`, { url, body: text.slice(0, 200) })
   return json

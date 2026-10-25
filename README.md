@@ -81,6 +81,8 @@ npm run dev            # dashboard Nuxt -> http://localhost:4001/
 | `npm run pine:copy:xau` | Copy `TM XAU Signals 2.pine` vào clipboard |
 | `npm run pine:copy:xau2` | Copy `TM XAU Signals 2.pine` vào clipboard |
 | `npm run notify` | Chạy webhook receiver |
+| `npm run bot:worker` | Supervisor paper theo owner (`run` / `--once`; cần `--owner` hoặc `BOT_OWNER_ID`) |
+| `npm run bot:status` | Xem lease, instance và lệnh đang chờ của một owner |
 | `npm test` | `pine:test` + `test:engine` + `test:db` |
 | `npm run pine:test` | Smoke test Pine + webhook (250 assertion) |
 | `npm run test:engine` | Golden fixtures + hợp đồng plugin + backtest + report + data + CLI (360 assertion) |

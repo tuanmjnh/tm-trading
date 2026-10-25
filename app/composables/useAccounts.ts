@@ -1,4 +1,4 @@
-import type { AccountItem } from '~~/types/accounts'
+import type { AccountItem } from '#shared/types/accounts'
 
 // =============================================================================
 //  Accounts API (Nitro internal route — no tm-hub hop). Fail-soft: Mongo down

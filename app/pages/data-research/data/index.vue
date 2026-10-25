@@ -55,7 +55,7 @@ useHead({ title })
 <template>
   <BasePage id="data" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('dataCenter.pips.overview')" />
+      <BasePageEyebrow :trail="trail" :pip="t('dataCenter.pips.overview')" />
     </template>
 
     <template #right>

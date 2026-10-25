@@ -1,4 +1,4 @@
-import type { RiskStatusData, RiskStatusResponse } from '~~/types/risk'
+import type { RiskStatusData, RiskStatusResponse } from '#shared/types/risk'
 
 // =============================================================================
 //  Risk gate status API (Nitro internal route — does NOT go to tm-hub; D10 still

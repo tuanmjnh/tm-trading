@@ -245,3 +245,4 @@ function formatDate(dateStr: string | null) {
   color: var(--ui-text-muted);
 }
 </style>
+

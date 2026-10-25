@@ -1,5 +1,5 @@
 import { Types } from 'mongoose'
-import type { PaperFillItem } from '../../types/fills'
+import type { PaperFillItem } from '#shared/types/fills'
 import { engineModel } from './engineModel'
 
 // =============================================================================

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
-import type { FilterChip } from '~/components/FilterChips.vue'
-import type { AiAgent, AiAgentDetail, AiAgentsStatus, AiAgentValidation, AiPolicyLevel } from '~~/types/ai'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
+import type { FilterChip } from '~/components/shared/FilterChips.vue'
+import type { AiAgent, AiAgentDetail, AiAgentsStatus, AiAgentValidation, AiPolicyLevel } from '#shared/types/ai'
 import { formatTimeAgo } from '@vueuse/core'
 import { getErrorMessage } from '~/shared/utils/errors'
 
@@ -329,40 +329,22 @@ useHead({ title })
 <template>
   <BasePage id="ai-agents" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('aiAgents.pipGovernance')" />
+      <BasePageEyebrow :trail="trail" :pip="t('aiAgents.pipGovernance')" />
     </template>
 
     <template #right>
       <div class="flex items-center gap-2">
-        <UBadge
-          v-if="status && status.mongo === 'down'"
-          :label="t('aiAgents.mongoDown')"
-          color="warning"
-          variant="subtle"
-          size="xs"
-        />
-        <UButton
-          icon="i-lucide-plus"
-          :label="t('aiAgents.createAgent')"
-          color="primary"
-          variant="soft"
-          size="sm"
-          :ui="{ label: 'hidden md:block' }"
-          @click="showCreate = true"
-        />
-        <UButton
-          icon="i-lucide-refresh-cw"
-          variant="soft"
-          color="neutral"
-          size="sm"
-          :loading="isLoading"
-          @click="load"
-        />
+        <UBadge v-if="status && status.mongo === 'down'" :label="t('aiAgents.mongoDown')" color="warning"
+          variant="subtle" size="xs" />
+        <UButton icon="i-lucide-plus" :label="t('aiAgents.createAgent')" color="primary" variant="soft" size="sm"
+          :ui="{ label: 'hidden md:block' }" @click="showCreate = true" />
+        <UButton icon="i-lucide-refresh-cw" variant="soft" color="neutral" size="sm" :loading="isLoading"
+          @click="load" />
       </div>
     </template>
 
     <div class="flex flex-col gap-6 w-full pb-24 lg:pb-6">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
 
       <!-- Autonomy policy — rendered from the server table, never hardcoded -->
       <UCard>
@@ -375,20 +357,13 @@ useHead({ title })
         </template>
 
         <div v-if="policy.length" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2">
-          <div
-            v-for="p in policy"
-            :key="p.level"
+          <div v-for="p in policy" :key="p.level"
             class="rounded border border-default p-3 flex flex-col gap-1.5 min-w-0"
-            :class="p.enabled ? 'bg-elevated' : 'bg-elevated/40'"
-          >
+            :class="p.enabled ? 'bg-elevated' : 'bg-elevated/40'">
             <div class="flex items-center justify-between gap-2">
               <span class="font-mono text-xs font-semibold text-highlighted">{{ p.level }}</span>
-              <UBadge
-                :label="p.enabled ? t('aiAgents.on') : t('aiAgents.off')"
-                :color="p.enabled ? 'success' : 'error'"
-                variant="subtle"
-                size="xs"
-              />
+              <UBadge :label="p.enabled ? t('aiAgents.on') : t('aiAgents.off')" :color="p.enabled ? 'success' : 'error'"
+                variant="subtle" size="xs" />
             </div>
             <span class="text-[11px] text-muted truncate">{{ p.label }}</span>
             <div class="text-[10px] text-dimmed">
@@ -399,38 +374,24 @@ useHead({ title })
               {{ t('aiAgents.requiresRiskEvidence') }}
             </div>
             <div class="flex flex-wrap gap-1 pt-0.5">
-              <span
-                v-for="tool in p.tools"
-                :key="tool"
-                class="font-mono text-[9px] px-1 rounded bg-accented text-muted"
-              >{{ tool }}</span>
+              <span v-for="tool in p.tools" :key="tool"
+                class="font-mono text-[9px] px-1 rounded bg-accented text-muted">{{
+                  tool }}</span>
               <span v-if="!p.tools.length" class="text-[10px] text-dimmed">{{ t('aiAgents.maxActionNone') }}</span>
             </div>
           </div>
         </div>
-        <AdminEmptyState
-          v-else-if="!isLoading"
-          :title="t('aiAgents.empty')"
-          :description="t('aiAgents.emptyHint')"
-          icon="i-lucide-shield-check"
-        />
+        <AdminEmptyState v-else-if="!isLoading" :title="t('aiAgents.empty')" :description="t('aiAgents.emptyHint')"
+          icon="i-lucide-shield-check" />
       </UCard>
 
       <!-- Registry -->
       <div class="flex flex-col gap-3">
-        <FilterChips v-model="stateFilter" :items="stateChips" />
+        <SharedFilterChips v-model="stateFilter" :items="stateChips" />
 
-        <LazyGridList
-          :items="filtered"
-          :columns="columns"
-          :loading="isLoading"
-          :can-load-more="false"
-          v-model:view-mode="viewMode"
-          item-key="agentId"
-          storage-key="ai-agents-view-mode"
-          @refresh="load"
-          @click="selectAgent"
-        >
+        <LazyGridList :items="filtered" :columns="columns" :loading="isLoading" :can-load-more="false"
+          v-model:view-mode="viewMode" item-key="agentId" storage-key="ai-agents-view-mode" @refresh="load"
+          @click="selectAgent">
           <template #name="{ item }">
             <div class="flex flex-col min-w-0">
               <span class="font-semibold text-xs text-highlighted truncate">{{ item.name }}</span>
@@ -451,7 +412,8 @@ useHead({ title })
           </template>
 
           <template #last="{ item }">
-            <time v-if="item.lastEventAt" :datetime="new Date(item.lastEventAt).toISOString()" class="text-[11px] text-muted">
+            <time v-if="item.lastEventAt" :datetime="new Date(item.lastEventAt).toISOString()"
+              class="text-[11px] text-muted">
               {{ formatTimeAgo(new Date(item.lastEventAt)) }}
             </time>
             <span v-else class="text-[11px] text-dimmed">—</span>
@@ -461,8 +423,10 @@ useHead({ title })
             <div class="flex flex-col gap-1 min-w-0">
               <div class="flex items-center gap-2">
                 <span class="font-semibold text-xs text-highlighted truncate">{{ item.name }}</span>
-                <UBadge :label="item.autonomy" :color="levelColor(item.autonomy)" variant="subtle" size="xs" class="shrink-0" />
-                <UBadge :label="stateLabel(item.state)" :color="stateColor(item.state)" variant="subtle" size="xs" class="shrink-0" />
+                <UBadge :label="item.autonomy" :color="levelColor(item.autonomy)" variant="subtle" size="xs"
+                  class="shrink-0" />
+                <UBadge :label="stateLabel(item.state)" :color="stateColor(item.state)" variant="subtle" size="xs"
+                  class="shrink-0" />
               </div>
               <span class="text-[10px] text-dimmed font-mono truncate">{{ item.agentId }}</span>
               <span class="text-[10px] text-muted">
@@ -474,11 +438,8 @@ useHead({ title })
           </template>
 
           <template #empty>
-            <AdminEmptyState
-              :title="t('aiAgents.agentsEmpty')"
-              :description="t('aiAgents.agentsEmptyHint')"
-              icon="i-lucide-bot"
-            />
+            <AdminEmptyState :title="t('aiAgents.agentsEmpty')" :description="t('aiAgents.agentsEmptyHint')"
+              icon="i-lucide-bot" />
           </template>
         </LazyGridList>
       </div>
@@ -489,9 +450,12 @@ useHead({ title })
           <div class="flex flex-wrap items-center gap-2">
             <UIcon name="i-lucide-bot" class="w-4 h-4 text-primary" />
             <h3 class="font-semibold text-sm truncate">{{ detail?.agent.name ?? selectedId }}</h3>
-            <UBadge v-if="detail" :label="detail.agent.autonomy" :color="levelColor(detail.agent.autonomy)" variant="subtle" size="xs" />
-            <UBadge v-if="detail" :label="stateLabel(detail.agent.state)" :color="stateColor(detail.agent.state)" variant="subtle" size="xs" />
-            <UBadge v-if="detail" :label="`${t('aiAgents.health')}: ${healthLabel(detail.health)}`" :color="healthColor(detail.health)" variant="subtle" size="xs" />
+            <UBadge v-if="detail" :label="detail.agent.autonomy" :color="levelColor(detail.agent.autonomy)"
+              variant="subtle" size="xs" />
+            <UBadge v-if="detail" :label="stateLabel(detail.agent.state)" :color="stateColor(detail.agent.state)"
+              variant="subtle" size="xs" />
+            <UBadge v-if="detail" :label="`${t('aiAgents.health')}: ${healthLabel(detail.health)}`"
+              :color="healthColor(detail.health)" variant="subtle" size="xs" />
             <span v-if="detailLoading" class="text-[11px] text-dimmed">{{ t('common.loading_text') }}</span>
           </div>
         </template>
@@ -499,45 +463,15 @@ useHead({ title })
         <div v-if="detail" class="flex flex-col gap-4">
           <!-- lifecycle -->
           <div class="flex flex-wrap items-center gap-2">
-            <UButton
-              v-for="action in agentActions"
-              :key="action.key"
-              :label="action.label"
-              :icon="action.icon"
-              :color="action.color ?? 'neutral'"
-              variant="soft"
-              size="xs"
-              :disabled="acting"
-              @click="action.onSelect()"
-            />
-            <UButton
-              :label="t('aiAgents.publishVersion')"
-              icon="i-lucide-file-plus-2"
-              color="primary"
-              variant="soft"
-              size="xs"
-              :disabled="acting"
-              @click="openPublish"
-            />
-            <UButton
-              :label="t('aiAgents.validate')"
-              icon="i-lucide-badge-check"
-              color="neutral"
-              variant="soft"
-              size="xs"
-              :loading="acting"
-              @click="submitValidation"
-            />
-            <UButton
-              v-if="canRecordRisk"
-              :label="t('aiAgents.riskIntegration')"
-              icon="i-lucide-shield-plus"
-              color="warning"
-              variant="soft"
-              size="xs"
-              :disabled="acting"
-              @click="showRisk = true"
-            />
+            <UButton v-for="action in agentActions" :key="action.key" :label="action.label" :icon="action.icon"
+              :color="action.color ?? 'neutral'" variant="soft" size="xs" :disabled="acting"
+              @click="action.onSelect()" />
+            <UButton :label="t('aiAgents.publishVersion')" icon="i-lucide-file-plus-2" color="primary" variant="soft"
+              size="xs" :disabled="acting" @click="openPublish" />
+            <UButton :label="t('aiAgents.validate')" icon="i-lucide-badge-check" color="neutral" variant="soft"
+              size="xs" :loading="acting" @click="submitValidation" />
+            <UButton v-if="canRecordRisk" :label="t('aiAgents.riskIntegration')" icon="i-lucide-shield-plus"
+              color="warning" variant="soft" size="xs" :disabled="acting" @click="showRisk = true" />
           </div>
 
           <p v-if="detail.agent.state === 'draft'" class="text-[11px] text-warning">
@@ -545,9 +479,11 @@ useHead({ title })
           </p>
 
           <!-- validation result -->
-          <div v-if="validation" class="rounded border p-3 text-xs" :class="validation.ok ? 'border-success/40 bg-success/5' : 'border-error/40 bg-error/5'">
+          <div v-if="validation" class="rounded border p-3 text-xs"
+            :class="validation.ok ? 'border-success/40 bg-success/5' : 'border-error/40 bg-error/5'">
             <div class="flex items-center gap-2">
-              <UIcon :name="validation.ok ? 'i-lucide-check-circle-2' : 'i-lucide-triangle-alert'" class="w-3.5 h-3.5" :class="validation.ok ? 'text-success' : 'text-error'" />
+              <UIcon :name="validation.ok ? 'i-lucide-check-circle-2' : 'i-lucide-triangle-alert'" class="w-3.5 h-3.5"
+                :class="validation.ok ? 'text-success' : 'text-error'" />
               <span :class="validation.ok ? 'text-success' : 'text-error'">
                 {{ validation.ok ? t('aiAgents.validationOk') : t('aiAgents.validationIssues') }}
               </span>
@@ -566,20 +502,10 @@ useHead({ title })
                 <UBadge :label="v.autonomy" :color="levelColor(v.autonomy)" variant="subtle" size="xs" />
                 <span class="font-mono text-[10px] text-dimmed truncate">{{ v.hash }}</span>
                 <span class="text-[10px] text-muted">{{ v.tools.join(', ') || '—' }}</span>
-                <UBadge
-                  v-if="v.riskIntegration?.passed"
-                  :label="t('aiAgents.riskEvidenceRecorded')"
-                  color="success"
-                  variant="subtle"
-                  size="xs"
-                />
-                <UBadge
-                  v-if="v.versionId === detail.agent.activeVersionId"
-                  :label="t('aiAgents.activeVersion')"
-                  color="primary"
-                  variant="subtle"
-                  size="xs"
-                />
+                <UBadge v-if="v.riskIntegration?.passed" :label="t('aiAgents.riskEvidenceRecorded')" color="success"
+                  variant="subtle" size="xs" />
+                <UBadge v-if="v.versionId === detail.agent.activeVersionId" :label="t('aiAgents.activeVersion')"
+                  color="primary" variant="subtle" size="xs" />
               </div>
             </div>
             <p v-else class="text-[11px] text-dimmed">{{ t('aiAgents.noVersion') }}</p>
@@ -592,16 +518,14 @@ useHead({ title })
               <span class="text-[11px] text-dimmed">{{ t('aiAgents.auditHint') }}</span>
             </div>
             <div v-if="detail.actions.length" class="flex flex-col divide-y divide-default/50">
-              <div v-for="a in detail.actions" :key="a.actionId" class="flex flex-wrap items-center gap-2 py-2 text-[11px]">
-                <UBadge
-                  :label="a.status === 'allowed' ? t('aiAgents.allowed') : t('aiAgents.blocked')"
-                  :color="a.status === 'allowed' ? 'success' : 'error'"
-                  variant="subtle"
-                  size="xs"
-                />
+              <div v-for="a in detail.actions" :key="a.actionId"
+                class="flex flex-wrap items-center gap-2 py-2 text-[11px]">
+                <UBadge :label="a.status === 'allowed' ? t('aiAgents.allowed') : t('aiAgents.blocked')"
+                  :color="a.status === 'allowed' ? 'success' : 'error'" variant="subtle" size="xs" />
                 <span class="font-mono text-highlighted">{{ a.type }}</span>
                 <span v-if="a.code !== 'OK'" class="font-mono text-error">{{ a.code }}</span>
-                <span v-if="a.sessionId" class="text-muted">{{ t('aiAgents.session') }}: <span class="font-mono">{{ a.sessionId }}</span></span>
+                <span v-if="a.sessionId" class="text-muted">{{ t('aiAgents.session') }}: <span class="font-mono">{{
+                  a.sessionId }}</span></span>
                 <span class="text-dimmed truncate">{{ a.message }}</span>
                 <time v-if="a.at" :datetime="new Date(a.at).toISOString()" class="text-[10px] text-muted ml-auto">
                   {{ formatTimeAgo(new Date(a.at)) }}
@@ -612,12 +536,8 @@ useHead({ title })
           </div>
         </div>
 
-        <AdminEmptyState
-          v-else-if="!detailLoading"
-          :title="t('aiAgents.empty')"
-          :description="t('aiAgents.selectAgent')"
-          icon="i-lucide-bot"
-        />
+        <AdminEmptyState v-else-if="!detailLoading" :title="t('aiAgents.empty')"
+          :description="t('aiAgents.selectAgent')" icon="i-lucide-bot" />
       </UCard>
       <p v-else class="text-[11px] text-dimmed">{{ t('aiAgents.selectAgent') }}</p>
 
@@ -628,13 +548,9 @@ useHead({ title })
             <div class="flex items-center gap-2">
               <UIcon name="i-lucide-cpu" class="w-4 h-4 text-primary" />
               <h3 class="font-semibold text-sm">{{ t('aiAgents.gateway') }}</h3>
-              <UBadge
-                v-if="status"
+              <UBadge v-if="status"
                 :label="status.gateway.configured ? t('aiAgents.configured') : t('aiAgents.notConfigured')"
-                :color="status.gateway.configured ? 'success' : 'warning'"
-                variant="subtle"
-                size="xs"
-              />
+                :color="status.gateway.configured ? 'success' : 'warning'" variant="subtle" size="xs" />
             </div>
           </template>
 
@@ -656,12 +572,8 @@ useHead({ title })
               <dd class="text-muted">{{ status.counts.experiments }}</dd>
             </div>
           </dl>
-          <AdminEmptyState
-            v-else-if="!isLoading"
-            :title="t('aiAgents.empty')"
-            :description="t('aiAgents.emptyHint')"
-            icon="i-lucide-cpu"
-          />
+          <AdminEmptyState v-else-if="!isLoading" :title="t('aiAgents.empty')" :description="t('aiAgents.emptyHint')"
+            icon="i-lucide-cpu" />
         </UCard>
 
         <UCard>
@@ -674,20 +586,13 @@ useHead({ title })
           </template>
 
           <div v-if="status?.tools.length" class="flex flex-col">
-            <div
-              v-for="tool in status.tools"
-              :key="tool.name"
-              class="flex flex-col gap-0.5 py-2 border-t border-default/50 first:border-t-0"
-            >
+            <div v-for="tool in status.tools" :key="tool.name"
+              class="flex flex-col gap-0.5 py-2 border-t border-default/50 first:border-t-0">
               <span class="font-mono text-xs text-highlighted">{{ tool.name }}</span>
               <span class="text-[11px] text-muted">{{ tool.description || '—' }}</span>
             </div>
           </div>
-          <AdminEmptyState
-            v-else-if="!isLoading"
-            :title="t('aiAgents.noTools')"
-            icon="i-lucide-wrench"
-          />
+          <AdminEmptyState v-else-if="!isLoading" :title="t('aiAgents.noTools')" icon="i-lucide-wrench" />
         </UCard>
       </div>
 
@@ -703,7 +608,8 @@ useHead({ title })
             <UInput v-model="createForm.name" :placeholder="t('aiAgents.namePlaceholder')" class="w-full" />
           </UFormField>
           <UFormField :label="t('aiAgents.descLabel')">
-            <UTextarea v-model="createForm.description" :placeholder="t('aiAgents.descPlaceholder')" :rows="3" class="w-full" />
+            <UTextarea v-model="createForm.description" :placeholder="t('aiAgents.descPlaceholder')" :rows="3"
+              class="w-full" />
           </UFormField>
           <UFormField :label="t('aiAgents.autonomyLabel')">
             <USelect v-model="createForm.autonomy" :items="autonomyOptions" value-key="value" class="w-full" />
@@ -712,15 +618,9 @@ useHead({ title })
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2">
-          <UButton color="neutral" variant="soft" :label="t('common.cancel')" @click="showCreate = false" />
-          <UButton
-            color="primary"
-            variant="soft"
-            :label="t('aiAgents.createAgent')"
-            :loading="acting"
-            :disabled="!createForm.name.trim()"
-            @click="submitCreate"
-          />
+          <UButton color="neutral" variant="ghost" :label="t('common.cancel')" @click="showCreate = false" />
+          <UButton color="primary" variant="soft" :label="t('aiAgents.createAgent')" :loading="acting"
+            :disabled="!createForm.name.trim()" @click="submitCreate" />
         </div>
       </template>
     </UModal>
@@ -734,17 +634,13 @@ useHead({ title })
             <USelect v-model="publishForm.autonomy" :items="autonomyOptions" value-key="value" class="w-full" />
           </UFormField>
           <UFormField :label="t('aiAgents.systemPrompt')" required>
-            <UTextarea v-model="publishForm.system" :placeholder="t('aiAgents.systemPromptPlaceholder')" :rows="6" class="w-full font-mono text-[11px]" />
+            <UTextarea v-model="publishForm.system" :placeholder="t('aiAgents.systemPromptPlaceholder')" :rows="6"
+              class="w-full font-mono text-[11px]" />
           </UFormField>
           <UFormField :label="t('aiAgents.toolsLabel')" :help="t('aiAgents.toolsHint')">
             <div class="flex flex-wrap gap-2">
-              <UCheckbox
-                v-for="tool in publishTools"
-                :key="tool"
-                :model-value="publishForm.tools.includes(tool)"
-                :label="tool"
-                @update:model-value="(value: boolean | 'indeterminate') => toggleTool(tool, value)"
-              />
+              <UCheckbox v-for="tool in publishTools" :key="tool" :model-value="publishForm.tools.includes(tool)"
+                :label="tool" @update:model-value="(value: boolean | 'indeterminate') => toggleTool(tool, value)" />
               <span v-if="!publishTools.length" class="text-[11px] text-dimmed">{{ t('aiAgents.maxActionNone') }}</span>
             </div>
           </UFormField>
@@ -755,15 +651,9 @@ useHead({ title })
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2">
-          <UButton color="neutral" variant="soft" :label="t('common.cancel')" @click="showPublish = false" />
-          <UButton
-            color="primary"
-            variant="soft"
-            :label="t('aiAgents.publishVersion')"
-            :loading="acting"
-            :disabled="!publishForm.system.trim()"
-            @click="submitPublish"
-          />
+          <UButton color="neutral" variant="ghost" :label="t('common.cancel')" @click="showPublish = false" />
+          <UButton color="primary" variant="soft" :label="t('aiAgents.publishVersion')" :loading="acting"
+            :disabled="!publishForm.system.trim()" @click="submitPublish" />
         </div>
       </template>
     </UModal>
@@ -774,7 +664,8 @@ useHead({ title })
         <div class="space-y-4">
           <p class="text-xs text-warning">{{ t('aiAgents.riskIntegrationHint') }}</p>
           <UFormField :label="t('aiAgents.riskTests')" required>
-            <UInput v-model="riskForm.tests" :placeholder="t('aiAgents.riskTestsPlaceholder')" class="w-full font-mono text-[11px]" />
+            <UInput v-model="riskForm.tests" :placeholder="t('aiAgents.riskTestsPlaceholder')"
+              class="w-full font-mono text-[11px]" />
           </UFormField>
           <UFormField :label="t('aiAgents.riskEvidenceProvided')">
             <UTextarea v-model="riskForm.evidence" :rows="3" class="w-full" />
@@ -783,24 +674,14 @@ useHead({ title })
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2">
-          <UButton color="neutral" variant="soft" :label="t('common.cancel')" @click="showRisk = false" />
-          <UButton
-            color="warning"
-            variant="soft"
-            :label="t('aiAgents.riskIntegration')"
-            :loading="acting"
-            :disabled="!riskForm.tests.trim()"
-            @click="submitRisk"
-          />
+          <UButton color="neutral" variant="ghost" :label="t('common.cancel')" @click="showRisk = false" />
+          <UButton color="warning" variant="soft" :label="t('aiAgents.riskIntegration')" :loading="acting"
+            :disabled="!riskForm.tests.trim()" @click="submitRisk" />
         </div>
       </template>
     </UModal>
 
-    <LazyBaseConfirmModal
-      v-model:open="showDisable"
-      :title="t('aiAgents.disableConfirmTitle')"
-      :description="t('aiAgents.disableConfirm')"
-      @confirm="confirmDisable"
-    />
+    <LazyBaseConfirmModal v-model:open="showDisable" :title="t('aiAgents.disableConfirmTitle')"
+      :description="t('aiAgents.disableConfirm')" @confirm="confirmDisable" />
   </BasePage>
 </template>

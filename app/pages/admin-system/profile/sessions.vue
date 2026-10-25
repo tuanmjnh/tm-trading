@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui'
-import type { UserSession } from '~/types/auth'
+import type { UserSession } from '#shared/types/auth'
 import { getErrorMessage } from '~/shared/utils/errors'
 
 const { t } = useI18n()
@@ -122,7 +122,7 @@ useHead({ title: computed(() => t('profile.sessions')) })
 <template>
   <BasePage id="profile" :title="t('profile.sessions')" :description="t('profile.sessionsDesc')">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" />
+      <BasePageEyebrow :trail="trail" />
     </template>
     <template #right>
       <UButton color="error" variant="soft" size="sm" icon="i-lucide-log-out" :label="t('profile.revokeAll')"
@@ -179,12 +179,12 @@ useHead({ title: computed(() => t('profile.sessions')) })
       </UCard>
     </BaseSectionNav>
 
-    <BaseConfirmModal v-model:open="isRevokeOpen" :title="t('settings.revokeSessionTitle')"
+    <LazyBaseConfirmModal v-model:open="isRevokeOpen" :title="t('settings.revokeSessionTitle')"
       :description="t('settings.revokeSessionDesc')" :confirm-label="t('profile.revoke')"
       :cancel-label="t('common.cancel')" color="error" icon="i-lucide-log-out" :loading="revokeLoading"
       @confirm="confirmRevoke" />
 
-    <BaseConfirmModal v-model:open="isRevokeAllOpen" :title="t('settings.revokeAllTitle')"
+    <LazyBaseConfirmModal v-model:open="isRevokeAllOpen" :title="t('settings.revokeAllTitle')"
       :description="t('settings.revokeAllDesc')" :confirm-label="t('profile.revokeAll')"
       :cancel-label="t('common.cancel')" color="error" icon="i-lucide-alert-triangle" :loading="revokeLoading"
       @confirm="confirmRevokeAll" />

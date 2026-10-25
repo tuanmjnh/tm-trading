@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { RecordingGroup } from '~~/types/data'
+import type { RecordingGroup } from '#shared/types/data'
 
 // Market Recordings (roadmap §58.9 Slice 4). Recorded rows grouped by venue:
 // `candles` for OHLCV bars, the `market_feed` ledger for feed events. Aggregated
@@ -77,7 +77,7 @@ useHead({ title })
 <template>
   <BasePage id="data-recordings" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('dataCenter.pips.recordings')" />
+      <BasePageEyebrow :trail="trail" :pip="t('dataCenter.pips.recordings')" />
     </template>
 
     <template #right>
@@ -104,7 +104,7 @@ useHead({ title })
 
     <template #toolbar>
       <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
-        <FilterChips v-model="planeFilter" :items="planeChips" />
+        <SharedFilterChips v-model="planeFilter" :items="planeChips" />
       </div>
     </template>
 
@@ -113,7 +113,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
       <LazyGridList
         :items="filtered"
         :columns="columns"

@@ -1,0 +1,50 @@
+// =============================================================================
+//  WONDERWHALES — SIGNAL LOGIC & FILTER GATES
+//  Pure signal structure: 100% preserved from original v1.0 specification
+// =============================================================================
+
+bool ww_rawBuy      = false
+bool ww_rawSell     = false
+bool ww_validBuy    = false
+bool ww_validSell   = false
+bool ww_blockedBuy  = false
+bool ww_blockedSell = false
+
+if ww_mode == "Parabolic SAR Reversal"
+    ww_rawBuy    := ww_buyFlip
+    ww_rawSell   := ww_sellFlip
+    ww_validBuy  := ww_rawBuy
+    ww_validSell := ww_rawSell
+
+else if ww_mode == "EMA Crossover"
+    ww_rawBuy    := ww_emaBuyCross
+    ww_rawSell   := ww_emaSellCross
+    ww_validBuy  := ww_rawBuy
+    ww_validSell := ww_rawSell
+
+else if ww_mode == "SAR + EMA Trend Filter"
+    ww_rawBuy      := ww_buyFlip
+    ww_rawSell     := ww_sellFlip
+    ww_validBuy    := ww_rawBuy and ww_emaBull
+    ww_validSell   := ww_rawSell and ww_emaBear
+    ww_blockedBuy  := ww_rawBuy and not ww_emaBull
+    ww_blockedSell := ww_rawSell and not ww_emaBear
+
+else if ww_mode == "SAR + EMA + ATR Filter"
+    ww_rawBuy      := ww_buyFlip
+    ww_rawSell     := ww_sellFlip
+    bool emaOkBuy  = ww_emaBull
+    bool emaOkSell = ww_emaBear
+    bool atrOk     = ww_volatilityOk
+    ww_validBuy    := ww_rawBuy and emaOkBuy and atrOk
+    ww_validSell   := ww_rawSell and emaOkSell and atrOk
+    ww_blockedBuy  := ww_rawBuy and not (emaOkBuy and atrOk)
+    ww_blockedSell := ww_rawSell and not (emaOkSell and atrOk)
+
+// Anti-repainting bar confirmation gate
+ww_barConfirmed = not ww_confirmOnClose or barstate.isconfirmed
+
+ww_signalBuy         = ww_validBuy and ww_barConfirmed
+ww_signalSell        = ww_validSell and ww_barConfirmed
+ww_signalBlockedBuy  = ww_blockedBuy and ww_barConfirmed
+ww_signalBlockedSell = ww_blockedSell and ww_barConfirmed

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
-import type { PositionItem } from '~~/types/positions'
+import type { PositionItem } from '#shared/types/positions'
 import { formatTimeAgo } from '@vueuse/core'
 import { getErrorMessage } from '~/shared/utils/errors'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 
 const { t } = useI18n()
 const notify = useNotify()
@@ -218,12 +218,12 @@ useHead({ title })
 <template>
   <BasePage id="positions" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('positions.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('positions.pip')" />
     </template>
 
     <template #right>
       <div class="flex items-center gap-2">
-        <AccountSwitcher />
+        <TradingAccountSwitcher />
         <UBadge
           v-if="meta?.mongo === 'down'"
           :label="t('positions.mongoDown')"
@@ -289,7 +289,7 @@ useHead({ title })
     </template>
 
     <div class="flex flex-col w-full h-full min-h-0 gap-3 pb-24 lg:pb-6">
-      <MetricRibbon :items="metrics" cols="grid-cols-2 md:grid-cols-3 xl:grid-cols-5" />
+      <SharedMetricRibbon :items="metrics" cols="grid-cols-2 md:grid-cols-3 xl:grid-cols-5" />
 
       <SharedRefreshNotice
         :stale="isStale"

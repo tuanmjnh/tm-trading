@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { MetricItem } from '~/components/MetricRibbon.vue'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 import type { OutlookSnapshot } from '~/composables/useNewsDesk'
 
 // =============================================================================
@@ -25,6 +25,12 @@ const group = ref<string>('crypto')
 const snaps = ref<Record<string, OutlookSnapshot | null>>({})
 const isLoading = ref(false)
 const degraded = ref(false)
+const assistantOpen = ref(false)
+const assistantScope = computed(() => ({
+  type: 'outlook' as const,
+  group: group.value,
+  horizon: 'short_term'
+}))
 
 const trail = computed(() => [{ label: title.value }])
 
@@ -81,12 +87,14 @@ useHead({ title })
 <template>
   <BasePage id="market-outlook" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('outlook.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('outlook.pip')" />
     </template>
 
     <template #right>
       <div class="flex items-center gap-2">
         <UBadge v-if="degraded" :label="t('outlook.degraded')" color="warning" variant="subtle" size="xs" />
+        <UButton icon="i-lucide-sparkles" variant="soft" color="primary" size="sm"
+          :aria-label="t('assistant.title')" :title="t('assistant.title')" @click="assistantOpen = true" />
         <UButton icon="i-lucide-refresh-cw" variant="soft" color="neutral" size="sm" :loading="isLoading" @click="refresh" />
       </div>
     </template>
@@ -127,7 +135,7 @@ useHead({ title })
          keep its CONTENT height — `h-full` + `min-h-0` pinned it to the viewport
          height and every card shrank to 0 px instead of overflowing. -->
     <div class="flex flex-col w-full pb-24 lg:pb-6 gap-3">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
 
       <UCard v-for="h in HORIZONS" :key="h">
         <template #header>
@@ -194,5 +202,6 @@ useHead({ title })
         />
       </UCard>
     </div>
+    <BaseModuleAssistantPanel v-model:open="assistantOpen" :scope="assistantScope" />
   </BasePage>
 </template>

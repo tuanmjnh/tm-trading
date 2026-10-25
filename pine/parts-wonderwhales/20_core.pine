@@ -1,0 +1,38 @@
+// =============================================================================
+//  WONDERWHALES — CORE VALIDATION & GUARDS (v1.1.3)
+// =============================================================================
+
+// Ensure PSAR max acceleration factor is not lower than start acceleration factor
+psarMaxSafe = math.max(ww_psarStart, ww_psarMax)
+
+// Ensure EMA periods are strictly positive and slow length strictly greater than fast length
+fastEmaSafe = math.max(1, ww_fastEmaLen)
+slowEmaSafe = math.max(fastEmaSafe + 1, ww_slowEmaLen)
+ema200Safe  = math.max(10, ww_ema200Len)
+
+// Ensure ATR period is strictly positive
+atrLenSafe = math.max(1, ww_atrLen)
+
+// Ensure Volume MA and Secondary indicators have positive lookbacks
+volMaLenSafe = math.max(1, ww_volMaLen)
+rsiLenSafe   = math.max(1, ww_rsiLen)
+bbLenSafe    = math.max(1, ww_bbLen)
+
+// Language selection flags
+ww_isLangEn = ww_lang == "EN (BUY/SELL)"
+ww_isLangCn = ww_lang == "CN (买/卖)"
+
+// Icon style selection flags
+ww_isStyleTriangle = ww_iconStyle == "Triangle"
+ww_isStyleLabel    = ww_iconStyle == "Compact Label"
+
+// Label size selection flags
+ww_isSizeTiny   = ww_labelSize == "Tiny"
+ww_isSizeSmall  = ww_labelSize == "Small"
+ww_isSizeNormal = ww_labelSize == "Normal"
+
+// Dashboard table position mapping
+ww_tablePos = ww_dashPos == "Bottom Right" ? position.bottom_right : ww_dashPos == "Top Left" ? position.top_left : ww_dashPos == "Bottom Left" ? position.bottom_left : position.top_right
+
+// Dashboard table text size mapping
+ww_tableTextSize = ww_dashSize == "Tiny" ? size.tiny : ww_dashSize == "Normal" ? size.normal : size.small

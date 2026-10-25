@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AuthUser } from '~/types/auth'
+import type { AuthUser } from '#shared/types/auth'
 import { z } from 'zod'
 import { getErrorMessage } from '~/shared/utils/errors'
 import type { HeaderAction } from '~/components/base/HeaderActions.vue'
@@ -227,9 +227,9 @@ const headerActions = computed<HeaderAction[]>(() => [
 </script>
 
 <template>
-  <BasePage id="admin-users" :title="$t('admin.usersTitle')">
+  <BasePage id="admin-users" :title="$t('admin.usersTitle')" :description="$t('admin.usersDesc')">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" />
+      <BasePageEyebrow :trail="trail" />
     </template>
     <template #right>
       <div class="flex items-center gap-2">

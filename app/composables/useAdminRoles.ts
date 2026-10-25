@@ -1,4 +1,4 @@
-import type { Role, ModulePermission, RouteTreeNode } from '~/types/rbac'
+import type { Role, ModulePermission, RouteTreeNode } from '#shared/types/rbac'
 
 export const useAdminRoles = () => {
   const list = useAdminList<Role>({

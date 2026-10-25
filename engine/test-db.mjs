@@ -492,6 +492,612 @@ const pdLegacy = await Signal.create({ ts: new Date(1), symbol: 'ETHUSDT', tf: '
 check('legacy signal without a signalKey still writes (partial index)', !!pdLegacy._id)
 
 // =============================================================================
+section('11. Phase E — owner lease, durable commands and instance recovery (E2)')
+
+const { BotInstance: PEInstance } = await import('../engine/models/botInstance.mjs')
+const { BotCommand: PECommand } = await import('../engine/models/botCommand.mjs')
+const runtimeStore = await import('../services/botRuntimeStore.mjs')
+
+const PE_OWNER = 'owner-phasee-lease'
+const PE_A = 'bot_phasee_a'
+const PE_B = 'bot_phasee_b'
+const PE_T0 = Date.now()
+
+await PEInstance.create({
+  _id: PE_A,
+  instanceId: PE_A,
+  ownerId: PE_OWNER,
+  accountId: 'default',
+  botProfileId: 'bp_phasee',
+  state: 'running',
+  createdAt: PE_T0,
+  createdBy: 'test-db',
+})
+await PEInstance.create({
+  _id: PE_B,
+  instanceId: PE_B,
+  ownerId: PE_OWNER,
+  accountId: 'default',
+  botProfileId: 'bp_phasee',
+  state: 'queued',
+  createdAt: PE_T0 + 1,
+  createdBy: 'test-db',
+  demo: true,
+})
+
+const lease1 = await runtimeStore.claimSupervisorLease({ ownerId: PE_OWNER, supervisorId: 'sup_one', now: PE_T0, ttlMs: 30_000 })
+check('the first supervisor claims the owner lease', lease1.ok === true && lease1.lease?.supervisorId === 'sup_one')
+const lease2 = await runtimeStore.claimSupervisorLease({ ownerId: PE_OWNER, supervisorId: 'sup_two', now: PE_T0 + 1000, ttlMs: 30_000 })
+check('a second supervisor cannot steal a live lease', lease2.ok === false && lease2.code === 'lease_held')
+const renewed = await runtimeStore.renewSupervisorLease({ ownerId: PE_OWNER, supervisorId: 'sup_one', now: PE_T0 + 2000, ttlMs: 30_000 })
+check('the holder renews its own lease', renewed.ok === true)
+const stolen = await runtimeStore.claimSupervisorLease({ ownerId: PE_OWNER, supervisorId: 'sup_two', now: PE_T0 + 40_000, ttlMs: 30_000 })
+check('an expired lease becomes claimable by another supervisor', stolen.ok === true && stolen.lease?.supervisorId === 'sup_two')
+
+const cmd = await runtimeStore.enqueueCommand({ ownerId: PE_OWNER, instanceId: PE_A, type: 'pause', commandId: 'pe-cmd-1', requestedAt: PE_T0 })
+const dupCmd = await runtimeStore.enqueueCommand({ ownerId: PE_OWNER, instanceId: PE_A, type: 'pause', commandId: 'pe-cmd-1', requestedAt: PE_T0 + 1 })
+check('a command is enqueued once', cmd.ok === true && cmd.duplicate === false)
+check('a retried command id is deduped, not duplicated', dupCmd.ok === true && dupCmd.duplicate === true && (await PECommand.countDocuments({ ownerId: PE_OWNER, commandId: 'pe-cmd-1' })) === 1)
+
+const applied = await runtimeStore.markCommandApplied({ ownerId: PE_OWNER, commandId: 'pe-cmd-1', supervisorId: 'sup_two', now: PE_T0 + 2 })
+const appliedTwice = await runtimeStore.markCommandApplied({ ownerId: PE_OWNER, commandId: 'pe-cmd-1', supervisorId: 'sup_one', now: PE_T0 + 3 })
+check('only one worker can acknowledge a pending command', applied === true && appliedTwice === false)
+
+const moved = await runtimeStore.transitionInstance({ ownerId: PE_OWNER, instanceId: PE_B, from: 'queued', to: 'starting', now: PE_T0 + 4 })
+const staleMove = await runtimeStore.transitionInstance({ ownerId: PE_OWNER, instanceId: PE_B, from: 'queued', to: 'starting', now: PE_T0 + 5 })
+check('instance transitions are compare-and-swap guarded', moved === true && staleMove === false)
+
+const attached = await runtimeStore.attachInstanceLease({ ownerId: PE_OWNER, instanceId: PE_A, supervisorId: 'sup_two', now: PE_T0 + 6, ttlMs: 30_000 })
+const wrongBeat = await runtimeStore.beatInstance({ ownerId: PE_OWNER, instanceId: PE_A, supervisorId: 'sup_one', patch: {}, now: PE_T0 + 7 })
+const rightBeat = await runtimeStore.beatInstance({
+  ownerId: PE_OWNER,
+  instanceId: PE_A,
+  supervisorId: 'sup_two',
+  patch: { engineVersion: 'test-1', subscriptions: ['BTCUSDT'], health: 'ok' },
+  now: PE_T0 + 8,
+  ttlMs: 30_000,
+})
+check('only the lease holder may beat an instance', attached === true && wrongBeat === false && rightBeat === true)
+const beatDoc = await runtimeStore.findOwnedInstance(PE_OWNER, PE_A)
+check(
+  'heartbeat persists engine version, subscriptions and a fresh lease',
+  beatDoc?.engineVersion === 'test-1' && beatDoc?.subscriptions?.[0] === 'BTCUSDT' && beatDoc?.lease?.expiresAt === PE_T0 + 30_008,
+)
+
+check('another owner cannot read the instance', (await runtimeStore.findOwnedInstance('owner-someone-else', PE_A)) === null)
+check('demo rows never appear in the operational list', (await runtimeStore.listOwnedInstances(PE_OWNER)).every((i) => i.demo !== true))
+check('boot recovery fails an orphaned instance with an explicit reason', (await runtimeStore.recoverOwnedInstances({ ownerId: PE_OWNER, now: PE_T0 + 60_000 })).length >= 1)
+const recovered = await runtimeStore.findOwnedInstance(PE_OWNER, PE_A)
+check('the orphan is FAILED with lease_expired, never silently RUNNING', recovered?.state === 'failed' && recovered?.healthReason === 'lease_expired' && recovered?.lease?.supervisorId == null)
+
+// =============================================================================
+section('12. Phase E — supervisor worker applies commands and owns session state')
+
+const { createBotWorker } = await import('../services/botWorker.mjs')
+const { TradingSession: PEWSession } = await import('../engine/models/session.mjs')
+
+const PEW_OWNER = 'owner-phasee-worker'
+const PEW_ID = 'bot_phasee_worker_1'
+const PEW_T0 = Date.now()
+const PEW_NOW = () => PEW_T0
+
+await PEInstance.create({
+  _id: PEW_ID,
+  instanceId: PEW_ID,
+  ownerId: PEW_OWNER,
+  accountId: 'default',
+  botProfileId: 'bp_phasee',
+  state: 'queued',
+  createdAt: PEW_T0,
+  createdBy: 'test-db',
+})
+
+const worker = createBotWorker({ ownerId: PEW_OWNER, nonce: 'test', now: PEW_NOW, log: { log() {}, warn() {} } })
+const workerBoot = await worker.boot()
+check('worker claims the owner lease and boots', workerBoot.ok === true && worker.claimed === true)
+
+await runtimeStore.enqueueCommand({ ownerId: PEW_OWNER, instanceId: PEW_ID, type: 'start', commandId: 'pew-start', requestedAt: PEW_T0 })
+await worker.applyPendingCommands()
+const started = await runtimeStore.findOwnedInstance(PEW_OWNER, PEW_ID)
+check('a start command creates a live-paper session and RUNNING instance', started?.state === 'running' && typeof started?.sessionId === 'string')
+const startedSession = started?.sessionId ? await PEWSession.findOne({ sessionId: started.sessionId }).lean() : null
+check('the session is persisted and owned by the same owner/account', startedSession?.state === 'running' && startedSession?.ownerId === PEW_OWNER && startedSession?.accountId === 'default')
+const startCmd = await PECommand.findOne({ ownerId: PEW_OWNER, commandId: 'pew-start' }).lean()
+check('the applied command is acknowledged with the supervisor id', startCmd?.status === 'applied' && startCmd?.supervisorId === worker.supervisorId)
+
+await runtimeStore.enqueueCommand({ ownerId: PEW_OWNER, instanceId: PEW_ID, type: 'pause', commandId: 'pew-pause', requestedAt: PEW_T0 + 1 })
+await worker.applyPendingCommands()
+check('pause moves the instance to PAUSED', (await runtimeStore.findOwnedInstance(PEW_OWNER, PEW_ID))?.state === 'paused')
+
+await runtimeStore.enqueueCommand({ ownerId: PEW_OWNER, instanceId: PEW_ID, type: 'resume', commandId: 'pew-resume', requestedAt: PEW_T0 + 2 })
+await worker.applyPendingCommands()
+check('resume moves the instance back to RUNNING', (await runtimeStore.findOwnedInstance(PEW_OWNER, PEW_ID))?.state === 'running')
+
+await runtimeStore.enqueueCommand({ ownerId: PEW_OWNER, instanceId: PEW_ID, type: 'stop', commandId: 'pew-stop', requestedAt: PEW_T0 + 3 })
+await worker.applyPendingCommands()
+const stopped = await runtimeStore.findOwnedInstance(PEW_OWNER, PEW_ID)
+const stoppedSession = stopped?.sessionId ? await PEWSession.findOne({ sessionId: stopped.sessionId }).lean() : null
+check('stop completes the instance and releases its lease', stopped?.state === 'completed' && stopped?.lease?.supervisorId == null)
+check('stop completes the trading session through the guarded state machine', stoppedSession?.state === 'completed' && stoppedSession?.stoppedAt != null)
+
+// Replaying the same command id is a no-op, not a second transition.
+const replay = await runtimeStore.enqueueCommand({ ownerId: PEW_OWNER, instanceId: PEW_ID, type: 'stop', commandId: 'pew-stop', requestedAt: PEW_T0 + 4 })
+check('a replayed command id is deduped at the store', replay.ok === true && replay.duplicate === true)
+
+await worker.shutdown()
+const worker2 = createBotWorker({ ownerId: PEW_OWNER, nonce: 'test', now: () => PEW_T0 + 10, log: { log() {}, warn() {} } })
+const boot2 = await worker2.boot()
+check('restarting the same supervisor re-claims the lease with nothing to recover', boot2.ok === true && boot2.recovered.length === 0)
+await worker2.shutdown()
+
+// =============================================================================
+section('13. Phase E — a native signal becomes exactly one bot alert (E4)')
+
+const { bridgeSignalsForInstance } = await import('../services/botSignalBridge.mjs')
+
+const PB_OWNER = 'owner-phasee-bridge'
+const PB_ID = 'bot_phasee_bridge_1'
+const PB_T0 = Date.now()
+
+await PEInstance.create({
+  _id: PB_ID,
+  instanceId: PB_ID,
+  ownerId: PB_OWNER,
+  accountId: 'default',
+  botProfileId: 'bp_phasee',
+  state: 'running',
+  subscriptions: [],
+  createdAt: PB_T0,
+  createdBy: 'test-db',
+})
+
+const attribution = { method: 'vsa', methodVersion: '1', strategyVersion: 'vsa@1', engineVersion: 'test', paramsHash: 'p0', indicatorRefs: [] }
+const mkSignal = (over = {}) => ({
+  ts: new Date(PB_T0),
+  symbol: 'BTCUSDT',
+  tf: '1h',
+  type: 'ST LONG',
+  price: 100,
+  ownerId: PB_OWNER,
+  accountId: null,
+  method: 'vsa',
+  signalKey: `sig_${Math.random().toString(36).slice(2, 10)}`,
+  schemaVersion: 'signal.v1',
+  attribution,
+  meta: { entry: 100, sl: 95, tp: 110 },
+  ...over,
+})
+
+await Signal.insertMany([
+  mkSignal({ signalKey: 'sig_long_1', ts: new Date(PB_T0), type: 'ST LONG' }),
+  mkSignal({ signalKey: 'sig_sv_1', ts: new Date(PB_T0 + 1), type: 'SV' }),
+  mkSignal({ signalKey: 'sig_short_1', ts: new Date(PB_T0 + 2), type: 'ST SHORT', meta: { entry: 100, sl: 105, tp: 90 } }),
+  mkSignal({ signalKey: 'sig_other_owner', ts: new Date(PB_T0 + 3), ownerId: 'someone-else' }),
+])
+
+const pbInstance = await runtimeStore.findOwnedInstance(PB_OWNER, PB_ID)
+const bridge1 = await bridgeSignalsForInstance({ instance: pbInstance, models: { Signal, Alert } })
+check("the bridge queues only the owner's entry signals", bridge1.ok === true && bridge1.queued === 2 && bridge1.scanned === 2)
+const botAlerts = await Alert.find({ ownerId: PB_OWNER, source: 'bot' }).lean()
+check('bot alerts land in the shared alerts collection with bot provenance', botAlerts.length === 2 && botAlerts.every((a) => a.instanceId === PB_ID && typeof a.signalKey === 'string'))
+const longAlert = botAlerts.find((a) => a.side === 'BUY')
+check('an entry alert keeps the plan levels from the signal meta', longAlert?.sl === 95 && longAlert?.tps?.[0] === 110 && JSON.parse(longAlert.raw).type === 'market')
+check('the alert key is deterministic per (instance, signal)', longAlert?.alertKey === `bot_${PB_ID}_sig_long_1`)
+
+const cursor = { ...pbInstance, lastSignalKey: bridge1.lastSignalKey, lastSignalTs: bridge1.lastSignalTs }
+const bridge2 = await bridgeSignalsForInstance({ instance: cursor, models: { Signal, Alert } })
+check('a second pass over the same window queues nothing (cursor + unique key)', bridge2.queued === 0 && bridge2.skipped === 0)
+check('no duplicate alert rows were created', (await Alert.countDocuments({ ownerId: PB_OWNER, source: 'bot' })) === 2)
+
+await Alert.deleteMany({ ownerId: PB_OWNER })
+
+// =============================================================================
+section('14. Phase E — signal -> bot -> risk -> order -> fill -> position -> metrics (E7)')
+
+const { runCycle } = await import('../exec/paper.mjs')
+const { loadRiskConfig } = await import('../exec/risk.mjs')
+const { PaperOrder } = await import('../engine/models/order.mjs')
+const { PaperFill } = await import('../engine/models/fill.mjs')
+const { PaperAccount } = await import('../engine/models/account.mjs')
+
+const PI_OWNER = 'owner-phasee-e2e'
+const PI_ID = 'bot_phasee_e2e_1'
+const PI_T0 = Date.now()
+
+await PEInstance.create({
+  _id: PI_ID,
+  instanceId: PI_ID,
+  ownerId: PI_OWNER,
+  accountId: 'default',
+  botProfileId: 'bp_phasee',
+  state: 'queued',
+  subscriptions: ['BTCUSDT'],
+  createdAt: PI_T0,
+  createdBy: 'test-db',
+})
+
+const e2eWorker = createBotWorker({ ownerId: PI_OWNER, nonce: 'e7', now: () => PI_T0, log: { log() {}, warn() {} } })
+await e2eWorker.boot()
+await runtimeStore.enqueueCommand({ ownerId: PI_OWNER, instanceId: PI_ID, type: 'start', commandId: 'e7-start', requestedAt: PI_T0 })
+await e2eWorker.applyPendingCommands()
+const e2eInstance = await runtimeStore.findOwnedInstance(PI_OWNER, PI_ID)
+check('the supervisor starts the instance with a live session', e2eInstance?.state === 'running' && typeof e2eInstance?.sessionId === 'string')
+
+// Deterministic market (injected, never a real feed): bar 1 fills the entry at
+// 100, bar 2 crosses TP 110.
+const bar = (time, o, h, l, c) => ({ time, open: o, high: h, low: l, close: c, volume: 10 })
+let marketRound = 0
+const quoteFor = (symbol, { at } = {}) => {
+  const t = Number(at) || Date.now()
+  const close = marketRound === 0 ? 100 : 111
+  return { last: close, time: t, bar: bar(t - 30_000, close, close, close, close) }
+}
+const fetchKlines = async ({ symbol }) => {
+  const t = Date.now()
+  // The second bar must be NEWER than the position's openedAt, otherwise the
+  // exit scanner (correctly) refuses to look at bars from before the fill.
+  const rows = marketRound === 0
+    ? [bar(t - 120_000, 100, 100.5, 99.5, 100), bar(t - 60_000, 100, 100.5, 99.5, 100)]
+    : [bar(t - 120_000, 100, 100.5, 99.5, 100), bar(t, 111, 111.5, 110.5, 111)]
+  return { symbol, tf: '1', bars: rows }
+}
+
+await Signal.create({
+  ts: new Date(PI_T0),
+  symbol: 'BTCUSDT',
+  tf: '1h',
+  type: 'ST LONG',
+  price: 100,
+  ownerId: PI_OWNER,
+  accountId: 'default',
+  method: 'vsa',
+  signalKey: 'sig_e2e_entry_1',
+  schemaVersion: 'signal.v1',
+  attribution: { method: 'vsa', methodVersion: '1', strategyVersion: 'vsa@1', engineVersion: 'test', paramsHash: 'p0', indicatorRefs: [] },
+  meta: { entry: 100, sl: 95, tp: 110 },
+})
+
+const e2eBridge = await bridgeSignalsForInstance({ instance: e2eInstance, models: { Signal, Alert } })
+check('the signal became exactly one bot alert', e2eBridge.ok === true && e2eBridge.queued === 1)
+
+const cfg = { ...loadRiskConfig(), ownerId: PI_OWNER, account: 'default' }
+const cycle1 = await runCycle(cfg, { sessionId: e2eInstance.sessionId, quoteFor, fetchKlines })
+const order1 = await PaperOrder.findOne({ ownerId: PI_OWNER }).lean()
+const fill1 = await PaperFill.findOne({ ownerId: PI_OWNER }).lean()
+const pos1 = await Position.findOne({ ownerId: PI_OWNER, status: 'open' }).lean()
+check('risk approved the bot intent and opened a filled paper order', cycle1.opened === 1 && order1?.status === 'filled')
+check('the order carries bot provenance (alertKey + instance)', order1?.alertKey === `bot_${PI_ID}_sig_e2e_entry_1` && order1?.ownerId === PI_OWNER)
+check('the fill ledger recorded the execution', Boolean(fill1) && fill1?.qty > 0)
+check('one open position exists at the executed price with the signal SL/TP', pos1?.status === 'open' && pos1?.sl === 95 && pos1?.tps?.[0] === 110)
+check('the alert is consumed (not left retrying)', (await Alert.findOne({ signalKey: 'sig_e2e_entry_1' })).status === 'opened')
+
+marketRound = 1
+const cycle2 = await runCycle(cfg, { sessionId: e2eInstance.sessionId, quoteFor, fetchKlines })
+const pos2 = await Position.findOne({ ownerId: PI_OWNER }).lean()
+check('the TP cross closed the position through the exit scanner', cycle2.closed === 1 && pos2?.status === 'closed')
+check('the close booked a fee-net PnL on the position', Number.isFinite(Number(pos2?.pnlAbs)) && Number(pos2?.pnlAbs) > 0)
+const acct = await PaperAccount.findOne({ ownerId: PI_OWNER, accountId: 'default' }).lean()
+check('the paper account is anchored (baseline frozen, projection source)', Boolean(acct) && Number(acct?.initialBalance) > 0)
+const dayKey = new Date().toISOString().slice(0, 10)
+const riskDay = await RiskState.findOne({ ownerId: PI_OWNER, account: 'default', utcDay: dayKey }).lean()
+check('the close is booked in the day risk state (daily metrics)', Number(riskDay?.realizedPnlAbs ?? 0) > 0)
+
+const evTypes = (await TradingDomainEvent.find({ ownerId: PI_OWNER }).lean()).map((e) => e.type)
+for (const t of ['order.created', 'order.filled', 'position.opened', 'position.closed']) {
+  check(`domain event emitted: ${t}`, evTypes.includes(t))
+}
+
+// Restart-no-duplicate: replaying the whole cycle must not create a second
+// order/fill/position (alertKey + clientOrderId are the dedupe keys).
+const ordersBefore = await PaperOrder.countDocuments({ ownerId: PI_OWNER })
+const fillsBefore = await PaperFill.countDocuments({ ownerId: PI_OWNER })
+await runCycle(cfg, { sessionId: e2eInstance.sessionId, quoteFor, fetchKlines })
+check('a replayed cycle creates no duplicate order', (await PaperOrder.countDocuments({ ownerId: PI_OWNER })) === ordersBefore)
+check('a replayed cycle creates no duplicate fill', (await PaperFill.countDocuments({ ownerId: PI_OWNER })) === fillsBefore)
+
+const sessionDoc = await PEWSession.findOne({ sessionId: e2eInstance.sessionId }).lean()
+check('the trading session is live and recorded the guarded start path', sessionDoc?.state === 'running' && (sessionDoc?.timeline || []).some((e) => e.message === 'queued -> starting'))
+
+await e2eWorker.shutdown()
+
+// =============================================================================
+section('15. Phase F — manifest -> frozen evidence -> PIT -> graph -> advisory draft')
+
+const { buildManifest, manifestGaps } = await import('./manifest.mjs')
+const { buildEvidenceBundle, freezeEvidenceSet, verifyEvidenceSet, evidenceSufficiency } = await import('./evidence.mjs')
+const { pitAudit, pitLimitation } = await import('./pointInTime.mjs')
+const { linkSummary, graphDigest, graphIds } = await import('./evidenceGraph.mjs')
+const { persistAiProposal, persistProposal } = await import('./experimentService.mjs')
+const { TradingSession, EvidenceSet, Journal, AiProposal } = await import('./models/index.mjs')
+const { NewsEvidenceSet } = await import('./models/newsEvidenceSet.mjs')
+const { acceptanceReport } = await import('./experiment.mjs')
+
+const PF_OWNER = 'owner-phasef-e2e'
+const PF_SESSION = 'ses_phasef_e2e'
+const PF_T0 = Date.now() - 7_200_000
+const PF_STOP = PF_T0 + 3_600_000
+const PF_FROZEN = PF_STOP + 1_000
+
+const pfManifestInput = {
+  kind: 'session',
+  source: 'paper',
+  engineVersion: 'test-f5',
+  strategyVersionId: 'vsa@1.4.0',
+  paramsHash: 'ph_f5',
+  method: 'vsa',
+  riskFingerprint: 'rf1_f5',
+  dataSource: 'venue-rest',
+  purpose: 'paper-validation',
+  instruments: ['BTCUSDT'],
+  timeframes: ['1h'],
+  createdAt: PF_T0,
+}
+const pfManifest = buildManifest(pfManifestInput)
+check('a v1 manifest has no gaps for a session', manifestGaps(pfManifest, { kind: 'session' }).length === 0,
+  JSON.stringify(manifestGaps(pfManifest, { kind: 'session' })))
+check('the manifest fingerprint is deterministic and excludes createdAt', pfManifest.fingerprint.startsWith('mf1_')
+  && pfManifest.fingerprint === buildManifest({ ...pfManifestInput, createdAt: PF_STOP }).fingerprint)
+
+await TradingSession.create({
+  _id: PF_SESSION,
+  sessionId: PF_SESSION,
+  kind: 'live-paper',
+  ownerId: PF_OWNER,
+  accountId: 'default',
+  strategyVersionId: 'vsa@1.4.0',
+  instruments: ['BTCUSDT'],
+  timeframes: ['1h'],
+  state: 'completed',
+  startedAt: PF_T0,
+  stoppedAt: PF_STOP,
+  manifest: pfManifest,
+  createdBy: 'test-db',
+})
+
+// 22 closed trades (the evidence floor is 20), all strictly inside the window.
+const pfPositions = Array.from({ length: 22 }, (_, i) => ({
+  _id: `pos_f5_${i}`,
+  externalId: `ext_f5_${i}`,
+  symbol: 'BTCUSDT',
+  dir: 1,
+  entryPrice: 100,
+  exitPrice: 101,
+  entryTime: PF_T0 + (i + 1) * 60_000,
+  exitTime: PF_T0 + (i + 1) * 60_000 + 30_000,
+  qty: 1,
+  pnlAbs: 1,
+  fees: 0,
+  result: 'TP',
+  rMultiple: 1,
+}))
+const pfOrders = [{ clientOrderId: 'co_f5_0', status: 'filled' }]
+const pfFills = [{ fillId: 'fl_f5_0', qty: 1, price: 100 }]
+const pfJournalRows = pfPositions.map((p, i) => ({
+  key: p.externalId,
+  ownerId: PF_OWNER,
+  source: 'paper',
+  account: 'default',
+  sourceId: p.externalId,
+  symbol: 'BTCUSDT',
+  tf: '1h',
+  dir: 1,
+  entryPrice: 100,
+  exitPrice: 101,
+  entryTime: new Date(p.entryTime),
+  exitTime: new Date(p.exitTime),
+  result: 'TP',
+  rMultiple: 1,
+  pnlAbs: 1,
+}))
+// Raw insert: the Journal schema reserves the path name `schema`, which Mongoose
+// document validation cannot handle (engine/journal.mjs inserts per-row and
+// swallows the error) — the audit below only needs the persisted rows.
+await Journal.collection.insertMany(pfJournalRows)
+const pfNews = await NewsEvidenceSet.create({
+  _id: 'nv_f5_1',
+  setId: 'nv_f5_1',
+  ownerId: PF_OWNER,
+  purpose: 'evaluation',
+  symbols: ['BTCUSDT'],
+  asOf: new Date(PF_T0 + 30_000),
+  hash: 'nvh_f5',
+})
+
+const pfBundle = buildEvidenceBundle({
+  kind: 'paper-session',
+  sourceId: PF_SESSION,
+  session: { sessionId: PF_SESSION, state: 'completed', startedAt: PF_T0, stoppedAt: PF_STOP, accountId: 'default', strategyVersionId: 'vsa@1.4.0', instruments: ['BTCUSDT'], timeframes: ['1h'], manifest: pfManifest },
+  positions: pfPositions,
+  orders: pfOrders,
+  fills: pfFills,
+  journalKeys: pfJournalRows.map((j) => j.key),
+  frozenAt: PF_FROZEN,
+})
+check('the bundle is sealed, carries the manifest and all 22 trades', pfBundle.sealed === true && pfBundle.trades.length === 22 && pfBundle.manifest?.fingerprint === pfManifest.fingerprint)
+check('the bundle links the journal rows by upstream identity', pfBundle.keys.journalKeys.length === 22 && pfBundle.keys.journalKeys.includes('ext_f5_0'))
+
+const pfFrozen = freezeEvidenceSet(pfBundle)
+await EvidenceSet.create({ ...pfFrozen, ownerId: PF_OWNER, createdBy: 'test-db' })
+const pfRead = await EvidenceSet.findById(pfFrozen.setId).lean()
+check('the frozen set persists and re-verifies byte-for-byte', verifyEvidenceSet(pfRead).ok === true)
+check('an edited set fails verification (immutability is enforced, not assumed)',
+  verifyEvidenceSet({ ...pfRead, trades: pfRead.trades.slice(0, 1) }).code === 'SET_TAMPERED')
+
+const pfPit = pitAudit({ bundle: pfRead, journal: pfJournalRows, news: [pfNews] })
+check('a clean graph passes the strict point-in-time audit', pfPit.ok === true && pfPit.cutoff === PF_FROZEN && pitLimitation(pfPit) === null)
+const pfLeak = pitAudit({ bundle: { ...pfRead, trades: [...pfRead.trades, { key: 'pos_future', entryTime: PF_T0, exitTime: PF_FROZEN + 1 }] }, journal: pfJournalRows, news: [pfNews] })
+check('a record after the freeze is reported, not silently dropped',
+  pfLeak.ok === false && pfLeak.violations.some((v) => v.code === 'EXIT_AFTER_CUTOFF' && v.recordId === 'pos_future'))
+check('the leaking set is not sufficient despite 22 trades', evidenceSufficiency(pfRead, { pit: pfLeak }).sufficient === false)
+check('the clean set is sufficient (floor 20)', evidenceSufficiency(pfRead, { pit: pfPit }).sufficient === true)
+
+const pfGraph = { session: { sessionId: PF_SESSION, ownerId: PF_OWNER }, bundle: pfRead, orders: pfOrders, fills: pfFills, journal: pfJournalRows, news: [pfNews], experiments: [], relatedSets: [], pit: pfPit }
+const pfLinks = linkSummary(pfGraph)
+check('the graph links set/journal/news and names the missing experiment', pfLinks.counts.orders === 1
+  && pfLinks.counts.journal === 22 && pfLinks.counts.news === 1 && pfLinks.counts.trades === 22
+  && pfLinks.missing.includes('experiment') && !pfLinks.missing.includes('journal'))
+const pfIds = graphIds(pfGraph)
+check('the citation allowlist contains real record ids from every source', pfIds.includes(pfFrozen.setId)
+  && pfIds.includes('ext_f5_0') && pfIds.includes('nv_f5_1') && pfIds.includes('co_f5_0'))
+const pfDigest1 = graphDigest(pfGraph)
+check('the digest is deterministic', pfDigest1 === graphDigest({ ...pfGraph }))
+check('adding a news row changes the digest (the graph is content-addressed)',
+  pfDigest1 !== graphDigest({ ...pfGraph, news: [...pfGraph.news, { setId: 'nv_f5_2', asOf: new Date(PF_T0 + 40_000) }] }))
+
+const pfProposal = {
+  proposalId: 'prop_f5_1',
+  strategyVersionId: 'vsa@1.4.0',
+  hypothesis: 'the TP/SL mix improved expectancy on the frozen sample',
+  changes: [{ parameter: 'minRRR', from: 1.5, to: 2 }],
+  evidence: [{ metric: 'expectancyR', value: 1, sampleSize: 22 }],
+  risks: ['single-regime sample'],
+  recommendedTest: { symbols: ['BTCUSDT'], timeframes: ['1h'] },
+  evidenceSetId: pfFrozen.setId,
+  citations: [
+    { kind: 'evidence-set', id: pfFrozen.setId },
+    { kind: 'trade', id: 'ext_f5_0' },
+    { kind: 'news', id: 'nv_f5_1' },
+  ],
+}
+const pfPersisted = await persistAiProposal(pfProposal, { generation: { kind: 'session-analysis', at: PF_FROZEN }, ownerId: PF_OWNER })
+const pfStored = await AiProposal.findById('prop_f5_1').lean()
+check('the advisory draft records its evidence set and citations', pfPersisted.ok === true
+  && pfStored?.evidenceSetId === pfFrozen.setId && (pfStored?.citations ?? []).length === 3)
+check('persisting the same draft twice cannot fork it ($setOnInsert)',
+  (await AiProposal.countDocuments({ _id: 'prop_f5_1' })) === 1 && (await persistAiProposal(pfProposal, { ownerId: PF_OWNER })).ok === true)
+
+const pfExp = await persistProposal(pfProposal, { now: PF_FROZEN, evidenceSetId: pfFrozen.setId, baselineVersionId: 'vsa@1.4.0', ownerId: PF_OWNER })
+check('the proposal becomes a draft experiment citing the same frozen set', pfExp.ok === true && pfExp.exp?.evidenceSetId === pfFrozen.setId)
+check('a candidate equal to its baseline can never pass acceptance', acceptanceReport(pfExp.exp).ok === false
+  && acceptanceReport(pfExp.exp).gates.some((g) => g.key === 'independentArms' && g.pass === false))
+
+// =============================================================================
+section('16. AI provider connections (Phase G, D35)')
+
+process.env.AI_CREDENTIAL_KEY ||= 'test-db-credential-key'
+const { listConnections, getConnection, upsertConnection, testConnection, setEnabled, deleteConnection, resolveProviderCandidates, resolveProviderConfig, recordUsage, budgetFor, envConnection, exportConnections, importConnections, discoverModelsForInput } = await import('../ai/providerStore.mjs')
+const { AiProviderConnection } = await import('./models/aiProviderConnection.mjs')
+const { AiProviderAudit } = await import('./models/aiProviderAudit.mjs')
+const AI_OWNER = 'owner_ai_1'
+const AI_OTHER = 'owner_ai_2'
+const FAKE_KEY = 'sk-test-db-secret-123456789'
+
+const createdAi = await upsertConnection({ provider: 'openai', name: 'main', model: 'gpt-4o-mini', apiKey: FAKE_KEY, ownerId: AI_OWNER }, { actor: AI_OWNER })
+check('a provider connection is created and redacted (no key in the response)',
+  createdAi.provider === 'openai' && createdAi.hasSecret === true && !JSON.stringify(createdAi).includes(FAKE_KEY)
+  && createdAi.secretMask !== FAKE_KEY && /^afp1_/.test(createdAi.secretFingerprint))
+const aiRaw = await AiProviderConnection.findById(createdAi.id).lean()
+check('the raw row stores an AES-GCM envelope, never plaintext',
+  String(aiRaw?.secretEnc ?? '').startsWith('enc1.') && !JSON.stringify(aiRaw).includes(FAKE_KEY))
+check('listing is owner-scoped', (await listConnections({ ownerId: AI_OWNER })).length === 1
+  && (await listConnections({ ownerId: AI_OTHER })).length === 0)
+const otherAi = await upsertConnection({ provider: 'openai', name: 'main', model: 'gpt-4o-mini', apiKey: 'sk-other-owner-123456', ownerId: AI_OTHER }, { actor: AI_OTHER })
+check('two owners can use the same provider/label without an _id collision',
+  otherAi.id !== createdAi.id && (await listConnections({ ownerId: AI_OWNER })).length === 1
+  && (await listConnections({ ownerId: AI_OTHER })).length === 1)
+await deleteConnection(otherAi.id, { ownerId: AI_OTHER, actor: AI_OTHER })
+
+const updatedAi = await upsertConnection({ id: createdAi.id, provider: 'openai', name: 'main', model: 'gpt-4o', ownerId: AI_OWNER }, { actor: AI_OWNER })
+const aiRaw2 = await AiProviderConnection.findById(createdAi.id).lean()
+check('editing the model keeps the stored secret and resets health to untested',
+  updatedAi.model === 'gpt-4o' && aiRaw2.secretEnc === aiRaw.secretEnc && updatedAi.status === 'untested')
+check('another owner cannot read or delete the row',
+  (await getConnection(createdAi.id, { ownerId: AI_OTHER })) === null
+  && (await deleteConnection(createdAi.id, { ownerId: AI_OTHER })) === false)
+
+const aiCandidates = await resolveProviderCandidates({ ownerId: AI_OWNER })
+check('the request resolver decrypts internally and exposes the configured model',
+  aiCandidates.length === 1 && aiCandidates[0].apiKey === FAKE_KEY && aiCandidates[0].model === 'gpt-4o')
+
+const fakeOk = async () => ({ ok: true, status: 200, text: async () => JSON.stringify({ data: [{ id: 'gpt-4o' }, { id: 'gpt-4o-mini' }] }) })
+const aiTest = await testConnection(createdAi.id, { fetchImpl: fakeOk, actor: AI_OWNER })
+check('a successful health test records ok + model discovery without leaking the key',
+  aiTest.ok === true && aiTest.modelFound === true && aiTest.models.length === 2 && !JSON.stringify(aiTest).includes(FAKE_KEY))
+const aiAfterTest = await AiProviderConnection.findById(createdAi.id).lean()
+check('health persists on the row (status ok, latency, testedAt)',
+  aiAfterTest.status === 'ok' && aiAfterTest.lastTestedAt > 0 && aiAfterTest.lastError === null)
+
+const fake401 = async () => ({ ok: false, status: 401, text: async () => '{"error":"bad key"}' })
+const aiBad = await testConnection(createdAi.id, { fetchImpl: fake401, actor: AI_OWNER })
+check('an invalid key is visible as ai.invalid-key and persists an error',
+  aiBad.ok === false && aiBad.code === 'ai.invalid-key'
+  && (await AiProviderConnection.findById(createdAi.id).lean())?.status === 'error')
+const fakeDown = async () => { throw new Error('connect ECONNREFUSED') }
+const aiDown = await testConnection(createdAi.id, { fetchImpl: fakeDown, actor: AI_OWNER })
+check('a network outage is classified as ai.network, not a generic 500',
+  aiDown.ok === false && aiDown.code === 'ai.network')
+
+const disabled = await setEnabled(createdAi.id, false, { ownerId: AI_OWNER, actor: AI_OWNER })
+check('a disabled connection is excluded from request resolution',
+  disabled.enabled === false && (await resolveProviderCandidates({ ownerId: AI_OWNER, includeEnv: false })).length === 0)
+await setEnabled(createdAi.id, true, { ownerId: AI_OWNER, actor: AI_OWNER })
+
+const aiBadCreate = await upsertConnection({ provider: 'unknown-ai', model: 'x', apiKey: FAKE_KEY, ownerId: AI_OWNER }).then(() => null).catch((e) => e)
+check('unknown providers are rejected before they reach the database', aiBadCreate?.code === 'ai.invalid-connection')
+
+const ollamaAi = await upsertConnection({ provider: 'ollama', name: 'local', model: 'llama3.2', ownerId: AI_OWNER }, { actor: AI_OWNER })
+check('a keyless local provider is allowed and stores no envelope',
+  ollamaAi.hasSecret === false && (await AiProviderConnection.findById(ollamaAi.id).lean())?.secretEnc === null)
+
+await AiProviderConnection.findByIdAndUpdate(createdAi.id, { $set: { budgets: { limitTokens: 100 } } })
+await recordUsage(createdAi.id, { tokens: 85 })
+const aiBudget = await budgetFor(createdAi.id)
+check('usage is recorded and the budget reports near-exhaustion', aiBudget.usedTokens === 85 && aiBudget.limitTokens === 100 && aiBudget.state === 'near')
+
+const auditRows = await AiProviderAudit.find({ connectionId: createdAi.id }).lean()
+check('create/update/test/enable/disable actions are audited without secrets',
+  auditRows.length >= 5 && auditRows.some((r) => r.action === 'test') && !JSON.stringify(auditRows).includes(FAKE_KEY))
+
+const savedEnv = { ...process.env }
+process.env.AI_PROVIDER = 'ollama'
+process.env.AI_BASE_URL = 'http://127.0.0.1:11434/v1'
+process.env.AI_MODEL = 'llama3.2'
+delete process.env.AI_API_KEY
+const envCfg = envConnection(process.env)
+const envResolved = await resolveProviderCandidates({ ownerId: 'owner_no_rows', includeEnv: true })
+check('a fresh owner falls back to env config only when no stored connection resolves',
+  envCfg?.provider === 'ollama' && envResolved.length === 1 && envResolved[0].source === 'env')
+process.env = savedEnv
+
+const fakeModels = async () => ({ ok: true, status: 200, text: async () => JSON.stringify({ data: [{ id: 'gpt-4o-mini' }, { id: 'gpt-4o' }] }) })
+const aiDiscover = await discoverModelsForInput(
+  { provider: 'openai', apiKey: 'sk-discover-test-123456', baseUrl: 'https://api.openai.com/v1' },
+  { fetchImpl: fakeModels },
+)
+check('discover models for unsaved credentials without writing a row',
+  aiDiscover.ok === true && aiDiscover.models.length === 2
+  && (await AiProviderConnection.countDocuments({ ownerId: AI_OWNER })) === 2)
+
+const aiExport = await exportConnections({ ownerId: AI_OWNER })
+check('export omits secrets by default and scopes to the owner', aiExport.connections.length === 2
+  && !JSON.stringify(aiExport).includes(FAKE_KEY) && aiExport.includeSecrets === false)
+const aiExportKeys = await exportConnections({ ownerId: AI_OWNER, includeSecrets: true })
+check('export with secrets decrypts the stored keys', aiExportKeys.includeSecrets === true
+  && JSON.stringify(aiExportKeys).includes(FAKE_KEY) && aiExportKeys.unreadable === 0)
+
+const importedSkip = await importConnections(aiExport.connections, { ownerId: AI_OWNER, overwrite: false })
+check('import skips existing provider/label pairs unless overwrite is on',
+  importedSkip.skipped === 2 && importedSkip.imported === 0)
+
+const NEW_KEY = 'sk-imported-secret-987654321'
+const importedUpdate = await importConnections([{ provider: 'openai', name: 'main', model: 'gpt-4o', baseUrl: 'https://api.openai.com/v1', apiKey: NEW_KEY }], { ownerId: AI_OWNER, overwrite: true })
+const importedResolved = await resolveProviderConfig({ ownerId: AI_OWNER, id: createdAi.id })
+check('import overwrite updates the encrypted key in place', importedUpdate.imported === 1
+  && importedUpdate.results[0].status === 'updated' && importedResolved.apiKey === NEW_KEY
+  && !JSON.stringify(importedUpdate).includes(NEW_KEY))
+
+const importedNew = await importConnections([{ provider: 'groq', name: 'backup', model: 'llama-3.1-8b-instant', apiKey: 'sk-groq-import-123456' }], { ownerId: AI_OWNER })
+check('import creates a new connection with its provider default base URL', importedNew.imported === 1
+  && importedNew.results[0].status === 'created')
+const importedRow = (await listConnections({ ownerId: AI_OWNER })).find((r) => r.name === 'backup')
+check('the created import is visible and redacted', importedRow?.provider === 'groq'
+  && importedRow?.baseUrl === 'https://api.groq.com/openai/v1' && !JSON.stringify(importedRow).includes('sk-groq-import-123456'))
+await deleteConnection(importedRow.id, { ownerId: AI_OWNER, actor: AI_OWNER })
+
+check('deleting removes only the owner\'s row', (await deleteConnection(createdAi.id, { ownerId: AI_OWNER, actor: AI_OWNER })) === true
+  && (await AiProviderConnection.findById(createdAi.id)) === null)
+
+// =============================================================================
 await db.dropDatabase() // khong de lai rac
 await disconnectMongo()
 console.log(`\n${fail === 0 ? 'PASS' : 'FAIL'} — ${pass} pass, ${fail} fail\n`)

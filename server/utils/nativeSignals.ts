@@ -1,5 +1,5 @@
 import { Types } from 'mongoose'
-import type { NativeSignalAttribution, NativeSignalItem } from '../../types/signals'
+import type { NativeSignalAttribution, NativeSignalItem } from '#shared/types/signals'
 import { engineModel } from './engineModel'
 
 // =============================================================================
@@ -98,5 +98,21 @@ export async function listNativeSignals(q: ListNativeSignalsQuery): Promise<List
   } catch {
     // Connection lost mid-read -> fail-soft like the webhook path: no 500.
     return { items: [], total: 0, mongo: 'down' }
+  }
+}
+
+/**
+ * One attributed native signal by id, scoped to its owner. Legacy rows without
+ * a durable `signalKey` are excluded here too. Null on foreign/unknown id.
+ */
+export async function getNativeSignal(ownerId: string, id: string): Promise<NativeSignalItem | null> {
+  if (!ownerId || !Types.ObjectId.isValid(id)) return null
+  const Signal = await engineModel('signal.mjs', 'Signal')
+  if (!Signal) return null
+  try {
+    const doc = await Signal.findOne({ _id: new Types.ObjectId(id), ownerId, signalKey: { $type: 'string' } }).lean()
+    return doc ? toItem(doc) : null
+  } catch {
+    return null
   }
 }

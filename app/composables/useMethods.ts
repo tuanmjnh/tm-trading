@@ -1,4 +1,4 @@
-import type { MethodEvent, MethodLeague, MethodMeta } from '~~/types/methods'
+import type { MethodEvent, MethodLeague, MethodMeta } from '#shared/types/methods'
 
 // =============================================================================
 //  useMethods — method events + league for the trade terminal (Phase 10 UI).

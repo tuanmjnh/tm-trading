@@ -8,7 +8,7 @@
 //  with empty accounts → we render an explicit "no data" state, not a crash.
 //  Polls every 30s (kill-switch can flip from exec/risk at any time).
 // =============================================================================
-import type { RiskStatusData } from '../../types/risk'
+import type { RiskStatusData } from '#shared/types/risk'
 import {
   driftTone,
   fmtSigned,
@@ -16,7 +16,7 @@ import {
   haltTone,
   mongoTone,
   pnlTone
-} from '../utils/terminal'
+} from '../../utils/terminal'
 
 const { t } = useI18n()
 

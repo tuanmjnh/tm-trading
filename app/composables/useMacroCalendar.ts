@@ -1,4 +1,4 @@
-import type { MacroCalendarEvent, MacroCalendarResponse } from '~~/types/macro'
+import type { MacroCalendarEvent, MacroCalendarResponse } from '#shared/types/macro'
 
 // =============================================================================
 //  useMacroCalendar — scheduled macro releases (V3.5 §60.7 / Slice C).

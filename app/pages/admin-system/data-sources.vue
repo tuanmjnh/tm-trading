@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { MarketSourceHealth, MarketSourceHealthResponse } from '~~/types/health'
-import type { MetricItem } from '~/components/MetricRibbon.vue'
+import type { MarketSourceHealth, MarketSourceHealthResponse } from '#shared/types/health'
+import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 
 // Market Data Sources (roadmap §58 acceptance #6). Live per-venue probes of the
 // market data providers (§30.1) — DISTINCT from tm-hub connection records
@@ -62,7 +62,7 @@ useHead({ title })
 <template>
   <BasePage id="system-data-sources" :title="title" :description="description">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" :pip="t('marketSources.pip')" />
+      <BasePageEyebrow :trail="trail" :pip="t('marketSources.pip')" />
     </template>
 
     <template #right>
@@ -86,7 +86,7 @@ useHead({ title })
     </template>
 
     <div class="w-full pb-24 lg:pb-6 space-y-4">
-      <MetricRibbon :items="metrics" />
+      <SharedMetricRibbon :items="metrics" />
 
       <UAlert
         icon="i-lucide-info"

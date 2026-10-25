@@ -50,9 +50,9 @@ export interface MoveResult {
   autoFreeze?: SessionAutoFreeze
 }
 
-import type { PaperOrderItem } from '~~/types/orders'
-import type { PaperFillItem } from '~~/types/fills'
-import type { PositionItem } from '~~/types/positions'
+import type { PaperOrderItem } from '#shared/types/orders'
+import type { PaperFillItem } from '#shared/types/fills'
+import type { PositionItem } from '#shared/types/positions'
 
 export const useSessions = () => {
   async function list(options: { limit?: number; state?: string; kind?: string; accountId?: string } = {}): Promise<TradingSession[]> {

@@ -39,7 +39,7 @@ useHead({ title: computed(() => t('settings.appearance')) })
 <template>
   <BasePage id="settings" :title="t('settings.appearance')" :description="t('settings.description')">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" />
+      <BasePageEyebrow :trail="trail" />
     </template>
     <BaseSectionNav :items="navItems">
       <div class="space-y-6">

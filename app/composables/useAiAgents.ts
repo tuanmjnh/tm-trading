@@ -10,7 +10,7 @@ import type {
   AiAgentValidation,
   AiAgentValidationResponse,
   AiPolicyLevel
-} from '~~/types/ai'
+} from '#shared/types/ai'
 
 // =============================================================================
 //  useAiAgents — AI agent client (Slice B read-only observability + Slice D

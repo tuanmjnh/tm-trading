@@ -1,4 +1,4 @@
-import type { BotInstance, BotProfile } from '~~/types/bots'
+import type { BotInstance, BotProfile } from '#shared/types/bots'
 
 // =============================================================================
 //  useBots — read-only bot contracts (§57.4 G/H, §58.6, roadmap §58.9 Slice 2).
@@ -71,5 +71,70 @@ export const useBots = () => {
     }
   }
 
-  return { profiles, profile, instances, instance }
+  /** Operational profile edits (rename / enable / status) — params change via
+   *  a NEW immutable strategy version (launch flow), never in place. */
+  async function updateProfile(id: string, body: Record<string, unknown>): Promise<boolean> {
+    try {
+      const res = await $fetch<{ success: boolean }>(`/api/v1/bots/profiles/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body
+      })
+      return res.success
+    } catch {
+      return false
+    }
+  }
+
+  async function deleteProfile(id: string): Promise<boolean> {
+    try {
+      const res = await $fetch<{ success: boolean }>(`/api/v1/bots/profiles/${encodeURIComponent(id)}`, { method: 'DELETE' })
+      return res.success
+    } catch {
+      return false
+    }
+  }
+
+  /** Soft-hide a TERMINAL instance — the run data stays (D1), list drops it. */
+  async function archiveInstance(id: string, archived = true): Promise<boolean> {
+    try {
+      const res = await $fetch<{ success: boolean }>(`/api/v1/bots/instances/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: { archived }
+      })
+      return res.success
+    } catch {
+      return false
+    }
+  }
+
+  /** Enqueue a supervisor command (start/pause/resume/stop) for an instance. */
+  async function enqueueCommand(instanceId: string, type: 'start' | 'pause' | 'resume' | 'stop'): Promise<{ success: boolean; data?: any; error?: string; code?: string }> {
+    try {
+      const res = await $fetch<{ success: boolean; data?: any; error?: string; code?: string }>(
+        `/api/v1/bots/instances/${encodeURIComponent(instanceId)}/commands`,
+        {
+          method: 'POST',
+          body: { type }
+        }
+      )
+      return res
+    } catch (e: any) {
+      return { success: false, error: e?.data?.message || e?.message, code: e?.data?.code }
+    }
+  }
+
+  /** Rerun a terminal instance (creates a new instance from the same profile). */
+  async function rerunInstance(instanceId: string): Promise<{ success: boolean; data?: any; error?: string; code?: string }> {
+    try {
+      const res = await $fetch<{ success: boolean; data?: any; error?: string; code?: string }>(
+        `/api/v1/bots/instances/${encodeURIComponent(instanceId)}/rerun`,
+        { method: 'POST' }
+      )
+      return res
+    } catch (e: any) {
+      return { success: false, error: e?.data?.message || e?.message, code: e?.data?.code }
+    }
+  }
+
+  return { profiles, profile, instances, instance, updateProfile, deleteProfile, archiveInstance, enqueueCommand, rerunInstance }
 }

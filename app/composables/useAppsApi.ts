@@ -1,4 +1,4 @@
-import type { App } from '~~/types'
+import type { App } from '#shared/types/apps'
 
 export interface AppsApiResponse {
   success: boolean

@@ -1,5 +1,5 @@
-import type { IntelNewsItem } from '~~/types/intel'
-import type { MarketEventPublic } from '~~/types/news'
+import type { IntelNewsItem } from '#shared/types/intel'
+import type { MarketEventPublic } from '#shared/types/news'
 
 // =============================================================================
 //  Symbol-linked news markers (V3.5 §60 Slice D) — PURE helpers.

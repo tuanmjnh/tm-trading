@@ -30,6 +30,9 @@ const BotProfileSchema = new mongoose.Schema(
     // Parameter overrides are permitted only when explicitly allowed; the
     // resulting effective config is fingerprinted (D1: unique config => hash).
     paramOverrides: { type: mongoose.Schema.Types.Mixed, default: null },
+    // Per-bot stop management (breakeven / ATR trailing) — consumed by the
+    // paper executor via the instance. Mixed so new options stay additive.
+    execution: { type: mongoose.Schema.Types.Mixed, default: null },
     effectiveParamsHash: { type: String, default: null },
     sessionRules: { type: mongoose.Schema.Types.Mixed, default: {} },
     notificationPolicy: { type: mongoose.Schema.Types.Mixed, default: {} },

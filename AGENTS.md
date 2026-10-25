@@ -120,9 +120,9 @@ overfitting. Read `docs/indicator/vsa-wyckoff/vsa-optimization.md` before propos
 `tm-hub` (Port 4000) is the central IAM, route catalog, configuration store, and notification hub:
 
 - **Satellite Connection**:
-  - Connects to TM Hub via `useHub()` (wrapping `tm-hub-client`) with `X-App-Id: tm-trading_8pmp33`.
+  - Connects to TM Hub via `useHub()` (wrapping `tm-hub-client`) with `X-App-Id: tm-trading_ghfseu`.
   - Login/auth requests go directly to Hub (`POST /api/v1/auth/login`).
-  - Configure via `.env`: `NUXT_PUBLIC_HUB_URL=http://localhost:4000`, `NUXT_PUBLIC_HUB_APP_ID=tm-trading_8pmp33`.
+  - Configure via `.env`: `NUXT_PUBLIC_HUB_URL=http://localhost:4000`, `NUXT_PUBLIC_HUB_APP_ID=tm-trading_ghfseu`.
     - **Note**: the committed `.env` currently points `NUXT_PUBLIC_HUB_URL` at the **deployed** hub (`https://tm-hub-app.vercel.app`) because the local hub is seeded with a different appId and rejects this app's login payload (`400 error.missingLoginFields`). See `docs/web-app/ui-test-findings.md` (F4/U4).
 - **Dynamic Menu Catalog**:
   - Navigation menu is fetched from TM Hub via `GET /api/v1/apps/:appId/routes` (`system_routes` table) filtered by `isVisible !== false`.
@@ -137,13 +137,32 @@ overfitting. Read `docs/indicator/vsa-wyckoff/vsa-optimization.md` before propos
 
 - **BasePage Mandatory**:
   - Every page MUST wrap its layout in `<BasePage :title="..." :description="...">`.
-  - Auxiliary header buttons belong in `template #right`.
-  - Primary actions use `color="primary" variant="soft"`.
+- **Button Variants**:
+  - Primary action buttons (save, create, run, confirm, launch, export, …) use `color="primary" variant="soft"` — exactly one per surface.
+  - Dismissal / secondary buttons (cancel, back, close, skip, dismiss, …) use `variant="ghost"` (usually `color="neutral"`) — they must never compete visually with the primary action.
+  - Destructive confirmations use `color="error"`; their cancel counterpart stays `variant="ghost"`.
+- **Page Actions (unified bar — apply to every page going forward)**:
+  - Register page actions ONCE via `useMobileBar().registerActions()` (from the page or its component — never declare them twice). Mark exactly one action `primary: true` (usually "Add").
+  - **Desktop**: all actions render in `BasePage`'s `UDashboardNavbar` (`#right`). The primary action is a labeled pill; every secondary action collapses into the `⋯` dropdown, never displayed as standalone buttons. When a page has no `#right` slot this happens automatically via `BasePageActions`; legacy pages may keep a hand-written `#right` (use `BaseHeaderActions` for the overflow logic).
+  - **Mobile**: ALL page actions MUST be reachable from the bottom bar — `BottomNav` shows the primary icon + info + `⋯` + record count, `NavActionsSheet` owns the overflow actions and global actions (bell/settings/profile/scan). Non-primary registered actions are overflow-only and must NOT also render outside.
+  - Call `mobileBar.registerInfo()` so the bottom bar can show the record count / loading state.
+  - In-page action rows are deprecated — do not add new ones.
 - **GridList & Batch Deletion**:
   - Prefer `LazyGridList` over `BaseTable`. Always provide a `#mobile-content` slot for responsive cards.
   - Delete operations support batch removal using `LazyBaseConfirmModal`.
+- **Lazy components (code splitting)**:
+  - Any component that mounts on demand — modals, slidesovers, drawers, heavy panels, tab content — MUST be referenced with the Nuxt `Lazy` prefix (e.g. `<LazyBaseResponsiveModal>`, `<LazyBaseConfirmModal>`, `<LazyTradingSymbolSearchModal>`). The Lazy prefix puts the component in its own chunk and defers loading until it is actually rendered.
+  - Direct (non-lazy) references are reserved for always-visible, above-the-fold chrome (BasePage, nav, grid list).
+- **Type placement (Nuxt 4 standard)**:
+  - Types used by BOTH the Vue app and the Nitro server live in `shared/types/` (import via the built-in `#shared/types/<file>` alias).
+  - App-only types live in `app/types/`; server-only types live in `server/types/`. There is NO root-level `types/` folder.
+  - One canonical definition per type name across the auto-imported surfaces (`app/types`, `server/types`, `shared/types`) — duplicated interface names across those folders trip the unimport "Duplicated imports" warnings.
+  - Values (type guards, status consts) belong in `shared/utils/` or `app/utils/`, not in types folders.
+- **Tailwind CSS Conventions**:
+  - Explicit pixel values using arbitrary brackets (e.g. max-h-[200px], w-[320px]) are acceptable for clarity. Shorthand scale enforcement (	ailwindcss/enforces-shorthand) and canonical class warnings are disabled.
 - **i18n Mandatory**:
   - All user-facing strings MUST be defined in both `i18n/locales/en.json` and `i18n/locales/vi.json`.
+  - **No Inline i18n Fallbacks**: NEVER pass fallback text as a second string argument to `t()` (e.g. `t('key', 'Fallback text')` is strictly forbidden). Always define keys directly in both `i18n/locales/en.json` and `i18n/locales/vi.json`, and invoke `t('key')` without inline fallback string arguments.
   - Never hardcode raw English or Vietnamese in template markup.
 - **Language Policy**:
   - All NEW code, comments, log/error strings, CLI output and docs MUST be in English.

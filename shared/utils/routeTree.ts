@@ -1,8 +1,8 @@
-import type { SystemRoute } from '../../types'
+import type { RouteTreeNode } from '#shared/types/rbac'
 
-export function buildRouteTree(flatRoutes: SystemRoute[]): SystemRoute[] {
-  const map = new Map<string, SystemRoute>()
-  const roots: SystemRoute[] = []
+export function buildRouteTree(flatRoutes: RouteTreeNode[]): RouteTreeNode[] {
+  const map = new Map<string, RouteTreeNode>()
+  const roots: RouteTreeNode[] = []
 
   const sorted = [...flatRoutes].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
 

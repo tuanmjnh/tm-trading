@@ -24,6 +24,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { runStamp, paramsHash, ENGINE_VERSION } from './version.mjs'
+import { buildManifest } from './manifest.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -106,6 +107,23 @@ export function withStamp(run, { bars = null, engineVersion = ENGINE_VERSION } =
 
   // Giu lai dataHash/createdAt da co (neu nguoi goi da tinh truoc); thieu moi sinh.
   const dataHash = run.dataHash ?? stamp.dataHash
+  const createdAt = run.createdAt ? new Date(run.createdAt) : new Date()
+  // Phase F: one manifest per run — the same identity document a session
+  // carries, built from the stamp that already had to be verified above.
+  const manifest = buildManifest({
+    kind: 'run',
+    source: 'backtest',
+    engineVersion: stamp.engineVersion,
+    methods: [run.method ?? 'vsa'],
+    paramsHash: stamp.paramsHash,
+    method: run.method ?? 'vsa',
+    dataSource: 'venue-rest',
+    dataHash,
+    symbol: run.symbol,
+    tf: run.tf,
+    market: run.market,
+    createdAt: createdAt.getTime(),
+  })
   return {
     ...run,
     engineVersion: stamp.engineVersion,
@@ -114,8 +132,9 @@ export function withStamp(run, { bars = null, engineVersion = ENGINE_VERSION } =
     dataHash,
     universeSnapshot: stamp.universeSnapshot,
     gitRev: run.gitRev ?? stamp.gitRev,
+    manifest,
     // D2: UTC. NDJSON se stringify thanh ISO `Z`, Mongo nhan Date (UTC ms).
-    createdAt: run.createdAt ? new Date(run.createdAt) : new Date(),
+    createdAt,
   }
 }
 
@@ -138,18 +157,28 @@ export function withStamp(run, { bars = null, engineVersion = ENGINE_VERSION } =
  *          `run` la ban ghi DA CO stamp - goi lai `run.paramsHash` duoc ngay.
  */
 export async function saveRun(run, opt = {}) {
-  const { trades = [], bars = null, mongo = 'auto', runsFile = RUNS_FILE, tradesFile = TRADES_FILE } = opt
+  const { trades = [], bars = null, mongo = 'auto' } = opt
+  // File paths: omitted -> the D1 defaults; explicit `null` -> skip that output
+  // (experiment arms record their own docs and must not double-write the runs
+  // ledger). A destructuring default cannot express "skip", hence the checks.
+  const runsFile = opt.runsFile === null ? null : (opt.runsFile ?? RUNS_FILE)
+  const tradesFile = opt.tradesFile === null ? null : (opt.tradesFile ?? TRADES_FILE)
   const warnings = []
 
   // --- D1: danh tinh TRUOC moi hanh dong ghi ---
   const doc = withStamp(run, { bars, engineVersion: run.engineVersion })
 
-  // --- NDJSON: LUON ghi (du Mongo co hay khong) ---
-  appendNdjson(runsFile, serialize(doc))
-  for (const t of trades) {
-    appendNdjson(tradesFile, serialize({ ...t, runId: null, paramsHash: doc.paramsHash, engineVersion: doc.engineVersion }))
+  // --- NDJSON: LUON ghi (du Mongo co hay khong) tru khi caller tat ---
+  let ndjson = false
+  if (runsFile) {
+    appendNdjson(runsFile, serialize(doc))
+    ndjson = true
   }
-  let ndjson = true
+  if (tradesFile) {
+    for (const t of trades) {
+      appendNdjson(tradesFile, serialize({ ...t, runId: null, paramsHash: doc.paramsHash, engineVersion: doc.engineVersion }))
+    }
+  }
 
   // --- Mongo: tuy chon, fail-soft ---
   let mongoWritten = false

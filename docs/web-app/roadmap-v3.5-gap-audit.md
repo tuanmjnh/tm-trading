@@ -141,7 +141,7 @@ only as a health row.
 **G4 (route drift, tracked as a code+doc gap) — `/intel` no longer exists.**
 §60.2 says "Keep the existing route as the main intelligence hub; add
 links/cards to News Desk, Outlook and Calendar". `/intel` now redirects to
-`/markets`; `app/composables/useIntel.ts` and `app/components/TradeIntel.vue`
+`/markets`; `app/composables/useIntel.ts` and `app/components/trading/TradeIntel.vue`
 are consumed inside the Markets surfaces. Either add the cross-links on the
 Markets hub or amend §60.2 (see R4). As written the roadmap describes a page
 that does not exist.

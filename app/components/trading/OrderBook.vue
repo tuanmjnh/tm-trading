@@ -6,7 +6,7 @@
 //  syncs). Live: materialized `market.book` frames from the plane (the plane
 //  owns Binance snapshot/diff sequencing — clients never see raw diffs).
 // =============================================================================
-import { formatPrice, formatQty, type BookLevel } from '../utils/marketFeed'
+import { formatPrice, formatQty, type BookLevel } from '../../utils/marketFeed'
 
 const props = defineProps<{ symbol: string }>()
 

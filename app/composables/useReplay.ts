@@ -5,7 +5,7 @@ import type {
   ReplayReadResponse,
   ReplaySummary,
   ReplaySummaryResponse
-} from '~~/types/replay'
+} from '#shared/types/replay'
 
 // =============================================================================
 //  Replay API (Nitro internal routes — /api/v1/replay/*, Phase 7R2).

@@ -1,5 +1,5 @@
-import type { IntelNewsItem, IntelRegime } from '~~/types/intel'
-import type { NewsDeskItem, NewsDeskResponse } from '~~/types/news'
+import type { IntelNewsItem, IntelRegime } from '#shared/types/intel'
+import type { NewsDeskItem, NewsDeskResponse } from '#shared/types/news'
 
 // =============================================================================
 //  useMarketCalendar — /markets/calendar reads (roadmap §58.5, store §60 Slice B).

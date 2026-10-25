@@ -54,6 +54,8 @@ export default defineNuxtConfig({
     '@vite-pwa/nuxt'
   ],
   imports: {
+    // app/shared/utils + app/shared/google (srcDir-relative) hold the shared
+    // VALUE helpers; app/types + server/types stay on Nuxt 4's default scan.
     dirs: [
       'shared/utils',
       'shared/google'

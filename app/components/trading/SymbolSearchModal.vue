@@ -325,9 +325,10 @@ watch(activeIndex, () => {
                   :data-testid="`pick-${r.symbol}`"
                   @click="pick(r.symbol)"
                 >
+                  <CommonSymbolIcon :symbol="r.symbol" class="shrink-0" />
                   <span class="font-mono text-xs font-semibold text-highlighted">{{ displaySymbol(r) }}</span>
                   <span v-if="r.base" class="text-[10px] text-dimmed">{{ r.base }}/{{ r.quote }}</span>
-                  <VenueChip :venues="r.venues" :source="r.source" />
+                  <TradingVenueChip :venues="r.venues" :source="r.source" />
                   <UIcon v-if="pendingSymbol === r.symbol" name="i-lucide-loader-circle" class="size-3.5 animate-spin text-primary shrink-0 ml-auto" />
                   <UBadge v-else :label="r.type.toUpperCase()" color="neutral" variant="subtle" size="xs" class="ml-auto shrink-0" />
                 </button>
@@ -351,7 +352,7 @@ watch(activeIndex, () => {
               >
                 <span class="font-mono text-xs font-semibold text-muted">{{ displaySymbol(r) }}</span>
                 <span v-if="r.base" class="text-[10px] text-dimmed">{{ r.base }}/{{ r.quote }}</span>
-                <VenueChip :venues="r.venues" :source="r.source" />
+                <TradingVenueChip :venues="r.venues" :source="r.source" />
                 <span v-if="r.value !== null && r.value !== undefined" class="text-[11px] font-mono text-highlighted">{{ fmtIndexValue(r) }}</span>
                 <UBadge :label="r.type.toUpperCase()" color="neutral" variant="outline" size="xs" class="ml-auto shrink-0" />
               </div>

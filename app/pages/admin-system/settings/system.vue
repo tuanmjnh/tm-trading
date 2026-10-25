@@ -65,7 +65,7 @@ useHead({ title: computed(() => t('nav.system')) })
 <template>
   <BasePage id="settings" :title="t('nav.system')" :description="t('settings.systemDesc')">
     <template #eyebrow>
-      <PageEyebrow :trail="trail" />
+      <BasePageEyebrow :trail="trail" />
     </template>
     <template #right>
       <UButton

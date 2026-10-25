@@ -11,20 +11,23 @@ those scripts; `tests/pineInventory.test.ts` fails if this file drifts from
 
 ## Summary
 
-- Scripts: 9 (4 strategy, 5 indicator)
+- Scripts: 12 (5 strategy, 7 indicator)
 - Pine version: 6
 
 | Script | Kind | Pine | Inputs | Alertcondition | plotshape | plot | Lines | Bytes | sha256[:12] |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| LongKaco VSA Backtest | strategy | v6 | 49 | 8 | 0 | 0 | 601 | 38058 | `a865678586d4` |
-| LongKaco VSA | indicator | v6 | 45 | 8 | 8 | 2 | 679 | 46727 | `9a8bfb4baaf1` |
-| Price Action MTF Backtest | strategy | v6 | 147 | 6 | 2 | 4 | 1710 | 100418 | `991dcfef4512` |
-| Price Action MTF | indicator | v6 | 144 | 6 | 2 | 6 | 1795 | 110109 | `bcd047b73df4` |
-| TM Fusion Zones Backtest | strategy | v6 | 60 | 5 | 5 | 3 | 1070 | 56234 | `3b31a57808d5` |
-| TM Fusion Zones | indicator | v6 | 57 | 5 | 5 | 3 | 1040 | 53948 | `dd1d879b81c2` |
-| TM Indicator 2 | indicator | v6 | 155 | 8 | 4 | 6 | 2340 | 141684 | `6ad042afdbc5` |
-| TM Indicator Strategy Lab 2 | strategy | v6 | 155 | 0 | 4 | 6 | 2331 | 141097 | `e2a6a029232e` |
-| TM XAU Signals 2 | indicator | v6 | 118 | 4 | 2 | 6 | 1384 | 84056 | `c71ab0293285` |
+| LongKaco VSA Backtest | strategy | v6 | 49 | 8 | 0 | 0 | 601 | 38080 | `ce9f0bd67850` |
+| LongKaco VSA | indicator | v6 | 45 | 8 | 8 | 2 | 682 | 47079 | `44c9f3cb64f6` |
+| Price Action MTF Backtest | strategy | v6 | 147 | 6 | 2 | 4 | 1827 | 112600 | `8a124c55b1c7` |
+| Price Action MTF | indicator | v6 | 144 | 6 | 2 | 6 | 1802 | 110664 | `c7b8e586033a` |
+| TM Fusion Zones Backtest | strategy | v6 | 58 | 5 | 5 | 3 | 1066 | 55841 | `f6893aad5036` |
+| TM Fusion Zones | indicator | v6 | 55 | 5 | 5 | 3 | 1036 | 53555 | `f44fc5ff686c` |
+| TM Indicator 2 | indicator | v6 | 151 | 8 | 4 | 6 | 2244 | 135198 | `d2aa774eb0bb` |
+| TM Indicator Strategy Lab 2 | strategy | v6 | 155 | 0 | 4 | 6 | 2331 | 141099 | `dc1e3e779eb9` |
+| TM XAU Signals 2 | indicator | v6 | 118 | 4 | 2 | 6 | 1384 | 84080 | `b18557e2243f` |
+| Wonderwhales Backtest | strategy | v6 | 50 | 0 | 27 | 11 | 615 | 45624 | `5ce35a31800c` |
+| Wonderwhales Overlay | indicator | v6 | 37 | 4 | 27 | 7 | 418 | 34053 | `898b204846c7` |
+| Wonderwhales | indicator | v6 | 37 | 4 | 27 | 9 | 416 | 33754 | `1240985cbfc9` |
 
 ## File map
 
@@ -39,6 +42,9 @@ those scripts; `tests/pineInventory.test.ts` fails if this file drifts from
 | `TM Indicator 2.pine` | TM Indicator 2 |
 | `TM Indicator Strategy Lab 2.pine` | TM Indicator Strategy Lab 2 |
 | `TM XAU Signals 2.pine` | TM XAU Signals 2 |
+| `Wonderwhales Backtest.pine` | Wonderwhales Backtest |
+| `Wonderwhales Overlay.pine` | Wonderwhales Overlay |
+| `Wonderwhales.pine` | Wonderwhales |
 
 ## Compatibility notes
 

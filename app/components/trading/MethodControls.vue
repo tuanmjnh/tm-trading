@@ -9,9 +9,9 @@
 //  Engine methods are dependency-free ESM (ta.mjs, simulate.mjs) so they
 //  bundle into the app without Node builtins.
 // =============================================================================
-import '../../engine/methods/all.mjs'
-import { getMethod, listMethods, type MethodMeta } from '../../engine/methods/index.mjs'
-import { methodParamEntries } from '../utils/terminal'
+import '../../../engine/methods/all.mjs'
+import { getMethod, listMethods, type MethodMeta } from '../../../engine/methods/index.mjs'
+import { methodParamEntries } from '../../utils/terminal'
 
 const { t, te } = useI18n()
 

@@ -15,6 +15,10 @@ const RunSchema = new mongoose.Schema(
     dataHash: { type: String, default: null },
     gitRev: { type: String, default: null },
     universeSnapshot: { type: mongoose.Schema.Types.Mixed, default: null },
+    // Phase F: versioned identity document (engine/strategy/risk/data/scope),
+    // built by engine/manifest.mjs. Additive — runs written before Phase F keep
+    // their individual stamps above and carry no manifest.
+    manifest: { type: mongoose.Schema.Types.Mixed, default: null },
 
     // --- pham vi ---
     method: { type: String, default: 'vsa' },

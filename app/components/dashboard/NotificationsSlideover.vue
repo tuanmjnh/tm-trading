@@ -180,7 +180,7 @@ const onMarkAll = async () => {
     </template>
   </USlideover>
 
-  <BaseConfirmModal v-model:open="isDeleteOpen" :title="t('confirm.delete_title')"
+  <LazyBaseConfirmModal v-model:open="isDeleteOpen" :title="t('confirm.delete_title')"
     :description="t('confirm.delete_desc')" :confirm-label="t('common.delete')" :cancel-label="t('common.cancel')"
     color="error" icon="i-lucide-trash-2" @confirm="handleDelete" />
 </template>

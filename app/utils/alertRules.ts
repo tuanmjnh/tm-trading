@@ -13,7 +13,7 @@ import type {
   AlertRuleKind,
   AlertRuleLevel,
   AlertRulePriority
-} from '~~/types/alertRules'
+} from '#shared/types/alertRules'
 
 export const RULE_KINDS: AlertRuleKind[] = ['news', 'alert']
 export const RULE_LEVELS: AlertRuleLevel[] = ['high', 'med', 'low']

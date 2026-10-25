@@ -1,4 +1,4 @@
-import type { IntelData, IntelResponse } from '~~/types/intel'
+import type { IntelData, IntelResponse } from '#shared/types/intel'
 
 // =============================================================================
 //  Market intelligence API (Nitro internal route — Phase 8). Fail-soft: Mongo

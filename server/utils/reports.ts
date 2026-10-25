@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { EngineRun, EngineRunSummary, EngineTrade } from '../../engine/store.mjs'
-import type { EquityPoint, RunSeries, RunSeriesDetail, RunSummary, RunTrade, RunWarning } from '../../types/runs'
+import type { EquityPoint, RunSeries, RunSeriesDetail, RunSummary, RunTrade, RunWarning } from '#shared/types/runs'
 
 // =============================================================================
 //  DOC KET QUA BACKTEST CHO DASHBOARD (roadmap Phase 7, D1)

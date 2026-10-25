@@ -1,4 +1,4 @@
-import type { IntelAccum, IntelConfluence, IntelData, IntelFlow, IntelFunding, IntelMover, IntelNewsItem, IntelRegime, IntelServiceRow, IntelZone } from '../../types/intel'
+import type { IntelAccum, IntelConfluence, IntelData, IntelFlow, IntelFunding, IntelMover, IntelNewsItem, IntelRegime, IntelServiceRow, IntelZone } from '#shared/types/intel'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { engineModel } from './engineModel'
