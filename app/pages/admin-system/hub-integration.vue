@@ -11,8 +11,8 @@ const { hubUrl, appId, hubFetch, client } = useHub()
 const auth = useAuth()
 const { copy } = useClipboard()
 
-const title = computed(() => t('nav.hub_integration', 'Cấu Hình & Tải Dữ Liệu TM Hub'))
-const description = computed(() => t('hub_integration.desc', 'Hướng dẫn chi tiết và kiểm tra trực tiếp cơ chế tải dữ liệu động từ TM Hub Control Plane về TM Trading'))
+const title = computed(() => t('nav.hub_integration'))
+const description = computed(() => t('hub_integration.desc'))
 
 const trail = computed(() => [
   { label: t('nav.admin_system') },
@@ -85,7 +85,7 @@ async function runLiveTest() {
   }
 
   testing.value = false
-  notify.success(t('common.success', 'Thành công'), 'Đã hoàn tất kiểm tra kết nối tới TM Hub')
+  notify.success(t('common.success'), 'Đã hoàn tất kiểm tra kết nối tới TM Hub')
 }
 
 const envSnippet = `# tm-trading/.env - Cấu hình kết nối Control Plane
@@ -142,7 +142,7 @@ const syncEndpoints = [
           icon="i-lucide-book-open"
           variant="ghost"
           size="sm"
-          :label="t('nav.docs', 'Tài Liệu API')"
+          :label="t('nav.docs')"
         />
         <UButton
           icon="i-lucide-activity"
@@ -150,7 +150,7 @@ const syncEndpoints = [
           variant="soft"
           size="sm"
           :loading="testing"
-          :label="t('hub_integration.runTest', 'Kiểm tra kết nối')"
+          :label="t('hub_integration.runTest')"
           @click="runLiveTest"
         />
       </div>

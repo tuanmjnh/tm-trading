@@ -128,8 +128,8 @@ const handleUpload = async () => {
     }
     if (successCount > 0) {
       toast.add({
-        title: t('media.upload_success', 'Upload complete'),
-        description: `${successCount} ${t('media.upload_success_description', 'file(s) uploaded successfully')}`,
+        title: t('media.upload_success'),
+        description: `${successCount} ${t('media.upload_success_description')}`,
         color: 'success'
       })
       emit('done', uploadedFiles)
@@ -138,14 +138,14 @@ const handleUpload = async () => {
       isOpen.value = false
     } else {
       toast.add({
-        title: t('media.upload_error', 'Upload error'),
-        description: `${errorCount} ${t('media.upload_error_description', 'file(s) failed to upload')}`,
+        title: t('media.upload_error'),
+        description: `${errorCount} ${t('media.upload_error_description')}`,
         color: 'error'
       })
     }
   } catch (error) {
     toast.add({
-      title: t('media.upload_error', 'Upload error'),
+      title: t('media.upload_error'),
       description: getErrorMessage(error, key => t(key)),
       color: 'error'
     })
@@ -157,7 +157,7 @@ const handleUpload = async () => {
 
 <template>
   <LazyBaseResponsiveModal v-model:open="isOpen" :disabled="uploading"
-    :title="`${$t('media.upload_review_title', 'Review Upload')} (${fileList.length})`"
+    :title="`${$t('media.upload_review_title')} (${fileList.length})`"
     :description="$t('media.upload_review_desc')" :ui="{ body: 'p-0 sm:p-0', width: 'sm:max-w-xl' }">
     <template #body>
       <div class="p-3">
@@ -205,15 +205,15 @@ const handleUpload = async () => {
     <template #footer>
       <div class="flex items-center justify-between w-full">
         <p class="text-sm text-toned font-medium">
-          {{ fileList.length }} {{ $t('media.selected_files_text', 'file(s) selected') }}
+          {{ fileList.length }} {{ $t('media.selected_files_text') }}
         </p>
         <div class="flex gap-2">
           <!-- <UButton color="neutral" variant="ghost" :disabled="uploading" @click="isOpen = false">
-            {{ $t('common.cancel', 'Cancel') }}
+            {{ $t('common.cancel') }}
           </UButton> -->
           <UButton color="primary" variant="soft" :loading="uploading" :disabled="fileList.length === 0 || uploading"
             @click="handleUpload">
-            {{ uploading ? $t('media.uploading_text', 'Uploading...') : $t('media.confirm_upload', 'Confirm Upload') }}
+            {{ uploading ? $t('media.uploading_text') : $t('media.confirm_upload') }}
           </UButton>
         </div>
       </div>

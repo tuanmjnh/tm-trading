@@ -111,7 +111,7 @@ mobileBar.registerInfo(computed(() => ({
     <template #right>
       <div class="flex items-center gap-2">
         <UButton to="/admin-system/hub-integration" icon="i-lucide-radio-tower" color="primary" variant="soft" size="sm"
-          :label="t('nav.hub_integration', 'Kết Nối Hub')" />
+          :label="t('nav.hub_integration')" />
         <UButton icon="i-lucide-refresh-cw" variant="ghost" size="sm" :loading="reloading" @click="fetchDocsContent" />
       </div>
     </template>

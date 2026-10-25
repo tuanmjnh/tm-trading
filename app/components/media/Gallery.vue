@@ -388,7 +388,7 @@ onUnmounted(destroySortable)
         <LazyBaseResponsiveModal
           v-model:open="showCloudinaryManager"
           :fullscreen="true"
-          :title="$t('media.cloudinary', 'Cloudinary Manager')"
+          :title="$t('media.cloudinary')"
           :ui="{ body: 'flex-1 min-h-0 p-0 pt-3 sm:p-0 sm:pt-3 overflow-hidden' }"
         >
           <template #body>

@@ -280,13 +280,13 @@ function toggleTool(tool: string, value: boolean | 'indeterminate') {
 }
 
 const columns = computed<GridColumn[]>(() => [
-  { key: 'name', label: t('common.name'), class: 'w-56' },
-  { key: 'autonomy', label: t('aiAgents.level'), class: 'w-24' },
-  { key: 'state', label: t('aiAgents.state'), class: 'w-28' },
+  { key: 'name', label: t('common.name') },
+  { key: 'autonomy', label: t('aiAgents.level') },
+  { key: 'state', label: t('aiAgents.state') },
   // Health is derived server-side from the heartbeat (engine/agentPolicy.mjs
   // agentHealth) and shown in the detail panel only — the list never guesses.
-  { key: 'versions', label: t('aiAgents.version'), class: 'w-20' },
-  { key: 'last', label: t('aiAgents.lastEvent'), class: 'w-32' }
+  { key: 'versions', label: t('aiAgents.version') },
+  { key: 'last', label: t('aiAgents.lastEvent') }
 ])
 
 const trail = computed(() => [{ label: title.value }])

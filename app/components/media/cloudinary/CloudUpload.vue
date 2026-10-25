@@ -129,8 +129,8 @@ const uploadFiles = async () => {
     }
     if (successCount > 0) {
       toast?.add({
-        title: t('media.upload_success', 'Upload complete'),
-        description: `${successCount} ${t('media.upload_success_description', 'file(s) uploaded successfully')}`,
+        title: t('media.upload_success'),
+        description: `${successCount} ${t('media.upload_success_description')}`,
         color: 'success'
       })
       emit('complete', uploadedFiles)
@@ -140,14 +140,14 @@ const uploadFiles = async () => {
     }
     if (errorCount > 0) {
       toast?.add({
-        title: t('media.upload_error', 'Upload error'),
-        description: `${errorCount} ${t('media.upload_error_description', 'file(s) failed to upload')}`,
+        title: t('media.upload_error'),
+        description: `${errorCount} ${t('media.upload_error_description')}`,
         color: 'error'
       })
     }
   } catch (error) {
     toast?.add({
-      title: t('media.upload_error', 'Upload error'),
+      title: t('media.upload_error'),
       description: getErrorMessage(error, key => t(key)),
       color: 'error'
     })

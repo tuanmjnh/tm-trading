@@ -18,23 +18,14 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="flex items-center gap-1 overflow-x-auto">
-    <button
-      v-for="chip in items"
-      :key="chip.value || 'all'"
-      type="button"
-      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs whitespace-nowrap transition-colors"
-      :class="chip.value === modelValue
+  <div class="flex items-center gap-1">
+    <button v-for="chip in items" :key="chip.value || 'all'" type="button"
+      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs whitespace-nowrap transition-colors" :class="chip.value === modelValue
         ? 'bg-accented text-primary font-semibold'
-        : 'text-muted hover:text-highlighted hover:bg-muted'"
-      @click="emit('update:modelValue', chip.value)"
-    >
+        : 'text-muted hover:text-highlighted hover:bg-muted'" @click="emit('update:modelValue', chip.value)">
       <span>{{ chip.label }}</span>
-      <span
-        v-if="chip.count != null"
-        class="text-[10px] font-mono"
-        :class="chip.value === modelValue ? 'text-primary/80' : 'text-dimmed'"
-      >{{ chip.count }}</span>
+      <span v-if="chip.count != null" class="text-[10px] font-mono"
+        :class="chip.value === modelValue ? 'text-primary/80' : 'text-dimmed'">{{ chip.count }}</span>
     </button>
   </div>
 </template>

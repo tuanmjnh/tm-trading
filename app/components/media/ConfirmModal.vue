@@ -63,7 +63,7 @@ const onCancel = () => {
           />
           <div class="flex flex-col">
             <h2 class="text-base font-semibold leading-6 text-highlighted">
-              {{ $t('confirm.delete_title', 'Confirm Delete') }}
+              {{ $t('confirm.delete_title') }}
             </h2>
             <p class="text-sm text-muted">
               {{ $t('confirm.delete_desc_name', [file?.display_name || file?.public_id], `Are you sure you want to
@@ -115,13 +115,13 @@ const onCancel = () => {
     <template #footer>
       <div class="flex items-center justify-end gap-2 w-full">
         <UButton
-          :label="$t('common.cancel', 'Cancel')"
+          :label="$t('common.cancel')"
           color="neutral"
           variant="ghost"
           @click="onCancel"
         />
         <UButton
-          :label="$t('common.confirm', 'Confirm')"
+          :label="$t('common.confirm')"
           :color="color"
           variant="soft"
           @click="onConfirm"

@@ -317,7 +317,7 @@ defineExpose({ openUpload, reload, toggleSidebar, setSearch, getStats })
       >
         <div class="w-full sm:w-auto flex items-center gap-2 sm:flex-1 sm:max-w-md">
           <!-- Sidebar Toggle -->
-          <UTooltip :text="$t('media.folder_text', 'Folders list')" class="hidden md:flex">
+          <UTooltip :text="$t('media.folder_text')" class="hidden md:flex">
             <UButton
               color="neutral"
               variant="ghost"
@@ -380,8 +380,8 @@ defineExpose({ openUpload, reload, toggleSidebar, setSearch, getStats })
         <LazyBaseResponsiveSlideover
           v-model:open="isSidebarOpen"
           side="left"
-          :title="$t('media.folder_text', 'Folders list')"
-          :description="$t('media.cloudinary', 'Cloudinary Manager')"
+          :title="$t('media.folder_text')"
+          :description="$t('media.cloudinary')"
         >
           <template #body>
             <div class="h-full p-2">
@@ -455,7 +455,7 @@ defineExpose({ openUpload, reload, toggleSidebar, setSearch, getStats })
             class="px-3"
             @click="selectedFiles = []"
           >
-            {{ $t('common.clear', 'Clear') }}
+            {{ $t('common.clear') }}
           </UButton>
           <UButton
             color="success"

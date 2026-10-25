@@ -46,10 +46,10 @@ const onDrop = (e: DragEvent) => {
       </p>
       <div v-if="dropText !== 'hidden'">
         <p class="text-sm font-medium text-highlighted">
-          {{ dropText || $t('media.drop_text', 'Drop files here to upload') }}
+          {{ dropText || $t('media.drop_text') }}
         </p>
         <p class="text-xs text-muted mt-1 mb-2">
-          {{ descriptionText || $t('media.upload_click_text', 'Click to choose upload method') }}
+          {{ descriptionText || $t('media.upload_click_text') }}
         </p>
       </div>
       <div class="flex items-center justify-center gap-2">
