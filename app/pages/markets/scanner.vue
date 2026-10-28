@@ -86,6 +86,28 @@ function fmtUtc(iso: string | null): string {
   return Number.isNaN(d.getTime()) ? iso : `${d.toISOString().slice(0, 16).replace('T', ' ')} UTC`
 }
 
+function fmtRelative(iso: string | null): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const diffMs = Date.now() - d.getTime()
+  if (diffMs < 60000) return `${Math.floor(diffMs / 1000)}s ago`
+  if (diffMs < 3600000) return `${Math.floor(diffMs / 60000)}m ago`
+  if (diffMs < 86400000) return `${Math.floor(diffMs / 3600000)}h ago`
+  return `${Math.floor(diffMs / 86400000)}d ago`
+}
+
+function fmtNextUpdate(iso: string | null, intervalSec: number): string {
+  if (!iso || !intervalSec) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  const next = new Date(d.getTime() + intervalSec * 1000)
+  const diffMs = next.getTime() - Date.now()
+  if (diffMs <= 0) return t('marketScanner.updatingSoon')
+  if (diffMs < 60000) return `${Math.ceil(diffMs / 1000)}s`
+  return `${Math.ceil(diffMs / 60000)}m`
+}
+
 // Terminal deep-link is guarded so non-ASCII / non-engine symbols (e.g. a
 // mis-scraped native symbol) never produce a broken /trading route (§57.4 B).
 const TERMINAL_SYMBOL = /^[A-Z0-9]{5,20}$/
@@ -156,7 +178,14 @@ useHead({ title })
           variant="subtle"
           size="xs"
         />
-        <UBadge v-if="generatedAt" :label="fmtUtc(generatedAt)" color="neutral" variant="subtle" size="xs" />
+        <UBadge v-if="generatedAt" :label="`${t('marketScanner.lastUpdated')} ${fmtUtc(generatedAt)}`" color="neutral" variant="subtle" size="xs" />
+        <UBadge
+          v-if="generatedAt && scannerService?.intervalSec"
+          :label="`${t('marketScanner.nextUpdate')} ${fmtNextUpdate(generatedAt, scannerService.intervalSec)}`"
+          color="neutral"
+          variant="subtle"
+          size="xs"
+        />
         <UButton
           icon="i-lucide-refresh-cw"
           variant="soft"

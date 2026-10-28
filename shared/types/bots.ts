@@ -10,6 +10,19 @@
 export type BotProfileMode = 'BACKTEST' | 'REPLAY' | 'LIVE_ANALYSIS' | 'LIVE_PAPER'
 export type BotProfileStatus = 'draft' | 'enabled' | 'disabled' | 'archived'
 
+export type BotSizingType = 'percentage' | 'fixed_value'
+
+export interface BotExecutionConfig {
+  slBreakevenOn?: boolean
+  slTriggerR?: number
+  slTrailOn?: boolean
+  slTrailAtrMult?: number
+  slTrailAtrLen?: number
+  sizingType?: BotSizingType
+  sizingValue?: number
+  [key: string]: unknown
+}
+
 export interface BotProfile {
   _id: string
   profileId: string
@@ -21,7 +34,9 @@ export interface BotProfile {
   timeframes: string[]
   riskProfileId: string | null
   simulatedAccountId: string | null
+  initialCapital?: number | null
   maxConcurrentPositions: number
+  execution?: BotExecutionConfig | null
   effectiveParamsHash: string | null
   enabled: boolean
   status: BotProfileStatus
@@ -56,12 +71,17 @@ export interface BotInstance {
   stoppedAt: number | null
   lastEventAt: number | null
   eventLagMs: number | null
+  accountId?: string | null
   counts: BotInstanceCounts
   paperEquity: number | null
   paperPnl: number | null
+  initialCapital?: number | null
   riskState: Record<string, unknown>
+  execution?: BotExecutionConfig | null
   health: string
+  healthReason?: string | null
   lastError: string | null
+  lease?: { supervisorId?: string | null; beatAt?: number | null; expiresAt?: number | null } | null
   createdAt: number | null
   updatedAt: number
   schemaVersion: string

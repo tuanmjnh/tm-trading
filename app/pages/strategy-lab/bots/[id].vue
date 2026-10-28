@@ -178,9 +178,9 @@ useHead({ title })
               </dd>
             </div>
             <div class="flex items-start justify-between gap-3">
-              <dt class="text-muted shrink-0">{{ t('strategyLab.bots.profileDetail.account') }}</dt>
-              <dd class="font-mono truncate" :class="profile.simulatedAccountId ? 'text-highlighted' : 'text-dimmed'">
-                {{ profile.simulatedAccountId || t('strategyLab.strategyDetail.none') }}
+              <dt class="text-muted shrink-0">{{ t('strategyLab.bots.profileDetail.initialCapital') }}</dt>
+              <dd class="font-mono text-highlighted">
+                ${{ (profile.initialCapital || 10000).toLocaleString() }}
               </dd>
             </div>
             <div class="flex items-start justify-between gap-3">

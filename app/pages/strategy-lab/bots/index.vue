@@ -134,7 +134,7 @@ function launchFrom(profile: BotProfile, copySuffix = false) {
     name: copySuffix ? `${profile.name} (copy)` : (profile.name || undefined),
     symbol: profile.instruments?.[0],
     timeframe: profile.timeframes?.[0],
-    account: profile.simulatedAccountId || undefined,
+    initialCapital: profile.initialCapital || 10000,
     paramOverrides: extra.paramOverrides || undefined,
     execution: extra.execution ?? undefined
   }

@@ -18,7 +18,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="flex items-center gap-1">
+  <div class="flex items-center gap-1 overflow-x-auto overflow-y-hidden">
     <button v-for="chip in items" :key="chip.value || 'all'" type="button"
       class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs whitespace-nowrap transition-colors" :class="chip.value === modelValue
         ? 'bg-accented text-primary font-semibold'

@@ -58,11 +58,13 @@ export default defineEventHandler(async (event) => {
   const method = String(body.method ?? '').trim()
   const symbol = String(body.symbol ?? '').trim().toUpperCase()
   const timeframe = String(body.timeframe ?? '15').trim()
-  const account = typeof body.account === 'string' && body.account.trim() ? body.account.trim() : 'paper-main'
+  const initialCapital = typeof body.initialCapital === 'number' && Number.isFinite(body.initialCapital) && body.initialCapital > 0
+    ? body.initialCapital
+    : 10000
   // Optional display name; empty -> auto-generated from the launch config.
   const customName = String(body.name ?? '').trim().slice(0, 80)
   const displayName = customName
-    || `${method} · ${symbol} ${tfLabel(timeframe)}${account !== 'paper-main' ? ` · ${account}` : ''}`
+    || `${method} · ${symbol} ${tfLabel(timeframe)}`
   const params = (body.params && typeof body.params === 'object' && !Array.isArray(body.params))
     ? body.params as Record<string, unknown>
     : {}
@@ -76,12 +78,16 @@ export default defineEventHandler(async (event) => {
     const n = Number(v)
     return Number.isFinite(n) && n > 0 ? n : fallback
   }
+  const sizingType = rawExec.sizingType === 'fixed_value' ? 'fixed_value' : 'percentage'
+  const sizingValue = num(rawExec.sizingValue, sizingType === 'fixed_value' ? 500 : 1)
   const execution = {
     slBreakevenOn: rawExec.slBreakevenOn === true,
     slTriggerR: num(rawExec.slTriggerR, 1),
     slTrailOn: rawExec.slTrailOn === true,
     slTrailAtrMult: num(rawExec.slTrailAtrMult, 1.5),
     slTrailAtrLen: num(rawExec.slTrailAtrLen, 14),
+    sizingType,
+    sizingValue,
   }
 
   if (!method || !symbol) {
@@ -157,12 +163,8 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, statusMessage: 'error.strategy_version', message: String(created?.code ?? 'create failed') })
     }
 
-    // 4) Bot profile — operational config (mode/instruments/risk).
-    // Identity = method + symbol + timeframe + ACCOUNT: each paper account is
-    // its own order book (one active bot per account), so parallel bots need a
-    // profile per combo — a shared id would silently overwrite the previous bot.
-    const accountSan = account.toLowerCase().replace(ID_SAFE, '-').slice(0, 24) || 'paper-main'
-    const botProfileId = `bot-${method}-${symbolSan}-${timeframe.toLowerCase()}-${accountSan}`.slice(0, 80)
+    // 4) Bot profile — operational config (mode/instruments/risk/initialCapital).
+    const botProfileId = `bot-${method}-${symbolSan}-${timeframe.toLowerCase()}`.slice(0, 80)
     const effHash = configHash
     const botProfile = await BotProfile.findOneAndUpdate(
       { profileId: botProfileId, ownerId },
@@ -176,9 +178,10 @@ export default defineEventHandler(async (event) => {
           status: 'enabled',
           instruments: [symbol],
           timeframes: [timeframe],
-          simulatedAccountId: account,
+          simulatedAccountId: null,
+          initialCapital,
           paramOverrides: mergedParams,
-    execution,
+          execution,
           effectiveParamsHash: effHash,
           createdBy: 'ui',
           schemaVersion: 'botProfile.v1',
@@ -203,7 +206,7 @@ export default defineEventHandler(async (event) => {
     const inst = await runtime.createInstanceFromProfile({
       ownerId,
       profileId: botProfileId,
-      accountId: account,
+      initialCapital,
       createdBy: 'ui',
       now,
     })
@@ -216,7 +219,6 @@ export default defineEventHandler(async (event) => {
       type: 'start',
       commandId: `cmd_start_${inst.instanceId}_${now.toString(36)}`,
       botProfileId,
-      accountId: account,
     })
 
     return {

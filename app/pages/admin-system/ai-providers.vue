@@ -19,6 +19,7 @@ const env = ref<AiProvidersResponse['env']>({ configured: false, provider: null,
 const loading = ref(false)
 const syncing = ref(false)
 const testingId = ref<string | null>(null)
+const discoveringId = ref<string | null>(null)
 const assistantOpen = ref(false)
 
 const formOpen = ref(false)
@@ -80,6 +81,38 @@ async function test(row: AiProviderConnectionRow) {
     notify.error(t('settings.aiProviders.testFailed'), getErrorMessage(err, key => t(key)))
   } finally {
     testingId.value = null
+  }
+}
+
+async function discoverModelsForRow(row: AiProviderConnectionRow) {
+  discoveringId.value = row.id
+  try {
+    const res = await $fetch<{ data: { ok: boolean, models: string[], code: string | null, error: string | null } }>(
+      '/api/v1/ai/providers/connections/discover',
+      {
+        method: 'POST',
+        body: { connectionId: row.id }
+      }
+    )
+    if (res.data.ok && res.data.models.length) {
+      const added = await $fetch<{ data: { added: number } }>(
+        `/api/v1/ai/providers/connections/${encodeURIComponent(row.id)}/models`,
+        { method: 'POST', body: { models: res.data.models, source: 'discovered' } }
+      )
+      notify.success(
+        t('settings.aiProviders.discovered', { count: res.data.models.length }),
+        t('settings.aiProviders.savedDiscovered', { count: res.data.models.length, added: added.data.added })
+      )
+      await load()
+    } else if (res.data.ok) {
+      notify.warning(t('settings.aiProviders.discoveredNone'))
+    } else {
+      notify.error(t('settings.aiProviders.discoverFailed'), aiProviderErrorText(t, res.data.code, res.data.error))
+    }
+  } catch (err) {
+    notify.error(t('settings.aiProviders.discoverFailed'), getErrorMessage(err, key => t(key)))
+  } finally {
+    discoveringId.value = null
   }
 }
 
@@ -182,8 +215,9 @@ onMounted(load)
 
         <div v-else class="divide-y divide-default rounded border border-default">
           <AiProvidersConnectionRow v-for="row in rows" :key="row.id" :row="row" :testing="testingId === row.id"
-            @test="test(row)" @toggle="value => toggle(row, value)" @edit="openEdit(row)" @remove="deleteTarget = row"
-            @open-models="openModels(row)" />
+            :discovering="discoveringId === row.id" @test="test(row)" @toggle="value => toggle(row, value)"
+            @edit="openEdit(row)" @remove="deleteTarget = row" @open-models="openModels(row)"
+            @discover-models="discoverModelsForRow(row)" />
         </div>
       </div>
 

@@ -29,7 +29,7 @@ const args = ['dev', '--port', '4001', '--no-fork', ...process.argv.slice(2)]
 console.log(`[dev] NODE_OPTIONS="${nodeOptions}"`)
 
 const child = spawn(process.execPath, [nuxtBin, ...args], {
-  stdio: 'inherit',
+  stdio: ['ignore', 'inherit', 'inherit'],
   env: { ...process.env, NODE_OPTIONS: nodeOptions }
 })
 
@@ -37,6 +37,11 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => child.kill(signal))
 }
 
+child.on('error', (err) => {
+  console.error('[dev launcher] child error:', err)
+})
+
 child.on('exit', (code, signal) => {
+  console.log('[dev launcher] child exited with code:', code, 'signal:', signal)
   process.exit(code ?? (signal ? 1 : 0))
 })

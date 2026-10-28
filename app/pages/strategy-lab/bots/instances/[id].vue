@@ -216,6 +216,10 @@ useHead({ title })
               <dd class="text-muted">{{ instance.eventLagMs === null ? '—' : `${instance.eventLagMs} ms` }}</dd>
             </div>
             <div class="flex items-center justify-between gap-3">
+              <dt class="text-muted">{{ t('strategyLab.bots.instanceDetail.initialCapital') }}</dt>
+              <dd class="text-muted font-mono">{{ fmtNum(instance.initialCapital ?? 10000) }}</dd>
+            </div>
+            <div class="flex items-center justify-between gap-3">
               <dt class="text-muted">{{ t('strategyLab.bots.instanceDetail.paperEquity') }}</dt>
               <dd class="text-muted">{{ fmtNum(instance.paperEquity) }}</dd>
             </div>

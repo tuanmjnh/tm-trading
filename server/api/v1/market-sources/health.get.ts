@@ -27,16 +27,21 @@ async function probeVenues() {
 
       try {
         if (venue === 'binance') {
-          const u = new URL('https://fapi.binance.com/fapi/v1/ping')
-          await fetchJson(u.toString())
+          try {
+            const u = new URL('https://fapi.binance.com/fapi/v1/ping')
+            await fetchJson(u.toString(), undefined, { throttleRetries: 0 })
+          } catch {
+            const u = new URL('https://api.binance.com/api/v3/ping')
+            await fetchJson(u.toString(), undefined, { throttleRetries: 0 })
+          }
           status = 'up'
         } else if (venue === 'bybit') {
           const u = new URL('https://api.bybit.com/v5/market/time')
-          await fetchJson(u.toString())
+          await fetchJson(u.toString(), undefined, { throttleRetries: 0 })
           status = 'up'
         } else if (venue === 'okx') {
           const u = new URL('https://www.okx.com/api/v5/public/time')
-          await fetchJson(u.toString())
+          await fetchJson(u.toString(), undefined, { throttleRetries: 0 })
           status = 'up'
         } else {
           status = 'unknown'

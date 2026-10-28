@@ -26,6 +26,7 @@ const BotProfileSchema = new mongoose.Schema(
     timeframes: { type: [String], default: [] },
     riskProfileId: { type: String, default: null },
     simulatedAccountId: { type: String, default: null },
+    initialCapital: { type: Number, default: 10000 },
     maxConcurrentPositions: { type: Number, default: 1 },
     // Parameter overrides are permitted only when explicitly allowed; the
     // resulting effective config is fingerprinted (D1: unique config => hash).

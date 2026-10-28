@@ -6,7 +6,7 @@ import { hubEnvReport, resolveHubEnv } from './shared/utils/hubEnv'
 const ROOT_DIR = fileURLToPath(new URL('.', import.meta.url))
 
 // Hub endpoint: one explicit order, one named source, and no silent localhost.
-// `NUXT_PUBLIC_HUB_URL` is a RUNTIME value, so a stale process env (or an empty
+// Trigger reload for services/botSignalBridge.mjs and aiAgentWorker.mjs updates.
 // value in .env) used to redirect login to localhost with no message at all.
 const IS_PRODUCTION = process.env.NODE_ENV === 'production'
 const HUB_ENV = resolveHubEnv(process.env, { isProduction: IS_PRODUCTION })
@@ -187,18 +187,6 @@ export default defineNuxtConfig({
     optimizeDeps: {
       exclude: ['#app-manifest'],
       include: [
-        'prosemirror-state',
-        'prosemirror-model',
-        'prosemirror-transform',
-        'prosemirror-view',
-        'prosemirror-history',
-        'prosemirror-keymap',
-        'prosemirror-commands',
-        'prosemirror-inputrules',
-        'prosemirror-schema-list',
-        'prosemirror-gapcursor',
-        'prosemirror-dropcursor',
-        'prosemirror-tables',
         '@tiptap/pm/state',
         '@tiptap/pm/model',
         '@tiptap/pm/transform',
@@ -210,7 +198,6 @@ export default defineNuxtConfig({
         '@tiptap/pm/schema-list',
         '@tiptap/pm/gapcursor',
         '@tiptap/pm/dropcursor',
-        '@tiptap/pm/tables',
         '@tiptap/pm/tables'
       ]
     }

@@ -29,6 +29,8 @@ const isRoot = computed(() => {
 
 const form = reactive({ provider: 'openai', name: 'default', model: '', baseUrl: '', apiKey: '', enabled: true })
 const modelOptions = ref<string[]>([])
+const modelMenuItems = computed(() => modelOptions.value.map(m => ({ label: m, value: m })))
+const modelPersistProgress = ref('')
 const discovering = ref(false)
 const saving = ref(false)
 // The provider the edited connection was loaded with. Changing it means the
@@ -43,9 +45,20 @@ const providerItems = computed(() => props.providers
 
 const currentDef = computed(() => props.providers.find(p => p.key === form.provider) ?? null)
 const providerChanged = computed(() => Boolean(props.row && originalProvider.value && form.provider !== originalProvider.value))
+
+function isLocalUrl(url?: string | null): boolean {
+  if (!url) return false
+  const trimmed = url.trim()
+  return /^(https?:\/\/)?(localhost|127\.0\.0\.1|::1|0\.0\.0\.0|192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/i.test(trimmed)
+}
+
+const isEffectiveKeyless = computed(() =>
+  Boolean(currentDef.value?.keyless || isLocalUrl(form.baseUrl || currentDef.value?.baseUrl) || /freellm|local/i.test(form.provider))
+)
+
 const canSave = computed(() => Boolean(
   form.provider && form.model.trim()
-  && (currentDef.value?.keyless || form.apiKey.trim() || (props.row && !providerChanged.value)),
+  && (isEffectiveKeyless.value || form.apiKey.trim() || (props.row && !providerChanged.value)),
 ))
 
 /**
@@ -147,7 +160,7 @@ watch(() => form.provider, (key) => {
 
 async function discoverModels() {
   if (!form.provider) return
-  if (!currentDef.value?.keyless && !form.apiKey.trim()) {
+  if (!isEffectiveKeyless.value && !form.apiKey.trim()) {
     notify.error(t('settings.aiProviders.discoverFailed'), t('settings.aiProviders.discoverNoKey'))
     return
   }
@@ -222,20 +235,27 @@ async function save() {
         enabled: form.enabled
       }
     })
-    notify.success(t('settings.aiProviders.saved'))
-    // Create mode: persist the discovered list with the new connection so the
-    // user never has to re-run discovery or retype model ids.
-    if (!props.row && modelOptions.value.length && res.data?.id) {
-      try {
-        await saveDiscoveredTo(res.data.id, modelOptions.value)
-      } catch { /* non-fatal — the connection itself was saved */ }
+    const targetId = props.row?.id ?? res.data?.id
+    const modelsToSave = Array.from(new Set([
+      ...(form.model ? [form.model.trim()] : []),
+      ...modelOptions.value.map(m => m.trim())
+    ])).filter(Boolean)
+    if (targetId && modelsToSave.length) {
+      const chunkSize = 50
+      for (let i = 0; i < modelsToSave.length; i += chunkSize) {
+        const chunk = modelsToSave.slice(i, i + chunkSize)
+        modelPersistProgress.value = `${Math.min(i + chunkSize, modelsToSave.length)}/${modelsToSave.length}`
+        await saveDiscoveredTo(targetId, chunk).catch(() => {})
+      }
     }
+    notify.success(t('settings.aiProviders.saved'))
     open.value = false
     emit('saved')
   } catch (err) {
     notify.error(t('settings.aiProviders.title'), getErrorMessage(err, key => t(key)))
   } finally {
     saving.value = false
+    modelPersistProgress.value = ''
   }
 }
 </script>
@@ -262,12 +282,13 @@ async function save() {
           <UFormField :label="t('settings.aiProviders.model')">
             <div class="flex gap-2">
               <USelectMenu v-if="modelOptions.length" v-model="form.model"
-                :items="modelOptions.map(m => ({ label: m, value: m }))" value-key="value" label-key="label"
+                :items="modelMenuItems" value-key="value" label-key="label"
                 :search-input="{ placeholder: t('settings.aiProviders.searchModel') }" class="w-full" placeholder="—" />
               <UInput v-else v-model="form.model" class="w-full" placeholder="gpt-4o-mini" />
               <UButton icon="i-lucide-sparkles" color="neutral" variant="soft" :loading="discovering"
-                :disabled="!currentDef || (!currentDef.keyless && !form.apiKey.trim() && !row)"
+                :disabled="!currentDef || (!isEffectiveKeyless && !form.apiKey.trim() && !row)"
                 :aria-label="t('settings.aiProviders.discoverModels')" :title="t('settings.aiProviders.discoverModels')"
+                :label="t('settings.aiProviders.discoverModels')"
                 @click="discoverModels" />
             </div>
             <UButton v-if="modelOptions.length && row" icon="i-lucide-save" color="neutral" variant="soft" size="xs"
@@ -278,9 +299,10 @@ async function save() {
           <UFormField :label="t('settings.aiProviders.baseUrl')">
             <UInput v-model="form.baseUrl" class="w-full" :placeholder="currentDef?.baseUrl ?? 'https://…/v1'" />
           </UFormField>
-          <UFormField v-if="!currentDef?.keyless" :label="t('settings.aiProviders.apiKey')"
-            :help="row && !providerChanged ? t('settings.aiProviders.apiKeyHint') : undefined">
-            <UInput v-model="form.apiKey" type="password" class="w-full" autocomplete="new-password" />
+          <UFormField :label="isEffectiveKeyless ? t('settings.aiProviders.apiKeyOptional') : t('settings.aiProviders.apiKey')"
+            :help="row && !providerChanged ? t('settings.aiProviders.apiKeyHint') : (isEffectiveKeyless ? t('settings.aiProviders.apiKeyOptionalHint') : undefined)">
+            <UInput v-model="form.apiKey" type="password" class="w-full" autocomplete="new-password"
+              :placeholder="isEffectiveKeyless ? t('settings.aiProviders.apiKeyOptionalPlaceholder') : '••••••••'" />
             <!-- Root-only: reveal + copy the stored key (server enforces root). -->
             <div v-if="isRoot && row && !providerChanged" class="mt-2 flex flex-wrap items-center gap-2">
               <UButton icon="i-lucide-eye" color="neutral" variant="soft" size="xs" :loading="revealingKey"
@@ -305,7 +327,7 @@ async function save() {
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton :label="t('common.cancel')" color="neutral" variant="ghost" @click="open = false" />
-        <UButton :label="t('common.save')" :loading="saving" variant="soft" :disabled="!canSave" @click="save" />
+        <UButton :label="modelPersistProgress ? t('settings.aiProviders.savingModelsProgress', { progress: modelPersistProgress }) : t('common.save')" :loading="saving" variant="soft" :disabled="!canSave" @click="save" />
       </div>
     </template>
   </UModal>

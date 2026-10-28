@@ -227,6 +227,9 @@ export function heartbeatPatch({
   engineVersion = null,
   subscriptions = null,
   lastSignalKey = null,
+  counts = null,
+  paperEquity = null,
+  paperPnl = null,
 } = {}) {
   if (!HEALTH_STATES.includes(health)) throw new Error(`heartbeatPatch: unknown health "${health}"`)
   const patch = {
@@ -238,6 +241,15 @@ export function heartbeatPatch({
   if (engineVersion != null) patch.engineVersion = String(engineVersion)
   if (Array.isArray(subscriptions)) patch.subscriptions = subscriptions.map((s) => String(s))
   if (lastSignalKey != null) patch.lastSignalKey = String(lastSignalKey)
+  if (counts && typeof counts === 'object') {
+    patch.counts = {
+      signals: Number(counts.signals) || 0,
+      orders: Number(counts.orders) || 0,
+      trades: Number(counts.trades) || 0,
+    }
+  }
+  if (typeof paperEquity === 'number' && Number.isFinite(paperEquity)) patch.paperEquity = paperEquity
+  if (typeof paperPnl === 'number' && Number.isFinite(paperPnl)) patch.paperPnl = paperPnl
   return patch
 }
 

@@ -241,6 +241,11 @@ export async function getMarketPlane(): Promise<MarketPlane> {
         console.warn(`[market] health snapshot writer not started (fail-soft): ${err instanceof Error ? err.message : String(err)}`)
       }
 
+      try {
+        plane.start()
+      } catch (err) {
+        console.warn(`[market] plane.start() failed: ${err instanceof Error ? err.message : String(err)}`)
+      }
       return plane
     })().catch((err: unknown) => {
       planePromise = null // a failed construction may be retried on the next client

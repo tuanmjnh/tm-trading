@@ -275,6 +275,31 @@ export async function createAgentRecord(input: CreateAgentInput): Promise<AnyDoc
   }
 }
 
+export interface UpdateAgentInput {
+  name?: string
+  description?: string
+  accountId?: string
+  instruments?: string[]
+}
+
+export async function updateAgentRecord(id: string, ownerId: string, patch: UpdateAgentInput): Promise<AnyDoc | null> {
+  const Agent = await aiAgentModel()
+  if (!Agent) throw new AgentError('agents store unavailable', 503, 'mongo_down')
+  const updates: Record<string, unknown> = {}
+  if (patch.name !== undefined) updates.name = String(patch.name).trim()
+  if (patch.description !== undefined) updates.description = String(patch.description).trim()
+  if (patch.accountId !== undefined) updates.accountId = String(patch.accountId).trim()
+  if (patch.instruments !== undefined && Array.isArray(patch.instruments)) updates.instruments = patch.instruments
+  if (!Object.keys(updates).length) return getAgent(id, ownerId)
+
+  const updated = await Agent.findOneAndUpdate(
+    { ownerId, $or: [{ _id: id }, { agentId: id }] },
+    { $set: updates },
+    { new: true }
+  ).lean()
+  return updated as AnyDoc | null
+}
+
 export interface PublishVersionInput {
   autonomy?: string
   model?: Record<string, unknown> | null

@@ -27,7 +27,7 @@ import {
   validateCommand,
 } from '../engine/botSupervisor.mjs'
 import { appendEvent as appendSessionEvent, transition as transitionSession } from '../engine/session.mjs'
-import { bridgeSignalsForInstance } from './botSignalBridge.mjs'
+import { bridgeSignalsForInstance, symbolVariants } from './botSignalBridge.mjs'
 import { evaluateInstanceSignals } from './botMethodDriver.mjs'
 import {
   attachInstanceLease,
@@ -454,6 +454,62 @@ export function createBotWorker({
         .runCycle(cfg, sessionId ? { sessionId } : {})
         .catch((e) => ({ errors: 1, error: String(e?.message || e) }))
 
+      const subs = Array.isArray(instance.subscriptions) && instance.subscriptions.length
+        ? instance.subscriptions
+        : (instance.instruments || [])
+      const allSyms = [...new Set(subs.flatMap(symbolVariants))]
+
+      // Metrics rollup for live monitoring and UI reporting
+      const [signalsCount, ordersCount, positions] = await Promise.all([
+        m.Signal && allSyms.length ? m.Signal.countDocuments({ ownerId, symbol: { $in: allSyms } }).catch(() => 0) : 0,
+        m.PaperOrder ? m.PaperOrder.countDocuments({ ownerId, $or: [{ account }, { accountId: account }] }).catch(() => 0) : 0,
+        m.Position ? m.Position.find({ ownerId, $or: [{ account }, { accountId: account }] }).lean().catch(() => []) : [],
+      ])
+
+      let realizedPnl = 0
+      let unrealizedPnl = 0
+
+      let quoteFor = () => null
+      try {
+        const { getMarketPlane } = await import('../server/utils/market-plane.ts').catch(() => ({}))
+        if (getMarketPlane) {
+          const plane = await getMarketPlane()
+          const rows = plane.quoteStore.all()
+          const bySym = new Map()
+          for (const r of rows) {
+            const clean = String(r.symbol || '').replace(/\.P$/i, '').toUpperCase()
+            bySym.set(clean, r)
+            bySym.set(`${clean}.P`, r)
+          }
+          quoteFor = (sym) => {
+            const clean = String(sym || '').replace(/\.P$/i, '').toUpperCase()
+            return bySym.get(sym) || bySym.get(clean) || bySym.get(`${clean}.P`) || null
+          }
+        }
+      } catch { /* plane lookup fail-soft */ }
+
+      for (const p of positions) {
+        if (p.status === 'open') {
+          let u = Number(p.live?.unrealized)
+          if (!Number.isFinite(u)) {
+            const q = quoteFor(p.symbol)
+            if (q) {
+              const mark = p.dir === 1 ? (q.bid || q.last) : (q.ask || q.last)
+              if (mark && p.entryPrice && p.qty) {
+                const gross = (mark - p.entryPrice) * p.dir * p.qty
+                u = gross - (p.fees || 0)
+              }
+            }
+          }
+          unrealizedPnl += Number(Number.isFinite(u) ? u : (p.pnlAbs ?? 0))
+        } else {
+          realizedPnl += Number(p.pnlAbs ?? 0)
+        }
+      }
+      const totalPnl = Number((realizedPnl + unrealizedPnl).toFixed(2))
+      const baseCapital = Number(instance.initialCapital) || 10000
+      const currentEquity = Number((baseCapital + totalPnl).toFixed(2))
+
       const health = evaluateHealth({
         mongoDown: Boolean(stats?.mongoDown),
         lastError: stats?.errors ? 'cycle_errors' : null,
@@ -467,6 +523,13 @@ export function createBotWorker({
         engineVersion: ENGINE_VERSION,
         subscriptions: instance.subscriptions || [],
         lastSignalKey: instance.lastSignalKey,
+        counts: {
+          signals: signalsCount,
+          orders: ordersCount,
+          trades: positions.length,
+        },
+        paperEquity: currentEquity,
+        paperPnl: totalPnl,
       })
       if (sessionId) patch.sessionId = sessionId
       // The signal cursor only advances after the alerts were queued, so a

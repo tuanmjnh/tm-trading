@@ -15,6 +15,8 @@ import {
   redactConnection,
   secretFingerprint,
   supports,
+  isLocalEndpoint,
+  resolveProviderKey,
 } from '../engine/aiProviders.mjs'
 import { decryptSecret, encryptSecret } from '../engine/aiProviderCrypto.mjs'
 import { AiProviderConnection } from '../engine/models/aiProviderConnection.mjs'
@@ -159,7 +161,8 @@ export async function upsertConnection(input = {}, { actor = null } = {}) {
   const id = String(input.id ?? '').trim() || (ownerId ? `${ownerId}:${c.id}` : c.id)
   const existing = await AiProviderConnection.findOne({ _id: id, ownerId }).lean()
   const providedKey = String(input.apiKey ?? '').trim()
-  if (!existing && !c.apiKey && !providerDefinition(c.provider)?.keyless) {
+  const isKeyless = Boolean(providerDefinition(c.provider)?.keyless) || isLocalEndpoint(c.baseUrl) || /freellm|local/i.test(c.provider)
+  if (!existing && !c.apiKey && !isKeyless) {
     const err = new Error('apiKey is required')
     err.code = 'ai.invalid-connection'
     throw err
@@ -167,7 +170,7 @@ export async function upsertConnection(input = {}, { actor = null } = {}) {
   let secretEnc = existing?.secretEnc ?? null
   let secretMask = existing?.secretMask ?? ''
   let fingerprint = existing?.secretFingerprint ?? null
-  if (c.provider === 'ollama') {
+  if (c.provider === 'ollama' || (isKeyless && !providedKey)) {
     secretEnc = null
     secretMask = ''
     fingerprint = null
@@ -175,7 +178,7 @@ export async function upsertConnection(input = {}, { actor = null } = {}) {
     secretEnc = encryptSecret(providedKey)
     secretMask = maskSecret(providedKey)
     fingerprint = secretFingerprint(providedKey)
-  } else if (!existing && !providerDefinition(c.provider)?.keyless) {
+  } else if (!existing && !isKeyless) {
     const err = new Error('apiKey is required')
     err.code = 'ai.invalid-connection'
     throw err
@@ -256,10 +259,10 @@ function normalizeHubModels(hub) {
   return (Array.isArray(hub?.models) ? hub.models : [])
     .map((m) => (m && typeof m === 'object'
       ? {
-          model: String(m.modelId ?? '').trim(),
-          displayName: String(m.displayName ?? '').trim().slice(0, 128) || null,
-          isPrimary: m.isPrimary === true,
-        }
+        model: String(m.modelId ?? '').trim(),
+        displayName: String(m.displayName ?? '').trim().slice(0, 128) || null,
+        isPrimary: m.isPrimary === true,
+      }
       : null))
     .filter((m) => m && m.model)
 }
@@ -681,12 +684,12 @@ export async function testConnection(idOrConn, { fetchImpl = globalThis.fetch, t
     err.code = 'ai.connection-not-found'
     throw err
   }
-  const keyless = Boolean(providerDefinition(row.provider)?.keyless)
+  const keyless = Boolean(providerDefinition(row.provider)?.keyless) || isLocalEndpoint(row.baseUrl) || /freellm|local/i.test(row.provider)
   // Hub rows hold no key: health = "the relay still grants this connection".
   if (row.provider === 'hub') return testHubConnection(row, { fetchImpl, timeoutMs, actor, persist })
   let apiKey = ''
   try {
-    apiKey = keyless ? '' : decryptSecret(row.secretEnc)
+    apiKey = row.apiKey || (row.secretEnc ? decryptSecret(row.secretEnc) : '')
   } catch (e) {
     apiKey = ''
   }
@@ -699,17 +702,33 @@ export async function testConnection(idOrConn, { fetchImpl = globalThis.fetch, t
   const timer = setTimeout(() => controller.abort(), Math.max(1_000, Number(timeoutMs) || 10_000))
   let result
   try {
-    const res = await fetchImpl(modelsUrl(row), {
+    let res = await fetchImpl(modelsUrl(row), {
       method: 'GET',
       headers: { accept: 'application/json', ...authHeaders(row, apiKey) },
       signal: controller.signal,
     })
+    if (!res.ok && res.status === 404) {
+      const base = String(row.baseUrl || '').replace(/\/+$/, '')
+      const altBase = base.endsWith('/v1') ? base.replace(/\/v1$/, '') : `${base}/v1`
+      try {
+        const altRes = await fetchImpl(`${altBase}/models`, {
+          method: 'GET',
+          headers: { accept: 'application/json', ...authHeaders(row, apiKey) },
+          signal: controller.signal,
+        })
+        if (altRes.ok) res = altRes
+      } catch { }
+    }
     const latencyMs = now() - started
     const text = await res.text()
     let body = null
     try { body = text ? JSON.parse(text) : null } catch { body = null }
     if (!res.ok) {
-      result = { ok: false, status: res.status, latencyMs, models: [], code: classify(res.status), error: `HTTP ${res.status}` }
+      if (isLocalEndpoint(row.baseUrl) && (process.env.VERCEL || process.env.NODE_ENV === 'production')) {
+        result = { ok: true, status: 200, latencyMs, models: [], code: 'ok', warning: 'Local endpoint registered (satellite client tests directly)' }
+      } else {
+        result = { ok: false, status: res.status, latencyMs, models: [], code: classify(res.status), error: `HTTP ${res.status}` }
+      }
     } else {
       const models = parseModels(body)
       const wanted = String(row.model).toLowerCase()
@@ -725,13 +744,17 @@ export async function testConnection(idOrConn, { fetchImpl = globalThis.fetch, t
     }
   } catch (e) {
     const aborted = e?.name === 'AbortError' || /aborted|timeout/i.test(String(e?.message ?? ''))
-    result = {
-      ok: false,
-      status: 0,
-      latencyMs: now() - started,
-      models: [],
-      code: aborted ? 'ai.timeout' : 'ai.network',
-      error: safeMessage(e),
+    if (isLocalEndpoint(row.baseUrl) && (process.env.VERCEL || process.env.NODE_ENV === 'production')) {
+      result = { ok: true, status: 200, latencyMs: now() - started, models: [], code: 'ok', warning: 'Local endpoint registered (satellite client tests directly)' }
+    } else {
+      result = {
+        ok: false,
+        status: 0,
+        latencyMs: now() - started,
+        models: [],
+        code: aborted ? 'ai.timeout' : 'ai.network',
+        error: safeMessage(e),
+      }
     }
   } finally {
     clearTimeout(timer)
@@ -782,7 +805,7 @@ async function finish(row, result, { actor, persist }) {
  * touching the collection.
  */
 export async function discoverModelsForInput(input = {}, { env = process.env, fetchImpl, timeoutMs } = {}) {
-  const key = String(input.provider ?? '').trim().toLowerCase()
+  const key = resolveProviderKey(input.provider, input.baseUrl) ?? String(input.provider ?? '').trim().toLowerCase()
   const def = providerDefinition(key)
   if (!def) {
     const err = new Error(`unknown provider: ${key}`)
@@ -801,7 +824,8 @@ export async function discoverModelsForInput(input = {}, { env = process.env, fe
     provider: def.key,
     model: String(input.model ?? '').trim(),
     baseUrl,
-    secretEnc: def.keyless ? null : (apiKey ? encryptSecret(apiKey, env) : null),
+    apiKey,
+    secretEnc: apiKey ? encryptSecret(apiKey, env) : null,
     secretMask: '',
     secretFingerprint: null,
   }
@@ -826,7 +850,7 @@ export async function resolveProviderCandidates({ id = null, ownerId = null, req
     if (row.enabled === false) continue
     if (!supports(row.provider, required)) continue
     let apiKey = ''
-    if (!providerDefinition(row.provider)?.keyless) {
+    if (!providerDefinition(row.provider)?.keyless && !isLocalEndpoint(row.baseUrl) && !/freellm|local/i.test(row.provider)) {
       try { apiKey = decryptSecret(row.secretEnc, env) } catch { continue }
       if (!apiKey) continue
     }
@@ -890,5 +914,5 @@ export async function budgetFor(id) {
   return budgetStatus(row.budgets ?? {}, row.budgets ?? {})
 }
 
-export { envConnection, providerDefinition }
+export { envConnection, providerDefinition, isLocalEndpoint }
 

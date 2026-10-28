@@ -80,10 +80,23 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Rang buoc: token phai duoc tm-hub cap cho DUNG app nay.
+  // Rang buoc: token phai duoc tm-hub cap cho DUNG app nay (ngoai tru root / cross-app).
   const config = useRuntimeConfig()
   const currentAppId = (config.public.hubAppId as string) || 'tm-trading'
-  if (payload.appId && payload.appId !== currentAppId) {
+  const roles = Array.isArray(payload.roles) ? payload.roles : []
+  const permissions = Array.isArray(payload.permissions) ? payload.permissions : []
+  const rawCapabilities = (payload as Record<string, unknown>).capabilities
+  const capabilities = Array.isArray(rawCapabilities) ? (rawCapabilities as string[]) : []
+  const isRootOrCrossApp = roles.includes('root')
+    || (payload as Record<string, unknown>).role === 'root'
+    || permissions.includes('*')
+    || permissions.includes('platform.crossapp.read')
+    || permissions.includes('platform.crossapp.write')
+    || capabilities.includes('*')
+    || capabilities.includes('platform.crossapp.read')
+    || capabilities.includes('platform.crossapp.write')
+
+  if (payload.appId && payload.appId !== currentAppId && !isRootOrCrossApp) {
     throw createError({
       statusCode: 403,
       statusMessage: 'error.forbidden',

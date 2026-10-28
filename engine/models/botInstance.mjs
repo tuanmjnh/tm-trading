@@ -43,6 +43,7 @@ const BotInstanceSchema = new mongoose.Schema(
     },
     paperEquity: { type: Number, default: null },
     paperPnl: { type: Number, default: null },
+    initialCapital: { type: Number, default: 10000 },
     riskState: { type: mongoose.Schema.Types.Mixed, default: {} },
     // Per-bot stop management (breakeven / ATR trailing), copied from the
     // profile at instance creation and handed to the paper executor.

@@ -33,7 +33,7 @@ export const DEFAULTS = Object.freeze({
   fast: 20,
   slow: 50,
   atrLen: 14,
-  minAtrPct: 0.5,       // % gia tri — bo tin hieu khi ATR% thap (thi truong phang)
+  minAtrPct: 0.2,       // % gia tri — bo tin hieu khi ATR% thap (thi truong phang). Giu <=0.2 cho BTCUSDT 15m
   slBuf: 0.5,
   rrFb: 2.0,
   feePct: 0.05,

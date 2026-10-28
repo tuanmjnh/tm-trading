@@ -11,8 +11,8 @@ export default defineEventHandler(async (event) => {
   if (!id) throw createError({ statusCode: 400, statusMessage: 'error.bad_request', message: 'instance id is required' })
   const ownerId = requireOwnerId(event)
   const body = (await readBody(event).catch(() => null)) as Record<string, unknown> | null
-  if (!body || typeof body.archived !== 'boolean') {
-    throw createError({ statusCode: 400, statusMessage: 'error.bad_request', message: 'archived (boolean) is required' })
+  if (!body || typeof body !== 'object') {
+    throw createError({ statusCode: 400, statusMessage: 'error.bad_request', message: 'JSON body is required' })
   }
 
   const BotInstance = await botInstanceModel()
@@ -20,10 +20,36 @@ export default defineEventHandler(async (event) => {
 
   const instance = await BotInstance.findOne({ _id: id, ownerId }).lean()
   if (!instance) throw createError({ statusCode: 404, statusMessage: 'error.notFound', message: 'instance not found' })
-  if (body.archived === false && !TERMINAL.has(String(instance.state))) {
-    throw createError({ statusCode: 409, statusMessage: 'error.bot_not_terminal', message: 'Only finished bots can be managed' })
+
+  const $set: Record<string, unknown> = {}
+
+  if (typeof body.archived === 'boolean') {
+    if (body.archived === false && !TERMINAL.has(String(instance.state))) {
+      throw createError({ statusCode: 409, statusMessage: 'error.bot_not_terminal', message: 'Only finished bots can be managed' })
+    }
+    $set.archived = body.archived
   }
 
-  await BotInstance.updateOne({ _id: id, ownerId }, { $set: { archived: body.archived } })
-  return { success: true, data: { instanceId: id, archived: body.archived } }
+  if (body.execution && typeof body.execution === 'object' && !Array.isArray(body.execution)) {
+    const rawExec = body.execution as Record<string, unknown>
+    const currentExec = (instance.execution || {}) as Record<string, unknown>
+    const mergedExec: Record<string, unknown> = {
+      ...currentExec,
+      ...rawExec,
+    }
+    if (rawExec.sizingType === 'fixed_value' || rawExec.sizingType === 'percentage') {
+      mergedExec.sizingType = rawExec.sizingType
+    }
+    if (Number.isFinite(Number(rawExec.sizingValue)) && Number(rawExec.sizingValue) > 0) {
+      mergedExec.sizingValue = Number(rawExec.sizingValue)
+    }
+    $set.execution = mergedExec
+  }
+
+  if (!Object.keys($set).length) {
+    throw createError({ statusCode: 400, statusMessage: 'error.bad_request', message: 'nothing to update' })
+  }
+
+  await BotInstance.updateOne({ _id: id, ownerId }, { $set })
+  return { success: true, data: { instanceId: id, ...$set } }
 })

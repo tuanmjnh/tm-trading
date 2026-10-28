@@ -123,12 +123,18 @@ export const useBots = () => {
     }
   }
 
-  /** Rerun a terminal instance (creates a new instance from the same profile). */
-  async function rerunInstance(instanceId: string): Promise<{ success: boolean; data?: any; error?: string; code?: string }> {
+  /** Rerun a terminal instance: mode 'reset' (clone & reset capital to default) or 'continue' (keep history & equity). */
+  async function rerunInstance(
+    instanceId: string,
+    options?: { mode?: 'reset' | 'continue'; initialCapital?: number }
+  ): Promise<{ success: boolean; data?: any; error?: string; code?: string }> {
     try {
       const res = await $fetch<{ success: boolean; data?: any; error?: string; code?: string }>(
         `/api/v1/bots/instances/${encodeURIComponent(instanceId)}/rerun`,
-        { method: 'POST' }
+        {
+          method: 'POST',
+          body: options
+        }
       )
       return res
     } catch (e: any) {

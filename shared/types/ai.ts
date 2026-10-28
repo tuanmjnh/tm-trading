@@ -59,6 +59,9 @@ export interface AiAgent {
   description: string
   autonomy: AiAutonomyLevel
   accountId: string
+  allocatedCapital?: number
+  currentEquity?: number
+  paperPnl?: number
   instruments: string[]
   state: AiAgentState
   activeVersionId: string | null
@@ -107,6 +110,7 @@ export interface AiAgentAction {
   sessionId: string | null
   idempotencyKey: string
   riskDecision: { ok: boolean | null; code: string | null; at: number | null; mongoDown: boolean | null } | null
+  payload?: Record<string, any> | null
   reason: string
   at: number | null
   createdAt?: string

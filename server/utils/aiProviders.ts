@@ -132,23 +132,36 @@ export async function parseAiProviderImport(payload: unknown, defaultModel: stri
 
 export async function discoverAiModels(ownerId: string, input: Record<string, unknown>) {
   const store = await loadStore()
-  // Edit mode: no key in the form → fall back to the connection's STORED key
-  // (decrypted server-side, never returned to the client — D35).
   let apiKey = typeof input.apiKey === 'string' ? input.apiKey : undefined
+  let provider = typeof input.provider === 'string' ? input.provider : undefined
+  let baseUrl = typeof input.baseUrl === 'string' ? input.baseUrl : undefined
+  let model = typeof input.model === 'string' ? input.model : undefined
   const connectionId = typeof input.connectionId === 'string' ? input.connectionId : undefined
-  if (!apiKey && connectionId) {
+
+  if (connectionId) {
     const row = await store.getConnectionRow(connectionId, { ownerId })
     if (!row) throw createError({ statusCode: 404, statusMessage: 'error.notFound', message: 'connection not found' })
-    if (!row.secretEnc && !store.providerDefinition(row.provider)?.keyless) {
+    if (provider) row.provider = provider
+    if (baseUrl) row.baseUrl = baseUrl
+    if (model) row.model = model
+    if (apiKey) row.apiKey = apiKey
+
+    const isKeyless = Boolean(store.providerDefinition(row.provider)?.keyless)
+      || (store.isLocalEndpoint && store.isLocalEndpoint(row.baseUrl))
+      || /freellm|local/i.test(row.provider)
+    if (!row.secretEnc && !isKeyless && !row.apiKey) {
       throw createError({ statusCode: 400, statusMessage: 'error.ai_no_key', message: 'connection has no stored key' })
     }
-    try { apiKey = (await getStoredAiKey(ownerId, connectionId)) ?? undefined } catch { apiKey = undefined }
+
+    const result = await store.testConnection(row, { persist: false })
+    return { ok: result.ok, models: result.models, code: result.code, error: result.error }
   }
+
   return store.discoverModelsForInput({
-    provider: typeof input.provider === 'string' ? input.provider : undefined,
-    baseUrl: typeof input.baseUrl === 'string' ? input.baseUrl : undefined,
+    provider,
+    baseUrl,
     apiKey,
-    model: typeof input.model === 'string' ? input.model : undefined,
+    model,
   })
 }
 

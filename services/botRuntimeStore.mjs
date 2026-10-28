@@ -63,6 +63,7 @@ export async function createInstanceFromProfile({
   profileId = null,
   watermarkTs = null,
   accountId = null,
+  initialCapital = 10000,
   createdBy = 'cli',
   now = Date.now(),
 } = {}) {
@@ -86,8 +87,6 @@ export async function createInstanceFromProfile({
     // The instance's paper account drives the worker's `account_busy` guard and
     // its per-account session map, so it MUST be persisted here. Explicit
     // override wins; otherwise the profile's account; a null account means the
-    // owner's default book (worker: accountOf() -> 'default').
-    const resolvedAccountId = accountId ?? profile.simulatedAccountId ?? null
     const baseId = `${profile.profileId}-${new Date(now).toISOString().slice(0, 10).replace(/-/g, '')}`
     // The daily id may already exist. A NON-terminal instance means the desk is
     // already armed (nothing to do); a TERMINAL one (completed/failed/halted —
@@ -106,6 +105,8 @@ export async function createInstanceFromProfile({
       }
       target = `${baseId}-${n}`
     }
+
+    const resolvedAccountId = accountId || profile.simulatedAccountId || `bot-${target}`
 
     const inst = await m.BotInstance.create({
       _id: target,
@@ -126,7 +127,8 @@ export async function createInstanceFromProfile({
       lastEventAt: now,
       eventLagMs: 0,
       counts: { signals: 0, orders: 0, trades: 0 },
-      paperEquity: 0,
+      initialCapital: Number(initialCapital) || 10000,
+      paperEquity: Number(initialCapital) || 10000,
       paperPnl: 0,
       riskState: { dailyLossUsedPct: 0, halted: false, openPositions: 0 },
       execution: profile.execution ?? null,

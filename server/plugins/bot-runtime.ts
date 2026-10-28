@@ -61,6 +61,14 @@ interface RuntimeModule {
     set?: Record<string, unknown>
     now?: number
   }): Promise<boolean>
+  enqueueCommand?(input: {
+    ownerId: string
+    instanceId: string
+    type: string
+    commandId?: string
+    payload?: Record<string, unknown>
+    now?: number
+  }): Promise<{ ok: boolean, code?: string }>
 }
 
 /** Console-shaped logger — the worker writes lifecycle lines via `log.log`. */
@@ -82,7 +90,8 @@ interface HeartbeatModule {
 
 let workerModule: BotWorkerModule | null = null
 async function loadWorkerModule(): Promise<BotWorkerModule | null> {
-  workerModule ??= await import(/* @vite-ignore */ pathToFileURL(join(process.cwd(), 'services', 'botWorker.mjs')).href) as BotWorkerModule
+  const fileUrl = pathToFileURL(join(process.cwd(), 'services', 'botWorker.mjs')).href
+  workerModule ??= await import(/* @vite-ignore */ `${fileUrl}?t=${Date.now()}`) as BotWorkerModule
   return workerModule
 }
 
@@ -150,6 +159,31 @@ export default defineNitroPlugin((nitro) => {
         m.BotCommand.find({ status: 'pending' }).distinct('ownerId')
       ])
       const owners = [...new Set([...instanceOwners, ...commandOwners].filter(Boolean).map(String))]
+
+      // Auto-boot: If any instance is sitting in 'queued', ensure it receives a 'start' command
+      try {
+        const queuedInstances = await (m.BotInstance as unknown as { find(q: Record<string, unknown>): { lean(): Promise<Array<{ instanceId: string, ownerId: string }>> } }).find({ state: 'queued' }).lean()
+        if (Array.isArray(queuedInstances) && queuedInstances.length > 0 && typeof store.enqueueCommand === 'function') {
+          for (const q of queuedInstances) {
+            const hasPending = await (m.BotCommand as unknown as { exists(q: Record<string, unknown>): Promise<boolean> }).exists({
+              instanceId: q.instanceId,
+              type: 'start',
+              status: 'pending'
+            })
+            if (!hasPending) {
+              await store.enqueueCommand({
+                ownerId: q.ownerId,
+                instanceId: q.instanceId,
+                type: 'start',
+                commandId: `auto_start_${q.instanceId}_${Date.now()}`
+              }).catch(() => null)
+              log.log(`[auto-boot] enqueued start command for queued instance ${q.instanceId}`)
+            }
+          }
+        }
+      } catch {
+        // fail-soft
+      }
       const mod = await loadWorkerModule()
       if (!mod) return
 

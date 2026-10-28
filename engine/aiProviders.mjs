@@ -40,9 +40,7 @@ export const AI_PROVIDER_CATALOG = Object.freeze([
   { key: 'nvidia', name: 'NVIDIA NIM', adapter: 'openai_compatible', baseUrl: 'https://integrate.api.nvidia.com/v1', requiresBaseUrl: false, keyless: false, privacy: 'vendor', capabilities: CAP(true, true, true, true) },
   { key: 'zhipu', name: 'Zhipu AI', adapter: 'openai_compatible', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', requiresBaseUrl: false, keyless: false, privacy: 'vendor', capabilities: CAP(true, true, true, true) },
   { key: 'ollama', name: 'Ollama (local)', adapter: 'ollama', baseUrl: 'http://127.0.0.1:11434/v1', requiresBaseUrl: false, keyless: true, privacy: 'local', capabilities: CAP(true, false, false, true) },
-  // FreeLLMAPI and OpenCode are *deployments*, not vendors: the exact endpoint
-  // must be configured (D35 — the app decides which deployment it trusts).
-  { key: 'freellmapi', name: 'FreeLLMAPI deployment', adapter: 'openai_compatible', baseUrl: null, requiresBaseUrl: true, keyless: false, privacy: 'deployment', capabilities: CAP(true, true, true, true) },
+  { key: 'freellmapi', name: 'FreeLLMAPI deployment', adapter: 'openai_compatible', baseUrl: 'http://127.0.0.1:31415/v1', requiresBaseUrl: false, keyless: true, privacy: 'deployment', capabilities: CAP(true, true, true, true) },
   { key: 'opencode', name: 'OpenCode server (OpenAI-compatible)', adapter: 'openai_compatible', baseUrl: null, requiresBaseUrl: true, keyless: false, privacy: 'deployment', capabilities: CAP(true, true, true, true) },
   { key: 'custom_openai', name: 'Custom OpenAI-compatible endpoint', adapter: 'openai_compatible', baseUrl: null, requiresBaseUrl: true, keyless: false, privacy: 'deployment', capabilities: CAP(true, true, true, true) },
   // TM Hub relay (managed by hub sync, never created by hand): this app holds no
@@ -128,7 +126,8 @@ export function parseConnectionImport(payload, { defaultModel = '' } = {}) {
       return
     }
     const apiKey = String(entry?.apiKey ?? entry?.key ?? entry?.token ?? entry?.secret ?? '').trim()
-    if (!def?.keyless && !apiKey) {
+    const isKeyless = def?.keyless || isLocalEndpoint(baseUrl)
+    if (!isKeyless && !apiKey) {
       errors.push({ index, label, message: 'apiKey is missing' })
       return
     }
@@ -155,6 +154,21 @@ export function parseConnectionImport(payload, { defaultModel = '' } = {}) {
   })
 
   return { ok: rows.length > 0, rows, errors }
+}
+
+export function isLocalEndpoint(url) {
+  if (!url) return false
+  const s = String(url).trim()
+  if (!s) return false
+  try {
+    const raw = s.includes('://') ? s : `http://${s}`
+    const u = new URL(raw)
+    const h = u.hostname.toLowerCase()
+    return h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '0.0.0.0' || h.endsWith('.local')
+      || /^(10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.)/.test(h)
+  } catch {
+    return /localhost|127\.0\.0\.1|::1|0\.0\.0\.0|\.local/i.test(s)
+  }
 }
 
 export function capabilitiesFor(key) {
@@ -184,10 +198,11 @@ export function normalizeConnection(input = {}, { requireKey = true } = {}) {
     errors.push(`unknown provider: ${String(input.provider ?? '') || '(empty)'}`)
     return { ok: false, errors }
   }
-  const apiKey = String(input.apiKey ?? '').trim()
-  if (requireKey && !def.keyless && !apiKey) errors.push('apiKey is required')
   const explicitBase = str(input.baseUrl)
   const baseUrl = explicitBase ?? def.baseUrl
+  const isKeyless = Boolean(def.keyless) || isLocalEndpoint(baseUrl) || /freellm|local/i.test(key)
+  const apiKey = String(input.apiKey ?? '').trim()
+  if (requireKey && !isKeyless && !apiKey) errors.push('apiKey is required')
   // `noBaseUrl` providers (tm-hub relay) never talk to a base URL directly, so
   // no endpoint is required or validated.
   if (!baseUrl && def.noBaseUrl !== true) errors.push('baseUrl is required for this provider')
@@ -216,7 +231,7 @@ export function normalizeConnection(input = {}, { requireKey = true } = {}) {
       adapter: str(input.adapter) ?? def.adapter,
       baseUrl: (baseUrl ?? '').replace(/\/+$/, ''),
       model,
-      apiKey: def.keyless ? '' : apiKey,
+      apiKey: (isKeyless && !apiKey) ? '' : apiKey,
       enabled,
       capabilities: { ...def.capabilities },
       privacy: def.privacy,

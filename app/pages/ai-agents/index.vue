@@ -83,7 +83,48 @@ async function selectAgent(item: AiAgent) {
   await refreshDetail()
 }
 
-onMounted(load)
+const live = useAiAgentsLive()
+
+onMounted(() => {
+  void load()
+  live.start()
+})
+
+onUnmounted(() => {
+  live.stop()
+})
+
+watch(live.agents, (streamAgents) => {
+  if (streamAgents?.length) {
+    for (const sa of streamAgents) {
+      const idx = agents.value.findIndex(a => a.agentId === sa.agentId)
+      if (idx >= 0) {
+        agents.value[idx] = { ...agents.value[idx], ...sa }
+      } else {
+        agents.value.push(sa)
+      }
+    }
+    if (detail.value && selectedId.value) {
+      const updated = streamAgents.find(a => a.agentId === selectedId.value)
+      if (updated) {
+        detail.value.agent = { ...detail.value.agent, ...updated }
+      }
+    }
+  }
+})
+
+watch(live.actions, (streamActions) => {
+  if (streamActions?.length && detail.value && selectedId.value) {
+    const forSelected = streamActions.filter(a => a.agentId === selectedId.value)
+    if (forSelected.length) {
+      const existingIds = new Set(detail.value.actions.map(a => a.actionId))
+      const newItems = forSelected.filter(a => !existingIds.has(a.actionId))
+      if (newItems.length) {
+        detail.value.actions = [...newItems, ...detail.value.actions].slice(0, 50)
+      }
+    }
+  }
+})
 
 /** Policy row for a level — read from the server table, never guessed. */
 const levelPolicy = (level: string): AiPolicyLevel | undefined => policy.value.find(p => p.level === level)

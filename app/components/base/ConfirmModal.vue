@@ -53,9 +53,9 @@ function onCancel() {
     </template>
 
     <template #footer>
-      <UButton :label="cancelLabel || t('global.cancel')" color="neutral" variant="ghost" :disabled="loading"
+      <UButton :label="cancelLabel || t('common.cancel')" color="neutral" variant="ghost" :disabled="loading"
         @click="onCancel" />
-      <UButton :label="confirmLabel || t('global.confirm')" variant="soft" :icon="confirmIcon" :color="color"
+      <UButton :label="confirmLabel || t('common.confirm')" variant="soft" :icon="confirmIcon" :color="color"
         :loading="loading" @click="emit('confirm')" />
     </template>
   </UModal>

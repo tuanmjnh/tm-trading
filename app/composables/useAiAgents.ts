@@ -54,10 +54,15 @@ export const useAiAgents = () => {
     }
   }
 
-  async function agents(options: { state?: string; limit?: number } = {}): Promise<{ agents: AiAgent[]; policy: AiPolicyLevel[] }> {
+  async function agents(options: { state?: string; autonomy?: string; accountId?: string; limit?: number } = {}): Promise<{ agents: AiAgent[]; policy: AiPolicyLevel[] }> {
     try {
       const res = await $fetch<AiAgentsListResponse>('/api/v1/ai-agents', {
-        params: { limit: options.limit ?? 100, state: options.state || undefined }
+        params: {
+          limit: options.limit ?? 100,
+          state: options.state || undefined,
+          autonomy: options.autonomy || undefined,
+          accountId: options.accountId || undefined
+        }
       })
       return { agents: res.data ?? [], policy: res.meta?.policy ?? [] }
     } catch {
@@ -82,6 +87,18 @@ export const useAiAgents = () => {
       return res.data ?? []
     } catch {
       return []
+    }
+  }
+
+  async function update(id: string, body: { name?: string; description?: string; accountId?: string; instruments?: string[] }): Promise<AiAgent | null> {
+    try {
+      const res = await $fetch<{ success: boolean; data: AiAgent }>(`/api/v1/ai-agents/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body
+      })
+      return res.data ?? null
+    } catch {
+      return null
     }
   }
 
@@ -113,5 +130,5 @@ export const useAiAgents = () => {
     return agent(id)
   }
 
-  return { status, agents, agent, activity, create, publishVersion, validateVersion, move, recordRiskIntegration }
+  return { status, agents, agent, activity, update, create, publishVersion, validateVersion, move, recordRiskIntegration }
 }

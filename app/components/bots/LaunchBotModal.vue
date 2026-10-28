@@ -2,17 +2,16 @@
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { getErrorMessage } from '~/shared/utils/errors'
 import type { MethodMeta } from '#shared/types/methods'
-import type { PaperAccountSummary } from '~/composables/usePaperAccounts'
+import type { BotExecutionConfig } from '#shared/types/bots'
 import type { SymbolRow } from '~/components/trading/SymbolSearchModal.vue'
-
 interface LaunchPrefill {
   profileId?: string
   name?: string
   symbol?: string
   timeframe?: string
-  account?: string
+  initialCapital?: number
   paramOverrides?: Record<string, number | boolean | string>
-  execution?: { slBreakevenOn?: boolean, slTriggerR?: number, slTrailOn?: boolean, slTrailAtrMult?: number } | null
+  execution?: BotExecutionConfig | null
 }
 
 /**
@@ -43,10 +42,9 @@ const slTrailOn = ref(false)
 const slTrailAtrMult = ref(1.5)
 const name = ref('')
 const nameTouched = ref(false)
-const ACCOUNT_AUTO = '__auto__'
-const account = ref(ACCOUNT_AUTO)
-const accounts = ref<PaperAccountSummary[]>([])
-const loadingAccounts = ref(false)
+const initialCapital = ref(10000)
+const sizingType = ref<'percentage' | 'fixed_value'>('percentage')
+const sizingValue = ref<number>(1)
 
 const { t, te } = useI18n()
 
@@ -91,16 +89,6 @@ const TIMEFRAMES = ['1', '5', '15', '30', '60', '240', 'D']
 
 const methodItems = computed(() => methods.value.map(m => ({ label: m.name, value: m.id })))
 const currentDefaults = computed(() => methods.value.find(m => m.id === method.value)?.defaults ?? null)
-const paper = usePaperAccounts()
-
-/** Existing live-paper accounts (auto-archived excluded server-side). */
-const accountItems = computed(() => [
-  { label: t('strategyLab.bots.launchAccountAuto'), value: ACCOUNT_AUTO },
-  ...accounts.value.map(a => ({
-    label: `${a.accountId} · ${a.initialBalance.toLocaleString()} ${a.currency}`,
-    value: a.accountId
-  }))
-])
 
 /** Auto name follows the launch config until the user edits the field. */
 const autoName = computed(() =>
@@ -130,12 +118,18 @@ async function applyPrefill() {
     if (p.symbol) symbol.value = p.symbol
     if (p.timeframe && TIMEFRAMES.includes(p.timeframe)) timeframe.value = p.timeframe
     if (p.paramOverrides) paramValues.value = { ...(currentDefaults.value ?? {}), ...p.paramOverrides }
-    account.value = p.account || ACCOUNT_AUTO
+    if (p.initialCapital != null && Number.isFinite(p.initialCapital)) initialCapital.value = p.initialCapital
     if (p.execution) {
       slBreakevenOn.value = p.execution.slBreakevenOn === true
       slTriggerR.value = p.execution.slTriggerR ?? 1
       slTrailOn.value = p.execution.slTrailOn === true
       slTrailAtrMult.value = p.execution.slTrailAtrMult ?? 1.5
+      if (p.execution.sizingType === 'fixed_value' || p.execution.sizingType === 'percentage') {
+        sizingType.value = p.execution.sizingType
+      }
+      if (Number.isFinite(p.execution.sizingValue) && Number(p.execution.sizingValue) > 0) {
+        sizingValue.value = Number(p.execution.sizingValue)
+      }
     }
     if (p.name) { name.value = p.name; nameTouched.value = true }
     await nextTick()
@@ -153,14 +147,9 @@ watch(open, async (value) => {
   slTriggerR.value = 1
   slTrailOn.value = false
   slTrailAtrMult.value = 1.5
-  if (!accounts.value.length) {
-    loadingAccounts.value = true
-    const res = await paper.accounts().catch(() => ({ items: [], mongo: 'down' as const }))
-    accounts.value = res.items
-    loadingAccounts.value = false
-    // Default stays on the "Auto (paper-main)" sentinel — the executor
-    // auto-seeds that account when the owner has none yet.
-  }
+  initialCapital.value = 10000
+  sizingType.value = 'percentage'
+  sizingValue.value = 1
   if (!universeRows.value.length) {
     const res = await catalog.universe().catch(() => null)
     universeRows.value = res?.rows ?? []
@@ -203,14 +192,16 @@ async function launch() {
             symbol: symbol.value.trim().toUpperCase(),
             timeframe: timeframe.value,
             name: name.value.trim() || undefined,
-    account: account.value === ACCOUNT_AUTO ? undefined : account.value,
-    params: parsed,
-    execution: {
-      slBreakevenOn: slBreakevenOn.value,
-      slTriggerR: slTriggerR.value,
-      slTrailOn: slTrailOn.value,
-      slTrailAtrMult: slTrailAtrMult.value
-    }
+            initialCapital: Number(initialCapital.value) || 10000,
+            params: parsed,
+            execution: {
+              slBreakevenOn: slBreakevenOn.value,
+              slTriggerR: slTriggerR.value,
+              slTrailOn: slTrailOn.value,
+              slTrailAtrMult: slTrailAtrMult.value,
+              sizingType: sizingType.value,
+              sizingValue: Number(sizingValue.value) || (sizingType.value === 'fixed_value' ? 500 : 1)
+            }
           }
         }
       )
@@ -255,10 +246,9 @@ async function launch() {
             <USelectMenu v-model="timeframe" :items="TIMEFRAMES.map(tf => ({ label: tfLabel(tf), value: tf }))"
               value-key="value" label-key="label" class="w-full" />
           </UFormField>
-          <UFormField :label="t('strategyLab.bots.launchAccount')" class="sm:col-span-2"
-            :help="accounts.length ? undefined : t('strategyLab.bots.launchAccountHint')">
-            <USelect v-model="account" :items="accountItems" value-key="value" label-key="label"
-              :loading="loadingAccounts" class="w-full" />
+          <UFormField :label="t('strategyLab.bots.launchInitialCapital')" class="sm:col-span-2"
+            :help="t('strategyLab.bots.launchInitialCapitalHint')">
+            <UInputNumber v-model="initialCapital" class="w-full" :min="100" :step="1000" />
           </UFormField>
         </div>
 
@@ -292,6 +282,40 @@ async function launch() {
                 </UTooltip>
               </div>
             </UFormField>
+          </div>
+        </div>
+
+        <!-- Order Sizing Configuration -->
+        <div class="space-y-2">
+          <div class="flex items-center gap-2 border-t border-default pt-2">
+            <UIcon name="i-lucide-calculator" class="size-3.5 text-muted" />
+            <span class="text-xs font-semibold text-highlighted">{{ t('strategyLab.bots.sizingSection') }}</span>
+          </div>
+          <div class="rounded border border-default p-3 space-y-3">
+            <div class="grid gap-3 sm:grid-cols-2">
+              <UFormField :label="t('strategyLab.bots.sizingMode')">
+                <USelect
+                  v-model="sizingType"
+                  class="w-full"
+                  :items="[
+                    { label: t('strategyLab.bots.sizingPercentage'), value: 'percentage' },
+                    { label: t('strategyLab.bots.sizingFixedValue'), value: 'fixed_value' }
+                  ]"
+                />
+              </UFormField>
+              <UFormField
+                :label="sizingType === 'percentage' ? t('strategyLab.bots.sizingPctLabel') : t('strategyLab.bots.sizingUsdLabel')"
+                :help="sizingType === 'percentage' ? t('strategyLab.bots.sizingPctHint') : t('strategyLab.bots.sizingUsdHint')"
+              >
+                <UInputNumber
+                  v-model="sizingValue"
+                  class="w-full"
+                  :step="sizingType === 'percentage' ? 0.5 : 50"
+                  :min="sizingType === 'percentage' ? 0.1 : 1"
+                  :max="sizingType === 'percentage' ? 100 : 1000000"
+                />
+              </UFormField>
+            </div>
           </div>
         </div>
 

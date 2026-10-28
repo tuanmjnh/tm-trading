@@ -209,21 +209,49 @@ function finalizeRows(raw: RawRow[], options: AiTransferParseOptions): AiTransfe
 
 function rowsFromJson(text: string): RawRow[] {
   const parsed = JSON.parse(text) as unknown
-  const list = Array.isArray(parsed)
-    ? parsed
-    : ((parsed as Record<string, unknown>)?.connections
-      ?? (parsed as Record<string, unknown>)?.keys
-      ?? (parsed as Record<string, unknown>)?.providers
-      ?? [])
+  let list: unknown[] = []
+  if (Array.isArray(parsed)) {
+    list = parsed
+  } else if (parsed && typeof parsed === 'object') {
+    const obj = parsed as Record<string, unknown>
+    if (Array.isArray(obj.connections)) list = obj.connections
+    else if (Array.isArray(obj.keys)) list = obj.keys
+    else if (Array.isArray(obj.providers)) list = obj.providers
+    else {
+      // Keyed dictionary of providers e.g. { "freellmapi": { ... }, "openai": { ... } }
+      const entries: RawRow[] = []
+      for (const [providerKey, val] of Object.entries(obj)) {
+        if (!val || typeof val !== 'object') continue
+        const item = val as Record<string, unknown>
+        const opts = (item.options && typeof item.options === 'object') ? (item.options as Record<string, unknown>) : {}
+        const models = (item.models && typeof item.models === 'object') ? (item.models as Record<string, unknown>) : {}
+        const modelNames = Object.keys(models)
+        const firstModel = modelNames[0] || ''
+        entries.push({
+          provider: item.provider ?? item.platform ?? item.key ?? providerKey,
+          name: item.name ?? item.label ?? providerKey,
+          model: item.model ?? item.modelId ?? item.defaultModel ?? opts.model ?? firstModel,
+          baseUrl: item.baseUrl ?? item.base_url ?? item.apiBase ?? item.api_base ?? item.url ?? opts.baseURL ?? opts.baseUrl,
+          apiKey: item.apiKey ?? item.api_key ?? item.key ?? item.token ?? item.secret ?? opts.apiKey,
+          enabled: item.enabled ?? item.isEnabled ?? (item.disabled === true ? false : undefined)
+        })
+      }
+      if (entries.length > 0) return entries
+    }
+  }
   if (!Array.isArray(list)) throw new Error('expected an array, or an object with a connections/keys array')
   return list.map((item) => {
     const entry = (item || {}) as Record<string, unknown>
+    const opts = (entry.options && typeof entry.options === 'object') ? (entry.options as Record<string, unknown>) : {}
+    const models = (entry.models && typeof entry.models === 'object') ? (entry.models as Record<string, unknown>) : {}
+    const modelNames = Object.keys(models)
+    const firstModel = modelNames[0] || ''
     return {
       provider: entry.provider ?? entry.platform ?? entry.key ?? entry.providerKey,
       name: entry.name ?? entry.label,
-      model: entry.model ?? entry.modelId ?? entry.defaultModel ?? entry.primaryModel,
-      baseUrl: entry.baseUrl ?? entry.base_url ?? entry.apiBase ?? entry.api_base ?? entry.url,
-      apiKey: entry.apiKey ?? entry.api_key ?? entry.key ?? entry.token ?? entry.secret,
+      model: entry.model ?? entry.modelId ?? entry.defaultModel ?? entry.primaryModel ?? opts.model ?? firstModel,
+      baseUrl: entry.baseUrl ?? entry.base_url ?? entry.apiBase ?? entry.api_base ?? entry.url ?? opts.baseURL ?? opts.baseUrl,
+      apiKey: entry.apiKey ?? entry.api_key ?? entry.key ?? entry.token ?? entry.secret ?? opts.apiKey,
       enabled: entry.enabled ?? entry.isEnabled ?? (entry.disabled === true ? false : undefined)
     }
   })

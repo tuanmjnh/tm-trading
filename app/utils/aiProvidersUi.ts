@@ -11,7 +11,8 @@ const PROVIDER_ERROR_KEYS: Record<string, string> = {
   'ai.network': 'errNetwork',
   'ai.http-error': 'errHttp',
   'ai.relay-tools': 'errRelayTools',
-  'hub_not_configured': 'hubNotConfigured'
+  'hub_not_configured': 'hubNotConfigured',
+  'ai.invalid-connection': 'errInvalidConnection'
 }
 
 export type Translate = (key: string) => string

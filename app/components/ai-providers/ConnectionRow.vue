@@ -5,7 +5,8 @@ import { aiProviderFormatWhen, aiProviderErrorText, aiProviderIsHubRow, aiProvid
 
 const props = defineProps<{
   row: AiProviderConnectionRow,
-  testing?: boolean
+  testing?: boolean,
+  discovering?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -14,6 +15,7 @@ const emit = defineEmits<{
   (e: 'edit'): void
   (e: 'remove'): void
   (e: 'open-models'): void
+  (e: 'discover-models'): void
 }>()
 
 const { t } = useI18n()
@@ -24,6 +26,7 @@ const isHub = computed(() => aiProviderIsHubRow(props.row))
 const actions = computed((): DropdownMenuItem[] => {
   const items: DropdownMenuItem[] = [
     { label: t('settings.aiProviders.test'), icon: 'i-lucide-activity', color: 'primary', disabled: props.testing, onSelect: () => emit('test') },
+    { label: t('settings.aiProviders.discoverModels'), icon: 'i-lucide-sparkles', color: 'neutral', disabled: props.discovering, onSelect: () => emit('discover-models') },
     { label: t('settings.aiProviders.models'), icon: 'i-lucide-library', color: 'neutral', onSelect: () => emit('open-models') }
   ]
   if (!isHub.value) {

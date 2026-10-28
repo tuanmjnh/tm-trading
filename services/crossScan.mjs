@@ -29,11 +29,19 @@ const defaultAdapters = {
     fetch: async ({ native }) => {
       const { premiumIndex } = await import('./binance.mjs')
       const { fetch } = globalThis
-      const url = new URL('https://fapi.binance.com/fapi/v1/ticker/24hr')
-      url.searchParams.set('symbol', native)
-      const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
-      if (!res.ok) throw new Error(`binance ticker HTTP ${res.status}`)
-      const row = await res.json()
+      let row
+      try {
+        const url = new URL('https://fapi.binance.com/fapi/v1/ticker/24hr')
+        url.searchParams.set('symbol', native)
+        const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        row = await res.json()
+      } catch {
+        const url = new URL('https://api.binance.com/api/v3/ticker/24hr')
+        url.searchParams.set('symbol', native)
+        const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
+        row = res.ok ? await res.json() : null
+      }
       const last = Number(row?.lastPrice)
       const quote = Number.isFinite(last) && last > 0 ? { last, bid: null, ask: null } : null
       const prem = (await premiumIndex().catch(() => [])).find((p) => p.symbol === native)

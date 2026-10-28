@@ -95,8 +95,11 @@ function applyCacheHeaders(event: H3Event, path: string): void {
 }
 
 function enforceRateLimit(event: H3Event, appId: string, flags: Record<string, unknown>): void {
+  // In development, bypass rate limiting to prevent 429s during rapid UI testing, re-probing, and hot module reloads
+  if (import.meta.dev || process.env.NODE_ENV !== 'production') return
+
   const api = flags.api as ApiFeatureSection | undefined
-  const rlCfg = api?.rateLimit
+  const rlCfg = api?.rateLimit ?? (flags.rateLimit as ApiFeatureSection['rateLimit'])
   const enabled = typeof rlCfg === 'boolean'
     ? rlCfg
     : isObj(rlCfg)
@@ -106,7 +109,7 @@ function enforceRateLimit(event: H3Event, appId: string, flags: Record<string, u
 
   const limit = isObj(rlCfg) && typeof rlCfg.maxPerMinute === 'number' && rlCfg.maxPerMinute > 0
     ? rlCfg.maxPerMinute
-    : 60
+    : 120
 
   const ip = getRequestIP(event, { xForwardedFor: true }) || 'unknown'
   const key = `api:${appId}:${ip}`

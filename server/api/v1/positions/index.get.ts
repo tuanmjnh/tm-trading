@@ -51,17 +51,38 @@ export default defineEventHandler(async (event) => {
     }>
     const bySymbol = new Map<string, LiveQuote>()
     for (const r of rows) {
-      bySymbol.set(r.symbol, {
+      const q: LiveQuote = {
         bid: typeof r.bid === 'number' ? r.bid : null,
         ask: typeof r.ask === 'number' ? r.ask : null,
         last: typeof r.last === 'number' ? r.last : null,
         time: typeof r.eventTime === 'number' ? r.eventTime : null
-      })
+      }
+      bySymbol.set(r.symbol, q)
+      const clean = r.symbol.replace(/\.P$/i, '').toUpperCase()
+      bySymbol.set(clean, q)
+      bySymbol.set(`${clean}.P`, q)
     }
+
+    // Auto-subscribe any open position symbols to the plane if not already observed
+    for (const p of items) {
+      if (p.status === 'open' && p.symbol) {
+        const clean = p.symbol.replace(/\.P$/i, '').toUpperCase()
+        if (!bySymbol.has(clean) && plane.addSymbol) {
+          plane.addSymbol(clean)
+        }
+      }
+    }
+
     if (bySymbol.size > 0) {
-      quoteFor = (symbol: string) => bySymbol.get(symbol) ?? null
+      quoteFor = (symbol: string) => {
+        if (!symbol) return null
+        const clean = symbol.replace(/\.P$/i, '').toUpperCase()
+        return bySymbol.get(symbol) ?? bySymbol.get(clean) ?? bySymbol.get(`${clean}.P`) ?? null
+      }
     }
-  } catch { /* plane/config unavailable — keep base read fail-soft */ }
+  } catch (err) {
+    console.warn('[positions] market-plane error:', err)
+  }
 
   const margin = await simulationMargin()
   const MARGIN_DEFAULTS = margin.MARGIN_DEFAULTS

@@ -27,6 +27,13 @@ export function botAlertKey(instanceId, signalKey) {
   return `${BOT_ALERT_PREFIX}${instanceId}_${signalKey}`
 }
 
+/** Normalize symbol variants (e.g. BTCUSDT and BTCUSDT.P) to prevent bridge drops. */
+export function symbolVariants(symbol) {
+  if (!symbol) return []
+  const base = String(symbol).trim().toUpperCase().replace(/\.P$/i, '')
+  return [base, `${base}.P`]
+}
+
 /** Sub-book of an instance (registry: `'default'` sentinel, never the tenancy axis). */
 export function accountOf(instance) {
   const a = instance?.accountId
@@ -88,7 +95,10 @@ export function signalToAlert({ signal, instance } = {}) {
   if (signal.accountId != null && String(signal.accountId) !== accountId) return null
 
   const subs = Array.isArray(instance.subscriptions) ? instance.subscriptions : []
-  if (subs.length > 0 && !subs.includes(signal.symbol)) return null
+  if (subs.length > 0) {
+    const allVariants = [...new Set(subs.flatMap(symbolVariants))]
+    if (!allVariants.includes(String(signal.symbol ?? '').toUpperCase())) return null
+  }
 
   const meta = signal.meta && typeof signal.meta === 'object' ? signal.meta : {}
   const sl = Number(meta.sl)
@@ -97,6 +107,27 @@ export function signalToAlert({ signal, instance } = {}) {
   const entry = Number(meta.entry)
 
   const ts = signal.ts instanceof Date ? signal.ts : new Date(signal.ts)
+
+  const rawObj = {
+    type: 'market',
+    botInstanceId: instance.instanceId,
+    signalKey: signal.signalKey,
+    signalType: signal.type,
+    attribution: signal.attribution ?? null,
+    meta: signal.meta ?? null,
+  }
+
+  const sizingType = instance.execution?.sizingType || 'percentage'
+  const sizingValue = Number(instance.execution?.sizingValue) || 1
+
+  if (sizingType === 'fixed_value' && sizingValue > 0) {
+    const entryPrice = Number.isFinite(entry) && entry > 0 ? entry : Number(signal.price)
+    if (entryPrice > 0) {
+      rawObj.qty = Number((sizingValue / entryPrice).toFixed(6))
+    }
+  } else if (sizingType === 'percentage' && sizingValue > 0 && sizingValue <= 100) {
+    rawObj.riskPct = sizingValue
+  }
 
   return {
     alertKey: botAlertKey(instance.instanceId, signal.signalKey),
@@ -114,14 +145,7 @@ export function signalToAlert({ signal, instance } = {}) {
     sl: Number.isFinite(sl) && sl > 0 ? sl : null,
     tps,
     status: 'received',
-    raw: JSON.stringify({
-      type: 'market',
-      botInstanceId: instance.instanceId,
-      signalKey: signal.signalKey,
-      signalType: signal.type,
-      attribution: signal.attribution ?? null,
-      meta: signal.meta ?? null,
-    }),
+    raw: JSON.stringify(rawObj),
   }
 }
 
@@ -151,7 +175,10 @@ export async function bridgeSignalsForInstance({ instance, models, limit = BOT_S
 
   const filter = { ownerId: instance.ownerId, ...cursorFilter(instance) }
   const subs = Array.isArray(instance.subscriptions) ? instance.subscriptions : []
-  if (subs.length > 0) filter.symbol = { $in: subs }
+  if (subs.length > 0) {
+    const allVariants = [...new Set(subs.flatMap(symbolVariants))]
+    filter.symbol = { $in: allVariants }
+  }
   // Informational events are never orders; filter in the query so the watermark
   // still advances past them.
   filter.type = { $in: [...ENTRY_SIGNAL_TYPES] }

@@ -192,3 +192,13 @@ collections are not touched.
    duplicate, invalid id/currency/balance, "book in use" refusal, rename clash,
    archive upsert), `tests/inAppSignals.test.ts` pins `toInAppAlertDoc`, and
    `tests/tenancy-isolation.test.ts` pins that archived desks are never traded.
+
+## Bot Capital & Demo Trading Separation
+
+As documented in `docs/web-app/bot-capital-isolation-architecture.md`:
+- `paper_accounts` is dedicated strictly to manual / demo trading.
+- Strategy bots (`bot_instances`) and AI agents (`ai_agents`) do not bind to shared `paper_accounts`. Each bot runs as an isolated strategy testbench with its own configurable `initialCapital` (default `$10,000.00`) and independent PnL/volume tracking.
+- Dual rerun semantics are supported:
+  1. `reset`: Fast creation of a fresh instance with initial capital reset to default.
+  2. `continue`: Resume execution inheriting cumulative PnL, existing trade history, and current equity balance.
+
