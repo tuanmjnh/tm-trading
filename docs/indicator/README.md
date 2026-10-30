@@ -86,6 +86,9 @@ Hệ thống hợp lưu Trend Ribbon & Dynamic Zones toàn diện:
 - [docs/indicator/liquidity/](./liquidity/): Nghiên cứu cấu trúc thanh khoản thể chế, vùng tích lũy và bẫy giá.
   - [liquidity-sweep.md](./liquidity/liquidity-sweep.md): Quy tắc quét thanh khoản, râu từ chối và tín hiệu xác nhận.
 - [docs/indicator/tm-indicator/](./tm-indicator/): Tài liệu lưu trữ về các giai đoạn phát triển ban đầu của TM Indicator v1 (Phase 0–8).
+- [docs/indicator/mtf-one-candle/](./mtf-one-candle/): Phương pháp **quét khung lớn → 1 cây nến** (2 video mới 10/2026, USOIL + XAU).
+  - [README.md](./mtf-one-candle/README.md): Bằng chứng theo mốc thời gian (D1→H4→H1→M30→M15→M5), định nghĩa nến mồi, công thức Entry/SL/TP, thang nhồi lệnh L0–L3 và đánh giá điểm yếu.
+  - [BUILD.md](./mtf-one-candle/BUILD.md): Spec build chỉ báo `MTF One-Candle` (11 module, input, thuật toán, alert `mtf1c.signal.v1.0`, twin backtest, nghiệm thu).
 
 ---
 
