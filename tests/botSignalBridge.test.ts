@@ -116,9 +116,14 @@ describe('bot signal bridge — replay-safe cursor', () => {
 
   test('the cursor is strictly after the watermark, keyed on a tie', () => {
     const f = cursorFilter({ lastSignalTs: 1000, lastSignalKey: 'sig_a' })
-    assert.equal(f.$or.length, 2)
+    // Three clauses (services/botSignalBridge.mjs): (1) strictly newer ts,
+    // (2) same ts but a lexicographically larger key, (3) a larger key at any ts
+    // (signalKey ordering is the primary one). Duplicate replays stay safe
+    // through the unique alertKey index, not through this filter.
+    assert.equal(f.$or.length, 3)
     assert.deepEqual(f.$or[0], { ts: { $gt: new Date(1000) } })
     assert.deepEqual(f.$or[1], { ts: new Date(1000), signalKey: { $gt: 'sig_a' } })
+    assert.deepEqual(f.$or[2], { signalKey: { $gt: 'sig_a' } })
     assert.deepEqual(cursorFilter({ lastSignalTs: 1000 }), { ts: { $gt: new Date(1000) } })
   })
 })

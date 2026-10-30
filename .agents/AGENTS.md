@@ -27,7 +27,7 @@ Mongoose are only required for the dashboard and the store layer.
 ```bash
 npm run pine:build          # assemble pine/parts* -> pine/dist (6 targets) + lint
 npm test               # smoke + engine + market + journal + preset-drift + stamp + risk
-                       # + paper + drift + mt5 + db + services + ai + ai-review (14 suites)
+                       # + paper + drift + exchange-demo + db + services + ai + ai-review (14 suites)
 npm run verify         # pine:build + test  <- the gate; must stay green
 npm run typecheck      # tools/typecheck.mjs
 
@@ -80,7 +80,7 @@ app/              Nuxt dashboard:
 server/           webhook.mjs (TradingView receiver)
 pine/             parts/ parts-vsa/ parts-sweep/ parts-xau/ parts-xau2/ shared/ dist/   (build inputs; dist is generated)
 tools/            build, smoke, errors, copy, pine-ref, typecheck, backup
-docs/             roadmap, architecture, data-model, time-rules, alert-schema, mt5-ipc,
+docs/             roadmap, architecture, data-model, time-rules, alert-schema,
                   method-league, vsa-wyckoff-method, vsa-optimization, app-inheritance
 tests/            run-tests.mjs (app-level suite)
 ```
@@ -99,7 +99,7 @@ re-running the fixtures. `tools/build.mjs` lints Pine against `tools/pine-ref.js
 `paramsHash`/`engineVersion`** in a report or preset table.
 
 ### 3. No order without the risk gate (D7)
-`exec/risk.mjs` is the single choke point for every order (manual, scanner, AI, MT5). AI output is
+`exec/risk.mjs` is the single choke point for every order (manual, scanner, AI, exchange demo). AI output is
 **proposals only** — see the guardrail comments in `ai/agent.mjs` and `ai/daily-brief.mjs`.
 
 ### 4. Idempotency has two layers (D3/D4)
@@ -134,11 +134,14 @@ overfitting. Read `docs/indicator/vsa-wyckoff/vsa-optimization.md` before propos
 
 ## UI & Coding Conventions
 
+- **Open Source First**: Đối với những chức năng chưa quen thuộc, đừng viết từ con số 0, hãy tìm kiếm các dự án mã nguồn mở trên GitHub để so sánh ý tưởng trước khi bắt tay vào làm.
 - **BasePage Mandatory**:
   - Every page MUST wrap its layout in `<BasePage :title="..." :description="...">`.
   - Auxiliary header buttons belong in `template #right`.
 - **Button Variants**:
   - Primary actions use `color="primary" variant="soft"`.
+- **Form Controls & Inputs**:
+  - Always add class `w-full` for inputs (`UInput`, `USelect`, `USelectMenu`, `UTextarea`, etc.) to ensure consistent responsive layout across all forms.
 - **GridList & Batch Deletion**:
   - Prefer `LazyGridList` over `BaseTable`. Always provide a `#mobile-content` slot for responsive cards.
   - Delete operations support batch removal using `LazyBaseConfirmModal`.

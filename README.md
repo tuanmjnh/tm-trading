@@ -1,21 +1,20 @@
 # TM Trading
 
 **Ứng dụng trade desk tự động**: engine tín hiệu + backtest chạy local, store MongoDB,
-dashboard Nuxt, **risk gate** và execution (paper → MT5/exchange).
+dashboard Nuxt, **risk gate** và execution (paper → exchange demo).
 
 Bộ chỉ báo TradingView (Pine Script **v6**) là **công cụ hỗ trợ** — nguồn tín hiệu và
-đối chiếu tay — **không phải sản phẩm chính**. Định hướng đầy đủ: `docs/web-app/tm-trading-roadmap-v3.5.md`.
+đối chiếu tay — **không phải sản phẩm chính**. Định hướng đầy đủ: `docs/web-app/tm-trading-roadmap-v3.9.md`.
 
 ```
 tm-trading/
 ├─ docs/
-│  ├─ tm-trading-roadmap-v3.5.md kế hoạch tổng thể hiện hành (§57–§60) — bản cũ: docs/web-app/archive/
+│  ├─ tm-trading-roadmap-v3.9.md kế hoạch tổng thể hiện hành (§57–§64) — bản cũ: docs/web-app/archive/
 │  ├─ data-model.md        schema/index/version của mọi collection  (Phase 3)
 │  ├─ app-inheritance.md   kế thừa app/ từ tm-hub: giữ/cắt gì + bẫy môi trường
 │  ├─ architecture.md      kiến trúc, luồng dữ liệu, quy ước mở rộng
 │  ├─ vsa-wyckoff-method.md  spec phương pháp VSA/Wyckoff (spec của engine)
 │  ├─ time-rules.md        hợp đồng thời gian D2 (UTC ms, ngày UTC, tz tường minh)
-│  ├─ mt5-ipc.md           hợp đồng IPC bridge MT5 (Phase 12, chốt sớm)
 │  └─ alert-schema.md      đặc tả payload JSON + luật bump `v`
 ├─ pine/                   ← CÔNG CỤ HỖ TRỢ (không phải sản phẩm)
 │  ├─ parts/*.pine         ← SỬA Ở ĐÂY (nguồn duy nhất — TM Signals/Backtest)

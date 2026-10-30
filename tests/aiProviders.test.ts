@@ -72,13 +72,30 @@ describe('normalizeConnection', () => {
     assert.equal(JSON.stringify(r).includes('sk-secret-value'), false)
   })
 
-  test('requires an explicit base URL for deployments', () => {
-    const missing = normalizeConnection({ provider: 'freellmapi', apiKey: 'k'.repeat(20), model: 'x' })
+  test('deployment providers with no default endpoint require an explicit base URL', () => {
+    // custom_openai (requiresBaseUrl: true) still pins the D35 contract: no
+    // default endpoint may be invented for a deployment.
+    const missing = normalizeConnection({ provider: 'custom_openai', apiKey: 'k'.repeat(20), model: 'x' })
     assert.equal(missing.ok, false)
     assert.ok(missing.errors.some((e) => e.includes('baseUrl')))
-    const ok = normalizeConnection({ provider: 'freellmapi', apiKey: 'k'.repeat(20), model: 'x', baseUrl: 'https://free.example/v1' })
+    const ok = normalizeConnection({ provider: 'custom_openai', apiKey: 'k'.repeat(20), model: 'x', baseUrl: 'https://free.example/v1' })
     assert.equal(ok.ok, true)
     assert.equal(ok.connection.baseUrl, 'https://free.example/v1')
+  })
+
+  test('freellmapi defaults to a local keyless deployment and accepts an explicit endpoint', () => {
+    // Deliberate contract since 2026-10-28: freellmapi ships a loopback default
+    // (isLocalEndpoint -> keyless), no remote endpoint is ever invented.
+    const local = normalizeConnection({ provider: 'freellmapi', model: 'x' })
+    assert.equal(local.ok, true)
+    assert.equal(local.connection.baseUrl, 'http://127.0.0.1:31415/v1')
+    assert.equal(local.connection.apiKey, '')
+    assert.equal(local.connection.privacy, 'deployment')
+    assert.equal(new URL(local.connection.baseUrl).hostname, '127.0.0.1')
+
+    const explicit = normalizeConnection({ provider: 'freellmapi', apiKey: 'k'.repeat(20), model: 'x', baseUrl: 'https://free.example/v1' })
+    assert.equal(explicit.ok, true)
+    assert.equal(explicit.connection.baseUrl, 'https://free.example/v1')
   })
 
   test('keyless Ollama needs no key; keyed providers do', () => {

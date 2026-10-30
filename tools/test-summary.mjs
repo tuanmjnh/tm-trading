@@ -28,11 +28,12 @@ const SUITES = [
   ['journal', 'engine/test-journal.mjs', []],
   ['preset-drift', 'engine/test-preset-drift.mjs', []],
   ['stamp', 'exec/test-stamp.mjs', []],
+  ['exchange-demo', 'exec/exchangeDemo.test.mjs', []],
+  ['exchange', 'exec/exchange/exchange.test.mjs', []],
   ['risk', 'exec/test-risk.mjs', []],
   ['paper', 'exec/test-paper.mjs', []],
   ['simulation', 'simulation/test.mjs', []],
   ['drift', 'exec/test-drift.mjs', []],
-  ['mt5', 'exec/mt5/test.mjs', []],
   ['db', 'engine/test-db.mjs', []],
   ['services', 'services/test.mjs', []],
   ['alert-rules', 'engine/test-alert-rules.mjs', []],
@@ -42,8 +43,12 @@ const SUITES = [
 
 const parseSummary = (out) => {
   const m = String(out).match(/(?:PASS|FAIL) — (\d+) pass, (\d+) fail\s*$/m)
-  if (!m) return null
-  return { pass: Number(m[1]), fail: Number(m[2]) }
+  if (m) return { pass: Number(m[1]), fail: Number(m[2]) }
+  // node:test TAP output (e.g. `node --test` / node:test suites) reports counts
+  // as `# pass N` / `# fail N` lines instead of the project's final summary line.
+  const tap = String(out).match(/# pass (\d+)[\s\S]*?# fail (\d+)/m)
+  if (tap) return { pass: Number(tap[1]), fail: Number(tap[2]) }
+  return null
 }
 
 const gitRev = (() => {

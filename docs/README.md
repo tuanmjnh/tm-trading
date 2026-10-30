@@ -15,7 +15,7 @@ docs/
 │   ├── xau/            # Historical XAU signals indicator blueprints
 │   └── README.md       # Indicator index
 ├── web-app/        # Nuxt 4 dashboard, UI design system, architecture & app roadmaps
-└── engine/         # Core quantitative signal engine, data models, time rules & MT5 IPC
+└── engine/         # Core quantitative signal engine, data models, time rules
 ```
 
 ---
@@ -48,7 +48,7 @@ docs/
 - [docs/web-app/app-inheritance.md](file:///d:/Applications/tm-trading/docs/web-app/app-inheritance.md): Hub-client architecture, satellite modules, and IAM integration.
 - [docs/web-app/ui-design-system.md](file:///d:/Applications/tm-trading/docs/web-app/ui-design-system.md): UI styling, component tokens, dark theme, and typography guidelines.
 - [docs/web-app/navigation-audit.md](file:///d:/Applications/tm-trading/docs/web-app/navigation-audit.md): Menu routes, authorization mapping, and navigation hierarchy.
-- [docs/web-app/tm-trading-roadmap-v3.5.md](file:///d:/Applications/tm-trading/docs/web-app/tm-trading-roadmap-v3.5.md): **Web App Roadmap V3.5 — the single authority.** §59 = AI agents, bots, sessions, autonomy; §60 = news, events & macro intelligence.
+- [docs/web-app/tm-trading-roadmap-v3.9.md](file:///d:/Applications/tm-trading/docs/web-app/tm-trading-roadmap-v3.9.md): **Web App Roadmap V3.9 — the single authority** (§59 AI agents/bots, §60 news/events/macro, §64 multi-exchange demo adapters and crypto-only execution scope).
 - [docs/web-app/ai-agent-session-audit.md](file:///d:/Applications/tm-trading/docs/web-app/ai-agent-session-audit.md): §59.17 required first deliverable — existing AI agent/session models, APIs and route ownership.
 - [docs/web-app/news-macro-status.md](file:///d:/Applications/tm-trading/docs/web-app/news-macro-status.md): §60 status record — slice status, closed gaps and their tests, remaining coverage/translation gaps.
 - [docs/web-app/roadmap-v3.5-gap-audit.md](file:///d:/Applications/tm-trading/docs/web-app/roadmap-v3.5-gap-audit.md): The gap audit that produced the §59/§60 work list, with a closure log at the top — read §0 before acting on a gap.
@@ -62,4 +62,3 @@ docs/
 - [docs/engine/time-rules.md](file:///d:/Applications/tm-trading/docs/engine/time-rules.md): UTC calendar days, trading sessions, and clock invariants.
 - [docs/engine/alert-schema.md](file:///d:/Applications/tm-trading/docs/engine/alert-schema.md): Webhook alert payload specifications and signal deduplication.
 - [docs/engine/method-league.md](file:///d:/Applications/tm-trading/docs/engine/method-league.md): Method league table scoring and ranking framework.
-- [docs/engine/mt5-ipc.md](file:///d:/Applications/tm-trading/docs/engine/mt5-ipc.md): MetaTrader 5 IPC bridge protocol and order communication.

@@ -604,11 +604,11 @@ check('duong dan sai -> 404', r6.status === 404, `status=${r6.status}`)
 
 const r7 = await fetch(`http://127.0.0.1:${port}/health`)
 check('/health -> 200', r7.status === 200)
-// Phase 12: the MT5 bridge is a component of the aggregate /health (D9). A dead
-// or unconfigured bridge must stay fail-soft: the webhook must still answer 200.
+// V3.9 scope: non-exchange (MT5/broker) execution was removed from this app,
+// so the aggregate /health must not report an MT5 bridge component.
 const j7 = await r7.json()
-check('/health exposes the mt5 bridge component', j7.mt5?.component === 'mt5_bridge', JSON.stringify(j7.mt5))
-check('mt5 component never hides the webhook as failed', j7.ok === true && j7.dedupe === 'ram', JSON.stringify({ ok: j7.ok, dedupe: j7.dedupe }))
+check('/health no longer exposes the mt5 bridge component', j7.mt5 === undefined, JSON.stringify(j7.mt5))
+check('/health never hides the webhook as failed', j7.ok === true && j7.dedupe === 'ram', JSON.stringify({ ok: j7.ok, dedupe: j7.dedupe }))
 
 // --- xac thuc (P1): fail-closed, khong phu thuoc User-Agent ---
 const noTok = await post(base, '/tm-alert')

@@ -5,7 +5,7 @@
 > Tài liệu này là **nguồn chân lý duy nhất** về schema/index; sửa code thì sửa ở đây trước.
 >
 > Liên quan: `docs/engine/time-rules.md` (luật thời gian D2), `docs/engine/alert-schema.md` (hợp đồng payload
-> + luật bump `v`), `docs/engine/mt5-ipc.md` (hợp đồng IPC MT5).
+> + luật bump `v`).
 
 Stack: **Mongoose 9 · MongoDB 8.2 local · engine Node ESM**.
 
@@ -178,7 +178,7 @@ test của chúng **vẫn chạy khi không cài / không có Mongo**.
 ```bash
 npm run test:db      # 58 assertion, cần MongoDB; tự SKIP (exit 0) nếu không có
 npm test             # smoke + engine + journal + preset-drift + stamp + risk
-                     # + paper + drift + mt5 + db + services + ai + ai-review
+                     # + paper + drift + exchange-demo + db + services + ai + ai-review
 ```
 
 > Phase 13 added three suites to `npm test`: `test:journal` (126 assertions),
@@ -209,7 +209,8 @@ vẫn là `tm-trading-test` sau khi import.
 - [x] `engine/store.mjs` — ghi NDJSON **luôn**, ghi Mongo khi có URI (theo D1/D2) ✅ 2026-10-02
 - [x] Nối `server/webhook.mjs` ghi `alerts` + dùng `alertKey` (bỏ `Map` trong RAM) ✅ 2026-10-02
 - [x] Luật bump `v` của `docs/engine/alert-schema.md` + thêm `source` khi có nguồn thứ hai ✅ 2026-10-02
-- [x] Hợp đồng IPC cho MT5 (endpoint/schema/timeout/retry) → `docs/engine/mt5-ipc.md` ✅ 2026-10-02
+- [x] MT5 IPC bridge — **removed in V3.9 scope cleanup** (crypto-exchange demo execution only;
+  transport, tests and the IPC contract document were deleted 2026-10-28)
 - [x] Luật thời gian D2 → `docs/engine/time-rules.md` ✅ 2026-10-02
 
 **Acceptance Phase 3** (roadmap §3): `docs/engine/data-model.md` tồn tại ✅ · `engine/store.mjs` ghi
@@ -331,7 +332,7 @@ Shape (one row per executed trade):
 | Field | Meaning |
 |---|---|
 | `key` | `j1_` + sha256 of `{v, account, source, externalId\|id}` — derived from the upstream identity, **not** a second order-id scheme |
-| `source` | `paper` · `mt5` · `exchange` · `manual` (else `unknown`) |
+| `source` | `paper` · `exchange` · `manual` (else `unknown`); `mt5` survives only as a legacy label for pre-V3.9 rows — the bridge itself was removed in V3.9 |
 | `account`, `sourceId` | upstream account + `positions.externalId` (or `_id`) |
 | `symbol`, `tf`, `dir` | `positions.tf` (written from the opening alert since §10.3); a LEGACY position has none, so the projection still falls back to `alerts.alertKey = positions.signalKey`, else `unknown` |
 | `entryPrice`, `exitPrice`, `sl`, `tps`, `qty` | filled from the position |

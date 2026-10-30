@@ -1,4 +1,7 @@
-# Skill: error-handling
+---
+name: error-handling
+description: API error convention and i18n statusMessage handling across backend createError and frontend getErrorMessage resolvers.
+---
 
 # API error convention (i18n statusMessage)
 

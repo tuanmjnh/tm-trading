@@ -14,6 +14,14 @@
 
 export const SESSION_KINDS = Object.freeze(['live-paper', 'replay'])
 
+/**
+ * Execution modes (roadmap §63.5). A session binds EXACTLY ONE execution adapter.
+ * `EXCHANGE_DEMO` routes orders to a crypto exchange demo venue; production/
+ * mainnet is NOT a mode and cannot be selected. `INTERNAL_PAPER` is the default
+ * so pre-V3.9 sessions behave exactly as before.
+ */
+export const EXECUTION_MODES = Object.freeze(['BACKTEST', 'REPLAY', 'INTERNAL_PAPER', 'EXCHANGE_DEMO'])
+
 /** Lifecycle states. `queued`/`starting`/`stopping` are transient by design. */
 export const SESSION_STATES = Object.freeze([
   'queued',
@@ -95,10 +103,20 @@ export function createSession(input = {}) {
     manifest = null,
     restartedFrom = null,
     createdBy = null,
+    // V3.9 (§63.5/§64.5B): execution binding. `executionMode` defaults to the
+    // historical internal-paper path so existing sessions behave EXACTLY as
+    // before. `executionVenue` is IMMUTABLE for the life of an active session —
+    // switching venue is a NEW session (failover.assertExecutionVenueImmutable).
+    executionMode = 'INTERNAL_PAPER',
+    executionVenue = null,
+    exchangeConnectionId = null,
+    marketDataVenue = null,
     now = Date.now(),
   } = input ?? {}
 
   if (!SESSION_KINDS.includes(kind)) throw new Error(`session: kind must be one of ${SESSION_KINDS.join('|')} (got ${String(kind)})`)
+  if (!EXECUTION_MODES.includes(executionMode)) throw new Error(`session: executionMode must be one of ${EXECUTION_MODES.join('|')} (got ${String(executionMode)})`)
+  if (executionMode === 'EXCHANGE_DEMO' && !executionVenue) throw new Error('session: EXCHANGE_DEMO requires an executionVenue')
   const at = Number(now)
   if (!Number.isFinite(at) || at <= 0) throw new Error('session: now must be a positive epoch ms')
   const id = sid === null || sid === undefined ? sessionId(at) : String(sid)
@@ -115,6 +133,11 @@ export function createSession(input = {}) {
     ownerId: ownerId == null ? null : String(ownerId),
     instruments: Array.isArray(instruments) ? instruments.map(String) : [],
     timeframes: Array.isArray(timeframes) ? timeframes.map(String) : [],
+    // V3.9 execution binding (additive, nullable; INTERNAL_PAPER = legacy default).
+    executionMode,
+    executionVenue: executionVenue == null ? null : String(executionVenue),
+    exchangeConnectionId: exchangeConnectionId == null ? null : String(exchangeConnectionId),
+    marketDataVenue: marketDataVenue == null ? null : String(marketDataVenue),
     state: 'queued',
     startedAt: null,
     stoppedAt: null,

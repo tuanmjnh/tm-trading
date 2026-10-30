@@ -12,9 +12,8 @@ describe('fidelity (§34)', () => {
     assert.deepEqual(FIDELITY_CODES, ['F0', 'F1', 'F2', 'F3', 'F4'])
   })
 
-  test('resolveFidelity: broker/exchange/mt5 -> F4; depthActive -> F3; tradeStream -> F2; quoteAware paper -> F1; backtest no quote -> F0', () => {
+  test('resolveFidelity: exchange demo -> F4; depthActive -> F3; tradeStream -> F2; quoteAware paper -> F1; backtest no quote -> F0', () => {
     assert.equal(resolveFidelity({ mode: 'exchange' }), 'F4')
-    assert.equal(resolveFidelity({ mode: 'mt5' }), 'F4')
     assert.equal(resolveFidelity({ mode: 'paper', brokerSync: true }), 'F4')
     assert.equal(resolveFidelity({ mode: 'paper', depthActive: true }), 'F3')
     assert.equal(resolveFidelity({ mode: 'paper', tradeStreamActive: true }), 'F2')

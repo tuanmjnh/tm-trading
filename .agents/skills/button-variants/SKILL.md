@@ -1,4 +1,7 @@
-# Skill: button-variants
+---
+name: button-variants
+description: Standard UButton variant conventions in Nuxt UI v4 (soft for primary/destructive, ghost for neutral/dismissal). Use when creating or styling buttons.
+---
 
 # Button Variants (Nuxt UI v4)
 

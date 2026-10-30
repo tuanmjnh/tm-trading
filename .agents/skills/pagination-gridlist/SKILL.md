@@ -1,4 +1,7 @@
-# Skill: pagination-gridlist
+---
+name: pagination-gridlist
+description: Reusable cursor pagination and GridList component patterns for list views and tables across frontend and backend.
+---
 
 # Pagination & GridList
 

@@ -29,6 +29,12 @@ const SessionSchema = new mongoose.Schema(
     accountId: { type: String, default: 'default', index: true },
     instruments: { type: [String], default: [] },
     timeframes: { type: [String], default: [] },
+    // V3.9 execution binding (§63.5/§64.5B). Additive + nullable: legacy docs
+    // without these behave exactly as before (INTERNAL_PAPER, no venue).
+    executionMode: { type: String, enum: ['BACKTEST', 'REPLAY', 'INTERNAL_PAPER', 'EXCHANGE_DEMO'], default: 'INTERNAL_PAPER', index: true },
+    executionVenue: { type: String, enum: ['bybit', 'binance', 'okx', null], default: null },
+    exchangeConnectionId: { type: String, default: null },
+    marketDataVenue: { type: String, default: null },
     state: { type: String, enum: [...SESSION_STATES], default: 'queued', index: true },
     startedAt: { type: Number, default: null },
     stoppedAt: { type: Number, default: null },

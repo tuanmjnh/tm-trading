@@ -65,6 +65,7 @@ Add `app/app.config.ts` if you need global overrides.
 - `icon`/`trailing-icon`/`loading`/`block`/`square`/`loading-auto` supported.
 
 ### UFormField / UForm / UInput / USelect / USelectMenu / UTextarea / UCheckbox
+- **Always add class w-full for inputs** (UInput, USelect, USelectMenu, UTextarea, etc.) to ensure consistent responsive layout across all forms.
 - `UFormField` wraps with `name`, `label`, `description`, `hint`. Place the input inside as default slot.
 - `UInput` `ui` slots include `base`, `leading`, `trailing`, `leadingIcon`, `trailingIcon`. Use `#leading`/`#trailing` templates for custom content.
 - **USelect and USelectMenu in Nuxt UI v4**:

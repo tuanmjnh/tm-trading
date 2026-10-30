@@ -16,18 +16,18 @@ those scripts; `tests/pineInventory.test.ts` fails if this file drifts from
 
 | Script | Kind | Pine | Inputs | Alertcondition | plotshape | plot | Lines | Bytes | sha256[:12] |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| LongKaco VSA Backtest | strategy | v6 | 49 | 8 | 0 | 0 | 601 | 38080 | `ce9f0bd67850` |
-| LongKaco VSA | indicator | v6 | 45 | 8 | 8 | 2 | 682 | 47079 | `44c9f3cb64f6` |
-| Price Action MTF Backtest | strategy | v6 | 147 | 6 | 2 | 4 | 1827 | 112600 | `8a124c55b1c7` |
-| Price Action MTF | indicator | v6 | 144 | 6 | 2 | 6 | 1802 | 110664 | `c7b8e586033a` |
-| TM Fusion Zones Backtest | strategy | v6 | 58 | 5 | 5 | 3 | 1066 | 55841 | `f6893aad5036` |
-| TM Fusion Zones | indicator | v6 | 55 | 5 | 5 | 3 | 1036 | 53555 | `f44fc5ff686c` |
-| TM Indicator 2 | indicator | v6 | 151 | 8 | 4 | 6 | 2244 | 135198 | `d2aa774eb0bb` |
-| TM Indicator Strategy Lab 2 | strategy | v6 | 155 | 0 | 4 | 6 | 2331 | 141099 | `dc1e3e779eb9` |
-| TM XAU Signals 2 | indicator | v6 | 118 | 4 | 2 | 6 | 1384 | 84080 | `b18557e2243f` |
-| Wonderwhales Backtest | strategy | v6 | 50 | 0 | 27 | 11 | 615 | 45624 | `5ce35a31800c` |
-| Wonderwhales Overlay | indicator | v6 | 37 | 4 | 27 | 7 | 418 | 34053 | `898b204846c7` |
-| Wonderwhales | indicator | v6 | 37 | 4 | 27 | 9 | 416 | 33754 | `1240985cbfc9` |
+| LongKaco VSA Backtest | strategy | v6 | 49 | 8 | 0 | 0 | 601 | 38080 | `4847eaf10033` |
+| LongKaco VSA | indicator | v6 | 45 | 8 | 8 | 2 | 682 | 47079 | `b09c15e94d26` |
+| Price Action MTF Backtest | strategy | v6 | 147 | 6 | 2 | 4 | 1827 | 112600 | `5051c39508df` |
+| Price Action MTF | indicator | v6 | 144 | 6 | 2 | 6 | 1802 | 110664 | `f04b69c3fcbe` |
+| TM Fusion Zones Backtest | strategy | v6 | 58 | 5 | 5 | 3 | 1066 | 55841 | `f8ba0f1b4851` |
+| TM Fusion Zones | indicator | v6 | 55 | 5 | 5 | 3 | 1036 | 53555 | `a48fe9f4745c` |
+| TM Indicator 2 | indicator | v6 | 151 | 8 | 4 | 6 | 2244 | 135198 | `746e0ade2ee5` |
+| TM Indicator Strategy Lab 2 | strategy | v6 | 155 | 0 | 4 | 6 | 2331 | 141099 | `7861c5145fd6` |
+| TM XAU Signals 2 | indicator | v6 | 118 | 4 | 2 | 6 | 1384 | 84080 | `80572abeaf82` |
+| Wonderwhales Backtest | strategy | v6 | 50 | 0 | 27 | 11 | 615 | 45624 | `e5deed58a0e3` |
+| Wonderwhales Overlay | indicator | v6 | 37 | 4 | 27 | 7 | 418 | 34053 | `75131c442c46` |
+| Wonderwhales | indicator | v6 | 37 | 4 | 27 | 9 | 416 | 33754 | `b7069c648b01` |
 
 ## File map
 

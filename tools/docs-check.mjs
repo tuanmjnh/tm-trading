@@ -79,6 +79,12 @@ const EXCEPTIONS = new Set([
   'docs/news-source-audit.md', // roadmap v3.5: planned milestone deliverable
   'docs/news-taxonomy.md', // roadmap v3.5: planned milestone deliverable
   'docs/news-license-matrix.md', // roadmap v3.5: planned milestone deliverable
+  // V3.9 scope cleanup: non-exchange (MT5/broker) execution was removed from
+  // this app. Historical roadmaps/archives still cite these deleted paths.
+  'exec/mt5/client.mjs',
+  'exec/mt5/server.py',
+  'exec/mt5/test.mjs',
+  'docs/engine/mt5-ipc.md',
 ])
 const pathRe = /`([A-Za-z][\w./-]*\.(?:mjs|cjs|js|mts|ts|vue|py|md|json|pine))`/g
 for (const rel of docFiles) {
