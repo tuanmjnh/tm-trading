@@ -69,7 +69,7 @@ describe('embedded supervisor — auto-start selection', () => {
 
     assert.deepEqual(ids, [
       'alertRules', 'brief', 'confluence', 'crossScan', 'funding', 'liquidation',
-      'macro', 'news', 'newsExtract', 'reconcile', 'regime', 'scanner', 'signals',
+      'macro', 'news', 'newsExtract', 'outbox-drain', 'reconcile', 'regime', 'scanner', 'signals',
     ])
     // The exceptions are structural, not accidental.
     for (const excluded of ['retention', 'market-plane', 'ai-agent', 'ai-review', 'bot-supervisor', 'market-feeds', 'outlook', 'demo-runner']) {

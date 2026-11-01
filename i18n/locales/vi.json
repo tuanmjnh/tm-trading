@@ -5707,6 +5707,7 @@
         "reconcile": "Đối soát dataset",
         "signals": "Tín hiệu native",
         "alertRules": "Bộ đánh giá quy tắc cảnh báo",
+        "outbox-drain": "Xử lý hộp thư thông báo",
         "brief": "Bản tin AI hằng ngày",
         "ai-agent": "AI agent",
         "ai-review": "AI review",

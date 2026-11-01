@@ -5707,6 +5707,7 @@
         "reconcile": "Dataset reconciliation",
         "signals": "Native signals",
         "alertRules": "Alert rule evaluator",
+        "outbox-drain": "Notification outbox drain",
         "brief": "AI morning brief",
         "ai-agent": "AI agent",
         "ai-review": "AI review",
