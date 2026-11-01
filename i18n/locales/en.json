@@ -472,7 +472,9 @@
     "start": "Start",
     "pause": "Pause",
     "resume": "Resume",
-    "stop": "Stop"
+    "stop": "Stop",
+    "symbol": "Symbol",
+    "score": "Score"
   },
   "confirm": {
     "delete_desc_name": "Are you sure you want to delete \"{0}\"? This action cannot be undone.",
@@ -1269,7 +1271,10 @@
     "tabs": {
       "market": "Market Intel",
       "scanner": "Movers & Volatility",
-      "topCoins": "Top Coins"
+      "topCoins": "Top Coins",
+      "volatility": "Volatility",
+      "funding": "Funding & OI",
+      "lowcap": "Lowcap"
     }
   },
   "watchlistWorkspace": {
@@ -5739,5 +5744,39 @@
         }
       }
     }
+  },
+  "marketVolatility": {
+    "title": "Volatility",
+    "desc": "Top symbols by 1h ATR-based volatility score.",
+    "atrPct": "ATR %",
+    "chg4h": "4h %",
+    "rangePct": "Range %",
+    "volRatio": "Vol ratio",
+    "score": "Score"
+  },
+  "marketFundingOi": {
+    "title": "Funding & OI",
+    "desc": "Top perpetuals by funding rate combined with open-interest pressure.",
+    "rate": "Rate",
+    "oi": "OI ($B)",
+    "score": "Score"
+  },
+  "marketLowcap": {
+    "title": "Lowcap",
+    "desc": "Low-quote-volume USDT perpetuals picked from the live ticker list.",
+    "quoteVolume": "Quote vol",
+    "lastPrice": "Price",
+    "pct24h": "24h %",
+    "score": "Score"
+  },
+  "marketCoin": {
+    "title": "Coin detail",
+    "desc": "Per-symbol view across every scanner snapshot.",
+    "detail": "Detail",
+    "freshness": "Freshness",
+    "mover": "Mover",
+    "flow": "Money flow",
+    "volatility": "Volatility",
+    "fundingOi": "Funding & OI"
   }
 }

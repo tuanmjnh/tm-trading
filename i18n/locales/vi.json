@@ -472,7 +472,9 @@
     "start": "Chạy",
     "pause": "Tạm dừng",
     "resume": "Tiếp tục",
-    "stop": "Dừng"
+    "stop": "Dừng",
+    "symbol": "Mã",
+    "score": "Điểm"
   },
   "confirm": {
     "delete_desc_name": "Bạn có chắc chắn muốn xóa \"{0}\" không?",
@@ -1269,7 +1271,10 @@
     "tabs": {
       "market": "Tổng quan thị trường",
       "scanner": "Biến động mạnh",
-      "topCoins": "Coin hàng đầu"
+      "topCoins": "Coin hàng đầu",
+      "volatility": "Biến động",
+      "funding": "Funding & OI",
+      "lowcap": "Coin nhỏ"
     }
   },
   "watchlistWorkspace": {
@@ -5739,5 +5744,39 @@
         }
       }
     }
+  },
+  "marketVolatility": {
+    "title": "Biến động",
+    "desc": "Các symbol hàng đầu theo điểm biến động ATR 1h.",
+    "atrPct": "ATR %",
+    "chg4h": "4h %",
+    "rangePct": "Biên độ %",
+    "volRatio": "Tỷ lệ KL",
+    "score": "Điểm"
+  },
+  "marketFundingOi": {
+    "title": "Funding & OI",
+    "desc": "Các perp hàng đầu theo lãi suất funding kết hợp áp lực open interest.",
+    "rate": "Lãi suất",
+    "oi": "OI ($B)",
+    "score": "Điểm"
+  },
+  "marketLowcap": {
+    "title": "Coin nhỏ",
+    "desc": "Các perp USDT khối lượng giao dịch thấp chọn từ danh sách ticker trực tiếp.",
+    "quoteVolume": "KL giao dịch",
+    "lastPrice": "Giá",
+    "pct24h": "24h %",
+    "score": "Điểm"
+  },
+  "marketCoin": {
+    "title": "Chi tiết coin",
+    "desc": "Xem theo từng symbol trên mọi snapshot scanner.",
+    "detail": "Chi tiết",
+    "freshness": "Dữ liệu mới",
+    "mover": "Biến động",
+    "flow": "Dòng tiền",
+    "volatility": "Biến động",
+    "fundingOi": "Funding & OI"
   }
 }
