@@ -11,7 +11,7 @@ import { evaluateHeartbeat, readHeartbeat, beat, checkOverdue, DEFAULT_INTERVALS
 import { isUsdtPerp, rawKlineToBar } from './binance.mjs'
 import { evaluateFunding } from './funding.mjs'
 import { parseFeed, scoreNews } from './news.mjs'
-import { pickTickers, topMovers, computeStats, detectFlow, detectAccum, detectBreakout } from './scanner.mjs'
+import { pickTickers, topMovers, computeStats, detectFlow, detectAccum, detectBreakout, detectVolatility, detectLowcap, detectFundingOi } from './scanner.mjs'
 import { parseAsi, parseFng, evalRegime, altSweep, pickSweepCandidates, computeSupplyDrift, readUnlocks, REGIME_CFG } from './regime.mjs'
 import { estimateZones, readLiqEvents, clusterLiqs, hourBucket, LIQ_CFG } from './liquidation.mjs'
 import { combineScore, methodRecencyScore, scoreRegime, scoreFunding, scoreZone, CONFLUENCE_CFG } from './confluence.mjs'
@@ -146,6 +146,39 @@ const stBo = computeStats(bo)
 check('breakout: close vuot top 20 + vol 3x -> true', detectBreakout(bo, stBo) === true)
 const boNoVol = flatBars(120, { high: (i) => (i >= 99 && i <= 118 ? 100 : 101), close: (i) => (i === 119 ? 100.5 : 100) })
 check('breakout: cung gia nhung khong volume -> false', detectBreakout(boNoVol, computeStats(boNoVol)) === false)
+
+// Volatility detector (S5)
+const vol1 = detectVolatility({ atrPct: 2.5, chg4h: 3.0, rangePct: 1.5, volRatio: 1.8 })
+check('volatility: atr 2.5 + chg4h 3 + range 1.5 + vol 1.8 -> score ~ 2.5 + 1.5 + 0.375 + 3.2 = 7.575', Math.abs(vol1.score - 7.58) < 0.01, String(vol1.score))
+check('volatility: out keys', vol1.atrPct === 2.5 && vol1.chg4h === 3.0 && vol1.rangePct === 1.5 && vol1.volRatio === 1.8)
+const vol2 = detectVolatility({ atrPct: 0, chg4h: 0, rangePct: 0, volRatio: 1 })
+check('volatility: phan 0 -> score 0', vol2.score === 0)
+const vol3 = detectVolatility({ atrPct: 4, chg4h: -5, rangePct: 8, volRatio: 3 })
+check('volatility: am chg4h lay gia tri tuyet doi', Math.abs(vol3.score - (4 + 2.5 + 2 + 8)) < 0.01, String(vol3.score))
+const vol4 = detectVolatility(null)
+check('volatility: null input -> 0 safe', vol4.score === 0 && vol4.atrPct === 0)
+
+// Lowcap detector (S5)
+const lc1 = detectLowcap({ symbol: 'AAAUSDT', quoteVolume: 1_000_000, lastPrice: 0.5, pct24h: 10 }, { maxQuoteVol: 5_000_000 })
+check('lowcap: vol 1M < 5M + price > 0 -> hit, score = rel(0.8) + |10|*0.01 = 0.9', lc1.hit === true && Math.abs(lc1.score - 0.9) < 0.001, String(lc1.score))
+check('lowcap: out keys', lc1.symbol === 'AAAUSDT' && lc1.quoteVolume === 1_000_000 && lc1.lastPrice === 0.5 && lc1.pct24h === 10)
+const lc2 = detectLowcap({ symbol: 'BBBUSDT', quoteVolume: 6_000_000, lastPrice: 1, pct24h: -5 }, { maxQuoteVol: 5_000_000 })
+check('lowcap: vol 6M > 5M -> no hit', lc2.hit === false && lc2.score === 0)
+const lc3 = detectLowcap({ symbol: 'CCCUSDT', quoteVolume: 1_000_000, lastPrice: 0, pct24h: 20 }, { maxQuoteVol: 5_000_000 })
+check('lowcap: price 0 -> no hit', lc3.hit === false)
+const lc4 = detectLowcap(null, {})
+check('lowcap: null input -> 0 safe', lc4.hit === false && lc4.score === 0)
+
+// FundingOi detector (S5) — PURE, uses row with rate + oi
+const fo1 = detectFundingOi({ symbol: 'BTCUSDT', rate: 0.0005, oiContracts: 10000, oiNotionalUsd: 5_000_000_000 })
+check('fundingOi: rate 0.05% + OI 5B (factor clamped 1) -> score 2x absRate', Math.abs(fo1.score - 0.001) < 1e-9, String(fo1.score))
+check('fundingOi: out keys (contracts + notional pass through)', fo1.oiContracts === 10000 && fo1.oiNotionalUsd === 5_000_000_000)
+const fo2 = detectFundingOi({ symbol: 'ETHUSDT', rate: -0.0008, oiContracts: 50000, oiNotionalUsd: 10_000_000_000 })
+check('fundingOi: am rate -> abs cho score', fo2.rate === -0.08 && fo2.pct === -0.08 && fo2.score > 0)
+const fo3 = detectFundingOi({ symbol: 'SOLUSDT', rate: 0.0001 })
+check('fundingOi: khong co OI -> oiFactor 0, score = |rate|', Math.abs(fo3.score - 0.0001) < 1e-9, String(fo3.score))
+const fo4 = detectFundingOi(null)
+check('fundingOi: null input -> 0 safe', fo4.score === 0 && fo4.rate === 0 && fo4.oiContracts === null && fo4.oiNotionalUsd === null)
 
 // =============================================================================
 section('5. heartbeat D9 (temp file)')

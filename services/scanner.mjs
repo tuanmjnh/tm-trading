@@ -6,9 +6,11 @@
 //  SCANNER_MIN_QUOTE_VOL -> chọn top |biến động| + top thanh khoản (gộp, cap)
 //  để scan sâu bằng klines 1h×120 (GIỮ cột taker-buy — xem binance.mjs).
 //
-//  3 snapshot (dashboard top-list, ghi đè mỗi chu kỳ): `mover` / `flow` /
-//  `accum`. Alert Telegram khi |24h| >= SCANNER_ALERT_PCT (dedupe theo
-//  `alert:mover:<sym>:<day>:<dir>` — 1 cảnh báo /symbol/ngày).
+//  6 snapshots (dashboard top-list, overwrite per cycle): mover / flow / accum /
+//  volatility / lowcap (+ fundingOi — emitted by funding.mjs which owns the OI
+//  data; detectFundingOi is PURE here so all detectors are golden tested from
+//  one file). Alert Telegram when |24h| >= SCANNER_ALERT_PCT (dedupe by
+//  alert:mover:<sym>:<day>:<dir> — 1 alert /symbol/day).
 //
 //  Toàn bộ detect là hàm PURE (services/test.mjs chạy golden offline).
 // =============================================================================
@@ -24,6 +26,10 @@ export const SCANNER_CFG = Object.freeze({
   deepCap: Number(process.env.SCANNER_DEEP_CAP || 48),
   moverTop: 8,
   alertPct: Number(process.env.SCANNER_ALERT_PCT || 15),
+  // S5 — new snapshot kinds.
+  volatilityTop: 8,
+  lowcapTop: 8,
+  lowcapMaxQuoteVol: Number(process.env.LOWCAP_MAX_QUOTE_VOL || 5_000_000),
 })
 
 // ---------------------------------------------------------------------------
@@ -150,6 +156,78 @@ export function detectBreakout(bars, stats, cfg = {}) {
   const breakoutHigh = Math.max(...prior.map((b) => b.high))
   return bars[n - 1].close >= breakoutHigh && stats.volRatio >= (cfg.volBreakout ?? 1.5)
 }
+// ---------------------------------------------------------------------------
+//  PURE detectors for the new snapshot kinds (S5). Every detector takes the
+//  already-computed stats (or the raw bars) and returns a plain object — no I/O,
+//  no side effects, so services/test.mjs can run golden offline tests.
+// ---------------------------------------------------------------------------
+
+/**
+ * Bien dong (snapshot `volatility`) — top |atrPct| 1h. Reuses computeStats.atrPct
+ * (ATR14 / close) so the volatility page and the mover page never disagree on
+ * what "volatility" means (D1 — one definition).
+ * @returns {{symbol:string, atrPct:number, chg4h:number, rangePct:number, volRatio:number, score:number}}
+ */
+export function detectVolatility(stats, cfg = {}) {
+  const atrPct = Number(stats?.atrPct) || 0
+  const chg4h = Number(stats?.chg4h) || 0
+  const rangePct = Number(stats?.rangePct) || 0
+  const volRatio = Number(stats?.volRatio) || 1
+  const score = atrPct + Math.abs(chg4h) * 0.5 + rangePct * 0.25 + (volRatio > 1 ? (volRatio - 1) * 4 : 0)
+  return {
+    atrPct: Number(atrPct.toFixed(2)),
+    chg4h: Number(chg4h.toFixed(2)),
+    rangePct: Number(rangePct.toFixed(2)),
+    volRatio: Number(volRatio.toFixed(2)),
+    score: Number(score.toFixed(2)),
+  }
+}
+
+/**
+ * Low-cap (snapshot `lowcap`) — 24h quote volume below a threshold, price > 0.
+ * Pure: takes the already-picked ticker row (no new symbol list, D1).
+ * @returns {{symbol:string, quoteVolume:number, lastPrice:number, pct24h:number, score:number}}
+ */
+export function detectLowcap(ticker, cfg = {}) {
+  const quoteVolume = Number(ticker?.quoteVolume) || 0
+  const lastPrice = Number(ticker?.lastPrice) || 0
+  const pct24h = Number(ticker?.pct24h) || 0
+  const cap = cfg.maxQuoteVol ?? 5_000_000
+  const hit = quoteVolume > 0 && quoteVolume <= cap && lastPrice > 0
+  const rel = cap > 0 ? (cap - quoteVolume) / cap : 0
+  const score = hit ? rel + Math.abs(pct24h) * 0.01 : 0
+  return {
+    symbol: String(ticker?.symbol ?? ''),
+    quoteVolume,
+    lastPrice,
+    pct24h: Number(pct24h.toFixed(2)),
+    hit,
+    score: Number(score.toFixed(4)),
+  }
+}
+
+/**
+ * Funding + OI (snapshot `fundingOi`) — combines the funding rate with the open
+ * interest observation. PURE: takes the already-evaluated funding row + OI.
+ * @returns {{symbol:string, rate:number, pct:number, oiContracts:number|null, oiNotionalUsd:number|null, score:number}}
+ */
+export function detectFundingOi(row, cfg = {}) {
+  const rate = Number(row?.rate) || 0
+  const oiContracts = typeof row?.oiContracts === 'number' ? row.oiContracts : null
+  const oiNotionalUsd = typeof row?.oiNotionalUsd === 'number' ? row.oiNotionalUsd : null
+  const absRate = Math.abs(rate)
+  const oiFactor = oiNotionalUsd ? Math.min(1, Math.log10(oiNotionalUsd + 1) / 6) : 0
+  const score = absRate * (1 + oiFactor)
+  return {
+    symbol: String(row?.symbol ?? ''),
+    rate: Number((rate * 100).toFixed(4)),
+    pct: Number((rate * 100).toFixed(4)),
+    oiContracts,
+    oiNotionalUsd,
+    score: Number(score.toFixed(6)),
+  }
+}
+
 
 // ---------------------------------------------------------------------------
 //  Runner
@@ -200,6 +278,21 @@ export async function runScanner({ fetchImpl, now = new Date(), cfg = SCANNER_CF
   const accumsOut = scan.filter((s) => s.accum.hit)
     .slice(0, cfg.moverTop)
     .map((s) => ({ symbol: s.symbol, reasons: s.accum.reasons, rangePct: Number(s.stats.rangePct.toFixed(2)), priceChg48: Number(s.stats.priceΔ48.toFixed(2)), obvNorm: Number(s.stats.obvNorm.toFixed(2)), volRatio: Number(s.stats.volRatio.toFixed(2)), pct24h: Number(s.pct24h.toFixed(2)) }))
+  const volatilityOut = [...scan]
+    .map((s) => ({ symbol: s.symbol, ...detectVolatility(s.stats, {}) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, cfg.volatilityTop)
+
+  // Low-cap: quote volume comes from the 24h ticker row (already picked), so we
+  // re-evaluate the whole picked universe against the lowcap gate — no new
+  // symbol list, no second fetch (D1).
+  const lowcapOut = tickers
+    .map((t) => ({ symbol: t.symbol, ...detectLowcap(t, { maxQuoteVol: cfg.lowcapMaxQuoteVol }) }))
+    .filter((r) => r.hit)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, cfg.lowcapTop)
+    .map((r) => ({ symbol: r.symbol, quoteVolume: r.quoteVolume, lastPrice: r.lastPrice, pct24h: r.pct24h, score: r.score }))
+
 
   const Intel = await getIntel()
   const mongo = Intel ? 'up' : 'down'
@@ -210,6 +303,8 @@ export async function runScanner({ fetchImpl, now = new Date(), cfg = SCANNER_CF
     await saveSnapshot('mover', moversOut.map((m) => ({ key: `mover:${m.symbol}`, symbol: m.symbol, ts, data: m })))
     await saveSnapshot('flow', flowsOut.map((m) => ({ key: `flow:${m.symbol}`, symbol: m.symbol, ts, data: m })))
     await saveSnapshot('accum', accumsOut.map((m) => ({ key: `accum:${m.symbol}`, symbol: m.symbol, ts, data: m })))
+    await saveSnapshot('volatility', volatilityOut.map((m) => ({ key: `volatility:${m.symbol}`, symbol: m.symbol, ts, data: m })))
+    await saveSnapshot('lowcap', lowcapOut.map((m) => ({ key: `lowcap:${m.symbol}`, symbol: m.symbol, ts, data: m })))
 
     const extreme = moversOut.filter((m) => Math.abs(m.pct24h) >= cfg.alertPct)
     if (extreme.length) {
@@ -230,5 +325,5 @@ export async function runScanner({ fetchImpl, now = new Date(), cfg = SCANNER_CF
     }
   }
 
-  return { tickers: tickers.length, scanned: scan.length, movers: moversOut.length, flows: flowsOut.length, accums: accumsOut.length, alerted, mongo }
+  return { tickers: tickers.length, scanned: scan.length, movers: moversOut.length, flows: flowsOut.length, accums: accumsOut.length, volatility: volatilityOut.length, lowcap: lowcapOut.length, alerted, mongo }
 }
