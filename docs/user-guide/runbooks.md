@@ -293,11 +293,26 @@ rename is what makes the state durable across a crash.
 **Confirm.** `node services/supervisor.mjs status` before and after.
 
 **Fix.** None — this is the design contract. Workers are **dedicated external
-processes**, not children of Nuxt, so a dashboard restart must not kill or duplicate
-them. Verify it once on your own box: note the worker pids (`node
-services/supervisor.mjs status`), restart Nuxt, and confirm the pids are unchanged.
+processes**: a dashboard restart must not kill or duplicate them. Verify it once on
+your own box: note the worker pids (`node services/supervisor.mjs status`), restart
+Nuxt, and confirm the pids are unchanged.
 
-**Prevent.** Never start long-lived workers from a Nuxt plugin or server handler.
+**Prevent.** Do not drain workers from a web process' shutdown path. The embedded
+driver (`server/plugins/service-supervisor.ts`, dev/self-host only) follows this: its
+`close` hook stops the tick timer and nothing else, so a Nitro restart is exactly the
+drill's *control-plane restart* — the next boot adopts the same pids
+(`[... adopted=13 recovered=0 ...]`).
+
+**If a web process dies without a close hook** (kill -9, OOM): the workers notice the
+closed IPC channel, log `lost its control-plane channel`, and keep serving for
+`WORKER_CHANNEL_GRACE_MS` (default 5 min) so the next supervisor can adopt the pid by
+its state-file record. If nothing adopts them they exit 0 by themselves — an
+unsupervised producer must not keep writing. Clear the window by starting the driver
+(`npm run services:supervised`, or just open the dashboard).
+
+**Escalation.** For anything beyond a single box, run the supervisor as an OS service
+and disable the embedded one (`SERVICE_SUPERVISOR_EMBEDDED=off`), so a dashboard
+outage cannot affect service supervision at all.
 
 ---
 

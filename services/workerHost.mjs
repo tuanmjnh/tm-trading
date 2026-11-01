@@ -72,6 +72,15 @@ export const MIN_CYCLE_INTERVAL_MS = 1_000
 export const CAPABILITY_TTL_MS = 300_000
 
 /**
+ * How long a worker keeps running after it loses its control-plane channel.
+ *
+ * Long enough for a restarted supervisor to adopt the pid (the alternative is a
+ * second copy of the same producer), short enough that an orphan cannot keep
+ * writing unsupervised. `WORKER_CHANNEL_GRACE_MS` overrides it.
+ */
+export const DEFAULT_CHANNEL_GRACE_MS = 300_000
+
+/**
  * Resolve the cycle interval in milliseconds.
  *
  * The env override is honoured the same way `services/run.mjs` honours it, so
@@ -396,11 +405,51 @@ async function main() {
   const operationId = process.env.TM_OPERATION_ID || null
   const log = line => console.log(`${new Date().toISOString()} ${line}`)
 
+  // ---------------------------------------------------------------------------
+  //  Control-plane channel.
+  //
+  //  Two traps live here, both found by restarting a control plane against real
+  //  workers:
+  //
+  //    1. `process.send()` on a CLOSED channel does not throw — Node emits an
+  //       `error` event on `process` (or calls the callback when one is given).
+  //       Without either, the next heartbeat becomes an uncaughtException and the
+  //       worker dies with a stack trace instead of a stated reason.
+  //    2. A worker whose supervisor vanished must not keep producing forever as
+  //       an unsupervised duplicate, but it must also outlive a control-plane
+  //       restart so the next supervisor can ADOPT it by pid instead of starting
+  //       a second copy. So: keep running, stop reporting, and give the next
+  //       control plane a bounded window to pick the pid up.
+  // ---------------------------------------------------------------------------
+  let channelDown = false
+  let orphanTimer = null
+
+  function noteChannelLoss(error) {
+    if (channelDown) return
+    channelDown = true
+    const graceMs = Number(process.env.WORKER_CHANNEL_GRACE_MS || DEFAULT_CHANNEL_GRACE_MS)
+    log(
+      `[worker] ${serviceId} lost its control-plane channel (${String(error?.code || error?.message || error)})`
+      + ` — keeping pid ${process.pid} alive for ${Math.round(graceMs / 1000)}s so a restarted supervisor can adopt it`,
+    )
+    orphanTimer = setTimeout(() => {
+      orphanTimer = null
+      log(`[worker] ${serviceId} was not adopted within the grace window — exiting so it cannot keep producing unsupervised`)
+      void shutdown(0)
+    }, Math.max(0, graceMs))
+    if (typeof orphanTimer.unref === 'function') orphanTimer.unref()
+  }
+
   const send = (message) => {
+    if (channelDown || typeof process.send !== 'function') return
     try {
-      if (typeof process.send === 'function') process.send(message)
-    } catch {
-      // The supervisor may already be gone; the process still has to exit.
+      // The callback receives the IPC error instead of it being emitted on
+      // `process` (which would surface as an uncaughtException).
+      process.send(message, undefined, undefined, (error) => {
+        if (error) noteChannelLoss(error)
+      })
+    } catch (error) {
+      noteChannelLoss(error)
     }
   }
 
@@ -512,12 +561,27 @@ async function main() {
   })
 
   process.on('message', (message) => {
+    // A message means a control plane is talking to us again: we are supervised,
+    // so an orphan grace window no longer applies.
+    if (orphanTimer) {
+      clearTimeout(orphanTimer)
+      orphanTimer = null
+      channelDown = false
+    }
     void worker.onMessage(message).then((result) => {
       // A `shutdown` request is the supervisor's drain: answer it, then exit so
       // the supervisor sees the process end instead of escalating to a kill.
       if (message?.type === 'shutdown') return shutdown(result?.drained === false ? 1 : 0)
       return undefined
     })
+  })
+
+  // Node emits `error` on `process` when an IPC write fails without a callback.
+  // Without this listener that becomes an uncaughtException and the worker dies
+  // with a stack trace the moment its supervisor goes away.
+  process.on('error', (error) => {
+    if (String(error?.code || '').startsWith('ERR_IPC')) return noteChannelLoss(error)
+    log(`[worker] ${serviceId} process error: ${String(error?.stack || error).slice(0, 300)}`)
   })
 
   const fatal = (label) => (error) => {
