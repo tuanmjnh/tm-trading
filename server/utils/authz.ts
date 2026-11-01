@@ -1,3 +1,4 @@
+import type { H3Event } from 'h3'
 import { CAPABILITIES, type Capability, SYSTEM_CAPABILITIES } from './permissions'
 import { requireAuthPayload, type AuthPayload } from './request'
 
@@ -107,4 +108,16 @@ export function requireSystemApp(payload: AuthPayload | undefined): void {
       message: 'System application access required'
     })
   }
+}
+
+/**
+ * Root-only guard, read from the event context.
+ *
+ * `requireOwnerId()` proves identity (someone is logged in); it does not prove
+ * privilege. Endpoints that can spawn or stop background processes must call
+ * this after it, otherwise any authenticated user can start a process on the
+ * server (see docs/web-app/v4.2-operations-control-audit.md).
+ */
+export function requireRootEvent(event: H3Event): void {
+  requireRoot((event.context as { auth?: AuthPayload }).auth)
 }

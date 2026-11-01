@@ -482,7 +482,16 @@
   },
   "dashboard": {
     "title": "Tổng quan Giao dịch",
-    "description": "Engine tín hiệu, backtest & risk gate — số liệu đọc trực tiếp từ reports/ (NDJSON).",
+    "description": "Trạng thái thị trường hiện tại — chế độ, tâm lý, thống trị và risk gate, đọc từ snapshot đã lưu của services.",
+    "riskGate": "Risk Gate",
+    "riskGateOk": "Mở",
+    "riskGateHalted": "Tạm dừng",
+    "riskGateUnknown": "Chưa rõ",
+    "runsBoard": "Lượt backtest",
+    "runsBadgeSeries": "series",
+    "runsBadgeRuns": "lượt chạy",
+    "runsBadgeTrades": "lệnh",
+    "runsBadgeWarnings": "cảnh báo dữ liệu",
     "series": "Series (Symbol × TF)",
     "seriesHint": "Mỗi bộ tham số trên một biểu đồ",
     "totalRuns": "Tổng lượt chạy",
@@ -1248,7 +1257,38 @@
     "outlook": "Triển vọng",
     "news_events": "Sự kiện",
     "news_sources": "Nguồn tin",
-    "news_impact": "Tác động tin"
+    "news_impact": "Tác động tin",
+    "discover": "Khám phá",
+    "watchlist": "Theo dõi & Tín hiệu",
+    "intelligence": "Phân tích",
+    "advanced": "Nâng cao & Nghiên cứu"
+  },
+  "discover": {
+    "title": "Khám phá",
+    "desc": "Một workspace quét thị trường — tổng quan, biến động mạnh và coin hàng đầu.",
+    "tabs": {
+      "market": "Tổng quan thị trường",
+      "scanner": "Biến động mạnh",
+      "topCoins": "Coin hàng đầu"
+    }
+  },
+  "watchlistWorkspace": {
+    "title": "Theo dõi & Tín hiệu",
+    "desc": "Tín hiệu futures và lịch sử của các mã bạn theo dõi.",
+    "tabs": {
+      "signals": "Tín hiệu Futures",
+      "history": "Lịch sử tín hiệu"
+    }
+  },
+  "intelligenceWorkspace": {
+    "title": "Phân tích",
+    "desc": "Tin tức, sự kiện, lịch kinh tế và triển vọng thị trường có bằng chứng.",
+    "tabs": {
+      "news": "Bản tin",
+      "events": "Sự kiện thị trường",
+      "calendar": "Lịch kinh tế",
+      "outlook": "Triển vọng thị trường"
+    }
   },
   "marketSources": {
     "title": "Nguồn dữ liệu thị trường",
@@ -1290,13 +1330,28 @@
       "privateStream": "Private stream",
       "accountApi": "Account API",
       "orderCapability": "Khả năng đặt lệnh",
-      "capabilities": { "supported": "Khả dụng", "unknown": "Chưa xác minh", "unsupported": "Không hỗ trợ" },
+      "capabilities": {
+        "supported": "Khả dụng",
+        "unknown": "Chưa xác minh",
+        "unsupported": "Không hỗ trợ"
+      },
       "deleteConfirm": "Xóa credential demo đã mã hóa của {profile}? Thao tác này không thể hoàn tác.",
       "saveSuccess": "Đã mã hóa và lưu credential sàn demo.",
       "testSuccess": "Kiểm tra tài khoản demo chỉ đọc thành công.",
-      "status": { "untested": "Chưa kiểm tra", "up": "Account API đã kết nối", "down": "Không khả dụng" },
+      "status": {
+        "untested": "Chưa kiểm tra",
+        "up": "Account API đã kết nối",
+        "down": "Không khả dụng"
+      },
       "loadFailed": "Không thể tải danh sách kết nối sàn demo.",
-      "profiles": { "bybit": "Bybit Linear Demo", "okx": "OKX Global Demo", "okxUs": "OKX US Demo", "okxEea": "OKX EEA Demo", "binance": "Binance Spot Demo", "binanceUsdm": "Binance USDⓈ-M Futures Demo" }
+      "profiles": {
+        "bybit": "Bybit Linear Demo",
+        "okx": "OKX Global Demo",
+        "okxUs": "OKX US Demo",
+        "okxEea": "OKX EEA Demo",
+        "binance": "Binance Spot Demo",
+        "binanceUsdm": "Binance USDⓈ-M Futures Demo"
+      }
     },
     "venuePrefs": {
       "title": "Ưu tiên sàn & chuyển dự phòng",
@@ -1305,7 +1360,10 @@
       "preferredVenue": "Sàn thực thi ưu tiên",
       "marketDataPolicy": "Chính sách dự phòng dữ liệu thị trường",
       "fallbackOrder": "Thứ tự dự phòng dữ liệu thị trường",
-      "policies": { "PREFERRED_ONLY": "Chỉ sàn ưu tiên (tạm dừng nếu không khả dụng)", "ALLOW_REFERENCE_FAILOVER": "Cho phép dự phòng tham khảo (có nhãn)" },
+      "policies": {
+        "PREFERRED_ONLY": "Chỉ sàn ưu tiên (tạm dừng nếu không khả dụng)",
+        "ALLOW_REFERENCE_FAILOVER": "Cho phép dự phòng tham khảo (có nhãn)"
+      },
       "save": "Lưu ưu tiên",
       "saveSuccess": "Đã lưu ưu tiên sàn.",
       "loadFailed": "Không tải được ưu tiên sàn.",
@@ -1319,12 +1377,26 @@
       "capabilityGaps": "Năng lực bắt buộc chưa xác minh",
       "configured": "Đã cấu hình",
       "notConfigured": "Chưa có khóa demo",
-      "caps": { "SUPPORTED": "Hỗ trợ", "UNSUPPORTED": "Không hỗ trợ", "UNKNOWN": "Chưa xác minh" },
-      "health": {
-        "status": "Trạng thái", "restAccount": "REST tài khoản", "privateStream": "Luồng riêng tư",
-        "publicStream": "Luồng thị trường công khai", "clockSkew": "Lệch đồng hồ", "rateBudget": "Ngân sách rate", "lastReconcile": "Lần đối soát cuối"
+      "caps": {
+        "SUPPORTED": "Hỗ trợ",
+        "UNSUPPORTED": "Không hỗ trợ",
+        "UNKNOWN": "Chưa xác minh"
       },
-      "statusLabels": { "READY": "Sẵn sàng", "DEGRADED": "Suy giảm", "STALE": "Cũ", "DISCONNECTED": "Mất kết nối" },
+      "health": {
+        "status": "Trạng thái",
+        "restAccount": "REST tài khoản",
+        "privateStream": "Luồng riêng tư",
+        "publicStream": "Luồng thị trường công khai",
+        "clockSkew": "Lệch đồng hồ",
+        "rateBudget": "Ngân sách rate",
+        "lastReconcile": "Lần đối soát cuối"
+      },
+      "statusLabels": {
+        "READY": "Sẵn sàng",
+        "DEGRADED": "Suy giảm",
+        "STALE": "Cũ",
+        "DISCONNECTED": "Mất kết nối"
+      },
       "switch": {
         "button": "Đổi sàn cho phiên kế tiếp",
         "title": "Đổi sàn thực thi",
@@ -1568,7 +1640,8 @@
       "successRunAllServices": "Đã gửi lệnh chạy một lần cho tất cả dịch vụ",
       "acknowledge": "Xác nhận",
       "dismiss": "Khước từ",
-      "errorGeneric": "Thao tác thất bại"
+      "errorGeneric": "Thao tác thất bại",
+      "acceptedRunAllServices": "Đã xếp {count} thao tác chạy một vòng — sẽ chạy khi supervisor hoạt động"
     },
     "botModal": {
       "title": "Chi tiết Bot giao dịch",
@@ -1796,6 +1869,14 @@
     "importance_high": "Cao",
     "importance_med": "Trung bình",
     "importance_low": "Thấp"
+  },
+  "alertsWorkspace": {
+    "title": "Cảnh báo",
+    "tabs": {
+      "rules": "Quy tắc cảnh báo",
+      "history": "Lịch sử gửi",
+      "inbox": "Hộp thư"
+    }
   },
   "alertRules": {
     "title": "Quy tắc cảnh báo",
@@ -5385,5 +5466,253 @@
   "hub_integration": {
     "desc": "Hướng dẫn chi tiết và kiểm tra trực tiếp cơ chế tải dữ liệu động từ TM Hub Control Plane về TM Trading",
     "runTest": "Kiểm tra kết nối"
+  },
+  "freshness": {
+    "states": {
+      "FRESH": "Trực tiếp",
+      "DELAYED": "Trễ",
+      "STALE": "Cũ",
+      "MISSING": "Không có dữ liệu",
+      "UNKNOWN": "Không rõ"
+    },
+    "age": {
+      "justNow": "vừa xong",
+      "seconds": "{n} giây trước",
+      "minutes": "{n} phút trước",
+      "hours": "{n} giờ trước",
+      "days": "{n} ngày trước"
+    },
+    "asOf": "Tính đến {time}"
+  },
+  "operations": {
+    "services": {
+      "tab": "Bảng điều khiển dịch vụ",
+      "refresh": "Làm mới",
+      "searchPlaceholder": "Tìm dịch vụ",
+      "loadFailed": "Không tải được danh sách dịch vụ",
+      "loadFailedHint": "API operations không phản hồi. Có thể supervisor chưa chạy.",
+      "neverStarted": "Chưa từng chạy",
+      "openDetail": "Mở chi tiết",
+      "summary": {
+        "total": "Tổng",
+        "ready": "Sẵn sàng",
+        "degraded": "Suy giảm",
+        "failed": "Lỗi",
+        "unknown": "Không rõ",
+        "drifting": "Lệch trạng thái",
+        "planned": "Dự kiến",
+        "sloBreached": "SLO vi phạm",
+        "sloAtRisk": "SLO có nguy cơ",
+        "deadLetter": "Thư chết"
+      },
+      "filters": {
+        "allStates": "Tất cả trạng thái"
+      },
+      "columns": {
+        "service": "Dịch vụ",
+        "state": "Trạng thái",
+        "health": "Sức khỏe",
+        "desired": "Mong muốn",
+        "heartbeat": "Nhịp tim",
+        "lastSuccess": "Thành công gần nhất",
+        "output": "Kết quả",
+        "slo": "SLO"
+      },
+      "flags": {
+        "planned": "Dự kiến",
+        "external": "Chạy ở tiến trình khác",
+        "drift": "Lệch trạng thái"
+      },
+      "category": {
+        "market-data": "Dữ liệu thị trường",
+        "intelligence": "Phân tích",
+        "signals": "Tín hiệu",
+        "alerts": "Cảnh báo",
+        "ai": "AI",
+        "bots": "Bot",
+        "platform": "Nền tảng"
+      },
+      "scope": {
+        "system": "Hệ thống",
+        "owner": "Chủ sở hữu",
+        "account": "Tài khoản",
+        "session": "Phiên"
+      },
+      "mode": {
+        "continuous": "Liên tục",
+        "periodic": "Định kỳ",
+        "event-driven": "Theo sự kiện",
+        "on-demand": "Theo yêu cầu"
+      },
+      "state": {
+        "UNKNOWN": "Không rõ",
+        "STARTING": "Đang khởi động",
+        "READY": "Sẵn sàng",
+        "DEGRADED": "Suy giảm",
+        "STOPPING": "Đang dừng",
+        "STOPPED": "Đã dừng",
+        "FAILED": "Lỗi"
+      },
+      "health": {
+        "HEALTHY": "Khỏe",
+        "DEGRADED": "Suy giảm",
+        "UNHEALTHY": "Không khỏe",
+        "UNKNOWN": "Không rõ"
+      },
+      "desired": {
+        "RUNNING": "Đang chạy",
+        "STOPPED": "Đã dừng"
+      },
+      "actions": {
+        "start": "Khởi động",
+        "stop": "Dừng",
+        "restart": "Khởi động lại",
+        "reset": "Đặt lại",
+        "probe": "Kiểm tra",
+        "run-once": "Chạy một vòng"
+      },
+      "phase": {
+        "queued": "Đang xếp hàng",
+        "starting": "Đang khởi động",
+        "awaiting-dependency": "Chờ phụ thuộc",
+        "awaiting-readiness": "Chờ sẵn sàng",
+        "stopping": "Đang dừng",
+        "draining": "Đang xả",
+        "running-once": "Đang chạy một vòng",
+        "done": "Xong",
+        "failed": "Thất bại",
+        "timed-out": "Quá hạn",
+        "stopped": "Đã dừng",
+        "ready": "Sẵn sàng"
+      },
+      "operationState": {
+        "QUEUED": "Đang xếp hàng",
+        "RUNNING": "Đang chạy",
+        "SUCCEEDED": "Thành công",
+        "FAILED": "Thất bại",
+        "CANCELLED": "Đã hủy",
+        "UNCONFIRMED": "Chưa xác nhận"
+      },
+      "rules": {
+        "process-alive": "Tiến trình còn sống",
+        "dependency-reachable": "Kết nối được phụ thuộc",
+        "subscription-acked": "Đã xác nhận đăng ký",
+        "fresh-event": "Có sự kiện thị trường mới",
+        "recent-success": "Chu kỳ gần nhất thành công",
+        "output-produced": "Có kết quả đầu ra",
+        "capability-verified": "Đã xác minh năng lực nhà cung cấp",
+        "validated-job": "Job gần nhất hợp lệ",
+        "outbox-consuming": "Outbox đang được xử lý",
+        "sink-writable": "Nơi ghi dữ liệu hoạt động"
+      },
+      "audit": {
+        "operation-requested": "Yêu cầu thao tác",
+        "operation-succeeded": "Thao tác thành công",
+        "operation-failed": "Thao tác thất bại",
+        "operation-unconfirmed": "Thao tác chưa xác nhận",
+        "worker-spawned": "Đã tạo worker",
+        "worker-exited": "Worker đã thoát",
+        "crash-restart": "Khởi động lại do lỗi",
+        "heartbeat-lost": "Mất nhịp tim",
+        "stop-requested": "Yêu cầu dừng",
+        "stop-escalated": "Buộc dừng",
+        "run-once-dispatched": "Đã gửi chạy một vòng",
+        "run-once-spawned": "Đã tạo worker chạy một vòng",
+        "reset-requested": "Yêu cầu đặt lại",
+        "restart-requested": "Yêu cầu khởi động lại",
+        "command-rejected": "Lệnh bị từ chối",
+        "command-expired": "Lệnh quá hạn",
+        "command-invalid": "Lệnh không đọc được"
+      },
+      "detail": {
+        "empty": "Chọn một dịch vụ",
+        "overview": "Tổng quan",
+        "pid": "PID",
+        "generation": "Thế hệ",
+        "restarts": "Số lần khởi động lại",
+        "host": "Máy chủ",
+        "heartbeat": "Nhịp tim",
+        "lastSuccess": "Thành công gần nhất",
+        "lastError": "Lỗi gần nhất",
+        "readiness": "Điều kiện sẵn sàng",
+        "noReadiness": "Chưa có lần kiểm tra sẵn sàng nào.",
+        "required": "Bắt buộc",
+        "optional": "Tùy chọn",
+        "workload": "Khối lượng",
+        "lastDuration": "Thời lượng gần nhất",
+        "lastOutput": "Kết quả gần nhất",
+        "interval": "Chu kỳ",
+        "lease": "Lease",
+        "telemetry": "Telemetry",
+        "noTelemetry": "Chưa có mẫu telemetry.",
+        "eventLoopP95": "Event loop p95",
+        "eventLoopP99": "Event loop p99",
+        "utilization": "Tỷ lệ bận event loop",
+        "cpu": "CPU",
+        "heap": "Heap",
+        "rss": "RSS",
+        "activity": "Hoạt động",
+        "noActivity": "Chưa có thao tác nào.",
+        "audit": "Nhật ký",
+        "controlPlane": "Điều khiển",
+        "controlNone": "Chưa có thao tác điều khiển nào hoàn tất.",
+        "controlQueue": "Chờ xử lý",
+        "controlRun": "Thực thi",
+        "controlTotal": "Tổng",
+        "controlOperation": "Thao tác"
+      },
+      "result": {
+        "accepted": "Đã nhận lệnh",
+        "succeeded": "Thao tác thành công",
+        "failed": "Thao tác thất bại",
+        "unconfirmed": "Chưa xác nhận — cần kiểm tra tay",
+        "rejected": "Lệnh bị từ chối"
+      },
+      "labels": {
+        "market-plane": "Bảng dữ liệu thị trường",
+        "funding": "Funding & open interest",
+        "scanner": "Quét biến động & top movers",
+        "news": "Thu thập tin tức",
+        "regime": "Chế độ thị trường",
+        "liquidation": "Thanh lý",
+        "confluence": "Hội tụ phương pháp",
+        "crossScan": "Quét liên sàn",
+        "macro": "Lịch & chuỗi vĩ mô",
+        "newsExtract": "Trích xuất tin tức",
+        "retention": "Lưu trữ dữ liệu",
+        "reconcile": "Đối soát dataset",
+        "signals": "Tín hiệu native",
+        "alertRules": "Bộ đánh giá quy tắc cảnh báo",
+        "brief": "Bản tin AI hằng ngày",
+        "ai-agent": "AI agent",
+        "ai-review": "AI review",
+        "bot-supervisor": "Giám sát bot",
+        "market-feeds": "Nguồn dữ liệu thị trường",
+        "outlook": "Triển vọng thị trường",
+        "demo-runner": "Chạy demo"
+      },
+      "stream": {
+        "live": "Trực tiếp",
+        "offline": "Đang dò"
+      },
+      "running": "Đang thực hiện thao tác",
+      "openMenu": "Thao tác dịch vụ",
+      "menu": {
+        "control": "Vòng đời",
+        "inspect": "Kiểm tra"
+      },
+      "slo": {
+        "title": "Mục tiêu dịch vụ",
+        "ok": "Đạt mục tiêu",
+        "at-risk": "Có nguy cơ",
+        "breached": "Vi phạm",
+        "unknown": "Chưa đo được",
+        "objectives": {
+          "freshness": "Độ mới của chu kỳ",
+          "flapping": "Độ ổn định khởi động lại",
+          "saturation": "Mức bão hoà tiến trình"
+        }
+      }
+    }
   }
 }

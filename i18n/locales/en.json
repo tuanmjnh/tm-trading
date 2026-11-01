@@ -482,7 +482,16 @@
   },
   "dashboard": {
     "title": "Trading Overview",
-    "description": "Signal engine, backtest & risk gate — numbers read straight from reports/ (NDJSON).",
+    "description": "Market state now — regime, sentiment, dominance and the risk gate, read from the services' stored snapshots.",
+    "riskGate": "Risk Gate",
+    "riskGateOk": "Open",
+    "riskGateHalted": "Halted",
+    "riskGateUnknown": "Unknown",
+    "runsBoard": "Backtest runs",
+    "runsBadgeSeries": "series",
+    "runsBadgeRuns": "runs",
+    "runsBadgeTrades": "trades",
+    "runsBadgeWarnings": "data warnings",
     "series": "Series (Symbol × TF)",
     "seriesHint": "One parameter set per chart",
     "totalRuns": "Total Runs",
@@ -1248,7 +1257,38 @@
     "outlook": "Market Outlook",
     "news_events": "Market Events",
     "news_sources": "News Sources",
-    "news_impact": "News Impact"
+    "news_impact": "News Impact",
+    "discover": "Discover",
+    "watchlist": "Watchlist & Signals",
+    "intelligence": "Intelligence",
+    "advanced": "Advanced & Research"
+  },
+  "discover": {
+    "title": "Discover",
+    "desc": "One scanner workspace — market intel, movers & volatility, and top coins.",
+    "tabs": {
+      "market": "Market Intel",
+      "scanner": "Movers & Volatility",
+      "topCoins": "Top Coins"
+    }
+  },
+  "watchlistWorkspace": {
+    "title": "Watchlist & Signals",
+    "desc": "Futures signals and their history for the instruments you track.",
+    "tabs": {
+      "signals": "Futures Signals",
+      "history": "Signal History"
+    }
+  },
+  "intelligenceWorkspace": {
+    "title": "Intelligence",
+    "desc": "News, events, macro calendar and the evidence-backed market outlook.",
+    "tabs": {
+      "news": "News Desk",
+      "events": "Market Events",
+      "calendar": "Macro Calendar",
+      "outlook": "Market Outlook"
+    }
   },
   "marketSources": {
     "title": "Market Data Sources",
@@ -1290,13 +1330,28 @@
       "privateStream": "Private stream",
       "accountApi": "Account API",
       "orderCapability": "Order capability",
-      "capabilities": { "supported": "Available", "unknown": "Not verified", "unsupported": "Unsupported" },
+      "capabilities": {
+        "supported": "Available",
+        "unknown": "Not verified",
+        "unsupported": "Unsupported"
+      },
       "deleteConfirm": "Remove the encrypted demo credentials for {profile}? This cannot be undone.",
       "saveSuccess": "Demo exchange credentials encrypted and saved.",
       "testSuccess": "Read-only demo account probe succeeded.",
-      "status": { "untested": "Not tested", "up": "Account API connected", "down": "Unavailable" },
+      "status": {
+        "untested": "Not tested",
+        "up": "Account API connected",
+        "down": "Unavailable"
+      },
       "loadFailed": "Could not load demo exchange connections.",
-      "profiles": { "bybit": "Bybit Linear Demo", "okx": "OKX Global Demo", "okxUs": "OKX US Demo", "okxEea": "OKX EEA Demo", "binance": "Binance Spot Demo", "binanceUsdm": "Binance USDⓈ-M Futures Demo" }
+      "profiles": {
+        "bybit": "Bybit Linear Demo",
+        "okx": "OKX Global Demo",
+        "okxUs": "OKX US Demo",
+        "okxEea": "OKX EEA Demo",
+        "binance": "Binance Spot Demo",
+        "binanceUsdm": "Binance USDⓈ-M Futures Demo"
+      }
     },
     "venuePrefs": {
       "title": "Venue preference & failover",
@@ -1305,7 +1360,10 @@
       "preferredVenue": "Preferred execution venue",
       "marketDataPolicy": "Market-data failover policy",
       "fallbackOrder": "Market-data fallback order",
-      "policies": { "PREFERRED_ONLY": "Preferred only (pause if unavailable)", "ALLOW_REFERENCE_FAILOVER": "Allow reference fallback (labelled)" },
+      "policies": {
+        "PREFERRED_ONLY": "Preferred only (pause if unavailable)",
+        "ALLOW_REFERENCE_FAILOVER": "Allow reference fallback (labelled)"
+      },
       "save": "Save preference",
       "saveSuccess": "Venue preference saved.",
       "loadFailed": "Could not load venue preference.",
@@ -1319,12 +1377,26 @@
       "capabilityGaps": "Unverified required capabilities",
       "configured": "Configured",
       "notConfigured": "No demo credentials",
-      "caps": { "SUPPORTED": "Supported", "UNSUPPORTED": "Unsupported", "UNKNOWN": "Not verified" },
-      "health": {
-        "status": "Status", "restAccount": "Account REST", "privateStream": "Private stream",
-        "publicStream": "Public market stream", "clockSkew": "Clock skew", "rateBudget": "Rate budget", "lastReconcile": "Last reconciliation"
+      "caps": {
+        "SUPPORTED": "Supported",
+        "UNSUPPORTED": "Unsupported",
+        "UNKNOWN": "Not verified"
       },
-      "statusLabels": { "READY": "Ready", "DEGRADED": "Degraded", "STALE": "Stale", "DISCONNECTED": "Disconnected" },
+      "health": {
+        "status": "Status",
+        "restAccount": "Account REST",
+        "privateStream": "Private stream",
+        "publicStream": "Public market stream",
+        "clockSkew": "Clock skew",
+        "rateBudget": "Rate budget",
+        "lastReconcile": "Last reconciliation"
+      },
+      "statusLabels": {
+        "READY": "Ready",
+        "DEGRADED": "Degraded",
+        "STALE": "Stale",
+        "DISCONNECTED": "Disconnected"
+      },
       "switch": {
         "button": "Switch venue for next session",
         "title": "Switch execution venue",
@@ -1568,7 +1640,8 @@
       "successRunAllServices": "Run-all services command dispatched",
       "acknowledge": "Acknowledge",
       "dismiss": "Dismiss",
-      "errorGeneric": "Action failed"
+      "errorGeneric": "Action failed",
+      "acceptedRunAllServices": "Queued {count} run-once operations — they run while the supervisor is up"
     },
     "botModal": {
       "title": "Trading Bot Details",
@@ -1796,6 +1869,14 @@
     "importance_high": "High",
     "importance_med": "Medium",
     "importance_low": "Low"
+  },
+  "alertsWorkspace": {
+    "title": "Alerts",
+    "tabs": {
+      "rules": "Alert Rules",
+      "history": "Delivery History",
+      "inbox": "Inbox"
+    }
   },
   "alertRules": {
     "title": "Alert Rules",
@@ -5385,5 +5466,253 @@
   "hub_integration": {
     "desc": "Step-by-step guide and live checks for the TM Hub dynamic-data integration",
     "runTest": "Run connection test"
+  },
+  "freshness": {
+    "states": {
+      "FRESH": "Live",
+      "DELAYED": "Delayed",
+      "STALE": "Stale",
+      "MISSING": "Unavailable",
+      "UNKNOWN": "Unknown"
+    },
+    "age": {
+      "justNow": "just now",
+      "seconds": "{n}s ago",
+      "minutes": "{n}m ago",
+      "hours": "{n}h ago",
+      "days": "{n}d ago"
+    },
+    "asOf": "As of {time}"
+  },
+  "operations": {
+    "services": {
+      "tab": "Service control plane",
+      "refresh": "Refresh",
+      "searchPlaceholder": "Search services",
+      "loadFailed": "Could not load services",
+      "loadFailedHint": "The operations API did not answer. The supervisor may not be running.",
+      "neverStarted": "Never started",
+      "openDetail": "Open detail",
+      "summary": {
+        "total": "Total",
+        "ready": "Ready",
+        "degraded": "Degraded",
+        "failed": "Failed",
+        "unknown": "Unknown",
+        "drifting": "Drifting",
+        "planned": "Planned",
+        "sloBreached": "SLO breached",
+        "sloAtRisk": "SLO at risk",
+        "deadLetter": "Dead-letter"
+      },
+      "filters": {
+        "allStates": "All states"
+      },
+      "columns": {
+        "service": "Service",
+        "state": "State",
+        "health": "Health",
+        "desired": "Desired",
+        "heartbeat": "Heartbeat",
+        "lastSuccess": "Last success",
+        "output": "Output",
+        "slo": "SLO"
+      },
+      "flags": {
+        "planned": "Planned",
+        "external": "Hosted elsewhere",
+        "drift": "Drift"
+      },
+      "category": {
+        "market-data": "Market data",
+        "intelligence": "Intelligence",
+        "signals": "Signals",
+        "alerts": "Alerts",
+        "ai": "AI",
+        "bots": "Bots",
+        "platform": "Platform"
+      },
+      "scope": {
+        "system": "System",
+        "owner": "Owner",
+        "account": "Account",
+        "session": "Session"
+      },
+      "mode": {
+        "continuous": "Continuous",
+        "periodic": "Periodic",
+        "event-driven": "Event-driven",
+        "on-demand": "On demand"
+      },
+      "state": {
+        "UNKNOWN": "Unknown",
+        "STARTING": "Starting",
+        "READY": "Ready",
+        "DEGRADED": "Degraded",
+        "STOPPING": "Stopping",
+        "STOPPED": "Stopped",
+        "FAILED": "Failed"
+      },
+      "health": {
+        "HEALTHY": "Healthy",
+        "DEGRADED": "Degraded",
+        "UNHEALTHY": "Unhealthy",
+        "UNKNOWN": "Unknown"
+      },
+      "desired": {
+        "RUNNING": "Running",
+        "STOPPED": "Stopped"
+      },
+      "actions": {
+        "start": "Start",
+        "stop": "Stop",
+        "restart": "Restart",
+        "reset": "Reset",
+        "probe": "Probe",
+        "run-once": "Run once"
+      },
+      "phase": {
+        "queued": "Queued",
+        "starting": "Starting",
+        "awaiting-dependency": "Waiting for dependency",
+        "awaiting-readiness": "Awaiting readiness",
+        "stopping": "Stopping",
+        "draining": "Draining",
+        "running-once": "Running one cycle",
+        "done": "Done",
+        "failed": "Failed",
+        "timed-out": "Timed out",
+        "stopped": "Stopped",
+        "ready": "Ready"
+      },
+      "operationState": {
+        "QUEUED": "Queued",
+        "RUNNING": "Running",
+        "SUCCEEDED": "Succeeded",
+        "FAILED": "Failed",
+        "CANCELLED": "Cancelled",
+        "UNCONFIRMED": "Unconfirmed"
+      },
+      "rules": {
+        "process-alive": "Process is alive",
+        "dependency-reachable": "Dependencies reachable",
+        "subscription-acked": "Subscription acknowledged",
+        "fresh-event": "Recent market event",
+        "recent-success": "Recent successful cycle",
+        "output-produced": "Output produced",
+        "capability-verified": "Provider capability verified",
+        "validated-job": "Last job validated",
+        "outbox-consuming": "Delivery outbox consumed",
+        "sink-writable": "Output sink writable"
+      },
+      "audit": {
+        "operation-requested": "Operation requested",
+        "operation-succeeded": "Operation succeeded",
+        "operation-failed": "Operation failed",
+        "operation-unconfirmed": "Operation unconfirmed",
+        "worker-spawned": "Worker spawned",
+        "worker-exited": "Worker exited",
+        "crash-restart": "Crash restart",
+        "heartbeat-lost": "Heartbeat lost",
+        "stop-requested": "Stop requested",
+        "stop-escalated": "Stop escalated",
+        "run-once-dispatched": "Run-once dispatched",
+        "run-once-spawned": "Run-once worker spawned",
+        "reset-requested": "Reset requested",
+        "restart-requested": "Restart requested",
+        "command-rejected": "Command rejected",
+        "command-expired": "Command expired",
+        "command-invalid": "Command unreadable"
+      },
+      "detail": {
+        "empty": "Select a service",
+        "overview": "Overview",
+        "pid": "PID",
+        "generation": "Generation",
+        "restarts": "Restarts",
+        "host": "Host",
+        "heartbeat": "Heartbeat",
+        "lastSuccess": "Last success",
+        "lastError": "Last error",
+        "readiness": "Readiness",
+        "noReadiness": "No readiness checks have run yet.",
+        "required": "Required",
+        "optional": "Optional",
+        "workload": "Workload",
+        "lastDuration": "Last duration",
+        "lastOutput": "Last output",
+        "interval": "Interval",
+        "lease": "Lease",
+        "telemetry": "Telemetry",
+        "noTelemetry": "No telemetry sample yet.",
+        "eventLoopP95": "Event loop p95",
+        "eventLoopP99": "Event loop p99",
+        "utilization": "Event loop utilization",
+        "cpu": "CPU",
+        "heap": "Heap",
+        "rss": "RSS",
+        "activity": "Activity",
+        "noActivity": "No operations yet.",
+        "audit": "Audit",
+        "controlPlane": "Control plane",
+        "controlNone": "No completed control action yet.",
+        "controlQueue": "Queue wait",
+        "controlRun": "Execution",
+        "controlTotal": "Total",
+        "controlOperation": "Operation"
+      },
+      "result": {
+        "accepted": "Command accepted",
+        "succeeded": "Operation succeeded",
+        "failed": "Operation failed",
+        "unconfirmed": "Unconfirmed — check by hand",
+        "rejected": "Command rejected"
+      },
+      "labels": {
+        "market-plane": "Market data plane",
+        "funding": "Funding and open interest",
+        "scanner": "Volatility and movers scanner",
+        "news": "News ingestion",
+        "regime": "Market regime",
+        "liquidation": "Liquidations",
+        "confluence": "Method confluence",
+        "crossScan": "Cross-venue scan",
+        "macro": "Macro calendar and series",
+        "newsExtract": "News extraction",
+        "retention": "Data retention",
+        "reconcile": "Dataset reconciliation",
+        "signals": "Native signals",
+        "alertRules": "Alert rule evaluator",
+        "brief": "AI morning brief",
+        "ai-agent": "AI agent",
+        "ai-review": "AI review",
+        "bot-supervisor": "Bot supervisor",
+        "market-feeds": "Market feeds",
+        "outlook": "Market outlook",
+        "demo-runner": "Demo runner"
+      },
+      "stream": {
+        "live": "Live",
+        "offline": "Polling"
+      },
+      "running": "Operation in progress",
+      "openMenu": "Service actions",
+      "menu": {
+        "control": "Lifecycle",
+        "inspect": "Inspect"
+      },
+      "slo": {
+        "title": "Service objectives",
+        "ok": "Meets target",
+        "at-risk": "At risk",
+        "breached": "Breached",
+        "unknown": "Not measured",
+        "objectives": {
+          "freshness": "Cycle freshness",
+          "flapping": "Restart stability",
+          "saturation": "Process saturation"
+        }
+      }
+    }
   }
 }

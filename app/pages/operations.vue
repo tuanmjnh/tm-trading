@@ -445,10 +445,17 @@ const riskSummary = computed(() => ({
 //  Tabs (Unified Console: Bots, Positions, Alerts, Agents)
 // -----------------------------------------------------------------------------
 
-type ConsoleTab = 'bots' | 'positions' | 'alerts' | 'agents'
-const activeTab = ref<ConsoleTab>('bots')
+type ConsoleTab = 'services' | 'bots' | 'positions' | 'alerts' | 'agents'
+// The service table is the primary view of this screen (V4.2 §17.9): it is the
+// only tab that reflects the supervisor's desired/observed state.
+const activeTab = ref<ConsoleTab>('services')
 
 const tabItems = computed(() => [
+  {
+    label: t('operations.services.tab'),
+    value: 'services',
+    icon: 'i-lucide-server-cog'
+  },
   {
     label: `${t('operationsCenter.botsTitle')} (${botSummary.value.total})`,
     value: 'bots',
@@ -1093,14 +1100,28 @@ async function stopAllRunning() {
   }
 }
 
-/** Run all services once. */
+/**
+ * Run every periodic service one cycle.
+ *
+ * V4.2 S2: the endpoint now enqueues a real `run-once` operation per service and
+ * answers `202 Accepted`. The message reports ACCEPTANCE, not a result — the
+ * supervisor performs the work and the Service control plane shows the outcome.
+ */
 async function runAllServices() {
-  const result = await $fetch<{ success: boolean; data?: any }>('/api/v1/admin/services/run-once', { method: 'POST' })
-  if (result.success) {
-    notify.success(t('operationsCenter.actions.successRunAllServices'))
-    await loadAll()
-  } else {
-    notify.error(t('operationsCenter.actions.errorGeneric'))
+  try {
+    const result = await $fetch<{ success: boolean; data?: { count: number } }>(
+      '/api/v1/admin/services/run-once',
+      { method: 'POST' },
+    )
+    if (result.success) {
+      notify.success(t('operationsCenter.actions.acceptedRunAllServices', { count: result.data?.count ?? 0 }))
+      await loadAll()
+    } else {
+      notify.error(t('operationsCenter.actions.errorGeneric'))
+    }
+  } catch (error) {
+    const detail = (error as { data?: { message?: string } })?.data
+    notify.error(detail?.message || t('operationsCenter.actions.errorGeneric'))
   }
 }
 
@@ -1392,7 +1413,7 @@ function botActionItems(instance: BotInstance): Array<{ label: string; icon?: st
         </template>
 
         <!-- Bounded Height Scroll Container -->
-        <div class="max-h-[460px] overflow-y-auto overflow-x-auto relative rounded">
+        <div v-if="activeTab !== 'services'" class="max-h-[460px] overflow-y-auto overflow-x-auto relative rounded">
           <!-- BOTS TAB -->
           <div v-if="activeTab === 'bots'" class="space-y-3">
             <!-- Bot Financial & Performance Ribbon -->
@@ -1781,6 +1802,12 @@ function botActionItems(instance: BotInstance): Array<{ label: string; icon?: st
               </template>
             </UTable>
           </div>
+        </div>
+
+        <!-- SERVICES TAB — the panel owns its own scroll area and toolbar, so it
+             is not nested inside the bounded scroller above. -->
+        <div v-else class="pt-1">
+          <OperationsServicesPanel />
         </div>
       </UCard>
 

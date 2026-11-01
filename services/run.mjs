@@ -31,6 +31,8 @@ import { runMacro } from './macro.mjs'
 import { runNewsExtract } from './newsExtract.mjs'
 import { runSignalProducer } from './signalProducer.mjs'
 import { notify } from '../notify/service.mjs'
+import { partitionBySupervisorLease } from './orchestratorGuard.mjs'
+import { createSupervisorStore } from './supervisorStore.mjs'
 
 loadEnv()
 
@@ -94,12 +96,60 @@ async function runOne(s) {
   }
 }
 
+// -----------------------------------------------------------------------------
+//  Overlap guard (V4.2 §17.15-O4): never run a service a live supervisor owns.
+//
+//  Two copies of a producer means duplicate alerts and duplicate writes. The
+//  supervisor is the authority — it holds an exclusive lease per service — so
+//  this orchestrator only READS that state and steps aside.
+//  `SERVICES_ALLOW_OVERLAP=1` is the deliberate, loud escape hatch.
+// -----------------------------------------------------------------------------
+
+function overlapsAllowed() {
+  return process.env.SERVICES_ALLOW_OVERLAP === '1'
+}
+
+function partitionAgainstSupervisor() {
+  if (overlapsAllowed()) return { runnable: [...SERVICES], blocked: [] }
+  try {
+    const store = createSupervisorStore(process.env.TM_SUPERVISOR_STATE
+      ? { file: process.env.TM_SUPERVISOR_STATE }
+      : {})
+    return partitionBySupervisorLease({ store, services: SERVICES, serviceIdOf: s => s.name })
+  } catch (e) {
+    log('[guard]', `cannot read supervisor state (skipping the overlap check): ${e?.message}`)
+    return { runnable: [...SERVICES], blocked: [] }
+  }
+}
+
+function reportBlocked(blocked) {
+  for (const { service, owner, expiresAt } of blocked) {
+    log('[guard]', `SKIP ${service.name}: supervisor lease held by ${owner} (expires ${new Date(expiresAt).toISOString()})`)
+  }
+  if (blocked.length) {
+    log('[guard]', `${blocked.length} service(s) are owned by the supervisor — run "node services/supervisor.mjs status" to see them, or set SERVICES_ALLOW_OVERLAP=1 to override (this WILL run duplicates).`)
+  }
+}
+
 async function once() {
-  for (const s of SERVICES) await runOne(s)
+  const { runnable, blocked } = partitionAgainstSupervisor()
+  reportBlocked(blocked)
+  if (!runnable.length && blocked.length) {
+    log('[guard]', 'every service is owned by the supervisor — nothing to run.')
+    return false
+  }
+  for (const s of runnable) await runOne(s)
+  return true
 }
 
 async function watch() {
-  log('[watch]', `chu ky: ${SERVICES.map((s) => `${s.name}=${s.intervalSec}s`).join(', ')}`)
+  const initial = partitionAgainstSupervisor()
+  reportBlocked(initial.blocked)
+  if (!initial.runnable.length && initial.blocked.length) {
+    log('[watch]', 'every service is owned by the supervisor — watch has nothing to do.')
+    process.exit(1)
+  }
+  log('[watch]', `chu ky: ${initial.runnable.map((s) => `${s.name}=${s.intervalSec}s`).join(', ')}`)
   // WS forceOrder -> data/liq-events.ndjson (best effort — neu mang khong
   // nhan frame thi lang im, runLiquidation van doc duoc estimate REST).
   try {
@@ -111,11 +161,21 @@ async function watch() {
   const timers = new Map()
   const schedule = (s, delayMs) => {
     timers.set(s.name, setTimeout(async () => {
+      // A supervisor may have picked this service up since we started; re-check
+      // every cycle so a second copy can never run alongside it.
+      if (!overlapsAllowed()) {
+        const { blocked } = partitionAgainstSupervisor()
+        if (blocked.some(entry => entry.service.name === s.name)) {
+          log('[guard]', `SKIP ${s.name}: supervisor lease held — skipping this cycle`)
+          schedule(s, s.intervalSec * 1000)
+          return
+        }
+      }
       await runOne(s)
       schedule(s, s.intervalSec * 1000)
     }, delayMs))
   }
-  SERVICES.forEach((s, i) => schedule(s, i * 3000)) // lệch pha nhẹ 3s
+  initial.runnable.forEach((s, i) => schedule(s, i * 3000)) // lệch pha nhẹ 3s
 
   // Kiem tra D9 (D9) — 60s/lan, nhanh hon chu ky nhieu lan de phat som.
   const checkSec = Number(process.env.HEARTBEAT_CHECK_SEC || 60)
@@ -162,12 +222,14 @@ if (isMain) {
   if (cmd === 'status') status()
   else if (cmd === 'watch') await watch()
   else if (cmd === 'once') {
-    await once()
+    const ran = await once()
     // Dong Mongo khong thi process treo (connection giu event loop) — cho
     // stdout flush xong roi thoat (log den pipe co the async tren Windows).
     const { disconnectMongo } = await import('../engine/db.mjs')
     await disconnectMongo()
-    setTimeout(() => process.exit(0), 100)
+    // Non-zero when every service was skipped: a cron/timer must be able to tell
+    // "ran nothing because the supervisor owns it" from "ran everything".
+    setTimeout(() => process.exit(ran === false ? 1 : 0), 100)
   }
   else {
     console.error(`lenh khong biet: ${cmd} (once | watch | status)`)
