@@ -13,6 +13,7 @@ import { premiumIndex, openInterest } from './binance.mjs'
 import { getIntel, getDataset, getMarketFeed, saveSnapshot, insertEvents } from './store.mjs'
 import { sendTelegram } from './telegram.mjs'
 import { createFeedRecorder, fundingFeedDoc } from '../market/feedRecorder.mjs'
+import { detectFundingOi } from './scanner.mjs'
 
 /** Cực đoan: |rate| >= th (0.0001 = 0.01%). Env FUNDING_ALERT_RATE. */
 export const DEFAULT_ALERT_RATE = Number(process.env.FUNDING_ALERT_RATE || 0.0005)
@@ -96,6 +97,19 @@ export async function runFunding({ fetchImpl, now = new Date(), th = DEFAULT_ALE
       data: { rate: e.rate, pct: Number((e.rate * 100).toFixed(4)), nextFundingTime: e.nextFundingTime, price: e.price, oiContracts: e.oiContracts ?? null, oiNotionalUsd: e.oiNotionalUsd ?? null },
     })))
 
+    // S5: fundingOi snapshot — built from the rows that have OI attached
+    const fundingOiOut = withOi
+      .map((e) => ({ symbol: e.symbol, ...detectFundingOi({ symbol: e.symbol, rate: e.rate, oiContracts: e.oiContracts, oiNotionalUsd: e.oiNotionalUsd }) }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8)
+
+    await saveSnapshot('fundingOi', fundingOiOut.map((m) => ({
+      key: `fundingOi:${m.symbol}`,
+      symbol: m.symbol,
+      ts,
+      data: m,
+    })))
+
     if (extremes.length) {
       const res = await insertEvents(extremes.map((e) => ({
         key: `alert:funding:${e.symbol}:${e.nextFundingTime}`,
@@ -117,5 +131,5 @@ export async function runFunding({ fetchImpl, now = new Date(), th = DEFAULT_ALE
     }
   }
 
-  return { checked: rows.length, snapshot: snapshot.length, extremes: extremes.length, alerted, feedWrote, mongo }
+  return { checked: rows.length, snapshot: snapshot.length, extremes: extremes.length, alerted, feedWrote, fundingOi: fundingOiOut?.length ?? 0, mongo }
 }

@@ -1,4 +1,4 @@
-import type { IntelAccum, IntelConfluence, IntelData, IntelFlow, IntelFunding, IntelMover, IntelNewsItem, IntelRegime, IntelServiceRow, IntelZone } from '#shared/types/intel'
+import type { IntelAccum, IntelConfluence, IntelData, IntelFlow, IntelFunding, IntelFundingOi, IntelLowcap, IntelMover, IntelNewsItem, IntelRegime, IntelServiceRow, IntelVolatility, IntelZone } from '#shared/types/intel'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { engineModel } from './engineModel'
@@ -204,6 +204,44 @@ export function toConfluence(doc: any): IntelConfluence {
   }
 }
 
+/** Biến động (snapshot `volatility`). */
+export function toVolatility(doc: any): IntelVolatility {
+  const d = dataOf(doc)
+  return {
+    symbol: String(doc?.symbol ?? ''),
+    atrPct: num(d.atrPct),
+    chg4h: num(d.chg4h),
+    rangePct: num(d.rangePct),
+    volRatio: num(d.volRatio),
+    score: num(d.score),
+  }
+}
+
+/** Low-cap (snapshot `lowcap`). */
+export function toLowcap(doc: any): IntelLowcap {
+  const d = dataOf(doc)
+  return {
+    symbol: String(doc?.symbol ?? ''),
+    quoteVolume: num(d.quoteVolume),
+    lastPrice: num(d.lastPrice),
+    pct24h: num(d.pct24h),
+    score: num(d.score),
+  }
+}
+
+/** Funding + OI (snapshot `fundingOi`). */
+export function toFundingOi(doc: any): IntelFundingOi {
+  const d = dataOf(doc)
+  return {
+    symbol: String(doc?.symbol ?? ''),
+    rate: num(d.rate),
+    pct: num(d.pct),
+    oiContracts: typeof d.oiContracts === 'number' ? d.oiContracts : null,
+    oiNotionalUsd: typeof d.oiNotionalUsd === 'number' ? d.oiNotionalUsd : null,
+    score: num(d.score),
+  }
+}
+
 const EMPTY = (mongo: 'up' | 'down', services: IntelServiceRow[]): IntelData => ({
   mongo,
   generatedAt: null,
@@ -211,6 +249,9 @@ const EMPTY = (mongo: 'up' | 'down', services: IntelServiceRow[]): IntelData => 
   flows: [],
   accums: [],
   funding: [],
+  volatility: [],
+  lowcap: [],
+  fundingOi: [],
   news: [],
   regime: null,
   zones: [],
@@ -224,11 +265,14 @@ export async function loadIntelData(now: Date = new Date()): Promise<IntelData> 
   if (!Intel) return EMPTY('down', services)
 
   try {
-    const [movers, flows, accums, funding, news, regimeDocs, zones, confluence] = await Promise.all([
+    const [movers, flows, accums, funding, volatility, lowcap, fundingOi, news, regimeDocs, zones, confluence] = await Promise.all([
       Intel.find({ kind: 'mover' }).sort({ ts: -1 }).limit(8).lean(),
       Intel.find({ kind: 'flow' }).sort({ 'data.score': -1, ts: -1 }).limit(8).lean(),
       Intel.find({ kind: 'accum' }).sort({ ts: -1 }).limit(8).lean(),
       Intel.find({ kind: 'funding' }).sort({ 'data.pct': -1, ts: -1 }).limit(15).lean(),
+      Intel.find({ kind: 'volatility' }).sort({ 'data.score': -1, ts: -1 }).limit(8).lean(),
+      Intel.find({ kind: 'lowcap' }).sort({ 'data.score': -1, ts: -1 }).limit(8).lean(),
+      Intel.find({ kind: 'fundingOi' }).sort({ 'data.score': -1, ts: -1 }).limit(8).lean(),
       Intel.find({ kind: 'news' }).sort({ ts: -1 }).limit(6).lean(),
       Intel.find({ kind: 'regime' }).sort({ ts: -1 }).limit(1).lean(),
       Intel.find({ kind: 'zone' }).sort({ score: -1, ts: -1 }).limit(12).lean(),
@@ -244,6 +288,9 @@ export async function loadIntelData(now: Date = new Date()): Promise<IntelData> 
       flows: flows.map(toFlow),
       accums: accums.map(toAccum),
       funding: funding.map(toFunding),
+      volatility: volatility.map(toVolatility),
+      lowcap: lowcap.map(toLowcap),
+      fundingOi: fundingOi.map(toFundingOi),
       news: news.map(toNews),
       regime: regimeDocs.length ? toRegime(regimeDocs[0]) : null,
       zones: zones.map(toZone),

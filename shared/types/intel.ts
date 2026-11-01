@@ -135,6 +135,35 @@ export interface IntelConfluence {
   ts: string
 }
 
+/** Biến động theo ATR14% + 4h change + range + volume ratio (snapshot `volatility`). */
+export interface IntelVolatility {
+  symbol: string
+  atrPct: number
+  chg4h: number
+  rangePct: number
+  volRatio: number
+  score: number
+}
+
+/** Low-cap theo khối lượng quote 24h (snapshot `lowcap`). */
+export interface IntelLowcap {
+  symbol: string
+  quoteVolume: number
+  lastPrice: number
+  pct24h: number
+  score: number
+}
+
+/** Funding + OI (snapshot `fundingOi`). */
+export interface IntelFundingOi {
+  symbol: string
+  rate: number
+  pct: number
+  oiContracts: number | null
+  oiNotionalUsd: number | null
+  score: number
+}
+
 export interface IntelData {
   /** 'up' = Mongo san sang; 'down' = khong ket noi duoc (fail-soft). */
   mongo: 'up' | 'down'
@@ -144,6 +173,9 @@ export interface IntelData {
   flows: IntelFlow[]
   accums: IntelAccum[]
   funding: IntelFunding[]
+  volatility: IntelVolatility[]
+  lowcap: IntelLowcap[]
+  fundingOi: IntelFundingOi[]
   news: IntelNewsItem[]
   /** Regime hien tai — null khi Mongo down/chua chay services (Phase 9). */
   regime: IntelRegime | null
