@@ -1,0 +1,71 @@
+// =============================================================================
+//  L4 - TRIGGER  (Entry / SL / TP1 / partial / RR filter)
+//  Hai kieu vao, CUNG mot thuoc R = bien do cay nen tham chieu:
+//    (a) ZoneLimit   [MAC DINH] cho giao LMT tai bien nen/vung khi gia hoi ve
+//    (b) CandleBreak            pha bien nen (stop)
+//  SL = phia doi dien cua CHINH cay nen do (+ dem ATR).
+//  TP1 = cau truc doi dien H1/H4, toi thieu ocl_minRR (mac dinh 2.5).
+// =============================================================================
+
+float ocl_buf = ocl_entryBufferATR * ocl_atr
+
+bool ocl_refReady = ocl_refArmed and not na(ocl_refBar) and bar_index > ocl_refBar
+
+bool ocl_longZone  = ocl_refReady and ocl_allowedDir > 0 and low <= ocl_refHigh + ocl_buf
+bool ocl_shortZone = ocl_refReady and ocl_allowedDir < 0 and high >= ocl_refLow - ocl_buf
+bool ocl_longBreak = ocl_refReady and ocl_allowedDir > 0 and close > ocl_refHigh + ocl_buf
+bool ocl_shortBreak = ocl_refReady and ocl_allowedDir < 0 and close < ocl_refLow - ocl_buf
+
+bool ocl_longSig  = ocl_entryMode == "ZoneLimit" ? ocl_longZone : ocl_longBreak
+bool ocl_shortSig = ocl_entryMode == "ZoneLimit" ? ocl_shortZone : ocl_shortBreak
+
+// --- Mot keo: entry / sl / risk ----------------------------------------------
+float ocl_entry = na
+float ocl_sl = na
+int   ocl_dir = 0
+
+if ocl_longSig
+    ocl_dir := 1
+    ocl_entry := ocl_entryMode == "ZoneLimit" ? math.min(ocl_refHigh + ocl_buf, close) : close
+    ocl_sl := ocl_refLow - ocl_slBufRef
+else if ocl_shortSig
+    ocl_dir := -1
+    ocl_entry := ocl_entryMode == "ZoneLimit" ? math.max(ocl_refLow - ocl_buf, close) : close
+    ocl_sl := ocl_refHigh + ocl_slBufRef
+
+float ocl_risk = na(ocl_entry) or na(ocl_sl) ? na : math.abs(ocl_entry - ocl_sl)
+
+// --- TP1 = cau truc doi dien ------------------------------------------------
+float ocl_tp1 = na
+float ocl_partial = na
+
+if not na(ocl_risk) and ocl_risk > 0.0 and ocl_dir == 1
+    bool ocl_okRes = ocl_tp1Mode == "Pivot" and not na(ocl_resLvl) and ocl_resLvl > ocl_entry + ocl_risk
+    ocl_tp1 := ocl_okRes ? ocl_resLvl : ocl_entry + 2.0 * ocl_risk
+    ocl_partial := ocl_entry + ocl_partialAtR * ocl_risk
+else if not na(ocl_risk) and ocl_risk > 0.0 and ocl_dir == -1
+    bool ocl_okSup = ocl_tp1Mode == "Pivot" and not na(ocl_supLvl) and ocl_supLvl < ocl_entry - ocl_risk
+    ocl_tp1 := ocl_okSup ? ocl_supLvl : ocl_entry - 2.0 * ocl_risk
+    ocl_partial := ocl_entry - ocl_partialAtR * ocl_risk
+
+float ocl_rr = na(ocl_risk) or na(ocl_tp1) or na(ocl_entry) or ocl_risk <= 0.0 ? na : math.abs(ocl_tp1 - ocl_entry) / ocl_risk
+float ocl_riskPct = na(ocl_risk) ? na : ocl_risk / close * 100.0
+
+// --- Cong tin hieu -----------------------------------------------------------
+bool ocl_rrOk = not na(ocl_rr) and ocl_rr >= ocl_minRR
+bool ocl_signal = ocl_okBar and ocl_dir != 0 and ocl_rrOk and ocl_regimeOk and ocl_sessOk and not ocl_vsaVeto and not ocl_ladderBlock
+
+string ocl_skip = "-"
+if ocl_okBar and ocl_dir != 0
+    if ocl_ladderBlock
+        ocl_skip := "LADDER BLOCK"
+    else if not ocl_rrOk
+        ocl_skip := "RR LOW"
+    else if not ocl_regimeOk
+        ocl_skip := "REGIME"
+    else if not ocl_sessOk
+        ocl_skip := "SESSION"
+    else if ocl_vsaVeto
+        ocl_skip := "VOL WEAK"
+    else
+        ocl_skip := "PASS"

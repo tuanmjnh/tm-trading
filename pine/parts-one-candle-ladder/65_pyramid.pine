@@ -1,0 +1,37 @@
+// =============================================================================
+//  L6 - PYRAMID (nhoi lenh)  *** MAC DINH TAT ***
+//  Nguon: video 1 tang khoi luong 0.01 -> 0.73 lo (x73) - do la hanh vi cua tac
+//  gia, KHONG phai cua bo nay. O day chot: base = 1 don vi, moi bac +1 don vi,
+//  tong <= ocl_pyramidMaxMult (mac dinh 4) => toi da 3 lan nhoi (L1..L3).
+//  So don vi duoc dung lam he so khoi luong cho ban strategy.
+// =============================================================================
+
+var int   ocl_pyrStage = 0
+var float ocl_pyrUnits = 1.0
+var bool  ocl_pyrAdd = false
+var int   ocl_pyrAddDir = 0
+
+ocl_pyrAdd := false
+ocl_pyrAddDir := 0
+
+if ocl_evEntry
+    ocl_pyrStage := 0
+    ocl_pyrUnits := 1.0
+
+int ocl_pyrMaxStage = math.max(0, int(ocl_pyramidMaxMult) - 1)
+
+bool ocl_pyrAllowed = ocl_pyramidOn and ocl_posDir != 0 and not ocl_tp1Hit and not ocl_needReset
+if ocl_pyrAllowed and ocl_pyramidResetOnBE and ocl_beMoved
+    ocl_pyrAllowed := false
+
+if ocl_pyrAllowed and ocl_pyrStage < ocl_pyrMaxStage and not na(ocl_posRisk) and ocl_posRisk > 0.0
+    float ocl_pyrGain = (close - ocl_posEntry) * float(ocl_posDir)
+    float ocl_pyrNeed = float(ocl_pyrStage + 1) * ocl_pyramidStepR * ocl_posRisk
+    bool ocl_pyrBarOk = ocl_posDir == 1 ? ocl_bullBar : ocl_bearBar
+    if ocl_pyrGain >= ocl_pyrNeed and ocl_pyrBarOk and ocl_okBar
+        ocl_pyrStage := ocl_pyrStage + 1
+        ocl_pyrUnits := ocl_pyrUnits + 1.0
+        ocl_pyrAdd := true
+        ocl_pyrAddDir := ocl_posDir
+
+string ocl_pyrText = ocl_pyramidOn ? "L" + str.tostring(ocl_pyrStage) + "/" + str.tostring(ocl_pyrMaxStage) + "  " + str.tostring(ocl_pyrUnits, "#.##") + "x" : "OFF"

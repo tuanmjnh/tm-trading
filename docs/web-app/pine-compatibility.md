@@ -11,7 +11,7 @@ pinned separately by the `engine/test.mjs` golden fixtures (`npm run indicator:p
 
 ## Summary
 
-- Scripts: 12 (covered: 5, with gaps: 7)
+- Scripts: 14 (covered: 5, with gaps: 9)
 - MISSING ta.* primitives: barssince, dmi, hma, tr
 - UNCLASSIFIED ta.* primitives: none
 
@@ -21,6 +21,8 @@ pinned separately by the `engine/test.mjs` golden fixtures (`npm run indicator:p
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | LongKaco VSA Backtest.pine | strategy | atr, change, highest, lowest, pivothigh, pivotlow, rma | no | no | no | no | no | no | covered |
 | LongKaco VSA.pine | indicator | atr, change, highest, lowest, pivothigh, pivotlow, rma | no | no | no | no | no | no | covered |
+| One-Candle Ladder Backtest.pine | strategy | atr, change, dmi, pivothigh, pivotlow, rma | yes | no | no | no | no | no | gaps: dmi |
+| One-Candle Ladder.pine | indicator | atr, change, dmi, pivothigh, pivotlow, rma | yes | no | no | no | no | no | gaps: dmi |
 | Price Action MTF Backtest.pine | strategy | atr, bb, change, crossover, crossunder, dmi, ema, highest, lowest, macd, pivothigh, pivotlow, rma, rsi, sma, vwap | yes | yes | no | yes | no | no | gaps: dmi |
 | Price Action MTF.pine | indicator | atr, bb, change, crossover, crossunder, dmi, ema, highest, lowest, macd, pivothigh, pivotlow, rma, rsi, sma, vwap | yes | yes | no | yes | no | no | gaps: dmi |
 | TM Fusion Zones Backtest.pine | strategy | atr, barssince, change, ema, highest, hma, lowest, pivothigh, pivotlow, rma, sma, tr | yes | yes | no | yes | no | no | gaps: barssince, hma, tr |
@@ -76,7 +78,7 @@ pinned separately by the `engine/test.mjs` golden fixtures (`npm run indicator:p
 runtime.** The engine core is dependency-free (AGENTS.md), and a Pine runtime
 would break that rule and the Pine↔engine parity discipline (risk #1).
 
-To mirror the 7 script(s) that are not yet covered natively,
+To mirror the 9 script(s) that are not yet covered natively,
 port the missing primitive(s) into `engine/ta.mjs` first: **barssince, dmi, hma, tr**.
 
 Until then those scripts stay reference-only; the scripts marked `covered` may be

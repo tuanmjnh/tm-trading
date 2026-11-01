@@ -8,6 +8,7 @@ This directory contains the technical documentation, architectural specification
 
 ```
 docs/
+├── user-guide/     # Task-oriented guide for people who USE the app
 ├── indicator/      # Pine Script indicators, trading signals, risk models & roadmaps
 │   ├── tm-indicator/   # TM Indicator multi-asset futures system (Phase 0–8)
 │   ├── vsa-wyckoff/    # Volume Spread Analysis & Wyckoff method
@@ -17,6 +18,29 @@ docs/
 ├── web-app/        # Nuxt 4 dashboard, UI design system, architecture & app roadmaps
 └── engine/         # Core quantitative signal engine, data models, time rules
 ```
+
+---
+
+## 0. Start Here
+
+**Using the application?** Read the user guide, not the roadmaps.
+
+- [docs/user-guide/README.md](file:///d:/Applications/tm-trading/docs/user-guide/README.md): What TM Trading is, who the guide is for, and the capability-status legend.
+- [docs/user-guide/getting-started.md](file:///d:/Applications/tm-trading/docs/user-guide/getting-started.md): Prerequisites, environment, first login, first-run checklist.
+- [docs/user-guide/workspaces.md](file:///d:/Applications/tm-trading/docs/user-guide/workspaces.md): Every workspace, in sidebar order, with an honest status per page.
+- [docs/user-guide/operations.md](file:///d:/Applications/tm-trading/docs/user-guide/operations.md): Running services, reading the heartbeat, restarting safely, seeding rules.
+- [docs/user-guide/troubleshooting.md](file:///d:/Applications/tm-trading/docs/user-guide/troubleshooting.md): Symptom → cause → fix, including login, empty tables, Telegram and bots.
+- [docs/user-guide/runbooks.md](file:///d:/Applications/tm-trading/docs/user-guide/runbooks.md): Recovery runbooks for every failure mode (crash, stale feed, lease, backlog, storage, restart).
+- [docs/web-app/v4.2-drills.md](file:///d:/Applications/tm-trading/docs/web-app/v4.2-drills.md): The reliability drill harness (`npm run drills`) — what each drill proves and what still needs operator evidence.
+
+**Changing the application?** Start with the V4.2 authority and its audit set.
+
+- [docs/web-app/tm-trading-roadmap-v4.2.md](file:///d:/Applications/tm-trading/docs/web-app/tm-trading-roadmap-v4.2.md): **Current authority** — product scope, compact IA, and §17 service operations.
+- [docs/web-app/v4.2-delivery-plan.md](file:///d:/Applications/tm-trading/docs/web-app/v4.2-delivery-plan.md): The 10-stage delivery plan (S0–S9) and decisions A1–A7.
+- [docs/web-app/v4-product-scope-audit.md](file:///d:/Applications/tm-trading/docs/web-app/v4-product-scope-audit.md): S0 — page inventory and capability audit.
+- [docs/web-app/v4-route-migration-map.md](file:///d:/Applications/tm-trading/docs/web-app/v4-route-migration-map.md): S0 — all 72 seeded routes mapped to the V4 IA.
+- [docs/web-app/v4.2-service-inventory.md](file:///d:/Applications/tm-trading/docs/web-app/v4.2-service-inventory.md): S0 — processes, 18 services, ownership, target grouping.
+- [docs/web-app/v4.2-operations-control-audit.md](file:///d:/Applications/tm-trading/docs/web-app/v4.2-operations-control-audit.md): S0 — control paths, `run-once` anti-pattern, security findings.
 
 ---
 
@@ -45,13 +69,21 @@ docs/
 
 ## 2. Web Application & Dashboard (`docs/web-app/`)
 
+- [docs/web-app/tm-trading-roadmap-v4.2.md](file:///d:/Applications/tm-trading/docs/web-app/tm-trading-roadmap-v4.2.md): **Current authority** — supersedes the V3.x product scope and primary navigation where it explicitly says so.
+- [docs/web-app/v4.2-delivery-plan.md](file:///d:/Applications/tm-trading/docs/web-app/v4.2-delivery-plan.md): Delivery plan for the V4.2 restructure.
+- [docs/web-app/v4-product-scope-audit.md](file:///d:/Applications/tm-trading/docs/web-app/v4-product-scope-audit.md): Page-by-page capability audit.
+- [docs/web-app/v4-route-migration-map.md](file:///d:/Applications/tm-trading/docs/web-app/v4-route-migration-map.md): Route registry → V4 IA mapping.
+- [docs/web-app/v4.2-service-inventory.md](file:///d:/Applications/tm-trading/docs/web-app/v4.2-service-inventory.md): Service and process inventory.
+- [docs/web-app/v4.2-operations-control-audit.md](file:///d:/Applications/tm-trading/docs/web-app/v4.2-operations-control-audit.md): Operations control-plane audit.
+- [docs/web-app/v4.2-drills.md](file:///d:/Applications/tm-trading/docs/web-app/v4.2-drills.md): Reliability drills — the seven lifecycle scenarios the supervisor must survive, and how to run them.
 - [docs/web-app/app-inheritance.md](file:///d:/Applications/tm-trading/docs/web-app/app-inheritance.md): Hub-client architecture, satellite modules, and IAM integration.
 - [docs/web-app/ui-design-system.md](file:///d:/Applications/tm-trading/docs/web-app/ui-design-system.md): UI styling, component tokens, dark theme, and typography guidelines.
 - [docs/web-app/navigation-audit.md](file:///d:/Applications/tm-trading/docs/web-app/navigation-audit.md): Menu routes, authorization mapping, and navigation hierarchy.
-- [docs/web-app/tm-trading-roadmap-v3.9.md](file:///d:/Applications/tm-trading/docs/web-app/tm-trading-roadmap-v3.9.md): **Web App Roadmap V3.9 — the single authority** (§59 AI agents/bots, §60 news/events/macro, §64 multi-exchange demo adapters and crypto-only execution scope).
+- [docs/web-app/tm-trading-roadmap-v3.9.md](file:///d:/Applications/tm-trading/docs/web-app/tm-trading-roadmap-v3.9.md): **Superseded by V4.2** for product scope and navigation; still the reference for §59 AI agents/bots, §60 news/events/macro and §64 multi-exchange demo adapters.
 - [docs/web-app/ai-agent-session-audit.md](file:///d:/Applications/tm-trading/docs/web-app/ai-agent-session-audit.md): §59.17 required first deliverable — existing AI agent/session models, APIs and route ownership.
 - [docs/web-app/news-macro-status.md](file:///d:/Applications/tm-trading/docs/web-app/news-macro-status.md): §60 status record — slice status, closed gaps and their tests, remaining coverage/translation gaps.
 - [docs/web-app/roadmap-v3.5-gap-audit.md](file:///d:/Applications/tm-trading/docs/web-app/roadmap-v3.5-gap-audit.md): The gap audit that produced the §59/§60 work list, with a closure log at the top — read §0 before acting on a gap.
+- [docs/web-app/oi-filter-hidden-gem.md](file:///d:/Applications/tm-trading/docs/web-app/oi-filter-hidden-gem.md): Open Interest screener spec — CoinGlass filter vocabulary from the source video, the three profiles (COIL/SQUEEZE/DISTRIBUTION), the 0–100 scoring model, the scan pipeline and the JSON contract the AI agent must answer from.
 - Superseded roadmaps (**V1 – V3.4**) are archived for history only — do not implement from them: `docs/web-app/archive/`.
 
 ---

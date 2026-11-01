@@ -1,0 +1,89 @@
+// =============================================================================
+//  L2 - TIME-FRAME LADDER (T1..T4)
+//  Trai tim cua phuong phap: D1 doc huong -> H4 khoanh vung -> H1 doc cau truc
+//  -> M30 lay muc vao. Tang duoi KHONG duoc phu dinh tang tren.
+//  Moi request.security deu dung [1] + lookahead_on => chi lay nen DA DONG.
+// =============================================================================
+
+// Bias tu 2 cap pivot da xac nhan: HH+HL => +1, LH+LL => -1, con lai 0
+f_oclBias(float ph0, float ph1, float pl0, float pl1) =>
+    na(ph0) or na(ph1) or na(pl0) or na(pl1) ? 0 : ph0 > ph1 and pl0 > pl1 ? 1 : ph0 < ph1 and pl0 < pl1 ? -1 : 0
+
+// --- T1: bias D1 --------------------------------------------------------------
+ocl_d1PhRaw = request.security(syminfo.tickerid, ocl_tf1, ta.pivothigh(high, ocl_pivotLen, ocl_pivotLen)[1], lookahead = barmerge.lookahead_on)
+ocl_d1PlRaw = request.security(syminfo.tickerid, ocl_tf1, ta.pivotlow(low, ocl_pivotLen, ocl_pivotLen)[1], lookahead = barmerge.lookahead_on)
+
+var float ocl_d1Ph0 = na
+var float ocl_d1Ph1 = na
+var float ocl_d1Pl0 = na
+var float ocl_d1Pl1 = na
+
+if not na(ocl_d1PhRaw)
+    ocl_d1Ph1 := ocl_d1Ph0
+    ocl_d1Ph0 := ocl_d1PhRaw
+if not na(ocl_d1PlRaw)
+    ocl_d1Pl1 := ocl_d1Pl0
+    ocl_d1Pl0 := ocl_d1PlRaw
+
+int ocl_bias = f_oclBias(ocl_d1Ph0, ocl_d1Ph1, ocl_d1Pl0, ocl_d1Pl1)
+
+// --- T2: vung H4 (pivot gan gia nhat + band ATR) -------------------------------
+[ocl_h4PhRaw, ocl_h4PlRaw, ocl_h4AtrRaw] = request.security(syminfo.tickerid, ocl_tf2, [ta.pivothigh(high, ocl_pivotLen, ocl_pivotLen)[1], ta.pivotlow(low, ocl_pivotLen, ocl_pivotLen)[1], ta.atr(14)[1]], lookahead = barmerge.lookahead_on)
+
+var float ocl_h4Ph = na
+var float ocl_h4Pl = na
+var float ocl_h4Atr = na
+
+if not na(ocl_h4PhRaw)
+    ocl_h4Ph := ocl_h4PhRaw
+if not na(ocl_h4PlRaw)
+    ocl_h4Pl := ocl_h4PlRaw
+if not na(ocl_h4AtrRaw)
+    ocl_h4Atr := ocl_h4AtrRaw
+
+float ocl_zoneBand = nz(ocl_h4Atr, ocl_atr) * ocl_zoneBandATR
+float ocl_zoneMid = na
+if not na(ocl_h4Ph) and not na(ocl_h4Pl)
+    ocl_zoneMid := math.abs(close - ocl_h4Ph) <= math.abs(close - ocl_h4Pl) ? ocl_h4Ph : ocl_h4Pl
+float ocl_zoneTop = na(ocl_zoneMid) ? na : ocl_zoneMid + ocl_zoneBand
+float ocl_zoneBot = na(ocl_zoneMid) ? na : ocl_zoneMid - ocl_zoneBand
+bool ocl_inZone = not na(ocl_zoneTop) and close >= ocl_zoneBot and close <= ocl_zoneTop
+
+// --- T3: cau truc H1 + muc doi dien dung cho TP ------------------------------
+[ocl_h1PhRaw, ocl_h1PlRaw] = request.security(syminfo.tickerid, ocl_tf3, [ta.pivothigh(high, ocl_pivotLen, ocl_pivotLen)[1], ta.pivotlow(low, ocl_pivotLen, ocl_pivotLen)[1]], lookahead = barmerge.lookahead_on)
+
+var float ocl_h1Ph0 = na
+var float ocl_h1Ph1 = na
+var float ocl_h1Pl0 = na
+var float ocl_h1Pl1 = na
+var float ocl_h1Ph = na
+var float ocl_h1Pl = na
+
+if not na(ocl_h1PhRaw)
+    ocl_h1Ph1 := ocl_h1Ph0
+    ocl_h1Ph0 := ocl_h1PhRaw
+    ocl_h1Ph := ocl_h1PhRaw
+if not na(ocl_h1PlRaw)
+    ocl_h1Pl1 := ocl_h1Pl0
+    ocl_h1Pl0 := ocl_h1PlRaw
+    ocl_h1Pl := ocl_h1PlRaw
+
+int ocl_h1Bias = f_oclBias(ocl_h1Ph0, ocl_h1Ph1, ocl_h1Pl0, ocl_h1Pl1)
+
+// --- T4: muc vao tu M30 ------------------------------------------------------
+ocl_m30LvlRaw = request.security(syminfo.tickerid, ocl_tf4, close[1], lookahead = barmerge.lookahead_on)
+var float ocl_m30Lvl = na
+if not na(ocl_m30LvlRaw)
+    ocl_m30Lvl := ocl_m30LvlRaw
+
+// --- Chieu duoc phep trade ---------------------------------------------------
+int ocl_allowedDir = ocl_bias == 0 ? 0 : ocl_enforceLadder and ocl_h1Bias != ocl_bias ? 0 : ocl_bias
+bool ocl_ladderBlock = ocl_enforceLadder and ocl_allowedDir == 0
+
+// Muc cau truc doi dien (dung cho TP1 "Pivot")
+float ocl_resLvl = na
+float ocl_supLvl = na
+if not na(ocl_h1Ph)
+    ocl_resLvl := na(ocl_h4Ph) ? ocl_h1Ph : math.max(ocl_h1Ph, ocl_h4Ph)
+if not na(ocl_h1Pl)
+    ocl_supLvl := na(ocl_h4Pl) ? ocl_h1Pl : math.min(ocl_h1Pl, ocl_h4Pl)

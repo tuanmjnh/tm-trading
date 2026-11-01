@@ -9,7 +9,7 @@ Tài liệu đã tổng hợp
 README.md — bảng bằng chứng theo mốc thời gian cho cả 2 video, thang khung 5 tầng, định nghĩa "nến mồi" (4 điều kiện, cần ≥2), công thức Entry/SL/TP, thang nhồi L0–L3, checklist 8 bước, 8 điểm yếu (nặng nhất: nhồi lệnh 0.01→0.73 là martingale một chiều; video chỉ khoe ngày thắng; một kèo mẫu có TP gần hơn SL nên sau phí là âm), và so sánh trực tiếp với Price Action MTF.
 BUILD.md — spec build: 11 module, target mtf1c + mtf1c-strategy (twin), 6 nhóm input với mặc định, pseudo-code T1–T5 / nến mồi / RR filter / pyramid / state machine, chống repaint, dashboard 2×12, alert JSON mtf1c.signal.v1.0, nghiệm thu và thứ tự thực hiện.
 Đã thêm link vào docs/indicator/README.md §4.
-Kiểm tra: npm run docs:check → PASS 1451/1451, 0 fail (gate bắt mọi npm run và đường dẫn backtick phải tồn tại). Mình chưa viết Pine — đây là spec để bạn duyệt trước, và mình cố ý không bịa ra đường dẫn pine/parts-... khi thư mục đó chưa tồn tại.
+Kiểm tra: npm run docs:check → PASS 1451/1451, 0 fail (gate bắt mọi lệnh npm và đường dẫn backtick phải tồn tại). Mình chưa viết Pine — đây là spec để bạn duyệt trước, và mình cố ý không bịa ra đường dẫn pine/parts-... khi thư mục đó chưa tồn tại.
 
 Cần bạn chốt 5 điểm trước khi build
 Tiêu chí nến mồi: 4 điều kiện (≥2) như mình đề xuất, hay chỉ inside bar + thân nhỏ?

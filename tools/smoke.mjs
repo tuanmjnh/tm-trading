@@ -204,6 +204,8 @@ build('lk-vsa')
 build('lk-vsa-strategy')
 build('pa-mtf')
 build('pa-mtf-strategy')
+build('ocl')
+build('ocl-strategy')
 build('fz')
 build('fz-strategy')
 build('wonderwhales')
@@ -214,6 +216,8 @@ const ACTIVE_DIST = [
   'LongKaco VSA Backtest.pine',
   'Price Action MTF.pine',
   'Price Action MTF Backtest.pine',
+  'One-Candle Ladder.pine',
+  'One-Candle Ladder Backtest.pine',
   'TM Fusion Zones.pine',
   'TM Fusion Zones Backtest.pine',
   'TM XAU Signals 2.pine',
@@ -406,6 +410,37 @@ check('xau2: pivot goi 2-3 tham so (CE10165)', (() => {
 // trong comment nen khong duoc goi that su.
 const codeOnly = (s) => s.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
 check('ca hai ban deu khong goi input.timezone', !codeOnly(lk).includes('input.timezone') && !codeOnly(xau2Src).includes('input.timezone'))
+
+// =============================================================================
+section('2e. One-Candle Ladder — ban build rieng (parts-one-candle-ladder)')
+
+// Khoa lai 3 quyet dinh cua chu du an (2026-10-31):
+//   (1) ZoneLimit la kieu vao MAC DINH
+//   (2) nhoi lenh MAC DINH TAT, cap cung x4
+//   (3) RR toi thieu 2.5 (do tu 3 keo that: 2.4 / 3.1 / 6.8)
+const oclSrc   = readFileSync(join(ROOT, 'pine', 'dist', 'One-Candle Ladder.pine'), 'utf8')
+const oclBtSrc = readFileSync(join(ROOT, 'pine', 'dist', 'One-Candle Ladder Backtest.pine'), 'utf8')
+const oclFlat  = (s) => s.replace(/\s+/g, ' ')
+const oclI = oclFlat(oclSrc)
+
+check('ocl: indicator, khong phai strategy', /^indicator\("One-Candle Ladder"/m.test(oclSrc) && !oclSrc.includes('strategy.entry('))
+check('ocl-strategy: la strategy', /^strategy\("One-Candle Ladder Backtest"/m.test(oclBtSrc) && oclBtSrc.includes('strategy.entry('))
+check('ocl: ZoneLimit la kieu vao mac dinh', oclI.includes('ocl_entryMode = input.string("ZoneLimit"'))
+check('ocl: RR toi thieu mac dinh 2.5', oclI.includes('ocl_minRR = input.float(2.5'))
+check('ocl: nhoi lenh mac dinh TAT', oclI.includes('ocl_pyramidOn = input.bool(false'))
+check('ocl: cap nhoi cung x4', oclI.includes('ocl_pyramidMaxMult = input.float(4.0'))
+check('ocl: so bac nhoi suy tu cap (maxStage = cap - 1)', oclI.includes('ocl_pyrMaxStage = math.max(0, int(ocl_pyramidMaxMult) - 1)'))
+check('ocl: R do tu CHINH cay nen (SL hai phia)', oclI.includes('ocl_sl := ocl_refLow - ocl_slBufRef') && oclI.includes('ocl_sl := ocl_refHigh + ocl_slBufRef'))
+check('ocl: tang duoi khong duoc phu dinh tang tren (allowedDir)', oclI.includes('ocl_allowedDir = ocl_bias == 0 ? 0 : ocl_enforceLadder and ocl_h1Bias != ocl_bias ? 0 : ocl_bias'))
+check('ocl: co chan LADDER BLOCK hien tren dashboard', oclI.includes('"LADDER BLOCK"'))
+check('ocl: alert schema ocl.signal.v1.0', oclSrc.includes('ocl.signal.v1.0'))
+check('ocl: dashboard 2 x 12 + table.clear phu het hang', oclI.includes('table.new(position.top_right, 2, 12') && oclI.includes('table.clear(ocl_tbl, 0, 0, 1, 11)'))
+check('ocl: TP1 lay cau truc doi dien H1/H4', oclI.includes('ocl_tp1 := ocl_okRes ? ocl_resLvl : ocl_entry + 2.0 * ocl_risk'))
+
+// Chong repaint: MOI request.security phai co [1] + lookahead_on
+const oclSecN = oclSrc.split('request.security(').length - 1
+const oclLookN = oclSrc.split('lookahead = barmerge.lookahead_on').length - 1
+check('ocl: moi request.security deu lookahead_on', oclSecN > 0 && oclSecN === oclLookN, `${oclSecN} security / ${oclLookN} lookahead`)
 
 // =============================================================================
 section('2d. Price Action MTF — ban build rieng (parts-price-action-mtf)')

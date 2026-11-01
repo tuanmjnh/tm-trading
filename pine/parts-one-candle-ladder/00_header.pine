@@ -1,0 +1,32 @@
+//@version=6
+{{DECL}}
+{{SHARED}}
+
+// =============================================================================
+//  ONE-CANDLE LADDER  -  v1.0.0   (OCL)
+//  Phuong phap "quet khung lon -> 1 cay nen" cua Nh Kien Thuc Trading
+//  Spec: docs/indicator/one-candle-ladder/BUILD.md
+//  Nghien cuu goc: docs/indicator/one-candle-ladder/README.md
+//
+//  Layer structure (thu tu file = thu tu phu thuoc, Pine khong co forward decl):
+//    L0  CONFIG     - input 6 nhom (10_config)
+//    L1  CORE       - ATR, volume/VSA bucket, session, ADX/regime (20_core)
+//                     (gop module 70_regime vi trigger o 50 can regime -> phai
+//                      khai bao TRUOC 50, khong the dat ten 70)
+//    L2  LADDER     - T1 D1 bias, T2 vung H4, T3 H1 bias, T4 muc M30 (30_tf_ladder)
+//    L3  REF CANDLE - T5: dung MOT cay nen lam thuoc do R (40_ref_candle)
+//    L4  TRIGGER    - Entry/SL/TP1/partial + loc RR (50_trigger)
+//    L5  STATE      - vong doi vi the PENDING -> OPEN -> BE -> TP1 -> CLOSED (60_state)
+//    L6  PYRAMID    - nhoi bac L0..L3, mac dinh TAT, cap x4 (65_pyramid)
+//    L7  STRATEGY   - cau noi orders cho ban backtest (91_strategy, skip:ocl)
+//    L8  VIZ        - nen moi + vung + Entry/SL/TP + dashboard 2x12 (95_viz)
+//    L9  ALERTS     - webhook JSON ocl.signal.v1.0 (99_alerts)
+//
+//  Nguyen tac bat buoc:
+//    - Khong repaint: moi request.security dung [1] + lookahead_on
+//    - Khong ro ri tuong lai: nen moi chi lay nen tf5 DA DONG
+//    - Huong do khung lon quyet dinh; khung nho chi chon CAY NEN, khong doi chieu
+//    - R = bien do cay nen tham chieu (+ dem), khong phai "SL sau cau truc"
+//    - TP1 = cau truc doi dien (H1/H4), toi thieu RR = ocl_minRR (mac dinh 2.5)
+//    - Nhoi lenh MAC DINH TAT; khi bat bi chan cung boi ocl_pyramidMaxMult
+// =============================================================================

@@ -73,6 +73,22 @@ const TARGETS = {
     shared: ['common.pine', 'zones.pine'],
     decl: `strategy("Price Action MTF Backtest", shorttitle = "PA MTF BT", overlay = true, pyramiding = 0, calc_on_order_fills = true, process_orders_on_close = true, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 1000, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, commission_value = 0.05, slippage = 0)`,
   },
+  // One-Candle Ladder (parts-one-candle-ladder)
+  // Phuong phap "quet khung lon -> 1 cay nen" (docs/indicator/one-candle-ladder/)
+  ocl: {
+    file: 'One-Candle Ladder.pine',
+    dir: 'parts-one-candle-ladder',
+    version: '1.0.0',
+    shared: ['common.pine'],
+    decl: `indicator("One-Candle Ladder", shorttitle = "OCL", overlay = true, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 1000)`,
+  },
+  'ocl-strategy': {
+    file: 'One-Candle Ladder Backtest.pine',
+    dir: 'parts-one-candle-ladder',
+    version: '1.0.0',
+    shared: ['common.pine'],
+    decl: `strategy("One-Candle Ladder Backtest", shorttitle = "OCL BT", overlay = true, pyramiding = 4, calc_on_order_fills = true, process_orders_on_close = true, dynamic_requests = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 1000, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, commission_value = 0.05, slippage = 1)`,
+  },
   // TM Fusion Zones (parts-fusion-zones)
   fz: {
     file: 'TM Fusion Zones.pine',

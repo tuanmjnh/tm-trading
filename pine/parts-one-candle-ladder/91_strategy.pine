@@ -1,0 +1,51 @@
+// @part skip:ocl
+// =============================================================================
+//  L7 - STRATEGY BRIDGE (One-Candle Ladder Backtest)
+//  Marker "@part skip:ocl" => ban indicator OCL KHONG chua file nay.
+//  Vao lenh tai close cua nen da dong (process_orders_on_close = true).
+// =============================================================================
+
+ocl_stratOn  = input.bool(true, "Bat giao dich tu dong", group = "OCL · Strategy", display = display.data_window)
+ocl_stratDir = input.string("Long + Short", "Chieu giao dich", options = ["Long + Short", "Long Only", "Short Only"], group = "OCL · Strategy", display = display.data_window)
+ocl_stratPct = input.float(100.0, "Khoi luong (% equity)", minval = 1.0, maxval = 100.0, step = 5.0, group = "OCL · Strategy", display = display.data_window)
+
+bool ocl_allowLong  = ocl_stratDir == "Long + Short" or ocl_stratDir == "Long Only"
+bool ocl_allowShort = ocl_stratDir == "Long + Short" or ocl_stratDir == "Short Only"
+
+float ocl_unitQty = ocl_stratPct / 100.0 * strategy.equity / close
+bool  ocl_qtyOk = ocl_unitQty > 0.0 and not na(close) and close > 0.0
+
+bool ocl_stratLong  = ocl_stratOn and ocl_qtyOk and ocl_evEntry and ocl_posDir == 1 and ocl_allowLong
+bool ocl_stratShort = ocl_stratOn and ocl_qtyOk and ocl_evEntry and ocl_posDir == -1 and ocl_allowShort
+
+if ocl_stratLong
+    strategy.entry("Long", strategy.long, qty = ocl_unitQty, comment = "OCL LONG")
+
+if ocl_stratShort
+    strategy.entry("Short", strategy.short, qty = ocl_unitQty, comment = "OCL SHORT")
+
+// --- Nhoi: moi bac them DUNG 1 don vi (cap da chan o 65_pyramid) --------------
+if ocl_stratOn and ocl_pyrAdd and ocl_qtyOk and ocl_pyrAddDir != 0
+    string ocl_addId = "Add" + str.tostring(ocl_pyrStage)
+    string ocl_addCmt = "OCL PYRAMID L" + str.tostring(ocl_pyrStage)
+    if ocl_pyrAddDir == 1
+        strategy.entry(ocl_addId, strategy.long, qty = ocl_unitQty, comment = ocl_addCmt)
+    else
+        strategy.entry(ocl_addId, strategy.short, qty = ocl_unitQty, comment = ocl_addCmt)
+
+// --- Thoat: chot mot phan tai partial, phan con lai theo TP1/SL --------------
+if ocl_stratOn and strategy.position_size > 0 and not na(ocl_posPartial) and not ocl_partialHit
+    strategy.exit("Partial L", from_entry = "Long", limit = ocl_posPartial, qty_percent = 50, comment_profit = "PARTIAL")
+
+if ocl_stratOn and strategy.position_size < 0 and not na(ocl_posPartial) and not ocl_partialHit
+    strategy.exit("Partial S", from_entry = "Short", limit = ocl_posPartial, qty_percent = 50, comment_profit = "PARTIAL")
+
+if ocl_stratOn and strategy.position_size > 0 and not na(ocl_posSl) and not na(ocl_posTp1)
+    strategy.exit("Exit L", from_entry = "Long", stop = ocl_posSl, limit = ocl_posTp1, comment_loss = "SL", comment_profit = "TP1")
+
+if ocl_stratOn and strategy.position_size < 0 and not na(ocl_posSl) and not na(ocl_posTp1)
+    strategy.exit("Exit S", from_entry = "Short", stop = ocl_posSl, limit = ocl_posTp1, comment_loss = "SL", comment_profit = "TP1")
+
+// Dong vi the khi state bao da dong (truong hop TP/SL khop trong nen)
+if ocl_stratOn and ocl_evClose and strategy.position_size != 0
+    strategy.close_all(comment = "OCL CLOSE")

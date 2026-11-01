@@ -1,0 +1,118 @@
+// =============================================================================
+//  L5 - STATE MACHINE
+//  PENDING -> OPEN -> (partial @ xR) -> BE -> TP1 -> CLOSED
+//  Chi mo MOT vi the tai mot thoi diem. Reset sau khi dong (deferred).
+// =============================================================================
+
+var int   ocl_posDir = 0
+var float ocl_posEntry = na
+var float ocl_posSl = na
+var float ocl_posTp1 = na
+var float ocl_posPartial = na
+var float ocl_posRisk = na
+var int   ocl_posBars = 0
+var int   ocl_posStage = 0
+var int   ocl_posBar = na
+var bool  ocl_needReset = false
+var bool  ocl_beMoved = false
+var bool  ocl_partialHit = false
+var bool  ocl_tp1Hit = false
+
+var int ocl_statTrades = 0
+var int ocl_statWins = 0
+var int ocl_statLosses = 0
+var float ocl_statRSum = 0.0
+
+var float ocl_xEntry = na
+var float ocl_xExit = na
+var float ocl_xR = na
+var int   ocl_xDir = 0
+
+var bool ocl_evEntry = false
+var bool ocl_evBe = false
+var bool ocl_evPartial = false
+var int  ocl_evTp = 0
+var bool ocl_evSl = false
+var bool ocl_evClose = false
+
+ocl_evEntry := false
+ocl_evBe := false
+ocl_evPartial := false
+ocl_evTp := 0
+ocl_evSl := false
+ocl_evClose := false
+
+// --- 1. Reset tre -------------------------------------------------------------
+if ocl_needReset
+    ocl_needReset := false
+    ocl_posDir := 0
+    ocl_posBars := 0
+    ocl_posStage := 0
+    ocl_posEntry := na
+    ocl_posSl := na
+    ocl_posTp1 := na
+    ocl_posPartial := na
+    ocl_posRisk := na
+    ocl_posBar := na
+    ocl_beMoved := false
+    ocl_partialHit := false
+    ocl_tp1Hit := false
+
+// --- 2. Quan ly vi the dang mo -------------------------------------------------
+if ocl_posDir != 0 and not na(ocl_posSl) and not na(ocl_posRisk)
+    bool ocl_isUp = ocl_posDir == 1
+
+    // chot mot phan tai xR (khong dong vi the)
+    float ocl_partLvl = ocl_isUp ? ocl_posEntry + ocl_partialAtR * ocl_posRisk : ocl_posEntry - ocl_partialAtR * ocl_posRisk
+    bool ocl_partReach = ocl_isUp ? high >= ocl_partLvl : low <= ocl_partLvl
+    if not ocl_partialHit and ocl_partReach
+        ocl_partialHit := true
+        ocl_evPartial := true
+        ocl_posStage := math.max(ocl_posStage, 1)
+
+    // doi SL ve hoa von tai beAtR
+    float ocl_beLvl = ocl_isUp ? ocl_posEntry + ocl_beAtR * ocl_posRisk : ocl_posEntry - ocl_beAtR * ocl_posRisk
+    bool ocl_beReach = ocl_isUp ? high >= ocl_beLvl : low <= ocl_beLvl
+    if not ocl_beMoved and ocl_beReach
+        ocl_posSl := ocl_posEntry
+        ocl_beMoved := true
+        ocl_evBe := true
+        ocl_posStage := math.max(ocl_posStage, 2)
+
+    bool ocl_hitSl = ocl_isUp ? low <= ocl_posSl : high >= ocl_posSl
+    bool ocl_hitTp1 = not na(ocl_posTp1) and (ocl_isUp ? high >= ocl_posTp1 : low <= ocl_posTp1)
+
+    if ocl_hitSl or ocl_hitTp1
+        bool ocl_win = ocl_hitTp1 and not ocl_hitSl
+        ocl_evTp := ocl_win ? 1 : 0
+        ocl_evSl := not ocl_win
+        ocl_evClose := true
+        ocl_statTrades := ocl_statTrades + 1
+        ocl_statWins := ocl_statWins + (ocl_win ? 1 : 0)
+        ocl_statLosses := ocl_statLosses + (ocl_win ? 0 : 1)
+        float ocl_exitPx = ocl_win ? ocl_posTp1 : ocl_posSl
+        ocl_xEntry := ocl_posEntry
+        ocl_xExit := ocl_exitPx
+        ocl_xDir := ocl_posDir
+        ocl_xR := (ocl_exitPx - ocl_posEntry) * float(ocl_posDir) / ocl_posRisk
+        ocl_statRSum := ocl_statRSum + ocl_xR
+        ocl_needReset := true
+
+    if not ocl_evClose
+        ocl_posBars := ocl_posBars + 1
+
+// --- 3. Mo vi the moi ---------------------------------------------------------
+if ocl_signal and ocl_posDir == 0 and not ocl_needReset
+    ocl_posDir := ocl_dir
+    ocl_posEntry := ocl_entry
+    ocl_posSl := ocl_sl
+    ocl_posTp1 := ocl_tp1
+    ocl_posPartial := ocl_partial
+    ocl_posRisk := ocl_risk
+    ocl_posBars := 0
+    ocl_posStage := 0
+    ocl_posBar := bar_index
+    ocl_beMoved := false
+    ocl_partialHit := false
+    ocl_tp1Hit := false
+    ocl_evEntry := true

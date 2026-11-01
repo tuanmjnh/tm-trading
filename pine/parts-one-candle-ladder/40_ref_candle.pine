@@ -1,0 +1,50 @@
+// =============================================================================
+//  L3 - REF CANDLE (T5)  "chi voi MOT cay nen"
+//  Nen tham chieu KHONG quyet dinh chieu. No chi cap 3 con so:
+//    refHigh / refLow  -> bien do R
+//    refBar            -> moc thoi gian de ve hop
+//  Chieu lay tu T1..T3 (ocl_allowedDir). Nen chi lay tu nen tf5 DA DONG ([1]).
+// =============================================================================
+
+[ocl_o5, ocl_h5, ocl_l5, ocl_c5, ocl_o5p, ocl_h5p, ocl_l5p, ocl_atr5] = request.security(syminfo.tickerid, ocl_tf5, [open[1], high[1], low[1], close[1], open[2], high[2], low[2], ta.atr(14)[1]], lookahead = barmerge.lookahead_on)
+
+float ocl_refRange = math.max(ocl_h5 - ocl_l5, syminfo.mintick)
+float ocl_refBody  = math.abs(ocl_c5 - ocl_o5)
+float ocl_refAtr   = nz(ocl_atr5, ocl_atr)
+
+// --- 4 dieu kien (moi dieu kien co toggle rieng; tat = khong tinh diem) -------
+bool ocl_c1 = ocl_refBody <= ocl_bodyMaxPct * ocl_refRange
+bool ocl_c2 = ocl_insideBarOn and ocl_h5 <= ocl_h5p and ocl_l5 >= ocl_l5p
+float ocl_rejWick = ocl_allowedDir < 0 ? ocl_h5 - math.max(ocl_o5, ocl_c5) : math.min(ocl_o5, ocl_c5) - ocl_l5
+bool ocl_c3 = ocl_rejWick / ocl_refRange >= ocl_wickMinPct
+bool ocl_c4 = ocl_refRange <= ocl_rangeMaxATR * ocl_refAtr
+
+int ocl_refScore = 0
+ocl_refScore := ocl_refScore + (ocl_c1 ? 1 : 0) + (ocl_c2 ? 1 : 0) + (ocl_c3 ? 1 : 0) + (ocl_c4 ? 1 : 0)
+
+// --- State --------------------------------------------------------------------
+var float ocl_refHigh = na
+var float ocl_refLow = na
+var int   ocl_refScoreArm = 0
+var int   ocl_refBar = na
+var bool  ocl_refArmed = false
+
+bool ocl_refFresh = ocl_h5 != nz(ocl_h5[1], ocl_h5) or ocl_l5 != nz(ocl_l5[1], ocl_l5)
+bool ocl_refQualify = ocl_refScore >= ocl_refMinScore and (not ocl_requireAtZone or ocl_inZone) and ocl_allowedDir != 0
+float ocl_slBufRef = ocl_slBufferATR * ocl_atr
+
+if ocl_refFresh and ocl_refQualify
+    ocl_refHigh := ocl_h5
+    ocl_refLow := ocl_l5
+    ocl_refScoreArm := ocl_refScore
+    ocl_refBar := bar_index
+    ocl_refArmed := true
+
+bool ocl_refExpired = ocl_refArmed and not na(ocl_refBar) and bar_index - ocl_refBar > ocl_refMaxBars
+bool ocl_refBroken  = ocl_refArmed and not na(ocl_refLow) and not na(ocl_refHigh) and (ocl_allowedDir > 0 ? close < ocl_refLow - ocl_slBufRef : close > ocl_refHigh + ocl_slBufRef)
+
+if ocl_refExpired or ocl_refBroken
+    ocl_refArmed := false
+
+// Debug / dashboard
+string ocl_refSkip = not ocl_refArmed ? "khong co nen dat" : ocl_refBroken ? "nen bi pha nguoc" : ocl_refExpired ? "het hieu luc" : "dang cho"

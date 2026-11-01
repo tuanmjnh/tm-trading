@@ -1,0 +1,89 @@
+// =============================================================================
+//  L8 - VISUALIZATION
+//  - Master switch ocl_showViz gate MOI diem ve
+//  - Nen tham chieu = hop quanh high/low cua DUNG cay nen do (thuoc do R)
+//  - Dashboard 2 x 12 theo chuan hien thi cua he (key xam / value bac)
+// =============================================================================
+
+plotshape(ocl_showViz and ocl_evEntry and ocl_posDir == 1, title = "OCL LONG", style = shape.triangleup, location = location.belowbar, color = ocl_cBull, size = size.tiny, text = "L", textcolor = ocl_cBull, force_overlay = true)
+plotshape(ocl_showViz and ocl_evEntry and ocl_posDir == -1, title = "OCL SHORT", style = shape.triangledown, location = location.abovebar, color = ocl_cBear, size = size.tiny, text = "S", textcolor = ocl_cBear, force_overlay = true)
+plotshape(ocl_showViz and ocl_evPartial and ocl_posDir == 1, title = "OCL PARTIAL L", style = shape.circle, location = location.belowbar, color = color.new(color.orange, 30), size = size.tiny, force_overlay = true)
+plotshape(ocl_showViz and ocl_evPartial and ocl_posDir == -1, title = "OCL PARTIAL S", style = shape.circle, location = location.abovebar, color = color.new(color.orange, 30), size = size.tiny, force_overlay = true)
+
+// --- Hop nen tham chieu -------------------------------------------------------
+var box ocl_bxRef = box.new(bar_index, 0.0, bar_index, 0.0, border_color = color.new(color.yellow, 40), border_width = 1, bgcolor = color.new(color.yellow, 90), force_overlay = true)
+
+if ocl_showViz and ocl_showRef and ocl_refArmed and not na(ocl_refHigh) and not na(ocl_refLow) and not na(ocl_refBar)
+    int ocl_left = math.max(bar_index - 500, ocl_refBar)
+    box.set_lefttop(ocl_bxRef, ocl_left, ocl_refHigh)
+    box.set_rightbottom(ocl_bxRef, bar_index + 1, ocl_refLow)
+    box.set_border_color(ocl_bxRef, ocl_c3 ? color.new(color.yellow, 20) : color.new(color.gray, 50))
+else
+    box.set_lefttop(ocl_bxRef, bar_index, na)
+    box.set_rightbottom(ocl_bxRef, bar_index, na)
+
+// --- Duong Entry / SL / TP1 cua vi the dang mo --------------------------------
+var line ocl_lnE = line.new(bar_index, 0.0, bar_index + 1, 0.0, color = color.new(color.silver, 20), style = line.style_solid, force_overlay = true)
+var line ocl_lnS = line.new(bar_index, 0.0, bar_index + 1, 0.0, color = color.new(color.red, 30), style = line.style_dashed, force_overlay = true)
+var line ocl_lnT = line.new(bar_index, 0.0, bar_index + 1, 0.0, color = color.new(color.green, 30), style = line.style_dashed, force_overlay = true)
+
+bool ocl_drawLevels = ocl_showViz and ocl_showLevels and ocl_posDir != 0 and not na(ocl_posEntry)
+
+if ocl_drawLevels
+    int ocl_l0 = math.max(bar_index - 500, nz(ocl_posBar, bar_index))
+    line.set_xy1(ocl_lnE, ocl_l0, ocl_posEntry)
+    line.set_xy2(ocl_lnE, bar_index + 1, ocl_posEntry)
+    line.set_xy1(ocl_lnS, ocl_l0, ocl_posSl)
+    line.set_xy2(ocl_lnS, bar_index + 1, ocl_posSl)
+    line.set_xy1(ocl_lnT, ocl_l0, ocl_posTp1)
+    line.set_xy2(ocl_lnT, bar_index + 1, ocl_posTp1)
+else
+    line.set_xy1(ocl_lnE, bar_index, na)
+    line.set_xy2(ocl_lnE, bar_index, na)
+    line.set_xy1(ocl_lnS, bar_index, na)
+    line.set_xy2(ocl_lnS, bar_index, na)
+    line.set_xy1(ocl_lnT, bar_index, na)
+    line.set_xy2(ocl_lnT, bar_index, na)
+
+// --- Dashboard 2 x 12 ---------------------------------------------------------
+var table ocl_tbl = table.new(position.top_right, 2, 12, border_width = 1, border_color = color.new(color.gray, 70), force_overlay = true)
+
+if ocl_showViz and ocl_showDash and barstate.islast
+    table.clear(ocl_tbl, 0, 0, 1, 11)
+    color ocl_bg = color.new(color.black, 85)
+    color ocl_kC = color.new(color.gray, 10)
+    color ocl_vC = color.new(color.silver, 0)
+    string ocl_biasTxt = ocl_bias == 1 ? "UP" : ocl_bias == -1 ? "DOWN" : "RANGE"
+    string ocl_allowTxt = ocl_allowedDir == 1 ? "BUY" : ocl_allowedDir == -1 ? "SELL" : "NONE"
+    color ocl_allowCol = ocl_allowedDir == 1 ? ocl_cBull : ocl_allowedDir == -1 ? ocl_cBear : color.gray
+    string ocl_zoneTxt = na(ocl_zoneTop) ? "-" : f_fmtPx(ocl_zoneBot) + " - " + f_fmtPx(ocl_zoneTop)
+    string ocl_refTxt = ocl_refArmed ? f_fmtPx(ocl_refLow) + " - " + f_fmtPx(ocl_refHigh) + "  " + str.tostring(ocl_refScoreArm) + "/4" : "-"
+    string ocl_rrTxt = na(ocl_rr) ? "-" : str.tostring(ocl_rr, "#.##")
+    color ocl_rrCol = na(ocl_rr) ? color.gray : ocl_rr >= ocl_minRR ? ocl_cBull : ocl_cBear
+    string ocl_stateTxt = ocl_posDir == 0 ? "PENDING" : ocl_beMoved ? "BE" : "OPEN"
+    string ocl_ladderTxt = ocl_ladderBlock ? "BLOCK" : "OK"
+
+    table.cell(ocl_tbl, 0, 0, "ONE-CANDLE LADDER", text_color = color.orange, text_size = ocl_font, text_halign = text.align_left, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 1, 0, timeframe.period + "  " + ocl_entryMode, text_color = ocl_vC, text_size = ocl_font, text_halign = text.align_right, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 0, 1, "T1 " + ocl_tf1 + " bias", text_color = ocl_kC, text_size = ocl_font, text_halign = text.align_left, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 1, 1, ocl_biasTxt, text_color = ocl_bias == 1 ? ocl_cBull : ocl_bias == -1 ? ocl_cBear : color.gray, text_size = ocl_font, text_halign = text.align_right, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 0, 2, "T2 " + ocl_tf2 + " zone", text_color = ocl_kC, text_size = ocl_font, text_halign = text.align_left, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 1, 2, ocl_zoneTxt, text_color = ocl_inZone ? color.yellow : ocl_vC, text_size = ocl_font, text_halign = text.align_right, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 0, 3, "T3 " + ocl_tf3 + " -> allowed", text_color = ocl_kC, text_size = ocl_font, text_halign = text.align_left, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 1, 3, ocl_allowTxt + " " + ocl_ladderTxt, text_color = ocl_allowCol, text_size = ocl_font, text_halign = text.align_right, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 0, 4, "T4 " + ocl_tf4 + " level", text_color = ocl_kC, text_size = ocl_font, text_halign = text.align_left, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 1, 4, na(ocl_m30Lvl) ? "-" : f_fmtPx(ocl_m30Lvl), text_color = ocl_vC, text_size = ocl_font, text_halign = text.align_right, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 0, 5, "T5 " + ocl_tf5 + " ref candle", text_color = ocl_kC, text_size = ocl_font, text_halign = text.align_left, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 1, 5, ocl_refTxt, text_color = ocl_refArmed ? color.yellow : color.gray, text_size = ocl_font, text_halign = text.align_right, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 0, 6, "Trigger", text_color = ocl_kC, text_size = ocl_font, text_halign = text.align_left, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 1, 6, ocl_dir == 1 ? "LONG" : ocl_dir == -1 ? "SHORT" : "-", text_color = ocl_dir == 1 ? ocl_cBull : ocl_dir == -1 ? ocl_cBear : color.gray, text_size = ocl_font, text_halign = text.align_right, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 0, 7, "Entry / SL / TP1", text_color = ocl_kC, text_size = ocl_font, text_halign = text.align_left, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 1, 7, na(ocl_entry) ? "-" : f_fmtPx(ocl_entry) + " / " + f_fmtPx(ocl_sl) + " / " + f_fmtPx(ocl_tp1), text_color = ocl_vC, text_size = ocl_font, text_halign = text.align_right, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 0, 8, "RR  (min " + str.tostring(ocl_minRR, "#.#") + ")", text_color = ocl_kC, text_size = ocl_font, text_halign = text.align_left, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 1, 8, ocl_rrTxt, text_color = ocl_rrCol, text_size = ocl_font, text_halign = text.align_right, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 0, 9, "Regime  ADX " + str.tostring(ocl_adx, "#.#"), text_color = ocl_kC, text_size = ocl_font, text_halign = text.align_left, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 1, 9, ocl_regime, text_color = ocl_regimeOk ? ocl_vC : color.orange, text_size = ocl_font, text_halign = text.align_right, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 0, 10, "Pyramid  " + ocl_stateTxt, text_color = ocl_kC, text_size = ocl_font, text_halign = text.align_left, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 1, 10, ocl_pyrText, text_color = ocl_pyramidOn ? color.orange : color.gray, text_size = ocl_font, text_halign = text.align_right, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 0, 11, "R% " + (na(ocl_riskPct) ? "-" : str.tostring(ocl_riskPct, "#.###")) + "  fee " + str.tostring(ocl_feeR, "#.##") + "R", text_color = ocl_kC, text_size = ocl_font, text_halign = text.align_left, bgcolor = ocl_bg)
+    table.cell(ocl_tbl, 1, 11, ocl_skip, text_color = ocl_skip == "PASS" ? ocl_cBull : color.orange, text_size = ocl_font, text_halign = text.align_right, bgcolor = ocl_bg)

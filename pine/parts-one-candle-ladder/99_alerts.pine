@@ -1,0 +1,35 @@
+// =============================================================================
+//  L9 - ALERTS  (schema ocl.signal.v1.0)
+//  Payload chi chua so lieu THAT cua setup: ladder + ref candle + risk.
+// =============================================================================
+
+f_jsonOcl(int dir, float entry, float sl, float t1, float part, float rr, float riskPct, string skipReason) =>
+    string side = dir == 1 ? "LONG" : "SHORT"
+    '{\"side\":\"' + side + '\",\"entry\":' + f_fmtPx(entry) + ',\"sl\":' + f_fmtPx(sl) + ',\"tp1\":' + f_fmtPx(t1) + ',\"partial\":' + f_fmtPx(part) + ',\"rr\":' + str.tostring(rr, "#.##") + ',\"riskPct\":' + str.tostring(riskPct, "#.###") + ',\"mode\":\"' + ocl_entryMode + '\",\"skip\":\"' + skipReason + '\"}'
+
+f_jsonLadder() =>
+    string b = ocl_bias == 1 ? "UP" : ocl_bias == -1 ? "DOWN" : "RANGE"
+    string h1 = ocl_h1Bias == 1 ? "UP" : ocl_h1Bias == -1 ? "DOWN" : "RANGE"
+    '{\"d1\":\"' + b + '\",\"h1\":\"' + h1 + '\",\"zoneLo\":' + f_fmtPx(ocl_zoneBot) + ',\"zoneHi\":' + f_fmtPx(ocl_zoneTop) + ',\"m30\":' + f_fmtPx(ocl_m30Lvl) + ',\"refHi\":' + f_fmtPx(ocl_refHigh) + ',\"refLo\":' + f_fmtPx(ocl_refLow) + ',\"refScore\":' + str.tostring(ocl_refScoreArm) + '}'
+
+ocl_head = '{\"v\":1,\"version\":\"1.0.0\",\"schema\":\"ocl.signal.v1.0\",\"ts\":\"' + f_ts() + '\",\"symbol\":\"' + f_sym() + '\",\"tf\":\"' + timeframe.period + '\"'
+bool ocl_doSend = ocl_payloadMode != "Off"
+
+alertcondition(ocl_evEntry and ocl_posDir == 1, "OCL LONG", "OCL LONG  {{ticker}} {{interval}}")
+alertcondition(ocl_evEntry and ocl_posDir == -1, "OCL SHORT", "OCL SHORT  {{ticker}} {{interval}}")
+alertcondition(ocl_signal, "OCL SETUP", "OCL SETUP  {{ticker}} {{interval}}")
+alertcondition(ocl_evPartial, "OCL PARTIAL", "OCL PARTIAL  {{ticker}}")
+alertcondition(ocl_evTp > 0, "OCL TAKE PROFIT", "OCL TP  {{ticker}}")
+alertcondition(ocl_evSl, "OCL STOP LOSS", "OCL SL  {{ticker}}")
+
+if ocl_okBar and ocl_doSend and ocl_evEntry
+    alert(ocl_head + ',\"action\":\"ENTRY\",\"ladder\":' + f_jsonLadder() + ',\"plan\":' + f_jsonOcl(ocl_posDir, ocl_posEntry, ocl_posSl, ocl_posTp1, ocl_posPartial, ocl_rr, ocl_riskPct, ocl_skip) + '}', alert.freq_once_per_bar)
+
+if ocl_okBar and ocl_doSend and ocl_evPartial
+    alert(ocl_head + ',\"action\":\"PARTIAL\",\"at\":' + f_fmtPx(ocl_posPartial) + '}', alert.freq_once_per_bar)
+
+if ocl_okBar and ocl_doSend and ocl_posDir != 0 and ocl_evTp > 0
+    alert(ocl_head + ',\"action\":\"TAKE_PROFIT\",\"level\":' + str.tostring(ocl_evTp) + ',\"r\":' + str.tostring(ocl_xR, "#.##") + '}', alert.freq_once_per_bar)
+
+if ocl_okBar and ocl_doSend and ocl_posDir != 0 and ocl_evSl
+    alert(ocl_head + ',\"action\":\"STOP_LOSS\",\"r\":' + str.tostring(ocl_xR, "#.##") + '}', alert.freq_once_per_bar)

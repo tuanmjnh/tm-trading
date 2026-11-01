@@ -1,0 +1,38 @@
+// =============================================================================
+//  L1 - CORE + REGIME GATE
+//  Gom module "70_regime" vao day: trigger (50) can regime nen no phai khai bao
+//  TRUOC 50. Pine khong co forward declaration -> ten file quyet dinh thu tu.
+// =============================================================================
+
+// --- Volatility ---------------------------------------------------------------
+ocl_atr    = ta.atr(14)
+ocl_atrPct = ocl_atr / close * 100.0
+
+// --- Candle metrics -----------------------------------------------------------
+float ocl_body  = math.abs(close - open)
+float ocl_range = math.max(high - low, syminfo.mintick)
+float ocl_hiWick = high - math.max(close, open)
+float ocl_loWick = math.min(close, open) - low
+
+// --- Volume / VSA bucket ------------------------------------------------------
+ocl_vol    = nz(volume)
+ocl_volMA  = ta.rma(ocl_vol, 20)
+ocl_volRatio = not na(ocl_volMA) and ocl_volMA > 0.0 ? ocl_vol / ocl_volMA : 0.0
+ocl_volBucket = f_vsaName(ocl_vol, ocl_volMA, 2.0, 1.6, 1.25, 0.9, 0.6)
+bool ocl_vsaVeto = ocl_vsaOn and ocl_volRatio < ocl_vsaMinRatio
+
+// --- Session ------------------------------------------------------------------
+bool ocl_sessOk = not ocl_sessionOn or f_sessionOk(ocl_session, ocl_tz)
+string ocl_sessName = f_sessName(f_sessAsia(ocl_tz), f_sessLondon(ocl_tz), f_sessNy(ocl_tz))
+
+// --- Regime (ADX) -------------------------------------------------------------
+[ocl_diP, ocl_diM, ocl_adx] = ta.dmi(ocl_adxLen, ocl_adxSmooth)
+string ocl_regime = ocl_adx >= ocl_adxTrend ? "TRENDING" : ocl_adx >= ocl_adxMin ? "RANGING" : "CHOPPY"
+bool ocl_regimeOk = not ocl_regimeOn or ocl_adx >= ocl_adxMin
+
+// --- Confirmed-bar gate -------------------------------------------------------
+bool ocl_okBar = ocl_confirmOnly ? barstate.isconfirmed : true
+
+// --- Co cau nen: xac dinh nen "dong cua" de danh dau nen pha ------------------
+bool ocl_bullBar = close > open
+bool ocl_bearBar = close < open
