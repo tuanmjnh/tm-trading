@@ -7,6 +7,9 @@
 //    node services/run.mjs watch   — lặp theo chu kỳ + kiểm tra D9 mỗi 60s
 //                                    + WS collect forceOrder (liq events)
 //    node services/run.mjs status  — in bảng heartbeat (exit 1 nếu có overdue)
+//    node services/run.mjs plan    — print which services would run and which a
+//                                    live supervisor owns; runs nothing
+//                                    (V4.2 §17.15-O4)
 //
 //  Heartbeat (D9): beat() trước mỗi lần chạy (lastRunAt), ok/err sau kết quả.
 //  `watch` kiểm tra overdue 2×chu kỳ -> Telegram (nhắc lại mỗi
@@ -142,6 +145,23 @@ async function once() {
   return true
 }
 
+/**
+ * Report what `once` would do, without running anything.
+ *
+ * The overlap guard can refuse services, so an operator needs a way to see the
+ * split (and who owns the rest) before a run — especially on a machine where a
+ * supervisor is already live. Shares `partitionAgainstSupervisor` and
+ * `reportBlocked` with `once`, so the plan cannot drift from the run.
+ *
+ * @returns {boolean} true when at least one service would run
+ */
+function plan() {
+  const { runnable, blocked } = partitionAgainstSupervisor()
+  reportBlocked(blocked)
+  log('[plan]', `${runnable.length} service(s) would run: ${runnable.map((s) => s.name).join(', ') || '(none)'}`)
+  return runnable.length > 0
+}
+
 async function watch() {
   const initial = partitionAgainstSupervisor()
   reportBlocked(initial.blocked)
@@ -220,6 +240,7 @@ const isMain = process.argv[1] && pathToFileURL(process.argv[1]).href === import
 
 if (isMain) {
   if (cmd === 'status') status()
+  else if (cmd === 'plan') process.exit(plan() ? 0 : 1)
   else if (cmd === 'watch') await watch()
   else if (cmd === 'once') {
     const ran = await once()
@@ -232,9 +253,9 @@ if (isMain) {
     setTimeout(() => process.exit(ran === false ? 1 : 0), 100)
   }
   else {
-    console.error(`lenh khong biet: ${cmd} (once | watch | status)`)
+    console.error(`unknown command: ${cmd} (once | watch | status | plan)`)
     process.exit(2)
   }
 }
 
-export { SERVICES, runOne, once }
+export { SERVICES, runOne, once, plan }

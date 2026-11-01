@@ -688,13 +688,30 @@ export function createSupervisor(options = {}) {
     const waiting = []
     for (const dependency of definition.dependencies ?? []) {
       if (dependency.policy === 'OPTIONAL') continue
+      // A dependency hosted by another process (`supervised: false`, e.g. the
+      // market plane inside Nitro) can never be lifecycle-gated here: the
+      // supervisor must not start it, so its observed state would stay UNKNOWN
+      // forever and permanently block everything downstream. Those services
+      // report their own `dependency-reachable` readiness evidence instead.
+      if (definitionOf(dependency.serviceId)?.supervised === false) continue
       // Dependencies are system services; owner scope never changes that.
       const depRecord = store.getService(dependency.serviceId, 'system')
       const observed = depRecord?.observed ?? 'UNKNOWN'
       const desired = depRecord?.desired ?? 'STOPPED'
       if (observed === 'READY') continue
-      if (observed === 'DEGRADED' && dependency.policy === 'DEGRADED_ALLOWED') continue
-      if (desired === 'RUNNING' && (observed === 'STARTING' || observed === 'UNKNOWN')) {
+      if (observed === 'DEGRADED') {
+        // DEGRADED is a settled state, not a transition: it may never become
+        // READY, so REQUIRE_READY blocks now instead of parking forever.
+        if (dependency.policy === 'DEGRADED_ALLOWED') continue
+        blocked.push(`${dependency.serviceId}:${observed}`)
+        continue
+      }
+      // A dependency the supervisor intends to run is not a hard block: it may be
+      // mid-start, mid-restart, or recovering from a crash (observed FAILED with
+      // desired RUNNING). Park the operation and re-check it next tick; the
+      // operation TTL bounds the wait, so a dependency that never recovers ends
+      // as OPERATION_TIMEOUT instead of a misleading "not ready, give up".
+      if (desired === 'RUNNING') {
         waiting.push(dependency.serviceId)
         continue
       }
@@ -1292,6 +1309,53 @@ export function createSupervisor(options = {}) {
   }
 
   /**
+   * Keep the exclusive lease alive for every instance this supervisor hosts.
+   *
+   * The lease is the only thing that stops the legacy orchestrator from running
+   * a second copy of a service, so it has to outlive the instance rather than
+   * just its spawn: claiming once and never renewing silently released a running
+   * service after `leaseTtlMs`, which let `services/run.mjs` start duplicates
+   * while the supervisor still reported the service as READY.
+   *
+   * Only instances this process actually holds a handle to are renewed, and a
+   * lease still held by *another* live owner is respected until it expires (an
+   * adopted instance from a previous supervisor keeps its claim for at most one
+   * TTL, and is taken over afterwards).
+   *
+   * @returns {number} how many leases were refreshed or claimed
+   */
+  function renewHostedLeases(at) {
+    let renewed = 0
+    for (const entry of processes.values()) {
+      const record = store.getService(entry.serviceId, entry.scopeKey)
+      if (!record) continue
+      const lease = record.lease
+      if (lease?.owner === supervisorId) {
+        if (store.renewLease({
+          serviceId: record.serviceId,
+          scopeKey: record.scopeKey,
+          owner: supervisorId,
+          ttlMs: leaseTtlMs,
+          now: at,
+        })) renewed += 1
+        continue
+      }
+      // Someone else's unexpired claim: not ours to take yet.
+      if (lease && Number(lease.expiresAt) > at) continue
+      const claim = store.claimLease({
+        serviceId: record.serviceId,
+        scopeKey: record.scopeKey,
+        owner: supervisorId,
+        serviceInstanceId: record.serviceInstanceId,
+        ttlMs: leaseTtlMs,
+        now: at,
+      })
+      if (claim.ok) renewed += 1
+    }
+    return renewed
+  }
+
+  /**
    * Advance every active operation and reconcile process state.
    *
    * Commands enqueued by the Operations API are performed first, so a command
@@ -1308,6 +1372,7 @@ export function createSupervisor(options = {}) {
     const at = now()
     if (options.consumeCommands !== false) consumeInbox(options.commandsDir ? { dir: options.commandsDir } : {})
     store.expireLeases(at)
+    renewHostedLeases(at)
     expireOperations(at)
     recoverServices(at)
     for (const operation of store.listOperations({ activeOnly: true })) {

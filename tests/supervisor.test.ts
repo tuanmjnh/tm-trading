@@ -21,6 +21,7 @@ import {
   serviceKey,
 } from '../services/supervisorStore.mjs'
 import { SERVICES } from '../services/registry.mjs'
+import { overlappingSupervisorLeases } from '../services/orchestratorGuard.mjs'
 import {
   enqueueCommand,
   listCommands,
@@ -646,6 +647,94 @@ describe('dependency gate', () => {
     harness.supervisor.tick()
     assert.equal(harness.spawned.length, 2, 'beta starts once alpha is ready')
   })
+
+  // Regression: after a supervisor restart (or a batch cold start) every service
+  // is re-queued in one tick, so a dependency that crashed earlier is observed
+  // FAILED while its own start is still queued. That is a *wait*, not a block —
+  // otherwise dependents would fail permanently on every recovery, which is
+  // exactly when the ordering is arbitrary.
+  test('waits while a required dependency is FAILED but still desired RUNNING', async () => {
+    const harness = makeHarness()
+    startService(harness, 'alpha', 'k1')
+    harness.supervisor.tick()
+    becomeReady(harness.spawned[0])
+
+    harness.spawned[0].exit({ code: 1, signal: null })
+    await flush()
+    assert.equal(harness.store.getService('alpha', 'system').observed, 'FAILED')
+    assert.equal(harness.store.getService('alpha', 'system').desired, 'RUNNING')
+
+    const beta = harness.supervisor.request({
+      serviceId: 'beta',
+      action: 'start',
+      actor: 'tester',
+      idempotencyKey: 'beta-1',
+    })
+    harness.supervisor.tick()
+    const waiting = harness.store.getOperation(beta.operation.operationId)
+    assert.equal(waiting.state, 'RUNNING', 'a recovering dependency is not a hard block')
+    assert.equal(waiting.phase, 'awaiting-dependency')
+    assert.deepEqual(waiting.result.waitingFor, ['alpha'])
+    assert.equal(harness.spawned.length, 1)
+
+    // The dependency comes back (bounded backoff), then beta is released.
+    harness.advance(5_000)
+    harness.supervisor.tick()
+    assert.equal(harness.spawned.length, 2, 'alpha restarted after the backoff')
+    becomeReady(harness.spawned[1])
+    harness.supervisor.tick()
+    assert.equal(harness.spawned.length, 3, 'beta starts once the dependency is ready')
+
+    // A start is not done when the worker is spawned: beta must prove readiness.
+    becomeReady(harness.spawned[2])
+    harness.supervisor.tick()
+    assert.equal(harness.store.getOperation(beta.operation.operationId).state, 'SUCCEEDED')
+  })
+
+  // Regression: a dependency the supervisor cannot start (hosted inside Nitro,
+  // `supervised: false`) would sit at UNKNOWN forever, so gating on it would
+  // permanently block the signal producer.
+  test('ignores a dependency that another process hosts', () => {
+    const harness = makeHarness({
+      registry: [
+        serviceDefinition({ id: 'alpha', supervised: false, supports: ['probe'] }),
+        BETA,
+      ],
+    })
+    const beta = harness.supervisor.request({
+      serviceId: 'beta',
+      action: 'start',
+      actor: 'tester',
+      idempotencyKey: 'beta-1',
+    })
+    harness.supervisor.tick()
+    assert.equal(harness.spawned.length, 1, 'beta is not gated on an externally hosted dependency')
+    assert.equal(
+      harness.store.getService('alpha', 'system')?.observed ?? 'UNKNOWN',
+      'UNKNOWN',
+      'the external dependency really is unobserved here',
+    )
+    becomeReady(harness.spawned[0])
+    harness.supervisor.tick()
+    assert.equal(harness.store.getOperation(beta.operation.operationId).state, 'SUCCEEDED')
+  })
+
+  test('still refuses when the dependency is stopped on purpose', () => {
+
+    const harness = makeHarness()
+    // Nobody intends to run alpha: desired is STOPPED and it never started.
+    const beta = harness.supervisor.request({
+      serviceId: 'beta',
+      action: 'start',
+      actor: 'tester',
+      idempotencyKey: 'beta-1',
+    })
+    harness.supervisor.tick()
+    const failed = harness.store.getOperation(beta.operation.operationId)
+    assert.equal(failed.state, 'FAILED')
+    assert.match(String(failed.error), /DEPENDENCY_NOT_READY/)
+    assert.equal(harness.spawned.length, 0)
+  })
 })
 
 describe('capability gate', () => {
@@ -950,6 +1039,42 @@ describe('supervisor store', () => {
     assert.equal(failed.state, 'FAILED')
     assert.match(String(failed.error), /LEASE_HELD/)
     assert.equal(harness.spawned.length, 0)
+  })
+
+  // Regression: the lease is what stops `services/run.mjs` from running a second
+  // copy, so it must be renewed while the instance lives. Claiming only at spawn
+  // released a healthy service after one TTL and the guard then let duplicates
+  // through — the exact overlap §17.15-O4 forbids.
+  test('the lease is renewed while the instance is alive, so the guard keeps blocking', () => {
+    const harness = makeHarness()
+    startService(harness, 'alpha', 'k1')
+    harness.supervisor.tick()
+    becomeReady(harness.spawned[0])
+
+    const claimed = harness.store.getService('alpha', 'system')
+    assert.equal(claimed.lease.owner, 'test-host:1')
+    assert.equal(claimed.lease.expiresAt, NOW + 30_000)
+
+    // Two ticks well past the original TTL: without renewal the lease would have
+    // expired here and the legacy orchestrator would see nothing to skip.
+    harness.advance(20_000)
+    harness.supervisor.tick()
+    harness.advance(30_000)
+    harness.supervisor.tick()
+
+    const live = harness.store.getService('alpha', 'system')
+    assert.equal(live.observed, 'READY')
+    assert.ok(live.lease, 'a running instance keeps its lease')
+    assert.equal(live.lease.owner, 'test-host:1')
+    assert.ok(Number(live.lease.expiresAt) > harness.now(), 'the lease is still fresh')
+
+    const blocked = overlappingSupervisorLeases({
+      store: harness.store,
+      serviceIds: ['alpha'],
+      now: harness.now(),
+    })
+    assert.deepEqual(blocked.map(entry => entry.serviceId), ['alpha'])
+    assert.equal(blocked[0].owner, 'test-host:1')
   })
 
   test('the audit trail is append-only and bounded', () => {
