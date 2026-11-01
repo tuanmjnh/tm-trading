@@ -4,68 +4,69 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 /**
- * Compatibility contract (V3.3 §58.2): every route seeded as a *visible* leaf in
+ * Compatibility contract: every route seeded as a *visible* leaf in
  * `createTradingRoutes` must resolve to an actual page file, otherwise the sidebar
- * links to a 404. This list mirrors the visible leaves of the target IA; update it
- * together with the seed when a hidden route is flipped on. Paths were re-homed under
- * menu-matching folders (see docs/navigation-audit.md); legacy paths 301-redirect.
+ * links to a 404. This list mirrors the visible leaves of the V4.2 IA; update it
+ * together with the seed when a hidden route is flipped on.
+ *
+ * A route that is a tab of a workspace (Discover, Watchlist, Intelligence, Alerts)
+ * is seeded with `is_visible: false` and stays routable as a deep link, so it is
+ * deliberately absent here. See docs/web-app/v4-route-migration-map.md.
  */
 const EXPECTED_VISIBLE_LEAF_PATHS = [
   // 1. Overview
   '/',
-  // 2. Markets
-  '/markets',
-  '/markets/explorer',
-  '/markets/scanner',
-  '/markets/calendar',
-  '/news',
-  '/news/sources',
-  '/news/events',
-  '/outlook',
-  // 3. Trading
+  // 2. Operations
+  '/operations',
+  // 3. Discover (V4.2 S4b workspace shell) — `/markets`, `/markets/scanner` and
+  //    `/markets/explorer` are tabs and stay routable as deep links; their nav rows
+  //    are hidden in the seed, so they are not listed here.
+  '/discover',
+  // 4. Watchlist & Signals (V4.2 S4b) — `/trading/signals` + `/test-center/forward` are tabs.
+  '/watchlist',
+  // 5. Intelligence (V4.2 S4b) — `/news`, `/news/events`, `/markets/calendar` and
+  //    `/outlook` are tabs. ('/news/sources' is hidden — V4.2 S4a, admin detail.)
+  '/intelligence',
+  // 6. Alerts (V4.2 S4c) — `/alerts/history` + `/alerts/inbox` are tabs.
+  '/alerts',
+  // 7. Advanced & Research (group `group_advanced`)
+  // 7a. Trading
   '/trading',
-  '/trading/signals',
   '/trading/paper',
   '/trading/orders',
   '/trading/positions',
   '/trading/accounts',
-  // 4. Strategy Lab
+  // 7b. Strategy Lab
   '/strategy-lab',
   '/strategy-lab/indicators',
   '/strategy-lab/methods',
   '/strategy-lab/bots',
   // '/strategy-lab/bots/instances' — merged into /strategy-lab/bots (tabbed view)
-  // 5. Test Center
+  // 7c. Test Center
   '/test-center',
   '/test-center/runs',
   '/test-center/runs/compare',
-  '/test-center/forward',
   '/test-center/replay',
   '/sessions',
-  // 6. Data & Research
-  '/data-research/data',
+  // 7d. Data & Research (group `data_center`)
   '/data-research/data/datasets',
   '/data-research/data/recordings',
   '/data-research/data/quality',
   '/data-research/data/lineage',
   '/data-research/research',
   '/data-research/research/experiments',
-  '/data-research/research/news-impact',
+  // '/data-research/research/news-impact' — V4.2 S4a: hidden (static shell, no data binding)
   '/data-research/journal',
   '/ai-agents',
-  // 7. Alerts & Notifications
-  '/alerts',
-  '/alerts/history',
-  '/alerts/inbox',
-  // 8. Shared Resources
+  '/admin-system/ai-providers',
+  // 8. Platform & Administration (group `group_admin_system`, incl. shared resources)
   '/shared-resources',
   '/shared-resources/import',
   '/shared-resources/connections',
   '/shared-resources/queues',
-  // 9. Administration & System
   '/admin-system',
   '/admin-system/roles',
-  '/admin-system/permissions',
+  // '/admin-system/permissions' — hidden: permissions are edited from the role editor
   '/admin-system/routes',
   '/admin-system/configs',
   '/admin-system/data-sources',
@@ -73,8 +74,9 @@ const EXPECTED_VISIBLE_LEAF_PATHS = [
   '/admin-system/logs',
   '/admin-system/profile',
   '/admin-system/docs',
+  '/admin-system/hub-integration',
   '/admin-system/settings',
-  // Secondary Tools
+  // 9. Tools (group `group_tools`)
   '/tools',
   '/tools/icons',
   '/tools/encode',

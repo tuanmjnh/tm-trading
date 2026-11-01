@@ -153,6 +153,7 @@ useHead({ title })
     </template>
 
     <template #toolbar>
+      <AlertsTabs active="history" />
       <UDashboardToolbar>
         <template #left>
           <div class="flex items-center gap-2 w-full min-w-0 sm:w-auto">

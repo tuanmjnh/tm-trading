@@ -421,6 +421,10 @@ useHead({ title })
       </div>
     </template>
 
+    <template #toolbar>
+      <AlertsTabs active="inbox" />
+    </template>
+
     <div class="flex-1 min-h-0 flex flex-col w-full h-full overflow-hidden">
       <!-- Disconnected State Alert -->
       <div v-if="profile && !connected" class="flex-1 flex items-center justify-center p-6">

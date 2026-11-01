@@ -127,40 +127,53 @@ const dataWarnings = computed(() =>
   series.value.reduce((s, i) => s + i.warnings.filter(w => w !== 'multipleRuns').length, 0)
 )
 
-const cards = computed<MetricItem[]>(() => [
-  {
-    key: 'series',
-    label: t('dashboard.series'),
-    value: String(series.value.length),
-    hint: t('dashboard.seriesHint'),
-    icon: 'i-lucide-layers-3',
-    tone: 'primary'
-  },
-  {
-    key: 'runs',
-    label: t('dashboard.totalRuns'),
-    value: String(totalRuns.value),
-    hint: t('dashboard.totalRunsHint'),
-    icon: 'i-lucide-flask-conical',
-    tone: 'success'
-  },
-  {
-    key: 'trades',
-    label: t('dashboard.totalTrades'),
-    value: String(totalTrades.value),
-    hint: t('dashboard.totalTradesHint'),
-    icon: 'i-lucide-list-ordered',
-    tone: 'info'
-  },
-  {
-    key: 'warnings',
-    label: t('dashboard.dataWarnings'),
-    value: String(dataWarnings.value),
-    hint: t('dashboard.dataWarningsHint'),
-    icon: 'i-lucide-triangle-alert',
-    tone: dataWarnings.value > 0 ? 'warning' : 'info'
-  }
-])
+/**
+ * V4.2 S4c: the Overview leads with *market state* (regime, sentiment,
+ * dominance, risk gate) instead of backtest counters. Backtest totals moved
+ * into the runs card header so no information is lost.
+ */
+const cards = computed<MetricItem[]>(() => {
+  const r = intel.value?.regime
+  const fng = r?.fng?.value
+  const gateUnknown = !risk.value || risk.value.mongo === 'down'
+  const halted = !!risk.value?.accounts.some(a => a.halted)
+  return [
+    {
+      key: 'asi',
+      label: t('regime.asi'),
+      value: String(r?.asi?.d90 ?? '—'),
+      hint: `30 ${r?.asi?.d30 ?? '—'} · 365 ${r?.asi?.d365 ?? '—'}`,
+      icon: 'i-lucide-activity',
+      tone: 'primary'
+    },
+    {
+      key: 'fng',
+      label: t('regime.fng'),
+      value: String(fng ?? '—'),
+      hint: r?.fng?.classification || '—',
+      icon: 'i-lucide-gauge',
+      tone: fng == null ? 'default' : fng <= 25 ? 'error' : fng >= 75 ? 'success' : 'default'
+    },
+    {
+      key: 'btcDom',
+      label: t('regime.btcDom'),
+      value: fmtPct(r?.btcDom, 1),
+      hint: `ETH ${fmtPct(r?.ethDom, 1)}`,
+      icon: 'i-lucide-pie-chart',
+      tone: 'info'
+    },
+    {
+      key: 'riskGate',
+      label: t('dashboard.riskGate'),
+      value: gateUnknown
+        ? t('dashboard.riskGateUnknown')
+        : halted ? t('dashboard.riskGateHalted') : t('dashboard.riskGateOk'),
+      hint: gateUnknown ? '—' : `${t('risk.openPositions')} ${risk.value?.openPositions ?? 0}`,
+      icon: 'i-lucide-shield-check',
+      tone: gateUnknown ? 'default' : halted ? 'error' : 'success'
+    }
+  ]
+})
 
 const trail = computed(() => [{ label: t('dashboard.title') }])
 
@@ -894,10 +907,19 @@ useHead({ title: computed(() => t('dashboard.title')) })
       <UCard :ui="{ body: 'p-3 sm:p-3 pr-0 sm:pr-0' }">
         <template #header>
           <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <UIcon name="i-lucide-history" class="w-4 h-4 text-primary" />
-              <h3 class="font-semibold text-sm">{{ t('dashboard.recentRuns') }}</h3>
-              <UBadge :label="`${series.length} ${t('runs.title')}`" variant="subtle" size="xs" />
+              <h3 class="font-semibold text-sm">{{ t('dashboard.runsBoard') }}</h3>
+              <UBadge :label="`${series.length} ${t('dashboard.runsBadgeSeries')}`" variant="subtle" size="xs" />
+              <UBadge :label="`${totalRuns} ${t('dashboard.runsBadgeRuns')}`" variant="subtle" size="xs" />
+              <UBadge :label="`${totalTrades} ${t('dashboard.runsBadgeTrades')}`" variant="subtle" size="xs" />
+              <UBadge
+                v-if="dataWarnings > 0"
+                :label="`${dataWarnings} ${t('dashboard.runsBadgeWarnings')}`"
+                color="warning"
+                variant="subtle"
+                size="xs"
+              />
             </div>
             <div class="flex items-center gap-2">
               <UButton

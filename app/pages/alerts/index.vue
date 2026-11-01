@@ -242,17 +242,9 @@ useHead({ title })
     </template>
 
     <template #toolbar>
+      <AlertsTabs active="rules" />
       <div class="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-2">
         <SharedFilterChips v-model="statusFilter" :items="statusChips" />
-        <UButton
-          icon="i-lucide-history"
-          :label="t('alertRules.historyLink')"
-          size="xs"
-          variant="ghost"
-          color="neutral"
-          to="/alerts/history"
-          class="ms-auto"
-        />
       </div>
     </template>
 
