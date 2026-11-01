@@ -3,6 +3,13 @@
 // resolves transport sinks + the `notification_logs` model lazily and calls
 // `dispatch`. This is the ONLY notify/ file allowed to touch services/.
 //
+// DURABLE PATH (§7.3): every event that the router accepts is now routed
+// THROUGH THE OUTBOX. `dispatch` stays as the legacy inline path (used by the
+// TradingView webhook receiver, which has its own fire-and-forget contract);
+// `notify()` is the shared path and is the only thing services like
+// alertRules / brief / funding should call, because a Telegram outage must
+// never slow a service loop and must never lose a message.
+//
 // Existing infrastructure is PRESERVED (§25): the Telegram sink delegates to
 // the proven services/telegram.mjs (no token -> returns false, the attempt is
 // recorded as a failed delivery — never a silent success). Web Push / Electron
@@ -10,6 +17,7 @@
 // recorded as `{ ok: false, error: 'sink not configured' }`, never faked.
 import { dispatch } from './send.mjs'
 import { sendTelegram } from '../services/telegram.mjs'
+import { enqueueNotification } from './outboxDriver.mjs'
 
 /** Telegram sink — formats the §25 event into one message. */
 export async function telegramSink(ctx) {
@@ -25,18 +33,28 @@ async function defaultGetLogModel() {
 }
 
 /**
- * Route + deliver + audit-log one §25 event. Never throws (fail-soft, D33).
+ * Shared notify path (§7.3). Routes the event through the durable outbox so a
+ * delivery failure is retried with backoff instead of being terminal.
  *
- * @param {object} event router event ({preset?, kind?, priority?, title?, body?, symbol?, at?})
- * @param {{sinks?:object, getLogModel?:()=>Promise<object|null>, dedupeWindowMs?:number, now?:()=>number, log?:object}} [opts]
+ * @param {object} event
+ * @param {object} [opts]
+ * @returns {Promise<{ enqueued: boolean, queued: number, delivered: string[], results: any[], suppressed?: boolean } | null>}
+ *   null when the router refused the event (not a delivery outcome).
  */
-export async function notify(event = {}, { sinks = DEFAULT_SINKS, getLogModel = defaultGetLogModel, dedupeWindowMs = 0, now = Date.now, log = console } = {}) {
-  let logModel = null
-  try {
-    logModel = await getLogModel()
-  } catch (e) {
-    if (log && log.warn) log.warn(`[notify] log model unavailable: ${e?.message || e}`)
-  }
-  const at = Number.isFinite(Number(event.at)) ? Number(event.at) : now()
-  return dispatch({ ...event, at }, { sinks, logModel, dedupeWindowMs, now: now(), log })
+export async function notify(event, { sinks = DEFAULT_SINKS, getLogModel = defaultGetLogModel, ...rest } = {}) {
+  // The outbox driver owns the model resolution and the audit row; we only need
+  // the log model for the legacy projection glue, which the driver already does.
+  return enqueueNotification(event, { sinks, ...rest })
+}
+
+/**
+ * Legacy inline dispatch (TradingView webhook path). Kept for callers that own
+ * their own delivery contract; new callers should use `notify()`.
+ */
+export async function dispatchNotify(event, opts = {}) {
+  return dispatch(event, {
+    sinks: opts.sinks || DEFAULT_SINKS,
+    getLogModel: opts.getLogModel || defaultGetLogModel,
+    ...opts,
+  })
 }

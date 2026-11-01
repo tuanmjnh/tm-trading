@@ -24,7 +24,7 @@ import { getAlertRule, getIntel, getNotificationLog, getAlert } from './store.mj
 import { emitTradingEvent } from './workspaceStore.mjs'
 import { matchRule, ruleEventDedupeKey, notifyKindFor } from '../engine/alertRules.mjs'
 import { notifyHash } from '../notify/router.mjs'
-import { notify } from '../notify/service.mjs'
+import { drainOutbox, enqueueNotification } from '../notify/outboxDriver.mjs'
 
 const EVENT_LIMIT = 500
 const LOOKBACK_MAX_SEC = 30 * 24 * 3600
@@ -84,16 +84,36 @@ export function toInAppAlertDoc(rule = {}, ev = {}, alertKey = null) {
 }
 
 /**
- * One evaluation cycle: load enabled rules + recent events, notify new matches.
- * @returns {Promise<object>} summary (also the heartbeat `lastSummary`)
+ * One evaluation cycle: drain the delivery outbox, then load enabled rules +
+ * recent events and queue new matches.
+ *
+ * This service is the OUTBOX CONSUMER (§7.3): a Telegram outage must not slow the
+ * match loop, so a match is queued durably and a failed delivery is retried with
+ * backoff here on the next cycle. The timestamp reported as `outboxLastConsumedAt`
+ * is the evidence behind the registry's optional `outbox-consuming` readiness rule
+ * — which is why the drain runs before the "no rules" early return.
+ *
+ * @returns {Promise<object>} summary (also the heartbeat `lastSummary`, incl. `evidence`)
  */
-export async function runAlertRules({ now = Date.now } = {}) {
+export async function runAlertRules({ now = Date.now, drain = true } = {}) {
   const Rule = await getAlertRule()
   const Intel = await getIntel()
   if (!Rule || !Intel) return { skipped: 'mongo-down' }
 
+  let evidence
+  if (drain) {
+    try {
+      const res = await drainOutbox({ now })
+      // Report the timestamp even when nothing was due: "I looked, the queue was
+      // empty" is the evidence the readiness rule needs, and a dead consumer
+      // would stop reporting it.
+      evidence = { outboxLastConsumedAt: now() }
+      if (res.attempted > 0) evidence.outboxAttempted = res.attempted
+    } catch { /* fail-soft: a retry sweep error must not stop rule evaluation */ }
+  }
+
   const rules = await Rule.find({ enabled: true }).lean()
-  if (!rules.length) return { rules: 0, events: 0, matched: 0, notified: 0, signals: 0 }
+  if (!rules.length) return { rules: 0, events: 0, matched: 0, notified: 0, signals: 0, ...(evidence ? { evidence } : {}) }
 
   const Log = await getNotificationLog()
   const Alert = await getAlert()

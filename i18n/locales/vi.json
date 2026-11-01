@@ -1875,7 +1875,31 @@
     "tabs": {
       "rules": "Quy tắc cảnh báo",
       "history": "Lịch sử gửi",
-      "inbox": "Hộp thư"
+      "inbox": "Hộp thư",
+      "outbox": "Hàng đợi gửi"
+    }
+  },
+  "outbox": {
+    "title": "Hàng đợi gửi thông báo",
+    "desc": "Kiểm tra hàng đợi giao hàng bền vững, trạng thái thử lại và thư chết.",
+    "pip": "Hàng đợi & Kênh",
+    "deadCount": "{n} thư chết cần xem xét",
+    "replay": "Chạy lại",
+    "replayed": "Đã đưa bản tin vào lại hàng đợi",
+    "empty": "Hàng đợi sạch",
+    "emptyHint": "Không có thư chết hoặc lỗi chờ xử lý trong hàng đợi.",
+    "metrics": {
+      "queued": "Đang xếp hàng",
+      "sent": "Đã gửi",
+      "accepted": "Đã chấp nhận",
+      "dead": "Thư chết"
+    },
+    "columns": {
+      "notifyId": "Mã thông báo",
+      "channel": "Kênh",
+      "attempts": "Số lần",
+      "error": "Lỗi cuối",
+      "updatedAt": "Cập nhật"
     }
   },
   "alertRules": {

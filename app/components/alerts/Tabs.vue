@@ -6,7 +6,7 @@
 // primary nav, exactly like the S4b workspace tabs.
 defineProps<{
   /** Active tab key — the page that is rendering this strip. */
-  active: 'rules' | 'history' | 'inbox'
+  active: 'rules' | 'history' | 'inbox' | 'outbox'
 }>()
 
 const { t } = useI18n()
@@ -14,7 +14,8 @@ const { t } = useI18n()
 const items = computed(() => [
   { value: 'rules', label: t('alertsWorkspace.tabs.rules'), icon: 'i-lucide-shield-alert', to: '/alerts' },
   { value: 'history', label: t('alertsWorkspace.tabs.history'), icon: 'i-lucide-bell', to: '/alerts/history' },
-  { value: 'inbox', label: t('alertsWorkspace.tabs.inbox'), icon: 'i-lucide-inbox', to: '/alerts/inbox' }
+  { value: 'inbox', label: t('alertsWorkspace.tabs.inbox'), icon: 'i-lucide-inbox', to: '/alerts/inbox' },
+  { value: 'outbox', label: t('alertsWorkspace.tabs.outbox'), icon: 'i-lucide-send-to-back', to: '/alerts/outbox' }
 ])
 
 function onSelect(value: string | number | undefined) {

@@ -1875,7 +1875,31 @@
     "tabs": {
       "rules": "Alert Rules",
       "history": "Delivery History",
-      "inbox": "Inbox"
+      "inbox": "Inbox",
+      "outbox": "Delivery Outbox"
+    }
+  },
+  "outbox": {
+    "title": "Notification Delivery Outbox",
+    "desc": "Inspect durable delivery queues, retry states, and terminal dead letters.",
+    "pip": "Queue & Sinks",
+    "deadCount": "{n} dead letters require review",
+    "replay": "Replay",
+    "replayed": "Outbox entry replayed to queue",
+    "empty": "Outbox is clean",
+    "emptyHint": "No dead letters or pending failures in the delivery queue.",
+    "metrics": {
+      "queued": "Queued",
+      "sent": "Sent",
+      "accepted": "Accepted",
+      "dead": "Dead Letters"
+    },
+    "columns": {
+      "notifyId": "Notification ID",
+      "channel": "Channel",
+      "attempts": "Attempts",
+      "error": "Last Error",
+      "updatedAt": "Updated"
     }
   },
   "alertRules": {

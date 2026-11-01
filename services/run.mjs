@@ -33,6 +33,7 @@ import { runAlertRules } from './alertRules.mjs'
 import { runMacro } from './macro.mjs'
 import { runNewsExtract } from './newsExtract.mjs'
 import { runSignalProducer } from './signalProducer.mjs'
+import { runOutboxDrain } from './outboxDrain.mjs'
 import { notify } from '../notify/service.mjs'
 import { partitionBySupervisorLease } from './orchestratorGuard.mjs'
 import { createSupervisorStore } from './supervisorStore.mjs'
@@ -60,6 +61,9 @@ const SERVICES = [
   // §58.5 — evaluate user alert rules against the intel event stream, route
   // matches through the notify/ router (dedupe via notification_logs, D4).
   { name: 'alertRules', run: runAlertRules, intervalSec: Number(process.env.ALERT_RULES_INTERVAL || DEFAULT_INTERVALS.alertRules), tag: '[alert-rules]' },
+  // §7.3 — dedicated sweep of the durable delivery outbox; the thing that makes
+  // the `outbox-consuming` readiness rule honest on its own cadence.
+  { name: 'outbox-drain', run: runOutboxDrain, intervalSec: Number(process.env.OUTBOX_DRAIN_INTERVAL || DEFAULT_INTERVALS.outboxDrain), tag: '[outbox-drain]' },
   // §60 Slice F — FRED macro vintages (skips cleanly without FRED_API_KEY).
   { name: 'macro', run: runMacro, intervalSec: Number(process.env.MACRO_INTERVAL || DEFAULT_INTERVALS.macro), tag: '[macro]' },
   // §60 Slice D/E — LLM extraction of eligible items (budget-capped, skips

@@ -35,6 +35,7 @@ export const DEFAULT_INTERVALS = Object.freeze({
   reconcile: Number(process.env.RECONCILE_INTERVAL || 21600), // §24.2 — venue compare every 6h
   crossScan: Number(process.env.CROSS_SCAN_INTERVAL || 14400), // §36 — cross-venue scan every 4h
   alertRules: Number(process.env.ALERT_RULES_INTERVAL || 300), // §58.5 — evaluate alert rules every 5m
+  outboxDrain: Number(process.env.OUTBOX_DRAIN_INTERVAL || 60), // §7.3 — sweep the delivery outbox every 60s
   macro: Number(process.env.MACRO_INTERVAL || 21600), // §60 Slice F — FRED vintages every 6h
 })
 

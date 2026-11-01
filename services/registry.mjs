@@ -339,6 +339,35 @@ export const SERVICES = Object.freeze([
   },
 
   // ---------------------------------------------------------------------------
+  // Delivery outbox drain (§7.3).
+  //
+  //  The dedicated consumer for the durable notification outbox. It is what
+  //  makes `alertRules`' optional `outbox-consuming` rule honest: before this
+  //  service existed, the only drain happened as a side effect of rule
+  //  evaluation, so a rules outage also meant no delivery retries. This tick
+  //  runs on its own cadence and reports `outboxLastConsumedAt` whether or not
+  //  anything was due — a dead consumer stops reporting, which is exactly the
+  //  signal the readiness rule is meant to catch.
+  // ---------------------------------------------------------------------------
+  {
+    id: 'outbox-drain',
+    label: 'Notification outbox drain',
+    category: 'alerts',
+    scope: 'system',
+    executionMode: 'periodic',
+    processGroup: 'signals',
+    entry: 'services/outboxDrain.mjs',
+    runExport: 'runOutboxDrain',
+    outputCountKeys: ['accepted'],
+    intervalSec: 60,
+    intervalEnv: 'OUTBOX_DRAIN_INTERVAL',
+    startupGraceMs: 120_000,
+    dependencies: [{ serviceId: 'alertRules', policy: 'DEGRADED_ALLOWED' }],
+    readiness: [req('process-alive'), req('dependency-reachable'), req('recent-success'), req('outbox-consuming')],
+    supports: ['start', 'stop', 'restart', 'run-once', 'probe'],
+  },
+
+  // ---------------------------------------------------------------------------
   // AI plane — external provider calls, budget-capped, crash-isolated.
   // ---------------------------------------------------------------------------
   {

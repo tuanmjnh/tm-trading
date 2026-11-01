@@ -54,6 +54,17 @@ export async function getNotificationLog() {
   return notificationLogMemo
 }
 
+/** Model `notification_outbox` (durable retry queue §7.3) — null = Mongo down. */
+let notificationOutboxMemo = null
+export async function getNotificationOutbox() {
+  if (notificationOutboxMemo) return notificationOutboxMemo
+  const mg = await connectMongo()
+  if (!mg) return null
+  const mod = await import('../engine/models/notificationOutbox.mjs')
+  notificationOutboxMemo = mod.NotificationOutbox
+  return notificationOutboxMemo
+}
+
 /** Model `alert_rules` (Alert Rules §58.5) — null = Mongo down. */
 let alertRuleMemo = null
 export async function getAlertRule() {
