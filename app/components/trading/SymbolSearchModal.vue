@@ -37,6 +37,7 @@ export interface SymbolRow {
 }
 
 import { useTerminalPrefs, MAX_WATCHLIST } from '~/composables/useTerminalPrefs'
+import { useWatchlists } from '~/composables/useWatchlists'
 
 const props = defineProps<{
   open: boolean
@@ -51,7 +52,8 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const { prefs, bumpRecent, addToWatchlist, inWatchlist } = useTerminalPrefs()
+const { prefs, bumpRecent } = useTerminalPrefs()
+const { defaultList, addSymbol, removeSymbol } = useWatchlists()
 
 const PAGE_SIZE = 20
 const MAX_ROWS = 200
@@ -221,9 +223,9 @@ const pick = (symbol: string): void => {
 }
 
 /** Watchlist mutation straight from a result row (never selects the row). */
-const watchlistFull = computed(() => prefs.value.watchlist.length >= MAX_WATCHLIST)
+const watchlistFull = computed(() => (defaultList.value?.symbols ?? []).length >= MAX_WATCHLIST)
 
-const pinned = (symbol: string): boolean => inWatchlist(symbol)
+const pinned = (symbol: string): boolean => (defaultList.value?.symbols ?? []).includes(symbol)
 
 const watchHint = (symbol: string): string => {
   if (pinned(symbol)) return t('trade.pickerInWatchlist')
@@ -233,7 +235,8 @@ const watchHint = (symbol: string): string => {
 
 const addWatch = (symbol: string): void => {
   if (pinned(symbol) || watchlistFull.value) return
-  addToWatchlist(symbol)
+  if (!defaultList.value?._id) return
+  void addSymbol(defaultList.value._id, symbol)
 }
 
 const fmtIndexValue = (r: SymbolRow): string => {

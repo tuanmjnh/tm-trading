@@ -275,3 +275,12 @@ export function marketFeedModel(): Promise<AnyModel | null> {
   return engineModel('marketFeed.mjs', 'MarketFeed')
 }
 
+// -----------------------------------------------------------------------------
+//  Watchlists (S8 chunk 1) — named, per-owner symbol lists. The trading panel
+//  reads the default list; the Lists tab on /watchlist manages the rest.
+// -----------------------------------------------------------------------------
+
+export function watchlistsModel(): Promise<AnyModel | null> {
+  return engineModel('watchlist.mjs', 'Watchlist')
+}
+

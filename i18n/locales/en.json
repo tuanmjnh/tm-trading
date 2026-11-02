@@ -1282,8 +1282,21 @@
     "desc": "Futures signals and their history for the instruments you track.",
     "tabs": {
       "signals": "Futures Signals",
-      "history": "Signal History"
+      "history": "Signal History",
+      "lists": "Lists"
     }
+  },
+  "watchlistLists": {
+    "title": "Watchlist Lists",
+    "desc": "Manage your named watchlists. The default list is shown in the trading panel.",
+    "create": "Create List",
+    "rename": "Rename",
+    "delete": "Delete",
+    "setDefault": "Set as Default",
+    "namePlaceholder": "List name",
+    "confirmDelete": "Delete this list? This cannot be undone.",
+    "cannotDeleteDefault": "Cannot delete the default list. Set another list as default first.",
+    "empty": "No watchlists yet. Create one to get started."
   },
   "intelligenceWorkspace": {
     "title": "Intelligence",

@@ -9,6 +9,7 @@
 //  Click a row to switch the active symbol on /trading (no reload).
 // =============================================================================
 import { formatPrice, formatQty, spreadOf } from '../../utils/marketFeed'
+import { useWatchlists } from '~/composables/useWatchlists'
 
 const props = defineProps<{
   symbol: string
@@ -19,14 +20,22 @@ const emit = defineEmits<{ select: [symbol: string], add: [] }>()
 
 const { t } = useI18n()
 const feed = useMarketStream()
-const { prefs, seedWatchlist, removeFromWatchlist } = useTerminalPrefs()
+const { defaultList, fetchLists, removeSymbol, seedDefault } = useWatchlists()
 
-// Seed once (no-op afterwards, so user removals stick).
+// The trading panel always operates on the default list (the one the Lists
+// tab shows as "Set as Default"). The default list is never deleted — only
+// emptied and renamed — so its id is stable for the lifetime of the owner.
+const defaultListId = computed(() => defaultList.value?._id ?? null)
+const { prefs } = useTerminalPrefs()
+
+// Seed the server default list once from the served plane symbols (the legacy
+// localStorage blob is the migration source; this keeps the panel non-empty
+// on a fresh workspace without inventing symbols — D12).
 watch(() => feed.state.hello?.symbols, (list) => {
-  if (list?.length) seedWatchlist(list)
+  if (list?.length) void seedDefault(list)
 }, { immediate: true })
 
-const symbols = computed(() => prefs.value.watchlist)
+const symbols = computed(() => defaultList.value?.symbols ?? [])
 
 interface WatchRow {
   symbol: string
@@ -144,7 +153,7 @@ const fmtChangePct = (v: number | null): string =>
         class="absolute right-0.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity max-lg:opacity-100 bg-default/90"
         :aria-label="t('trade.watchlistRemove')"
         :data-testid="`watchlist-remove-${row.symbol}`"
-        @click="removeFromWatchlist(row.symbol)"
+        @click="row.symbol && defaultListId && void removeSymbol(defaultListId, row.symbol)"
       />
     </div>
   </div>

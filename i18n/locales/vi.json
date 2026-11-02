@@ -1282,8 +1282,21 @@
     "desc": "Tín hiệu futures và lịch sử của các mã bạn theo dõi.",
     "tabs": {
       "signals": "Tín hiệu Futures",
-      "history": "Lịch sử tín hiệu"
+      "history": "Lịch sử tín hiệu",
+      "lists": "Danh sách"
     }
+  },
+  "watchlistLists": {
+    "title": "Danh sách theo dõi",
+    "desc": "Quản lý các danh sách theo dõi có tên. Danh sách mặc định được hiển thị trong bảng giao dịch.",
+    "create": "Tạo danh sách",
+    "rename": "Đổi tên",
+    "delete": "Xóa",
+    "setDefault": "Đặt làm mặc định",
+    "namePlaceholder": "Tên danh sách",
+    "confirmDelete": "Xóa danh sách này? Hành động này không thể hoàn tác.",
+    "cannotDeleteDefault": "Không thể xóa danh sách mặc định. Hãy đặt danh sách khác làm mặc định trước.",
+    "empty": "Chưa có danh sách nào. Hãy tạo một danh sách để bắt đầu."
   },
   "intelligenceWorkspace": {
     "title": "Phân tích",
