@@ -15,6 +15,8 @@ export interface WatchlistItem {
   /** Denormalized UI-stability hint (0-based). Mirrors `symbols` order. */
   order?: number
   isDefault: boolean
+  /** Hub user ids this list is shared WITH (chunk 3). */
+  sharedWith?: string[]
   createdAt: string
   updatedAt: string
 }
@@ -43,4 +45,10 @@ export interface WatchlistUpdateBody {
   symbols?: string[]
   /** Full ordered array of symbols (the new order). Same set as stored, else 400. */
   order?: string[]
+}
+
+export interface WatchlistShareBody {
+  action: 'add' | 'remove'
+  /** Hub user id to share with / unshare from. */
+  with: string
 }

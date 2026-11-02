@@ -1308,7 +1308,18 @@
     "importPlaceholder": "BTCUSDT\nETHUSDT\nSOLUSDT",
     "apply": "Apply",
     "export": "Export",
-    "exported": "Copied"
+    "exported": "Copied",
+    "share": "Share",
+    "unshare": "Unshare",
+    "shareTitle": "Share list",
+    "shareDesc": "Grant read and edit access to other users. Only the owner can change sharing.",
+    "sharePlaceholder": "Search users by name or email",
+    "sharedWith": "Shared with",
+    "ownerOnly": "Owner only",
+    "notOwner": "You are not the owner of this list",
+    "shareSuccess": "List shared",
+    "unshareSuccess": "Access revoked",
+    "noSharedUsers": "No users shared"
   },
   "intelligenceWorkspace": {
     "title": "Intelligence",

@@ -26,6 +26,10 @@ const WatchlistSchema = new mongoose.Schema(
     // Exactly one default per owner. The trading panel reads this list; it is
     // the seed target when migrating the legacy localStorage blob (S8).
     isDefault: { type: Boolean, default: false, index: true },
+    // Chunk 3: hub user ids this list is shared WITH. A shared list is read-only
+    // for the recipient by default; the owner keeps full control (rename, delete,
+    // setDefault, share/unshare). Recipients can edit the symbol set.
+    sharedWith: { type: [String], default: [], index: true },
   },
   { timestamps: true, collection: 'watchlists' },
 )

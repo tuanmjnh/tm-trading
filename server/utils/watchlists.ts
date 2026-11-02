@@ -82,12 +82,12 @@ export function watchlistsHttpError(err: unknown) {
   return createError({ statusCode: 500, statusMessage: 'watchlist_failed', message: e?.message || 'watchlist failed' })
 }
 
-/** All of the owner's lists, most recently updated first. Fail-soft -> []. */
+/** All of the owner's lists plus those shared WITH the owner, most recently updated first. Fail-soft -> []. */
 export async function listWatchlists(ownerId: string): Promise<AnyDoc[]> {
   const Model = await watchlistsModel()
   if (!Model) return []
   try {
-    return (await Model.find({ ownerId })
+    return (await Model.find({ $or: [{ ownerId }, { sharedWith: ownerId }] })
       .sort({ isDefault: -1, updatedAt: -1 })
       .limit(MAX_LISTS_PER_OWNER + 1)
       .lean()) as AnyDoc[]
@@ -96,12 +96,12 @@ export async function listWatchlists(ownerId: string): Promise<AnyDoc[]> {
   }
 }
 
-/** One of the owner's lists, or null (unknown id OR store down). */
+/** One of the owner's lists, or one shared WITH the owner, or null (unknown id OR store down). */
 export async function getWatchlist(id: string, ownerId: string): Promise<AnyDoc | null> {
   const Model = await watchlistsModel()
   if (!Model) return null
   try {
-    const found = await Model.findOne({ ownerId, _id: id }).lean()
+    const found = await Model.findOne({ _id: id, $or: [{ ownerId }, { sharedWith: ownerId }] }).lean()
     return (found ?? null) as AnyDoc | null
   } catch {
     return null
@@ -171,8 +171,11 @@ export async function updateWatchlist(id: string, ownerId: string, patch: Update
   const current = await getWatchlist(id, ownerId)
   if (!current) return null
 
+  // Only the owner can rename; shared recipients can edit symbols but not ownership/meta.
+  const isOwner = current.ownerId === ownerId
   const updates: Record<string, unknown> = {}
   if (patch.name !== undefined) {
+    if (!isOwner) throw new WatchlistError('only owner can rename list', 403, 'forbidden')
     const name = sanitizeName(patch.name)
     if (!name) throw new WatchlistError('invalid list name', 400, 'invalid_name')
     updates.name = name
@@ -183,7 +186,11 @@ export async function updateWatchlist(id: string, ownerId: string, patch: Update
   if (!Object.keys(updates).length) return current
 
   try {
-    const updated = await Model.findOneAndUpdate({ ownerId, _id: id }, { $set: updates }, { new: true }).lean()
+    const updated = await Model.findOneAndUpdate(
+      { _id: id, $or: [{ ownerId }, { sharedWith: ownerId }] },
+      { $set: updates },
+      { new: true }
+    ).lean()
     return (updated ?? null) as AnyDoc | null
   } catch (err) {
     if ((err as { code?: unknown })?.code === 11000) {
@@ -247,7 +254,7 @@ export async function reorderSymbols(
 
   try {
     const updated = await Model.findOneAndUpdate(
-      { ownerId, _id: id },
+      { _id: id, $or: [{ ownerId }, { sharedWith: ownerId }] },
       { $set: { symbols: sanitized, order: sanitized.length - 1 } },
       { new: true }
     ).lean()
@@ -268,6 +275,7 @@ export async function deleteWatchlist(id: string, ownerId: string): Promise<AnyD
 
   const current = await getWatchlist(id, ownerId)
   if (!current) return null
+  if (current.ownerId !== ownerId) throw new WatchlistError('only owner can delete list', 403, 'forbidden')
   if (current.isDefault) throw new WatchlistError('the default list cannot be deleted', 409, 'default_list')
 
   try {
@@ -288,6 +296,7 @@ export async function setDefaultWatchlist(id: string, ownerId: string): Promise<
 
   const current = await getWatchlist(id, ownerId)
   if (!current) throw new WatchlistError(`watchlist not found: ${id}`, 404, 'not_found')
+  if (current.ownerId !== ownerId) throw new WatchlistError('only owner can set default', 403, 'forbidden')
 
   await Model.updateMany({ ownerId, isDefault: true }, { $set: { isDefault: false } })
   const updated = await Model.findOneAndUpdate({ ownerId, _id: id }, { $set: { isDefault: true } }, { new: true }).lean()
@@ -312,7 +321,7 @@ export async function addSymbolToList(id: string, ownerId: string, symbol: strin
       throw new WatchlistError('list is full', 409, 'list_full')
     }
     const updated = await Model.findOneAndUpdate(
-      { ownerId, _id: id },
+      { _id: id, $or: [{ ownerId }, { sharedWith: ownerId }] },
       { $addToSet: { symbols: sym } },
       { new: true }
     ).lean()
@@ -334,13 +343,65 @@ export async function removeSymbolFromList(id: string, ownerId: string, symbol: 
   if (!sym) return null
   try {
     const updated = await Model.findOneAndUpdate(
-      { ownerId, _id: id },
+      { _id: id, $or: [{ ownerId }, { sharedWith: ownerId }] },
       { $pull: { symbols: sym } },
       { new: true }
     ).lean()
     return (updated ?? null) as AnyDoc | null
   } catch {
     return null
+  }
+}
+
+/**
+ * Grant another hub user read/edit access to this list (owner-only). The owner
+ * keeps full control: rename, delete, setDefault and share/unshare remain
+ * owner-only. Returns the updated doc, or null when the id is unknown / store
+ * is down.
+ */
+export async function shareWatchlist(id: string, ownerId: string, withId: string): Promise<AnyDoc | null> {
+  const Model = await watchlistsModel()
+  if (!Model) throw new WatchlistError('watchlist store unavailable', 503, 'mongo_down')
+
+  const current = await getWatchlist(id, ownerId)
+  if (!current) return null
+  if (current.ownerId !== ownerId) throw new WatchlistError('only owner can share list', 403, 'forbidden')
+  if (current.sharedWith?.includes(withId)) return current
+
+  try {
+    const updated = await Model.findOneAndUpdate(
+      { ownerId, _id: id },
+      { $addToSet: { sharedWith: withId } },
+      { new: true }
+    ).lean()
+    return (updated ?? null) as AnyDoc | null
+  } catch {
+    throw new WatchlistError('watchlist store unavailable', 503, 'mongo_down')
+  }
+}
+
+/**
+ * Revoke a hub user's access to this list (owner-only). Returns the updated
+ * doc, or null when the id is unknown / store is down.
+ */
+export async function unshareWatchlist(id: string, ownerId: string, withId: string): Promise<AnyDoc | null> {
+  const Model = await watchlistsModel()
+  if (!Model) throw new WatchlistError('watchlist store unavailable', 503, 'mongo_down')
+
+  const current = await getWatchlist(id, ownerId)
+  if (!current) return null
+  if (current.ownerId !== ownerId) throw new WatchlistError('only owner can unshare list', 403, 'forbidden')
+  if (!current.sharedWith?.includes(withId)) return current
+
+  try {
+    const updated = await Model.findOneAndUpdate(
+      { ownerId, _id: id },
+      { $pull: { sharedWith: withId } },
+      { new: true }
+    ).lean()
+    return (updated ?? null) as AnyDoc | null
+  } catch {
+    throw new WatchlistError('watchlist store unavailable', 503, 'mongo_down')
   }
 }
 

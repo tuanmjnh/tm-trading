@@ -1,4 +1,4 @@
-import type { WatchlistItem, WatchlistListResponse, WatchlistResponse } from '#shared/types/watchlist'
+import type { WatchlistItem, WatchlistListResponse, WatchlistResponse, WatchlistShareBody } from '#shared/types/watchlist'
 
 // =============================================================================
 //  useWatchlists — client for the server-persisted watchlists (S8 chunk 1).
@@ -81,6 +81,24 @@ export function useWatchlists() {
     return res.data
   }
 
+  async function shareList(id: string, withId: string): Promise<WatchlistItem> {
+    const res = await $fetch<WatchlistResponse>(`/api/v1/watchlists/${id}/share`, {
+      method: 'PATCH',
+      body: { action: 'add', with: withId } as WatchlistShareBody
+    })
+    await fetchLists()
+    return res.data
+  }
+
+  async function unshareList(id: string, withId: string): Promise<WatchlistItem> {
+    const res = await $fetch<WatchlistResponse>(`/api/v1/watchlists/${id}/share`, {
+      method: 'PATCH',
+      body: { action: 'remove', with: withId } as WatchlistShareBody
+    })
+    await fetchLists()
+    return res.data
+  }
+
   async function deleteList(id: string): Promise<void> {
     await $fetch(`/api/v1/watchlists/${id}`, { method: 'DELETE' })
     await fetchLists()
@@ -128,6 +146,8 @@ export function useWatchlists() {
     deleteList,
     seedDefault,
     addSymbol,
-    removeSymbol
+    removeSymbol,
+    shareList,
+    unshareList
   }
 }

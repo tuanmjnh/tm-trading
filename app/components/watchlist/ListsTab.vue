@@ -18,7 +18,9 @@ import type { WatchlistItem } from '#shared/types/watchlist'
 import { LazyBaseConfirmModal } from '#components'
 
 const { t } = useI18n()
-const { lists, loading, error, defaultList, fetchLists, createList, renameList, updateSymbols, reorderSymbols, deleteList, removeSymbol } = useWatchlists()
+const { lists, loading, error, defaultList, fetchLists, createList, renameList, updateSymbols, reorderSymbols, deleteList, removeSymbol, shareList, unshareList } = useWatchlists()
+const hub = useHub()
+const me = useAuth().user
 
 onMounted(() => {
   fetchLists()
@@ -29,6 +31,13 @@ const newName = ref('')
 const editingId = ref<string | null>(null)
 const editName = ref('')
 const confirmDeleteId = ref<string | null>(null)
+
+const showShare = ref(false)
+const shareListId = ref<string | null>(null)
+const shareQuery = ref('')
+const shareResults = ref<any[]>([])
+const shareLoading = ref(false)
+let shareTimer: ReturnType<typeof setTimeout> | null = null
 
 // A write failure (reorder / import / remove) surfaces here; the composable
 // `error` only tracks read failures. After a failed write the state is
@@ -209,6 +218,54 @@ async function exportList(list: any) {
   if (copiedTimer) clearTimeout(copiedTimer)
   copiedTimer = setTimeout(() => { copiedId.value = null }, 1600)
 }
+
+// --- Share (chunk 3) ---------------------------------------------------------
+function openShare(list: any) {
+  if (!isOwner(list)) return
+  shareListId.value = list._id
+  shareQuery.value = ''
+  shareResults.value = []
+  showShare.value = true
+}
+
+function isOwner(list: any) {
+  return String(list.ownerId) === String(me.value?.id)
+}
+
+async function searchUsers() {
+  const q = shareQuery.value.trim()
+  if (!q) { shareResults.value = [] ; return }
+  shareLoading.value = true
+  if (shareTimer) clearTimeout(shareTimer)
+  shareTimer = setTimeout(async () => {
+    try {
+      const res = await hub.users.list({ q, limit: 20 })
+      shareResults.value = res?.data ?? []
+    } catch {
+      shareResults.value = []
+    } finally {
+      shareLoading.value = false
+    }
+  }, 300)
+}
+
+async function doShare(userId: string) {
+  if (!shareListId.value) return
+  try {
+    await shareList(shareListId.value, userId)
+  } catch (err) {
+    writeError.value = err instanceof Error ? err.message : String(err)
+  }
+}
+
+async function doUnshare(userId: string) {
+  if (!shareListId.value) return
+  try {
+    await unshareList(shareListId.value, userId)
+  } catch (err) {
+    writeError.value = err instanceof Error ? err.message : String(err)
+  }
+}
 </script>
 
 <template>
@@ -259,11 +316,15 @@ async function exportList(list: any) {
           <div class="flex items-center gap-3">
             <UIcon name="i-lucide-list" class="text-muted" />
             <div>
-              <div v-if="editingId !== list._id" class="font-medium">
+              <div v-if="editingId !== list._id" class="flex items-center gap-2 font-medium">
                 {{ list.name }}
                 <UBadge v-if="list.isDefault" size="xs" color="primary" variant="soft">
                   {{ t('watchlistLists.setDefault') }}
                 </UBadge>
+                <div v-if="!isOwner(list)" class="text-xs text-muted flex items-center gap-1 italic">
+                  <UIcon name="i-lucide-lock" class="w-3 h-3" />
+                  {{ t('watchlistLists.ownerOnly') }}
+                </div>
               </div>
               <UInput
                 v-else
@@ -274,6 +335,9 @@ async function exportList(list: any) {
               />
               <div class="text-xs text-muted">
                 {{ t('watchlistLists.count', { n: list.symbols.length }) }}
+                <span v-if="list.sharedWith?.length" class="ml-1">
+                  • {{ t('watchlistLists.sharedWith') }}: {{ list.sharedWith.length }}
+                </span>
               </div>
             </div>
           </div>
@@ -294,18 +358,23 @@ async function exportList(list: any) {
               :aria-label="t('watchlistLists.manage')"
               @click="toggleExpand(list._id)"
             />
-            <UButton size="xs" variant="ghost" @click="startRename(list)">
-              {{ t('watchlistLists.rename') }}
-            </UButton>
-            <UButton
-              size="xs"
-              variant="ghost"
-              color="error"
-              :disabled="list.isDefault"
-              @click="handleDelete(list._id)"
-            >
-              {{ t('watchlistLists.delete') }}
-            </UButton>
+            <template v-if="isOwner(list)">
+              <UButton size="xs" variant="ghost" @click="openShare(list)">
+                {{ t('watchlistLists.share') }}
+              </UButton>
+              <UButton size="xs" variant="ghost" @click="startRename(list)">
+                {{ t('watchlistLists.rename') }}
+              </UButton>
+              <UButton
+                size="xs"
+                variant="ghost"
+                color="error"
+                :disabled="list.isDefault"
+                @click="handleDelete(list._id)"
+              >
+                {{ t('watchlistLists.delete') }}
+              </UButton>
+            </template>
           </div>
         </div>
 
@@ -376,6 +445,58 @@ async function exportList(list: any) {
             >
               {{ t('watchlistLists.apply') }}
             </UButton>
+          </div>
+        </template>
+      </UCard>
+    </UModal>
+
+    <!-- Share modal -->
+    <UModal v-model="showShare">
+      <UCard>
+        <template #header>
+          <h3 class="text-base font-medium">{{ t('watchlistLists.shareTitle') }}</h3>
+        </template>
+        <p class="mb-4 text-xs text-muted">{{ t('watchlistLists.shareDesc') }}</p>
+        
+        <div class="space-y-4">
+          <UInput
+            v-model="shareQuery"
+            :placeholder="t('watchlistLists.sharePlaceholder')"
+            class="w-full"
+            @update:model-value="searchUsers"
+          />
+
+          <div v-if="shareLoading" class="text-xs italic text-muted">Loading...</div>
+          <div v-else-if="shareResults.length" class="space-y-1">
+            <div
+              v-for="user in shareResults"
+              :key="user.id"
+              class="flex items-center justify-between rounded bg-muted/20 px-2 py-1 text-sm"
+            >
+              <span>{{ user.username }} ({{ user.email }})</span>
+              <UButton size="xs" variant="ghost" @click="doShare(user.id)">{{ t('watchlistLists.share') }}</UButton>
+            </div>
+          </div>
+          
+          <div class="mt-6">
+            <h4 class="text-sm font-medium mb-2">{{ t('watchlistLists.sharedWith') }}</h4>
+            <div v-if="lists.find(l => l._id === shareListId)?.sharedWith?.length" class="space-y-1">
+              <div
+                v-for="userId in lists.find(l => l._id === shareListId)?.sharedWith"
+                :key="userId"
+                class="flex items-center justify-between rounded border px-2 py-1 text-sm"
+              >
+                <span class="font-mono text-xs">{{ userId }}</span>
+                <UButton size="xs" variant="ghost" color="error" @click="doUnshare(userId)">{{ t('watchlistLists.unshare') }}</UButton>
+              </div>
+            </div>
+            <div v-else class="text-xs text-muted italic">{{ t('watchlistLists.noSharedUsers') }}</div>
+          </div>
+        </div>
+
+        <template #footer>
+          <div class="flex justify-end">
+            <UButton variant="ghost" @click="showShare = false">{{ t('common.close') }}</UButton>
           </div>
         </template>
       </UCard>

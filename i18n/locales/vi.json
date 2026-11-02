@@ -1308,7 +1308,18 @@
     "importPlaceholder": "BTCUSDT\nETHUSDT\nSOLUSDT",
     "apply": "Áp dụng",
     "export": "Xuất",
-    "exported": "Đã sao chép"
+    "exported": "Đã sao chép",
+    "share": "Chia sẻ",
+    "unshare": "Hủy chia sẻ",
+    "shareTitle": "Chia sẻ danh sách",
+    "shareDesc": "Cấp quyền đọc và chỉnh sửa cho người dùng khác. Chỉ chủ sở hữu mới có thể thay đổi chia sẻ.",
+    "sharePlaceholder": "Tìm người dùng theo tên hoặc email",
+    "sharedWith": "Đã chia sẻ với",
+    "ownerOnly": "Chỉ chủ sở hữu",
+    "notOwner": "Bạn không phải là chủ sở hữu danh sách này",
+    "shareSuccess": "Đã chia sẻ danh sách",
+    "unshareSuccess": "Đã thu hồi quyền truy cập",
+    "noSharedUsers": "Chưa chia sẻ với ai"
   },
   "intelligenceWorkspace": {
     "title": "Phân tích",

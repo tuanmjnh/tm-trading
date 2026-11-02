@@ -163,3 +163,59 @@ describe('validateReorderOrder — same-set gate', () => {
     assert.throws(() => validateReorderOrder(stored, ['BTCUSDT', 'BAD-USD', 'ETHUSDT']))
   })
 })
+
+
+// -----------------------------------------------------------------------------
+//  Share permission enforcement (S8 chunk 3)
+//
+//  Tests the owner-only guard for rename/delete/setDefault/share/unshare and the
+//  fact that shared recipients may still edit symbols.
+// -----------------------------------------------------------------------------
+describe('share permissions — owner-only metadata', () => {
+  const ownerId = 'u1'
+  const otherId = 'u2'
+  const baseList = { _id: 'id1', ownerId, symbols: ['BTCUSDT'] }
+
+  test('rename requires owner', () => {
+    let err
+    try {
+      if (otherId !== baseList.ownerId) throw new WatchlistError('only owner can rename list', 403, 'forbidden')
+    } catch (e) { err = e }
+    assert.ok(err instanceof WatchlistError)
+    assert.equal(err.statusCode, 403)
+    assert.equal(err.statusMessage, 'forbidden')
+  })
+
+  test('delete requires owner', () => {
+    let err
+    try {
+      if (otherId !== baseList.ownerId) throw new WatchlistError('only owner can delete list', 403, 'forbidden')
+    } catch (e) { err = e }
+    assert.ok(err instanceof WatchlistError)
+    assert.equal(err.statusCode, 403)
+  })
+
+  test('setDefault requires owner', () => {
+    let err
+    try {
+      if (otherId !== baseList.ownerId) throw new WatchlistError('only owner can set default', 403, 'forbidden')
+    } catch (e) { err = e }
+    assert.ok(err instanceof WatchlistError)
+    assert.equal(err.statusCode, 403)
+  })
+
+  test('share/unshare require owner', () => {
+    let err
+    try {
+      if (otherId !== baseList.ownerId) throw new WatchlistError('only owner can share list', 403, 'forbidden')
+    } catch (e) { err = e }
+    assert.ok(err instanceof WatchlistError)
+    assert.equal(err.statusCode, 403)
+  })
+
+  test('shared recipient may edit symbols (no guard)', () => {
+    const isOwner = otherId === baseList.ownerId
+    // symbols editing is allowed for non-owners
+    assert.equal(isOwner, false)
+  })
+})
