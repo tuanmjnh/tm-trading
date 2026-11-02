@@ -24,6 +24,16 @@ export interface SignalItem {
   /** received | rejected | forwarded */
   status: string
   rejectReason: string
+  /**
+   * Lifecycle overlay (S8 chunk 4). Defaults to `active` for every stored
+   * webhook row — the legacy `status` field is untouched. Read-only: the
+   * transitions are enforced server-side (server/utils/signalLifecycle.ts).
+   */
+  lifecycleStatus: string
+  /** ISO-8601 UTC — when the lifecycle last changed (empty string = never). */
+  lifecycleAt: string
+  /** Optional human-readable note for the last lifecycle transition. */
+  lifecycleNote: string
 }
 
 export interface SignalsListResponse {
@@ -71,6 +81,20 @@ export interface NativeSignalItem {
   /** Full attribution; null only on legacy rows (which this endpoint excludes). */
   attribution: NativeSignalAttribution | null
   meta: Record<string, unknown> | null
+  /**
+   * Lifecycle overlay (S8 chunk 4). Defaults to `active` for every stored
+   * native row. Read-only: transitions are enforced server-side.
+   */
+  lifecycleStatus: string
+  /** ISO-8601 UTC — when the lifecycle last changed (empty string = never). */
+  lifecycleAt: string
+  /** Optional note for the last lifecycle transition. */
+  lifecycleNote: string
+  /**
+   * ISO-8601 UTC — the signal's horizon (D2). A signal past this timestamp is
+   * a candidate for `expired`; the field is immutable once written.
+   */
+  expiresAt: string | null
 }
 
 export interface NativeSignalsListResponse {

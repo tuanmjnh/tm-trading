@@ -54,7 +54,11 @@ function toItem(a: any): SignalItem {
     atr: Number.isFinite(a.atr) ? a.atr : null,
     conf: Number.isFinite(a.conf) ? a.conf : null,
     status: a.status ?? 'received',
-    rejectReason: a.rejectReason ?? ''
+    rejectReason: a.rejectReason ?? '',
+    // Lifecycle overlay (S8 chunk 4) — additive over the immutable evidence.
+    lifecycleStatus: String(a.lifecycleStatus ?? 'active'),
+    lifecycleAt: toIso(a.lifecycleAt),
+    lifecycleNote: String(a.lifecycleNote ?? '')
   }
 }
 

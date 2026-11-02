@@ -37,6 +37,9 @@ const mongoDown = ref(false)
 const source = ref<'alerts' | 'engine'>('alerts')
 const assistantOpen = ref(false)
 const assistantScope = ref<{ type: 'signal', id: string, source: 'alerts' | 'engine' } | null>(null)
+
+const detailOpen = ref(false)
+const detailItemId = ref<string | null>(null)
 const sourceItems = computed(() => [
   { label: t('signals.source_alerts'), value: 'alerts' },
   { label: t('signals.source_engine'), value: 'engine' }
@@ -169,7 +172,9 @@ const columns = computed<GridColumn[]>(() => [
   { key: 'actions', label: '', class: 'w-20' }
 ])
 
-const rowActions = () => buildRowActions([])
+const rowActions = (item: SignalItem | NativeSignalItem) => buildRowActions([
+  { type: 'view', onSelect: () => { detailItemId.value = item.id; detailOpen.value = true } }
+])
 
 const fmtPrice = (v: number | null | undefined) =>
   typeof v === 'number' && Number.isFinite(v) ? String(v) : '—'
@@ -456,6 +461,7 @@ useHead({ title })
       </LazyGridList>
       </template>
     </div>
+    <LazySignalDetailModal v-model="detailOpen" :item-id="detailItemId" :source="source" />
     <BaseModuleAssistantPanel v-model:open="assistantOpen" :scope="assistantScope" />
   </BasePage>
 </template>

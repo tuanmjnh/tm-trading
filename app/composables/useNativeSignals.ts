@@ -39,5 +39,17 @@ export const useNativeSignals = () => {
     }
   }
 
-  return { list }
+  async function get(id: string): Promise<NativeSignalItem> {
+    const res = await $fetch<{ data: NativeSignalItem }>(`/api/v1/signals/native/${id}`)
+    return res.data
+  }
+
+  async function setLifecycle(id: string, status: string, note?: string): Promise<void> {
+    await $fetch(`/api/v1/signals/native/${id}/lifecycle`, {
+      method: 'PATCH',
+      body: { status, note, at: new Date().toISOString() }
+    })
+  }
+
+  return { list, get, setLifecycle }
 }

@@ -40,5 +40,17 @@ export const useSignals = () => {
     }
   }
 
-  return { list }
+  async function get(id: string): Promise<SignalItem> {
+    const res = await $fetch<{ data: SignalItem }>(`/api/v1/signals/${id}`)
+    return res.data
+  }
+
+  async function setLifecycle(id: string, status: string, note?: string): Promise<void> {
+    await $fetch(`/api/v1/signals/${id}/lifecycle`, {
+      method: 'PATCH',
+      body: { status, note, at: new Date().toISOString() }
+    })
+  }
+
+  return { list, get, setLifecycle }
 }

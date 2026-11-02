@@ -21,8 +21,16 @@ const { viewMode } = useAdminGridView('engine-signals-view-mode')
 const api = useNativeSignals()
 const { version: workspaceVersion } = useTradingWorkspace()
 const { error: loadError, hasError, isStale, run } = useResourceState()
+const { buildRowActions } = useAdminRowActions()
 
 const mongoDown = ref(false)
+
+const detailOpen = ref(false)
+const detailItemId = ref<string | null>(null)
+
+const rowActions = (item: NativeSignalItem) => buildRowActions([
+  { type: 'view', onSelect: () => { detailItemId.value = item.id; detailOpen.value = true } }
+])
 
 const list = useCursorPagination<NativeSignalItem>({
   limit: 50,
@@ -61,7 +69,8 @@ const columns = computed<GridColumn[]>(() => [
   { key: 'strategyVersion', label: t('signals.strategyVersion'), class: 'w-40' },
   { key: 'engineVersion', label: t('signals.engineVersion'), class: 'w-24' },
   { key: 'price', label: t('signals.price'), class: 'w-24' },
-  { key: 'params', label: t('signals.params'), class: 'w-28' }
+  { key: 'params', label: t('signals.params'), class: 'w-28' },
+  { key: 'actions', label: '', class: 'w-20' }
 ])
 
 const fmtPrice = (v: number | null | undefined) =>
@@ -125,6 +134,7 @@ defineExpose({ refresh, loadMore, items, loading, hasMore, mongoDown, metrics })
       :columns="columns"
       :loading="loading"
       :can-load-more="hasMore"
+      :action-options="rowActions"
       v-model:view-mode="viewMode"
       item-key="id"
       storage-key="engine-signals-view-mode"
@@ -201,5 +211,6 @@ defineExpose({ refresh, loadMore, items, loading, hasMore, mongoDown, metrics })
         />
       </template>
     </LazyGridList>
+    <LazySignalDetailModal v-model="detailOpen" :item-id="detailItemId" source="engine" />
   </div>
 </template>

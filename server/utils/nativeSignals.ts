@@ -63,7 +63,12 @@ function toItem(s: any): NativeSignalItem {
     schemaVersion: s.schemaVersion ?? null,
     accountId: s.accountId ?? null,
     attribution,
-    meta: s.meta && typeof s.meta === 'object' ? s.meta : null
+    meta: s.meta && typeof s.meta === 'object' ? s.meta : null,
+    // Lifecycle overlay (S8 chunk 4) — additive over the immutable evidence.
+    lifecycleStatus: String(s.lifecycleStatus ?? 'active'),
+    lifecycleAt: toIso(s.lifecycleAt),
+    lifecycleNote: String(s.lifecycleNote ?? ''),
+    expiresAt: s.expiresAt ? toIso(s.expiresAt) : null
   }
 }
 
