@@ -1,7 +1,7 @@
 # S8 — Watchlist CRUD (chunk 1)
 
 **Date:** 2026-11-02
-**Status:** IN PROGRESS
+**Status:** DONE (chunk 1 committed `4177461`)
 **Approach:** A (wrap-not-replace) — keep one default list, add named additional lists.
 
 ## Goal
@@ -47,6 +47,7 @@ panel keeps showing the default list exactly as it does today (no UX change on `
 | `server/api/v1/watchlists/[id].get.ts` | `GET /api/v1/watchlists/:id` |
 | `server/api/v1/watchlists/[id].patch.ts` | `PATCH /api/v1/watchlists/:id` |
 | `server/api/v1/watchlists/[id].delete.ts` | `DELETE /api/v1/watchlists/:id` |
+| `server/api/v1/watchlists/seed.post.ts` | `POST /api/v1/watchlists/seed` (migration) |
 | `app/composables/useWatchlists.ts` | Vue composable |
 | `app/components/watchlist/ListsTab.vue` | Lists tab page component |
 | `tests/watchlists.test.ts` | Pure/sanitized logic tests |
