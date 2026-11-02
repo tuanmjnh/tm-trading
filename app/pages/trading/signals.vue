@@ -17,11 +17,22 @@ const signalsApi = useSignals()
 const { version: workspaceVersion } = useTradingWorkspace()
 const { error: loadError, hasError, isStale, run } = useResourceState()
 
+// ── S8 chunk 5: CLOSE_ONLY default. The engine only trusts closed bars, so the
+//  read default is `mode=closed`; `live`/`intrabar` are opt-in repaint risk.
+//  The lifecycle filter is additive over the legacy `status` field.
+const filterMode = ref<'all' | 'closed' | 'live' | 'intrabar'>('closed')
+const filterLifecycle = ref<'all' | 'active' | 'intrabar' | 'closed' | 'expired'>('all')
+
 // List collection `alerts` (D4) qua Nitro route noi dia.
 const signalsList = useCursorPagination<SignalItem>({
   limit: 50,
   fetch: async (cursor, limit) => {
-    const res = await signalsApi.list({ cursor: typeof cursor === 'string' ? cursor : null, limit })
+    const res = await signalsApi.list({
+      cursor: typeof cursor === 'string' ? cursor : null,
+      limit,
+      mode: filterMode.value,
+      lifecycle: filterLifecycle.value
+    })
     mongoDown.value = res.meta?.mongo === 'down'
     return { items: res.items, nextCursor: res.nextCursor, hasMore: !!res.nextCursor }
   }
@@ -29,6 +40,20 @@ const signalsList = useCursorPagination<SignalItem>({
 const { items: signals, loading: isLoading, hasMore } = signalsList
 
 const mongoDown = ref(false)
+
+const modeItems = computed(() => [
+  { label: t('signals.mode_all'), value: 'all' },
+  { label: t('signals.mode_closed'), value: 'closed' },
+  { label: t('signals.mode_live'), value: 'live' },
+  { label: t('signals.mode_intrabar'), value: 'intrabar' }
+])
+const lifecycleItems = computed(() => [
+  { label: t('signals.lifecycle_all'), value: 'all' },
+  { label: t('signals.lifecycle_active'), value: 'active' },
+  { label: t('signals.lifecycle_intrabar'), value: 'intrabar' },
+  { label: t('signals.lifecycle_closed'), value: 'closed' },
+  { label: t('signals.lifecycle_expired'), value: 'expired' }
+])
 
 // ── Source switch (§61.17 Phase D — D5): the TradingView webhook (collection
 //  alerts, legacy) vs the NATIVE engine output (collection signals, attributed).
@@ -149,6 +174,8 @@ function exportCsv() {
           { key: 'sl', label: 'sl', value: s => s.sl },
           { key: 'tps', label: 'tps', value: s => s.tps.join(' ') },
           { key: 'conf', label: 'conf', value: s => s.conf },
+          { key: 'maxHoldBars', label: 'maxHoldBars', value: s => s.maxHoldBars },
+          { key: 'expiresAt', label: 'expiresAt', value: s => s.expiresAt },
           { key: 'status', label: 'status', value: s => s.status }
         ])
     downloadCsv(csvFilename(source.value === 'engine' ? 'tm-trading-engine-signals' : 'tm-trading-signals'), csv)
@@ -168,9 +195,26 @@ const columns = computed<GridColumn[]>(() => [
   { key: 'sl', label: t('signals.sl'), class: 'w-24' },
   { key: 'tps', label: t('signals.tps'), class: 'w-44' },
   { key: 'conf', label: t('signals.conf'), class: 'w-20' },
+  // S8 chunk 5: documented horizon (D2) — the bar count the signal is worth
+  // watching. Expired rows render in the lifecycle colour, not greyed out.
+  { key: 'expiresAt', label: t('signals.expiresAt'), class: 'w-32' },
   { key: 'status', label: t('signals.status'), class: 'w-24' },
   { key: 'actions', label: '', class: 'w-20' }
 ])
+
+const fmtExpires = (item: SignalItem) => {
+  if (!item.expiresAt) return '—'
+  const d = new Date(item.expiresAt)
+  if (Number.isNaN(d.getTime())) return '—'
+  const now = Date.now()
+  const ms = d.getTime() - now
+  if (ms <= 0) return t('signals.horizonExpired')
+  const mins = Math.floor(ms / 60000)
+  if (mins < 60) return t('signals.horizonRemaining', { n: mins })
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return t('signals.horizonRemaining', { n: hrs })
+  return t('signals.horizonRemaining', { n: Math.floor(hrs / 24) })
+}
 
 const rowActions = (item: SignalItem | NativeSignalItem) => buildRowActions([
   { type: 'view', onSelect: () => { detailItemId.value = item.id; detailOpen.value = true } }
@@ -290,6 +334,14 @@ useHead({ title })
       <TradingEngineSignalsPanel v-if="source === 'engine'" ref="nativePanel" />
 
       <template v-else>
+      <!-- S8 chunk 5: CLOSE_ONLY filter bar. `closed` is the default — the
+           engine only trusts closed bars; `live`/`intrabar` are opt-in. -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <USelect v-model="filterMode" :items="modeItems" value-key="value" size="sm" class="w-40" />
+        <USelect v-model="filterLifecycle" :items="lifecycleItems" value-key="value" size="sm" class="w-40" />
+        <span class="text-[11px] text-dimmed">{{ t('signals.filter') }}</span>
+      </div>
+
       <SharedRefreshNotice
         :stale="isStale"
         :retrying="isLoading"
@@ -354,6 +406,12 @@ useHead({ title })
 
         <template #conf="{ item }">
           <span class="text-xs text-muted">{{ item.conf !== null ? item.conf.toFixed(2) : '—' }}</span>
+        </template>
+
+        <template #expiresAt="{ item }">
+          <span class="text-xs font-mono" :class="item.expiresAt && new Date(item.expiresAt).getTime() <= Date.now() ? 'text-error' : 'text-muted'">
+            {{ fmtExpires(item) }}
+          </span>
         </template>
 
         <template #status="{ item }">

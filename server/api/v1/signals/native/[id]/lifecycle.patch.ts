@@ -1,5 +1,5 @@
 import { getRouterParam, readBody } from 'h3'
-import { applySignalLifecycle } from '../../../utils/signalLifecycle'
+import { applySignalLifecycle } from '../../../../../utils/signalLifecycle'
 
 // =============================================================================
 //  PATCH /api/v1/signals/native/:id/lifecycle — advance one native engine signal

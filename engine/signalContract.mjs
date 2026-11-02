@@ -20,10 +20,68 @@
 
 import { createHash } from 'node:crypto'
 
+import { TF_MS } from './data.mjs'
 import { stableStringify } from './version.mjs'
 
 /** Version of this contract. Any shape/semantic change bumps this. */
 export const SIGNAL_CONTRACT_VERSION = '1'
+
+/**
+ * Default hold limit in bars. Mirrors Pine `tm_maxHoldBars` (default 300) so the
+ * engine and the indicator agree on "how long is this signal worth watching".
+ */
+export const DEFAULT_MAX_HOLD_BARS = 300
+
+/**
+ * Normalise a timeframe to the engine canonical key (`'5'`, `'60'`, `'D'`…).
+ * Accepts the TradingView form (`'15'`, `'1h'`, `'1D'`) as well as the engine
+ * form — the webhook path sends TV strings while the native generator sends
+ * canonical ones, and the contract must answer both.
+ */
+export function normalizeSignalTf(raw) {
+  const s = String(raw ?? '').trim()
+  if (!s) return null
+  if (TF_MS[s]) return s
+  const m = /^(\d+)\s*m?$/i.exec(s)
+  if (m) {
+    const min = Number(m[1])
+    const byMs = Object.entries(TF_MS).find(([, ms]) => ms === min * 60000)
+    if (byMs) return byMs[0]
+  }
+  const h = /^(\d+)\s*h$/i.exec(s)
+  if (h) {
+    const ms = Number(h[1]) * 3600000
+    const byMs = Object.entries(TF_MS).find(([, v]) => v === ms)
+    if (byMs) return byMs[0]
+  }
+  return null
+}
+
+/**
+ * Documented horizon of a signal (D2). A signal is worth watching until
+ * `ts + maxHoldBars * tf duration`; after that it is a candidate for `expired`.
+ *
+ * `expiresAt` is IMMUTABLE ONCE WRITTEN: an explicit override wins, otherwise it
+ * is derived. Re-deriving on every call would silently move the horizon and make
+ * "is this signal expired?" depend on call order — the store preserves the
+ * written value and the read path never recomputes.
+ *
+ * @returns {Date|null}
+ */
+export function computeExpiresAt(ts, tf, maxHoldBars, explicit) {
+  if (explicit instanceof Date) return explicit
+  if (typeof explicit === 'string' && explicit) {
+    const d = new Date(explicit)
+    if (!Number.isNaN(d.getTime())) return d
+  }
+  const canon = normalizeSignalTf(tf)
+  if (!canon || !TF_MS[canon]) return null
+  const bars = Number(maxHoldBars)
+  if (!Number.isFinite(bars) || bars <= 0) return null
+  const base = ts instanceof Date ? ts : new Date(ts)
+  if (Number.isNaN(base.getTime())) return null
+  return new Date(base.getTime() + bars * TF_MS[canon])
+}
 
 /**
  * Signal event vocabulary. MUST match the `SIGNAL_TYPES` enum in
@@ -120,9 +178,16 @@ export function signalKeyFor({ symbol, tf, ts, type, method, strategyVersion, ow
  * Build a normalized signal document (not yet persisted). Validates type, ts and
  * attribution, and derives `signalKey`.
  *
+ * Horizon (S8 chunk 5): `expiresAt` is computed here — the single choke point —
+ * from `ts + maxHoldBars * tf duration` (default 300 bars, matching Pine
+ * `tm_maxHoldBars`). An explicit override wins; null means no horizon could be
+ * derived (unknown tf). The value is written once and never recomputed by the
+ * read path.
+ *
  * @returns {{signalKey:string, schemaVersion:string, ts:Date, symbol:string,
  *            tf:string, type:string, price:number|null, ownerId:string|null,
- *            accountId:string|null, attribution:object, meta:object|null}}
+ *            accountId:string|null, attribution:object, meta:object|null,
+ *            expiresAt:Date|null, maxHoldBars:number|null}}
  */
 export function signalDoc(input = {}) {
   const type = input.type
@@ -141,6 +206,10 @@ export function signalDoc(input = {}) {
   const symbol = String(input.symbol ?? '')
   const tf = String(input.tf ?? '')
 
+  const maxHoldBars = Number.isFinite(Number(input.maxHoldBars)) && Number(input.maxHoldBars) > 0
+    ? Number(input.maxHoldBars)
+    : DEFAULT_MAX_HOLD_BARS
+
   return {
     signalKey: signalKeyFor({
       symbol,
@@ -157,6 +226,8 @@ export function signalDoc(input = {}) {
     tf,
     type,
     price,
+    expiresAt: computeExpiresAt(ts, tf, maxHoldBars, input.expiresAt),
+    maxHoldBars,
     ownerId: typeof input.ownerId === 'string' && input.ownerId.length > 0 ? input.ownerId : null,
     accountId: typeof input.accountId === 'string' && input.accountId.length > 0 ? input.accountId : null,
     attribution,

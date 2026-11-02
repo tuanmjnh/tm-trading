@@ -1,5 +1,5 @@
 import { getRouterParam, readBody } from 'h3'
-import { applySignalLifecycle, getSignalLifecycleHistory } from '../../../utils/signalLifecycle'
+import { applySignalLifecycle, getSignalLifecycleHistory } from '../../../../utils/signalLifecycle'
 
 // =============================================================================
 //  PATCH /api/v1/signals/:id/lifecycle — advance one webhook signal through the

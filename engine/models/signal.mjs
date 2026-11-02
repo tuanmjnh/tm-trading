@@ -21,6 +21,15 @@ const SignalSchema = new mongoose.Schema(
     tf: { type: String, required: true },
     type: { type: String, enum: SIGNAL_TYPES, required: true },
     price: { type: Number, default: null },
+    /**
+     * S8 chunk 5: documented horizon (D2). Computed once by
+     * engine/signalContract.mjs `signalDoc()` (ts + maxHoldBars × tf duration)
+     * and immutable thereafter. null = no horizon could be derived (unknown tf).
+     */
+    expiresAt: { type: Date, default: null },
+    /** The hold window the horizon was computed from (Pine `tm_maxHoldBars`, default
+     *  300). null = the row predates the horizon rule. */
+    maxHoldBars: { type: Number, default: null },
 
     // Tenancy (roadmap §61.3): user-scoped per product decision; shared market
     // reference data is what stays global, generated signals are not.

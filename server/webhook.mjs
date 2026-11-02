@@ -25,6 +25,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { alertKey } from '../engine/keys.mjs'
 import { SIGNAL_TYPES } from '../engine/models/signal.mjs'
+import { computeExpiresAt } from '../engine/signalContract.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
@@ -206,6 +207,16 @@ const webhookOwnerId = () => {
 
 export function toAlertDoc(o, source) {
   const num = (x) => (Number.isFinite(x) ? x : null)
+  // S8 chunk 5: documented horizon (D2). The TradingView payload may carry an
+  // explicit `maxHoldBars` (Pine `tm_maxHoldBars`) or `expiresAt`; otherwise we
+  // derive `ts + maxHoldBars * tf duration` with the Pine default of 300 bars.
+  // null = the tf is unknown, so no horizon could be derived.
+  const expiresAt = computeExpiresAt(
+    new Date(o.ts),
+    o.tf,
+    o.maxHoldBars,
+    o.expiresAt,
+  )
   return {
     source,
     ownerId: webhookOwnerId(),
@@ -222,6 +233,8 @@ export function toAlertDoc(o, source) {
     tps: Array.isArray(o.tps) ? o.tps.map(Number).filter(Number.isFinite) : [],
     atr: num(o.atr),
     conf: num(o.conf),
+    maxHoldBars: Number.isFinite(Number(o.maxHoldBars)) && Number(o.maxHoldBars) > 0 ? Number(o.maxHoldBars) : null,
+    expiresAt,
     status: 'received',
     raw: JSON.stringify(o),
   }
@@ -260,6 +273,14 @@ export function toSignalDoc(o, source, key) {
   const type = signalTypeOf(o)
   if (!type) return null
   const num = (x) => (Number.isFinite(x) ? x : null)
+  // S8 chunk 5: same horizon rule as the alert — the signal inherits the
+  // documented hold window from the payload that produced it.
+  const expiresAt = computeExpiresAt(
+    new Date(o.ts),
+    o.tf,
+    o.maxHoldBars,
+    o.expiresAt,
+  )
   return {
     ts: new Date(o.ts),
     symbol: o.symbol,
@@ -269,6 +290,8 @@ export function toSignalDoc(o, source, key) {
     price: num(o.price),
     method: 'vsa',
     alertKey: key ?? null,
+    expiresAt,
+    maxHoldBars: Number.isFinite(Number(o.maxHoldBars)) && Number(o.maxHoldBars) > 0 ? Number(o.maxHoldBars) : null,
     meta: { source, action: o.action, side: o.side, sl: num(o.sl), tps: Array.isArray(o.tps) ? o.tps.map(Number).filter(Number.isFinite) : [], atr: num(o.atr), conf: num(o.conf), mode: o.mode ?? null, v: o.v },
   }
 }

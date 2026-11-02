@@ -1,5 +1,5 @@
 import { getRouterParam } from 'h3'
-import { getNativeSignal } from '../../../utils/nativeSignals'
+import { getNativeSignal } from '../../../../utils/nativeSignals'
 
 // =============================================================================
 //  GET /api/v1/signals/native/:id — one attributed native signal (collection

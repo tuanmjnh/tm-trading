@@ -1,5 +1,5 @@
 import { Types } from 'mongoose'
-import type { SignalItem } from '#shared/types/signals'
+import type { SignalItem, SignalLifecycleFilter, SignalModeFilter } from '#shared/types/signals'
 import { engineModel } from './engineModel'
 
 // =============================================================================
@@ -22,6 +22,17 @@ export interface ListSignalsQuery {
   side?: string
   /** ISO-8601 hoac epoch ms — loc alert tu luc nay (inclusive). */
   since?: string
+  /**
+   * Lifecycle filter (S8 chunk 4/5). `active` is the read default — it matches
+   * `{ $in: ['active', null] }` because legacy rows store `lifecycleStatus: null`.
+   * `intrabar` is a separate state (still live, not yet on a closed bar).
+   */
+  lifecycle?: SignalLifecycleFilter
+  /**
+   * Chart-mode filter (S8 chunk 5, CLOSE_ONLY). `closed` is the default — the
+   * engine only trusts closed bars. `live`/`intrabar` are opt-in.
+   */
+  mode?: SignalModeFilter
 }
 
 export interface ListSignalsResult {
@@ -58,7 +69,26 @@ function toItem(a: any): SignalItem {
     // Lifecycle overlay (S8 chunk 4) — additive over the immutable evidence.
     lifecycleStatus: String(a.lifecycleStatus ?? 'active'),
     lifecycleAt: toIso(a.lifecycleAt),
-    lifecycleNote: String(a.lifecycleNote ?? '')
+    lifecycleNote: String(a.lifecycleNote ?? ''),
+    // S8 chunk 5: documented horizon (D2). Immutable once written; null = the
+    // alert predates the horizon rule or its tf is unknown.
+    expiresAt: toIso(a.expiresAt),
+    maxHoldBars: Number.isFinite(a.maxHoldBars) ? a.maxHoldBars : null,
+  }
+}
+
+/**
+ * Build the lifecycle half of the Mongo filter. Legacy rows store
+ * `lifecycleStatus: null`, so `active` must match `{ $in: ['active', null] }` —
+ * never `=== 'active'` or the legacy rows silently vanish.
+ */
+function lifecycleFilter(lifecycle?: SignalLifecycleFilter): Record<string, any> | null {
+  switch (lifecycle) {
+    case 'active': return { lifecycleStatus: { $in: ['active', null] } }
+    case 'intrabar': return { lifecycleStatus: 'intrabar' }
+    case 'closed': return { lifecycleStatus: 'closed' }
+    case 'expired': return { lifecycleStatus: 'expired' }
+    default: return null
   }
 }
 
@@ -84,6 +114,11 @@ export async function listSignals(q: ListSignalsQuery): Promise<ListSignalsResul
   if (q.action) filter.action = q.action
   if (q.side) filter.side = q.side
   if (since) filter.ts = { $gte: new Date(since) }
+  // S8 chunk 5: CLOSE_ONLY default — the engine only trusts closed bars, so the
+  // read default is `closed`. `live`/`intrabar` are opt-in (repaint risk).
+  if (q.mode && q.mode !== 'all') filter.mode = q.mode
+  const lc = lifecycleFilter(q.lifecycle)
+  if (lc) Object.assign(filter, lc)
   if (q.cursor) {
     if (!Types.ObjectId.isValid(q.cursor)) {
       throw createError({ statusCode: 400, statusMessage: 'error.invalidCursor', message: 'cursor khong phai id hop le' })

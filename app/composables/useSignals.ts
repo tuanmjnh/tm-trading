@@ -1,4 +1,4 @@
-import type { SignalItem, SignalsListResponse } from '#shared/types/signals'
+import type { SignalItem, SignalLifecycleFilter, SignalModeFilter, SignalsListResponse } from '#shared/types/signals'
 
 // =============================================================================
 //  Webhook signal API (TM Trading's Nitro route — does NOT go to tm-hub).
@@ -15,6 +15,13 @@ export interface ListSignalsOptions {
   side?: string
   /** ISO-8601 hoac epoch ms. */
   since?: string
+  /** Lifecycle filter (S8 chunk 4/5). `active` is the read default. */
+  lifecycle?: SignalLifecycleFilter
+  /**
+   * Chart-mode filter (S8 chunk 5, CLOSE_ONLY). Default `closed` — the engine
+   * only trusts closed bars. `live`/`intrabar` are opt-in repaint risk.
+   */
+  mode?: SignalModeFilter
 }
 
 export const useSignals = () => {
@@ -30,7 +37,9 @@ export const useSignals = () => {
         symbol: options.symbol,
         action: options.action,
         side: options.side,
-        since: options.since
+        since: options.since,
+        lifecycle: options.lifecycle,
+        mode: options.mode
       }
     })
     return {

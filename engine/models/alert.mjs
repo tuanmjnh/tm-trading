@@ -37,6 +37,14 @@ const AlertSchema = new mongoose.Schema(
     tps: { type: [Number], default: undefined },
     atr: { type: Number, default: null },
     conf: { type: Number, default: null },
+    // S8 chunk 5: documented horizon (D2). `ts + maxHoldBars * tf duration`,
+    // default maxHoldBars = 300 (matches Pine `tm_maxHoldBars`). Immutable once
+    // written — the store preserves it on update; null = no horizon known.
+    expiresAt: { type: Date, default: null },
+    // S8 chunk 5: the hold window the horizon was computed from (Pine
+    // `tm_maxHoldBars`, default 300). Queryable so a re-run can compare the
+    // documented horizon against the current preset without recomputing.
+    maxHoldBars: { type: Number, default: null },
 
     // Ket qua xu ly - de biet alert nao da di tiep, alert nao bi chan.
     // Paper executor (Phase 6) them 'opened'/'closed': ENTRY da mo vi the /

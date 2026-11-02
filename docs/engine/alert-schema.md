@@ -22,6 +22,8 @@ Endpoint phải trả HTTP `200` với body `{"ok":true}` — trả lỗi 4xx/5x
 | `atr` | number | ATR(14) tại thời điểm phát — bỏ ở chế độ `Slim` |
 | `conf` | number | 0..1, confidence của tín hiệu — bỏ ở chế độ `Slim` |
 | `event` | string | **Optional** — sự kiện VSA gốc (`SV`/`BC`/`ST LONG`/`ST SHORT`/`NS`/`ND`/`EoM`) để dịch sang `signals`. Thiếu/sai giá trị → receiver suy từ `side` (`BUY`→`ST LONG`, `SELL`→`ST SHORT`). Thêm field optional, receiver cũ bỏ qua được → **không bump `v`** |
+| `maxHoldBars` | number | **Optional** — số nến tối đa signal được coi là còn hiệu lực (Pine `tm_maxHoldBars`, default `300`). Thiếu → receiver dùng default. Field này **không tham gia `alertKey`** (chỉ là hint horizon, không ảnh hưởng identity). |
+| `expiresAt` | string | **Optional** — ISO-8601 UTC, ghi rõ thời điểm signal hết hiệu lực. Nếu có, receiver dùng trực tiếp; nếu thiếu, receiver tính từ `ts + maxHoldBars × tf duration`. |
 
 ## Luật bump `v`
 
@@ -117,6 +119,17 @@ TradingView **không gửi được header tùy ý** nên `source` nằm trong J
 ### TIME_CLOSE (hết `maxHoldBars`)
 
 Giống ENTRY nhưng `action: "TIME_CLOSE"`, `level` không có.
+
+## Documented horizon (`expiresAt`, S8 chunk 5)
+
+Mỗi alert được lưu có field **`expiresAt`** (ISO-8601 UTC) và **`maxHoldBars`** — đó là "documented horizon" (D2). Ý nghĩa:
+
+- Signal được coi là **đang theo dõi** (`lifecycleStatus: active`) cho đến khi `expiresAt` trôi qua; sau đó nó là ứng cử viên cho transition `expired`.
+- `expiresAt` **immutable một lần đã viết**: receiver (`server/webhook.mjs` `toAlertDoc()`) tính đúng một lần từ payload (`expiresAt` hoặc `ts + maxHoldBars × tf duration`), engine native (`engine/signalContract.mjs` `signalDoc()`) là điểm chốt duy nhất. Read path **không tính lại** — nếu tính lại thì "signal này đã hết hạn chưa?" sẽ phụ thuộc vào thứ tự gọi.
+- `maxHoldBars` default = `300` (đồng bộ Pine `tm_maxHoldBars`). `tf` → duration dùng bảng `TF_MS` canonical (`engine/data.mjs`).
+- Legacy alert (được gửi trước rule này) sẽ có `expiresAt: null` / `maxHoldBars: null` — dashboard hiển thị `—`, không coi là expired.
+
+**Lưu ý filter (S8 chunk 5):** read default là `mode=closed` (CLOSE_ONLY) — engine chỉ tin nến đã đóng. `live` / `intrabar` là opt-in (repaint risk). Filter `lifecycle=active` phải match `{ $in: ['active', null] }` vì legacy rows store `lifecycleStatus: null`.
 
 ## Ghi chú vận hành
 

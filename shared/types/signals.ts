@@ -34,7 +34,30 @@ export interface SignalItem {
   lifecycleAt: string
   /** Optional human-readable note for the last lifecycle transition. */
   lifecycleNote: string
+  /**
+   * ISO-8601 UTC — the signal's documented horizon (D2). A signal past this
+   * timestamp is a candidate for `expired`; the field is immutable once written
+   * (S8 chunk 5). null = no horizon could be derived (unknown tf).
+   */
+  expiresAt: string | null
+  /** The hold window the horizon was computed from (Pine `tm_maxHoldBars`, default
+   * 300). null = the alert predates the horizon rule. */
+  maxHoldBars: number | null
 }
+
+/**
+ * Lifecycle filter for `listSignals`. The overlay is additive over the legacy
+ * `status` field, and legacy rows store `lifecycleStatus: null`, so filtering
+ * `active` must match `{ $in: ['active', null] }` — see server/utils/signals.ts.
+ */
+export type SignalLifecycleFilter = 'all' | 'active' | 'intrabar' | 'closed' | 'expired'
+
+/**
+ * Mode filter for `listSignals`. `mode` is the TradingView chart mode field
+ * (`closed` = only closed bars, `live` = realtime repaint). Default is
+ * `closed` (CLOSE_ONLY) — the engine only trusts closed bars.
+ */
+export type SignalModeFilter = 'all' | 'closed' | 'live' | 'intrabar'
 
 export interface SignalsListResponse {
   success: boolean
@@ -45,6 +68,8 @@ export interface SignalsListResponse {
     total: number
     /** 'up' = Mongo san sang; 'down' = khong ket noi duoc (fail-soft, khong 500). */
     mongo: 'up' | 'down'
+    /** S8 chunk 5: the chart-mode filter applied (default `closed` — CLOSE_ONLY). */
+    mode?: SignalModeFilter
   }
 }
 

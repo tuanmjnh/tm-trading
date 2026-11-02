@@ -91,6 +91,25 @@ async function submitTransition() {
 
 const fmtPrice = (v: number | null | undefined) =>
   typeof v === 'number' && Number.isFinite(v) ? String(v) : '—'
+
+/**
+ * S8 chunk 5: documented horizon (D2). `expiresAt` is immutable once written;
+ * null means no horizon could be derived (unknown tf) or the row predates the
+ * horizon rule. Rendered in the evidence grid, guarded for both item types.
+ */
+const fmtHorizon = (s: SignalItem | NativeSignalItem | null) => {
+  const exp = (s as any)?.expiresAt
+  if (!exp) return '—'
+  const d = new Date(exp)
+  if (Number.isNaN(d.getTime())) return '—'
+  const ms = d.getTime() - Date.now()
+  if (ms <= 0) return t('signals.horizonExpired')
+  const mins = Math.floor(ms / 60000)
+  if (mins < 60) return t('signals.horizonRemaining', { n: mins })
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return t('signals.horizonRemaining', { n: hrs })
+  return t('signals.horizonRemaining', { n: Math.floor(hrs / 24) })
+}
 </script>
 
 <template>
@@ -116,6 +135,8 @@ const fmtPrice = (v: number | null | undefined) =>
             <div><span class="text-dimmed">{{ t('signals.sl') }}</span><div class="font-mono text-error">{{ fmtPrice((signal as any).sl) }}</div></div>
             <div><span class="text-dimmed">{{ t('signals.tps') }}</span><div class="font-mono text-success">{{ ((signal as any).tps || []).join(' · ') || '—' }}</div></div>
             <div><span class="text-dimmed">{{ t('signals.conf') }}</span><div>{{ (signal as any).conf ?? '—' }}</div></div>
+            <div><span class="text-dimmed">{{ t('signals.maxHoldBars') }}</span><div>{{ (signal as any).maxHoldBars ?? '—' }}</div></div>
+            <div><span class="text-dimmed">{{ t('signals.expiresAt') }}</span><div class="font-mono">{{ fmtHorizon(signal) }}</div></div>
             <div><span class="text-dimmed">{{ t('signals.status') }}</span><div>{{ t(`signals.status_${(signal as SignalItem).status}`) }}</div></div>
           </div>
         </div>
@@ -154,7 +175,7 @@ const fmtPrice = (v: number | null | undefined) =>
               { label: t('signals.lifecycle_invalidated'), value: 'invalidated' },
               { label: t('signals.lifecycle_superseded'), value: 'superseded' }
             ]" :placeholder="t('signals.selectStatus')" />
-            <UTextarea class="w-full" v-model="transitionForm.note" :placeholder="t('signals.detail_modal_note')" rows="2" />
+            <UTextarea class="w-full" v-model="transitionForm.note" :placeholder="t('signals.detail_modal_note')" :rows="2" />
             <UButton :loading="saving" :disabled="!transitionForm.status" color="primary" variant="soft" size="sm" @click="submitTransition">
               {{ t('common.save') }}
             </UButton>

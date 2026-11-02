@@ -14,7 +14,7 @@
 
 import { Types } from 'mongoose'
 import { engineModel } from './engineModel'
-import { isSignalLifecycleStatus, SIGNAL_LIFECYCLE_TRANSITIONS } from '#shared/utils/signalLifecycle'
+import { isSignalLifecycleStatus, SIGNAL_LIFECYCLE_TRANSITIONS, type SignalLifecycleStatus } from '#shared/utils/signalLifecycle'
 
 export interface LifecycleTransition {
   status: string
@@ -64,7 +64,7 @@ export async function applySignalLifecycle(
   if (!doc) return null
 
   const current = String(doc.lifecycleStatus ?? 'active').toLowerCase()
-  const allowed = (SIGNAL_LIFECYCLE_TRANSITIONS[current as any] ?? []) as string[]
+  const allowed = (SIGNAL_LIFECYCLE_TRANSITIONS[current as SignalLifecycleStatus] ?? []) as string[]
   if (!allowed.includes(next)) {
     const err = new Error(`lifecycle transition ${current} -> ${next} is not allowed`)
     ;(err as any).statusCode = 400
