@@ -5,6 +5,7 @@ import {
   sanitizeName,
   sanitizeSymbol,
   sanitizeSymbols,
+  validateReorderOrder,
   WATCHLIST_LIMITS
 } from '../server/utils/watchlists'
 
@@ -100,5 +101,65 @@ describe('WATCHLIST_LIMITS — the frozen contract', () => {
     assert.equal(WATCHLIST_LIMITS.maxSymbols, 60)
     assert.equal(WATCHLIST_LIMITS.maxLists, 20)
     assert.equal(WATCHLIST_LIMITS.maxNameLength, 64)
+  })
+})
+
+// -----------------------------------------------------------------------------
+//  validateReorderOrder (chunk 2) — the drag-to-reorder contract.
+//
+//  Pure: no Mongo, no model. Locks the rule that a reorder is a POSITION
+//  change, never a content change — the ordered array must be the SAME SET as
+//  what is stored, or the store refuses the write (so a stale UI cannot
+//  silently drop symbols the server already has).
+// -----------------------------------------------------------------------------
+describe('validateReorderOrder — same-set gate', () => {
+  const stored = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']
+
+  test('accepts a permutation (same set, any order)', () => {
+    assert.deepEqual(validateReorderOrder(stored, ['SOLUSDT', 'BTCUSDT', 'ETHUSDT']), ['SOLUSDT', 'BTCUSDT', 'ETHUSDT'])
+  })
+
+  test('accepts the same order (idempotent no-op)', () => {
+    assert.deepEqual(validateReorderOrder(stored, stored), stored)
+  })
+
+  test('accepts case-insensitive input and dedupes', () => {
+    assert.deepEqual(validateReorderOrder(stored, ['solusdt', 'btcusdt', 'ethusdt']), ['SOLUSDT', 'BTCUSDT', 'ETHUSDT'])
+  })
+
+  test('rejects a smaller set (a missing symbol)', () => {
+    let err: any
+    try { validateReorderOrder(stored, ['BTCUSDT', 'ETHUSDT']) } catch (e) { err = e }
+    assert.ok(err, 'expected validateReorderOrder to throw')
+    assert.ok(err instanceof WatchlistError)
+    assert.equal(err.statusCode, 400)
+    assert.equal(err.statusMessage, 'invalid_order')
+  })
+
+  test('rejects a larger set (an extra symbol)', () => {
+    let err: any
+    try { validateReorderOrder(stored, ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XAUUSD']) } catch (e) { err = e }
+    assert.ok(err, 'expected validateReorderOrder to throw')
+    assert.ok(err instanceof WatchlistError)
+    assert.equal(err.statusCode, 400)
+    assert.equal(err.statusMessage, 'invalid_order')
+  })
+
+  test('rejects a symbol that is not in the list', () => {
+    let err: any
+    try { validateReorderOrder(stored, ['BTCUSDT', 'XAUUSD', 'ETHUSDT']) } catch (e) { err = e }
+    assert.ok(err, 'expected validateReorderOrder to throw')
+    assert.ok(err instanceof WatchlistError)
+    assert.equal(err.statusCode, 400)
+    assert.equal(err.statusMessage, 'invalid_order')
+  })
+
+  test('rejects garbage / non-array input', () => {
+    assert.throws(() => validateReorderOrder(stored, null as unknown as string[]))
+    assert.throws(() => validateReorderOrder(stored, 'BTCUSDT' as unknown as string[]))
+  })
+
+  test('rejects symbols that fail the shape gate', () => {
+    assert.throws(() => validateReorderOrder(stored, ['BTCUSDT', 'BAD-USD', 'ETHUSDT']))
   })
 })

@@ -67,6 +67,20 @@ export function useWatchlists() {
     return res.data
   }
 
+  /**
+   * Reorder the symbols of a list in place (drag-to-drop on the Lists tab).
+   * Sends the full ordered array; the server validates it is the same SET as
+   * stored (no additions / omissions) before writing. Throws on failure.
+   */
+  async function reorderSymbols(id: string, symbols: string[]): Promise<WatchlistItem> {
+    const res = await $fetch<WatchlistResponse>(`/api/v1/watchlists/${id}`, {
+      method: 'PATCH',
+      body: { order: symbols }
+    })
+    await fetchLists()
+    return res.data
+  }
+
   async function deleteList(id: string): Promise<void> {
     await $fetch(`/api/v1/watchlists/${id}`, { method: 'DELETE' })
     await fetchLists()
@@ -110,6 +124,7 @@ export function useWatchlists() {
     createList,
     renameList,
     updateSymbols,
+    reorderSymbols,
     deleteList,
     seedDefault,
     addSymbol,

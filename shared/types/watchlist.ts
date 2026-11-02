@@ -12,6 +12,8 @@ export interface WatchlistItem {
   ownerId: string
   name: string
   symbols: string[]
+  /** Denormalized UI-stability hint (0-based). Mirrors `symbols` order. */
+  order?: number
   isDefault: boolean
   createdAt: string
   updatedAt: string
@@ -39,4 +41,6 @@ export interface WatchlistCreateBody {
 export interface WatchlistUpdateBody {
   name?: string
   symbols?: string[]
+  /** Full ordered array of symbols (the new order). Same set as stored, else 400. */
+  order?: string[]
 }

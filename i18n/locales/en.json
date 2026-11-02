@@ -1296,7 +1296,19 @@
     "namePlaceholder": "List name",
     "confirmDelete": "Delete this list? This cannot be undone.",
     "cannotDeleteDefault": "Cannot delete the default list. Set another list as default first.",
-    "empty": "No watchlists yet. Create one to get started."
+    "empty": "No watchlists yet. Create one to get started.",
+    "count": "{n} symbols",
+    "manage": "Manage symbols",
+    "dragHandle": "Drag to reorder",
+    "removeSymbol": "Remove symbol",
+    "emptySymbols": "No symbols yet. Use Import to add some.",
+    "import": "Import",
+    "importTitle": "Import Symbols",
+    "importDesc": "Paste symbols, one per line or separated by commas. New symbols are appended; existing ones stay in place.",
+    "importPlaceholder": "BTCUSDT\nETHUSDT\nSOLUSDT",
+    "apply": "Apply",
+    "export": "Export",
+    "exported": "Copied"
   },
   "intelligenceWorkspace": {
     "title": "Intelligence",

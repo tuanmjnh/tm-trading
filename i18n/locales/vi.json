@@ -1296,7 +1296,19 @@
     "namePlaceholder": "Tên danh sách",
     "confirmDelete": "Xóa danh sách này? Hành động này không thể hoàn tác.",
     "cannotDeleteDefault": "Không thể xóa danh sách mặc định. Hãy đặt danh sách khác làm mặc định trước.",
-    "empty": "Chưa có danh sách nào. Hãy tạo một danh sách để bắt đầu."
+    "empty": "Chưa có danh sách nào. Hãy tạo một danh sách để bắt đầu.",
+    "count": "{n} mã",
+    "manage": "Quản lý mã theo dõi",
+    "dragHandle": "Kéo để sắp xếp",
+    "removeSymbol": "Xóa mã",
+    "emptySymbols": "Chưa có mã nào. Dùng Nhập để thêm.",
+    "import": "Nhập",
+    "importTitle": "Nhập mã theo dõi",
+    "importDesc": "Dán mã, mỗi dòng một mã hoặc ngăn cách bằng dấu phẩy. Mã mới được thêm vào cuối; mã có sẵn giữ nguyên vị trí.",
+    "importPlaceholder": "BTCUSDT\nETHUSDT\nSOLUSDT",
+    "apply": "Áp dụng",
+    "export": "Xuất",
+    "exported": "Đã sao chép"
   },
   "intelligenceWorkspace": {
     "title": "Phân tích",

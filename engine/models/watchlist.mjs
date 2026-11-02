@@ -16,8 +16,13 @@ const WatchlistSchema = new mongoose.Schema(
     // Display name. Case-insensitive unique per owner (collation below).
     name: { type: String, required: true, trim: true },
     // Ordered, uppercase symbol strings (BTCUSDT, ETHUSDT, ...). De-duplicated
-    // in order of first appearance on write; the UI never shows dupes.
+    // in order of first appearance on write; the UI never shows dupes. The array
+    // order IS the canonical order; `order` is a denormalized hint for UI stability.
     symbols: { type: [String], default: [] },
+    // Denormalized UI-stability hint (0-based), mirrors `symbols` order. Written
+    // by reorder operations so the trading panel keeps a stable row layout even
+    // when the server re-sorts or re-indexes the array.
+    order: { type: Number, default: 0 },
     // Exactly one default per owner. The trading panel reads this list; it is
     // the seed target when migrating the legacy localStorage blob (S8).
     isDefault: { type: Boolean, default: false, index: true },

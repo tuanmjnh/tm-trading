@@ -194,6 +194,70 @@ export async function updateWatchlist(id: string, ownerId: string, patch: Update
 }
 
 /**
+ * Validate that `ordered` is a permutation of `stored` (same set, same size).
+ * Returns the sanitized ordered array; throws WatchlistError(400, invalid_order)
+ * on any mismatch. Pure: tested without Mongo in tests/watchlists.test.ts.
+ */
+export function validateReorderOrder(stored: readonly string[], ordered: readonly string[]): string[] {
+  const sanitized = sanitizeSymbols(ordered)
+  if (sanitized.length !== stored.length) {
+    throw new WatchlistError(
+      `order mismatch: expected ${stored.length} symbols, got ${sanitized.length}`,
+      400,
+      'invalid_order'
+    )
+  }
+  const storedSet = new Set(stored)
+  for (const s of sanitized) {
+    if (!storedSet.has(s)) {
+      throw new WatchlistError(`symbol ${s} is not in the list`, 400, 'invalid_order')
+    }
+  }
+  return sanitized
+}
+
+/**
+ * Reorder the symbols of one of the owner's lists in place. The caller sends
+ * the full ordered array; the store validates that it is the SAME SET as what
+ * is currently stored (no additions, no omissions) and only then writes it.
+ * This keeps a stale UI from silently dropping symbols the server already has.
+ *
+ * Throws WatchlistError: 404 on unknown id, 503 on store down, 400 when the
+ * ordered array is not a permutation of the stored set or the list is empty.
+ * Idempotent: a no-op order returns the current doc without a write.
+ */
+export async function reorderSymbols(
+  id: string,
+  ownerId: string,
+  orderedSymbols: readonly string[]
+): Promise<AnyDoc | null> {
+  const Model = await watchlistsModel()
+  if (!Model) throw new WatchlistError('watchlist store unavailable', 503, 'mongo_down')
+
+  const current = await getWatchlist(id, ownerId)
+  if (!current) throw new WatchlistError(`watchlist not found: ${id}`, 404, 'not_found')
+
+  const stored = current.symbols ?? []
+  if (stored.length === 0) throw new WatchlistError('cannot reorder an empty list', 400, 'empty_list')
+
+  const sanitized = validateReorderOrder(stored, orderedSymbols)
+
+  // Idempotent: same order, no write.
+  if (sanitized.every((s, i) => stored[i] === s)) return current
+
+  try {
+    const updated = await Model.findOneAndUpdate(
+      { ownerId, _id: id },
+      { $set: { symbols: sanitized, order: sanitized.length - 1 } },
+      { new: true }
+    ).lean()
+    return (updated ?? null) as AnyDoc | null
+  } catch {
+    throw new WatchlistError('watchlist store unavailable', 503, 'mongo_down')
+  }
+}
+
+/**
  * Delete one of the owner's lists. The default list cannot be deleted (the
  * trading panel always needs a home list); it can be emptied and renamed.
  * Returns the deleted doc, or null when the id is unknown (store down too).
