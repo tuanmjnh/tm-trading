@@ -1,7 +1,7 @@
 import { readBody } from 'h3'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { tfLabel } from '~~/app/utils/timeframe'
+import { tfLabel } from '#shared/utils/timeframe'
 import { botProfileModel, botRuntimeStore, strategyProfileModel, strategyService } from '../../../utils/engineModel'
 import { loadMethodRegistry } from '../../../utils/methods'
 

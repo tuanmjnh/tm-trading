@@ -46,7 +46,7 @@ import type { SymbolRow } from '~/components/trading/SymbolSearchModal.vue'
 import type { UniverseRow } from '~/composables/useMarketCatalog'
 import type { DeskTab } from '~/composables/useTerminalPrefs'
 import { useStorage } from '@vueuse/core'
-import { isAuthError } from '../../shared/utils/errors'
+import { isAuthError } from '~/shared/utils/errors'
 
 const { t } = useI18n()
 const auth = useAuth()

@@ -8,7 +8,7 @@
 // =============================================================================
 import type { FillsListResponse, PaperFillItem } from '#shared/types/fills'
 import { formatPrice } from '../../utils/marketFeed'
-import { getErrorMessage, isAuthError } from '../../shared/utils/errors'
+import { getErrorMessage, isAuthError } from '~/shared/utils/errors'
 
 defineProps<{
   reload?: number

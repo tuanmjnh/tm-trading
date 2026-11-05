@@ -1,10 +1,13 @@
 node_modules/
 .playwright-mcp
+.tmp-design
+dist
+scratch
+.superpowers
 .env
 /logs
 *.log
 .DS_Store
-scratch
 
 # Output sinh boi `npm run build` - khong sua truc tiep, khong commit.
 # Nguon chan ly luon la pine/parts/ + tools/build.mjs

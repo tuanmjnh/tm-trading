@@ -9,7 +9,7 @@
 // =============================================================================
 import type { OrdersListResponse, PaperOrderItem } from '#shared/types/orders'
 import { formatPrice } from '../../utils/marketFeed'
-import { getErrorMessage, isAuthError } from '../../shared/utils/errors'
+import { getErrorMessage, isAuthError } from '~/shared/utils/errors'
 
 const props = defineProps<{
   /** bump to force one refresh immediately (e.g. after a ticket submit). */
