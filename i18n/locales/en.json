@@ -5875,7 +5875,8 @@
         "alt": "Alt season",
         "btc": "BTC season",
         "neutral": "Neutral"
-      }
+      },
+      "sources": "Sources"
     },
     "signal": {
       "title": "Signal center",

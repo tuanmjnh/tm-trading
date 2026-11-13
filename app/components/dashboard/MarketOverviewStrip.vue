@@ -2,11 +2,29 @@
 // Market Overview strip (V5.0 §3.1). Every value carries its source and asOf;
 // a stale snapshot is labelled stale instead of being presented as current.
 import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
+import type { MarketSourceHealth } from '#shared/types/health'
 import { formatTimeAgo } from '@vueuse/core'
 
 const { t } = useI18n()
 const { intel, intelFreshness, failed } = useDashboardFeed()
 const overlay = useAppOverlay()
+const healthApi = useSystemHealth()
+
+// Data-source status is part of the overview contract (V5.0 §3.1). The route
+// probes each venue and caches for 5 minutes server-side, so this is one cheap
+// read per page load, not a probe per render.
+const venues = ref<MarketSourceHealth[]>([])
+const venuesFailed = ref(false)
+
+onMounted(async () => {
+  try {
+    const res = await healthApi.marketSources()
+    venues.value = res.data ?? []
+    venuesFailed.value = false
+  } catch {
+    venuesFailed.value = true
+  }
+})
 
 const regime = computed(() => intel.value?.regime ?? null)
 const generatedAt = computed(() => intel.value?.generatedAt ?? null)
@@ -99,7 +117,22 @@ const cards = computed<MetricItem[]>(() => {
 
     <SharedMetricRibbon :items="cards" />
 
-    <p class="text-[11px] text-muted">{{ t('dash.market.sourceNote') }}</p>
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted">
+      <span>{{ t('dash.market.sourceNote') }}</span>
+      <span class="inline-flex items-center gap-1">
+        <UIcon name="i-lucide-database" class="size-3" />
+        {{ t('dash.market.sources') }}
+      </span>
+      <UBadge
+        v-for="venue in venues"
+        :key="venue.venue"
+        :color="venue.status === 'up' ? 'success' : venue.status === 'down' ? 'error' : 'neutral'"
+        variant="subtle"
+        size="xs"
+        :label="venue.status === 'up' && venue.latencyMs != null ? `${venue.venue} ${venue.latencyMs}ms` : `${venue.venue} ${venue.status}`"
+      />
+      <UBadge v-if="venuesFailed" color="warning" variant="subtle" size="xs" :label="t('dash.health.unavailable')" />
+    </div>
 
     <UAlert
       v-if="failed.intel"

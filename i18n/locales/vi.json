@@ -5875,7 +5875,8 @@
         "alt": "Mùa altcoin",
         "btc": "Mùa BTC",
         "neutral": "Trung tính"
-      }
+      },
+      "sources": "Nguồn"
     },
     "signal": {
       "title": "Trung tâm tín hiệu",
