@@ -60,14 +60,6 @@ export interface FeedEvent {
   recordId: string | null
 }
 
-export interface FeedSection<T> {
-  data: T
-  loading: boolean
-  error: boolean
-  /** ISO time this section was last successfully read. */
-  readAt: string | null
-}
-
 /** How long each source may be considered current. */
 export const FRESH_MS: Record<'intel' | 'news' | 'signals' | 'outlook', number> = {
   intel: 15 * 60_000,
@@ -427,7 +419,6 @@ const _useDashboardFeed = () => {
   /** Latest observation time across the sections a panel cares about. */
   const intelFreshness = computed(() => freshnessOf(intel.value?.generatedAt, 'intel'))
   const newsFreshness = computed(() => freshnessOf(news.value[0]?.publishedAt || news.value[0]?.firstSeenAt, 'news'))
-  const signalFreshness = computed(() => freshnessOf(signals.value[0]?.ts, 'signals'))
 
   const serviceSummary = computed(() => operations.value?.summary ?? null)
   const services = computed<OperationsServiceRow[]>(() => operations.value?.services ?? [])
@@ -486,7 +477,6 @@ const _useDashboardFeed = () => {
     watchRows,
     intelFreshness,
     newsFreshness,
-    signalFreshness,
     refreshAll,
     refreshLive,
     loadSignals,
