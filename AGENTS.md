@@ -149,6 +149,12 @@ overfitting. Read `docs/indicator/vsa-wyckoff/vsa-optimization.md` before propos
 
 ## UI & Coding Conventions
 
+- **V5.0 surface decision**: new information belongs in a Dashboard panel
+  (`app/components/dashboard/*`) or an overlay, not in a new page. Use
+  `useAppOverlay()` for details/quick edits and `useDashboardFeed()` for reads; the
+  Control Center is the only configuration surface. Details and examples:
+  `docs/web-app/ui-design-system.md` § "V5.0 Dashboard conventions".
+
 - **Open Source First**: Đối với những chức năng chưa quen thuộc, đừng viết từ con số 0, hãy tìm kiếm các dự án mã nguồn mở trên GitHub để so sánh ý tưởng trước khi bắt tay vào làm.
 - **BasePage Mandatory**:
   - Every page MUST wrap its layout in `<BasePage :title="..." :description="...">`.
