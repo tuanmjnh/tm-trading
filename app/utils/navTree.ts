@@ -19,6 +19,32 @@ export interface SelectNavOptions<T extends NavNode> {
   hasLocalPage: (path?: string | null) => boolean
   /** Route names that must never appear (legacy name-based hide list). */
   hiddenNames?: Set<string>
+  /** Path prefixes hidden from the menu (their pages stay routable). */
+  hiddenPathPrefixes?: string[]
+}
+
+/**
+ * V5.0 §3/§9: the groups whose content now lives in the single Dashboard, the
+ * Control Center or a Slideover. They are hidden from navigation, NOT deleted —
+ * the pages stay routable for deep links and advanced inspection until the
+ * TM Hub route registry is trimmed in the same change window.
+ */
+export const DASHBOARD_REPLACED_PREFIXES: readonly string[] = [
+  '/markets',
+  '/news',
+  '/watchlist',
+  '/intelligence',
+  '/outlook',
+  '/alerts',
+  '/operations',
+  '/discover'
+]
+
+/** True when `path` is one of the prefixes hidden from the menu. */
+export function isDashboardReplacedPath(path: string | null | undefined, prefixes: readonly string[] = DASHBOARD_REPLACED_PREFIXES): boolean {
+  if (!path) return false
+  const normalised = path.replace(/\/+$/, '') || '/'
+  return prefixes.some(prefix => normalised === prefix || normalised.startsWith(`${prefix}/`))
 }
 
 function isHidden<T extends NavNode>(node: T, hiddenNames: Set<string>): boolean {
@@ -39,10 +65,12 @@ export function selectNavRoutes<T extends NavNode>(
   options: SelectNavOptions<T>
 ): T[] {
   const hiddenNames = options.hiddenNames ?? new Set<string>()
+  const hiddenPrefixes = options.hiddenPathPrefixes ?? []
 
   const walk = (list: NavNode[]): NavNode[] =>
     list.flatMap((node) => {
       if (isHidden(node, hiddenNames)) return []
+      if (hiddenPrefixes.length > 0 && isDashboardReplacedPath(node.path, hiddenPrefixes)) return []
       if (node.children && node.children.length > 0) {
         const children = walk(node.children)
         return children.length > 0 ? [{ ...node, children }] : []

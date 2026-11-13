@@ -2,6 +2,9 @@
 
 This directory contains the technical documentation, architectural specifications, indicator methodologies, and web application designs for the TM Trading ecosystem.
 
+> **Current product/UI authority: V5.0** — read [tm-trading-central-dashboard-v5.0.md](web-app/tm-trading-central-dashboard-v5.0.md) first for the single-dashboard product scope, Modal/Slideover rules, Control Center, deployment boundaries and cleanup plan. V4.2 remains a technical reference for service reliability/readiness and its audits; V3.x documents are historical unless explicitly retained as technical references.
+
+
 ---
 
 ## Directory Organization
@@ -33,14 +36,22 @@ docs/
 - [docs/user-guide/runbooks.md](file:///d:/Applications/tm-trading/docs/user-guide/runbooks.md): Recovery runbooks for every failure mode (crash, stale feed, lease, backlog, storage, restart).
 - [docs/web-app/v4.2-drills.md](file:///d:/Applications/tm-trading/docs/web-app/v4.2-drills.md): The reliability drill harness (`npm run drills`) — what each drill proves and what still needs operator evidence.
 
-**Changing the application?** Start with the V4.2 authority and its audit set.
+**Changing the application?** Start with the V5.0 product/UI authority, then consult the V4.2 technical reliability and audit set.
 
-- [docs/web-app/tm-trading-roadmap-v4.2.md](file:///d:/Applications/tm-trading/docs/web-app/tm-trading-roadmap-v4.2.md): **Current authority** — product scope, compact IA, and §17 service operations.
+- [docs/web-app/tm-trading-roadmap-v4.2.md](file:///d:/Applications/tm-trading/docs/web-app/tm-trading-roadmap-v4.2.md): **Technical reference** — retain §17 service lifecycle, reliability, readiness, authorization and operations rules; V5.0 governs product scope and primary UI.
 - [docs/web-app/v4.2-delivery-plan.md](file:///d:/Applications/tm-trading/docs/web-app/v4.2-delivery-plan.md): The 10-stage delivery plan (S0–S9) and decisions A1–A7.
 - [docs/web-app/v4-product-scope-audit.md](file:///d:/Applications/tm-trading/docs/web-app/v4-product-scope-audit.md): S0 — page inventory and capability audit.
 - [docs/web-app/v4-route-migration-map.md](file:///d:/Applications/tm-trading/docs/web-app/v4-route-migration-map.md): S0 — all 72 seeded routes mapped to the V4 IA.
 - [docs/web-app/v4.2-service-inventory.md](file:///d:/Applications/tm-trading/docs/web-app/v4.2-service-inventory.md): S0 — processes, 18 services, ownership, target grouping.
 - [docs/web-app/v4.2-operations-control-audit.md](file:///d:/Applications/tm-trading/docs/web-app/v4.2-operations-control-audit.md): S0 — control paths, `run-once` anti-pattern, security findings.
+
+**V5.0 implementation reports** (generated on `refactor/central-intelligence-dashboard-v5`):
+
+- [docs/web-app/v5-baseline-inventory.md](file:///d:/Applications/tm-trading/docs/web-app/v5-baseline-inventory.md): baseline audit + what the implementation pass changed.
+- [docs/web-app/v5-route-migration-map.md](file:///d:/Applications/tm-trading/docs/web-app/v5-route-migration-map.md): every route's V5.0 disposition, redirects and deep-link contract.
+- [docs/web-app/v5-component-disposition.md](file:///d:/Applications/tm-trading/docs/web-app/v5-component-disposition.md): component-level KEEP/MERGE/HIDDEN/ARCHIVE decisions.
+- [docs/web-app/v5-service-runtime-map.md](file:///d:/Applications/tm-trading/docs/web-app/v5-service-runtime-map.md): supervisor ownership, embedded cutovers, readiness and freshness.
+- [docs/web-app/v5-cleanup-report.md](file:///d:/Applications/tm-trading/docs/web-app/v5-cleanup-report.md): deletions, package-manager decision, security fixes and rollback.
 
 ---
 
@@ -69,7 +80,8 @@ docs/
 
 ## 2. Web Application & Dashboard (`docs/web-app/`)
 
-- [docs/web-app/tm-trading-roadmap-v4.2.md](file:///d:/Applications/tm-trading/docs/web-app/tm-trading-roadmap-v4.2.md): **Current authority** — supersedes the V3.x product scope and primary navigation where it explicitly says so.
+- [docs/web-app/tm-trading-central-dashboard-v5.0.md](file:///d:/Applications/tm-trading/docs/web-app/tm-trading-central-dashboard-v5.0.md): **Current product/UI authority** — one Dashboard, Modal/Slideover rules, Control Center, cleanup phases.
+- [docs/web-app/tm-trading-roadmap-v4.2.md](file:///d:/Applications/tm-trading/docs/web-app/tm-trading-roadmap-v4.2.md): Technical reference for service lifecycle, readiness and operations rules (V5.0 governs product/UI).
 - [docs/web-app/v4.2-delivery-plan.md](file:///d:/Applications/tm-trading/docs/web-app/v4.2-delivery-plan.md): Delivery plan for the V4.2 restructure.
 - [docs/web-app/v4-product-scope-audit.md](file:///d:/Applications/tm-trading/docs/web-app/v4-product-scope-audit.md): Page-by-page capability audit.
 - [docs/web-app/v4-route-migration-map.md](file:///d:/Applications/tm-trading/docs/web-app/v4-route-migration-map.md): Route registry → V4 IA mapping.

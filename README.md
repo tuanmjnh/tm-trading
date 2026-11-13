@@ -1,15 +1,33 @@
 # TM Trading
 
-**Ứng dụng trade desk tự động**: engine tín hiệu + backtest chạy local, store MongoDB,
-dashboard Nuxt, **risk gate** và execution (paper → exchange demo).
+**Ứng dụng market intelligence và nghiên cứu tín hiệu**: một Dashboard trung tâm bằng Nuxt 4, tập trung vào dữ liệu thị trường, tín hiệu quan sát, watchlist, tin tức, AI briefing và điều khiển dịch vụ.
 
-Bộ chỉ báo TradingView (Pine Script **v6**) là **công cụ hỗ trợ** — nguồn tín hiệu và
-đối chiếu tay — **không phải sản phẩm chính**. Định hướng đầy đủ: `docs/web-app/tm-trading-roadmap-v3.9.md`.
+**Tài liệu triển khai hiện hành:** [`docs/web-app/tm-trading-central-dashboard-v5.0.md`](docs/web-app/tm-trading-central-dashboard-v5.0.md). Tài liệu V5.0 là nguồn quyết định cho product scope, Dashboard, Modal/Slideover và quy trình cleanup. Các tài liệu V4.2/V3.x chỉ còn là tham chiếu kỹ thuật/lịch sử nếu không xung đột với V5.0.
+
+TM Trading theo hướng information-first/read-only. Không phát triển hoặc đưa order-entry, execution controls, private exchange trading credentials hay autonomous execution vào trải nghiệm chính. Các thư mục legacy được giữ lại cho đến khi audit dependency, data và tests hoàn tất.
+
+## Dashboard trung tâm (`/`)
+
+Mọi thứ người dùng cần nằm trên một trang; không có trang riêng cho từng loại dữ liệu.
+
+| Panel | Nội dung |
+|---|---|
+| System health | Trạng thái tổng + 5 nhóm worker (market/scanner/news/AI/notification), lần chạy thành công gần nhất |
+| Market overview | Regime, Fear & Greed, BTC/ETH 24h, breadth, trạng thái từng nguồn dữ liệu |
+| Signal center | Bảng sự kiện hợp nhất (engine + quan sát của service + tin), lọc theo loại/độ mới/watchlist |
+| Watchlist | Chỉ theo dõi: giá quan sát, 24h, sự kiện mới nhất (không có nút đặt lệnh) |
+| Market pulse | Movers, thanh khoản cao, biến động, khối lượng, funding, OI, thanh lý (phân biệt sàn báo cáo vs ước tính) |
+| News & events | Tiêu đề có nguồn + sự kiện thị trường kèm mức xác thực chéo |
+| Market briefing | Kết luận theo luật (rules-based) cho ngắn/swing/dài hạn kèm bằng chứng, bằng chứng ngược, hạn chế |
+
+Cách tương tác: bấm một dòng → **Slideover** chi tiết; sửa nhanh → **Modal**; cấu hình và điều khiển dịch vụ → **Control Center** (một Slideover, 7 tab). Deep link: `/?panel=signal|asset|news|control` — không bao giờ chứa secret.
+
+Mọi giá trị đều có nguồn và `asOf`; dữ liệu cũ bị gắn nhãn *stale* chứ không hiển thị như realtime. Chi tiết quy ước UI: `docs/web-app/ui-design-system.md` § "V5.0 Dashboard conventions".
 
 ```
 tm-trading/
 ├─ docs/
-│  ├─ tm-trading-roadmap-v3.9.md kế hoạch tổng thể hiện hành (§57–§64) — bản cũ: docs/web-app/archive/
+│  ├─ web-app/tm-trading-central-dashboard-v5.0.md nguồn quyết định hiện hành cho product/UI/cleanup
 │  ├─ data-model.md        schema/index/version của mọi collection  (Phase 3)
 │  ├─ app-inheritance.md   kế thừa app/ từ tm-hub: giữ/cắt gì + bẫy môi trường
 │  ├─ architecture.md      kiến trúc, luồng dữ liệu, quy ước mở rộng
@@ -28,7 +46,7 @@ tm-trading/
 ├─ server/
 │  └─ webhook.mjs          webhook receiver (Telegram / Discord)
 ├─ engine/                 ← BACKBONE: tín hiệu + backtest (Phase 2–5)
-├─ exec/                   ← risk gate + paper/real execution (Phase 6+)
+├─ exec/                   ← QUARANTINE: risk gate + paper/real; KHÔNG nối vào UI V5.0
 ├─ services/               ← market intelligence + heartbeat (Phase 8+)
 ├─ app/                    ← UI Nuxt dashboard (Phase 7+)
 ├─ ai/                     ← AI copilot (Phase 11+)
@@ -44,11 +62,11 @@ tm-trading/
 ## 1. Cài đặt & chạy
 
 Cần **Node.js ≥ 18**. Repo có dependency (Mongoose + bộ Nuxt kế thừa từ `tm-hub`) nên phải
-`npm install` trước. **Pine tooling và engine core vẫn zero-dep** — `npm run pine:build`,
+`pnpm install` (lockfile `pnpm-lock.yaml`) trước. **Pine tooling và engine core vẫn zero-dep** — `npm run pine:build`,
 `npm run pine:test`, `npm run test:engine` chạy được kể cả khi chưa cài đủ gói UI.
 
 ```bash
-npm install            # Mongoose + Nuxt UI (cache trong workspace qua .npmrc)
+pnpm install           # Mongoose + Nuxt UI (lockfile pnpm-lock.yaml)
 npm run pine:build          # ghép pine/parts* + pine/shared -> pine/dist
 npm test               # smoke (173) + engine (176) + db (49, tự SKIP nếu không có Mongo)
 npm run verify         # pine:build + docs:check + test

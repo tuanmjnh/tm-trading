@@ -201,3 +201,31 @@ locked by `tests/nav-contracts.test.ts`; do not change them for the sake of a mo
 Phase 1 stays limited to the Trading cluster for review: `/`, `/trading*`, `/markets*`.
 The remaining screens adopt the same tokens afterwards. Presentation-only changes — pages
 keep consuming the existing `/api/v1/*` endpoints.
+
+---
+
+## V5.0 Dashboard conventions (product-authoritative)
+
+The single Dashboard is the normal workspace. A new capability follows this ladder
+before it is allowed to become a page:
+
+1. **List / summary** → a panel on `/` (`app/components/dashboard/*`).
+2. **Detail of one row** → `ResponsiveSlideover` opened through
+   `useAppOverlay().open('signal' | 'asset' | 'news', payload)`.
+3. **Short form (one or two fields)** → `ResponsiveModal` (e.g. `AddAssetModal`).
+4. **Configuration / service control** → the one `ControlCenterSlideover`.
+5. **A page of its own** → only for authentication, administration gated by TM Hub,
+   or advanced research that genuinely needs its own URL.
+
+Rules that keep the Dashboard honest:
+
+- Data goes through `useDashboardFeed()` (one shared read model). A panel never
+  fetches its own copy of a dataset that another panel already reads.
+- Every value carries a source and an `asOf`. `freshnessOf()` decides fresh / stale /
+  missing; a stale value is labelled, never presented as current.
+- One primary overlay at a time. `overlay.dirty` must be set by any form that can
+  lose edits; closing then requires explicit discard.
+- Structural colours are semantic only (state badges, deltas). No decorative
+  gradients or glow; use `border-default`, `bg-elevated` and hairline dividers.
+- Panels are `Lazy`-referenced so each ships as its own chunk, and a failing panel
+  degrades itself (its own alert/empty state) instead of blanking the page.

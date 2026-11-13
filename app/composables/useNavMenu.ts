@@ -81,7 +81,9 @@ export const useNavMenu = () => {
     const hidden = new Set(['settings'])
     const nodes = selectNavRoutes(allowedRoutes.value, {
       hasLocalPage: createHasLocalPage(localPaths),
-      hiddenNames: hidden
+      hiddenNames: hidden,
+      // V5.0: these groups are folded into the Dashboard / Control Center.
+      hiddenPathPrefixes: [...DASHBOARD_REPLACED_PREFIXES]
     })
     const items = nodes.map((node: RouteTreeNode) => mapRouteToNav(node, open))
     // Collapsed mode renders group children as a flat popover link list, so

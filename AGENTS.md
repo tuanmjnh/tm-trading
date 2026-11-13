@@ -2,11 +2,21 @@
 
 Guidance for AI coding agents working in this repository.
 
+## Current product authority — V5.0
+
+- Read `docs/web-app/tm-trading-central-dashboard-v5.0.md` before starting product/UI/architecture work.
+- The active product is information-first and read-only: one Dashboard, a shared Modal/Slideover system, and one Control Center.
+- Do not add order-entry, order submission/amend/cancel, broker/private trading credentials, portfolio execution views or autonomous execution to the active application.
+- Legacy `exec/`, `simulation/` and trading-oriented pages/components are under controlled audit/decommission. Do not delete them or reconnect them without a documented dependency/data/test review.
+- Preserve existing deterministic signal, market-data, research, evidence, news, alert, TM Hub and service-reliability capabilities where they fit V5.0.
+- This V5.0 authority takes precedence over older roadmap wording and old page-navigation plans. V4.2 remains a technical reference for reliability, readiness, authorization, idempotency and audit requirements.
+
+
 > **This file describes `tm-trading` only.** For tm-hub read `../tm-hub/AGENTS.md`, and for tm-tools read `../tm-tools/AGENTS.md`.
 
 ## What this project is
 
-An **automated trade desk** and quantitative signal execution platform with an integrated Nuxt 4 administration dashboard:
+A **single-dashboard Crypto Market Intelligence & Signal Research application** with a Nuxt 4 SPA. The authoritative product/UI/cleanup specification is `docs/web-app/tm-trading-central-dashboard-v5.0.md`.
 
 - **`engine/`** — Node ESM signal engine + backtester (the backbone)
 - **`exec/`** — risk gate, drift detection, paper execution
@@ -22,7 +32,11 @@ Mongoose are only required for the dashboard and the store layer.
 
 ## Commands
 
-**Package manager is `npm`** (not pnpm). See `.npmrc` and "Environment gotchas" below.
+**Dependencies are installed with `pnpm`** — `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the
+`node_modules/.pnpm` store are the installed state (verified 2026-11-13), and `package.json`
+declares `packageManager`. `pnpm run <script>` is canonical; the `npm run <script>` examples below
+still work because npm only executes the script. Never mix installers and never add a
+second lockfile. See `.npmrc` and "Environment gotchas" below.
 
 ```bash
 npm run pine:build          # assemble pine/parts* -> pine/dist (13 targets) + lint
@@ -134,6 +148,12 @@ overfitting. Read `docs/indicator/vsa-wyckoff/vsa-optimization.md` before propos
   - Supports both **Firebase Cloud Messaging (FCM)** and standard **VAPID Web Push** dispatched via TM Hub.
 
 ## UI & Coding Conventions
+
+- **V5.0 surface decision**: new information belongs in a Dashboard panel
+  (`app/components/dashboard/*`) or an overlay, not in a new page. Use
+  `useAppOverlay()` for details/quick edits and `useDashboardFeed()` for reads; the
+  Control Center is the only configuration surface. Details and examples:
+  `docs/web-app/ui-design-system.md` § "V5.0 Dashboard conventions".
 
 - **Open Source First**: Đối với những chức năng chưa quen thuộc, đừng viết từ con số 0, hãy tìm kiếm các dự án mã nguồn mở trên GitHub để so sánh ý tưởng trước khi bắt tay vào làm.
 - **BasePage Mandatory**:

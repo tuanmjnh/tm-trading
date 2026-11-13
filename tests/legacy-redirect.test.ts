@@ -38,6 +38,15 @@ describe('legacy redirects — matcher', () => {
     assert.equal(matchLegacy('/test-center/runs'), null)
   })
 
+  test('a retired V5.0 subtree lands on the Dashboard without leaking the sub-path', () => {
+    assert.deepEqual(matchLegacy('/trading/orders'), { to: '/', rest: '' })
+    assert.deepEqual(matchLegacy('/trading'), { to: '/', rest: '' })
+  })
+
+  test('the Operations page now opens the Control Center section', () => {
+    assert.deepEqual(matchLegacy('/operations'), { to: '/?panel=control&section=services', rest: '' })
+  })
+
   test('/utilities/text goes to the Tools index, not the non-existent /tools/text', () => {
     assert.deepEqual(matchLegacy('/utilities/text'), { to: '/tools', rest: '' })
   })
@@ -50,7 +59,10 @@ describe('legacy redirects — matcher', () => {
 describe('legacy redirects — every target resolves to a page', () => {
   for (const { from, to } of LEGACY_REDIRECTS) {
     test(`${from} -> ${to} has a page file`, () => {
-      const candidates = pageCandidates(to)
+      // A target may select a Dashboard panel with a query string; the page is
+      // still the path before `?`.
+      const target = to.split('?')[0] || '/'
+      const candidates = pageCandidates(target)
       assert.ok(
         candidates.some(existsSync),
         `legacy target ${to} (from ${from}) has no page; checked ${candidates.join(', ')}`

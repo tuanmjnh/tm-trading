@@ -2195,7 +2195,8 @@
     "filter": "Lọc",
     "horizonRemaining": "còn {n} phút",
     "horizonExpired": "hết hạn",
-    "lifecycle_intrabar": "Trong nến"
+    "lifecycle_intrabar": "Trong nến",
+    "lifecycle_closed": "Đã đóng"
   },
   "runs": {
     "freezeEvidence": "Đóng băng bằng chứng",
@@ -5844,5 +5845,271 @@
     "flow": "Dòng tiền",
     "volatility": "Biến động",
     "fundingOi": "Funding & OI"
+  },
+  "dash": {
+    "title": "Trung tâm thị trường",
+    "description": "Một dashboard duy nhất: trạng thái thị trường, sự kiện nghiên cứu, watchlist, nhịp thị trường, tin có nguồn và sức khỏe worker.",
+    "controlCenter": "Control Center",
+    "asOf": "tính đến",
+    "partial": "{count} phần đang giảm chất lượng",
+    "freshness": {
+      "fresh": "Mới",
+      "stale": "Cũ",
+      "missing": "Không có dữ liệu"
+    },
+    "overlay": {
+      "dirtyTitle": "Bỏ các thay đổi chưa lưu?",
+      "dirtyDescription": "Panel này có thay đổi chưa lưu. Đóng lại sẽ mất các thay đổi đó.",
+      "discard": "Bỏ thay đổi"
+    },
+    "market": {
+      "title": "Tổng quan thị trường",
+      "regime": "Chế độ",
+      "fng": "Sợ hãi & Tham lam",
+      "btc": "BTC 24h",
+      "breadth": "Độ rộng",
+      "noData": "Chưa có snapshot thị trường",
+      "noDataHint": "Các service thị trường chưa ghi snapshot, hoặc không kết nối được database. Không ước lượng giá trị ở đây.",
+      "sourceNote": "Nguồn: snapshot của các service thị trường (collection intel). Độ rộng được suy ra từ các mã đang biến động trong snapshot đó.",
+      "season": {
+        "alt": "Mùa altcoin",
+        "btc": "Mùa BTC",
+        "neutral": "Trung tính"
+      },
+      "sources": "Nguồn"
+    },
+    "signal": {
+      "title": "Trung tâm tín hiệu",
+      "hint": "Tín hiệu từ engine và quan sát từ service. Bấm một dòng để xem bằng chứng và nguồn gốc.",
+      "empty": "Không có sự kiện nào khớp bộ lọc",
+      "emptyHint": "Hãy xoá bộ lọc, hoặc chờ engine và các service công bố chu kỳ mới.",
+      "loadMore": "Tải thêm tín hiệu",
+      "loaded": "Đang hiển thị {count} dòng",
+      "total": "{count} sự kiện",
+      "sort": "Đảo chiều sắp xếp",
+      "detail": "Chi tiết sự kiện",
+      "notFound": "Sự kiện này không còn trong feed hiện tại",
+      "notFoundHint": "Feed được làm mới liên tục; hãy mở lại từ Trung tâm tín hiệu.",
+      "detected": "Thời điểm phát hiện",
+      "source": "Nguồn",
+      "price": "Giá",
+      "quality": "Chất lượng",
+      "expires": "Hết hạn",
+      "recordId": "Bản ghi",
+      "provenance": "Nguồn gốc",
+      "indicators": "Chỉ báo",
+      "evidence": "Bằng chứng",
+      "noEvidence": "Không có bằng chứng lưu sẵn",
+      "noEvidenceHint": "Dòng này là quan sát từ snapshot; service không lưu bằng chứng riêng cho từng dòng. Xem tab nhịp thị trường để thấy toàn bộ snapshot.",
+      "lifecycleNote": "Ghi chú vòng đời",
+      "detailFailed": "Không tải được bản ghi đã lưu",
+      "detailFailedHint": "Dòng trong danh sách vẫn hiển thị từ feed. Hãy đóng rồi mở lại chi tiết để thử lại.",
+      "filter": {
+        "all": "Tất cả sự kiện",
+        "indicator": "Chỉ báo",
+        "volatility": "Biến động",
+        "volume": "Khối lượng",
+        "funding": "Funding",
+        "oi": "Open interest",
+        "news": "Tin tức",
+        "category": "Loại sự kiện",
+        "freshness": "Độ mới",
+        "fresh": "Chỉ dữ liệu mới",
+        "stale": "Chỉ dữ liệu cũ",
+        "search": "Tìm mã hoặc nội dung",
+        "watchlist": "Chỉ watchlist"
+      },
+      "colAsset": "Mã",
+      "colType": "Loại",
+      "colTf": "Khung",
+      "colContext": "Nội dung",
+      "colQuality": "Chất lượng",
+      "colDetected": "Phát hiện",
+      "colSource": "Nguồn",
+      "colFreshness": "Độ mới",
+      "colStatus": "Trạng thái"
+    },
+    "watchlist": {
+      "title": "Watchlist",
+      "add": "Thêm mã",
+      "added": "Đã thêm mã",
+      "removed": "Đã xoá mã",
+      "duplicate": "Mã này đã có trong danh sách",
+      "empty": "Chưa có mã nào",
+      "emptyHint": "Thêm một mã để theo dõi giá và sự kiện mới nhất tại đây.",
+      "symbol": "Mã",
+      "price": "Giá",
+      "change24h": "24h",
+      "change4h": "4h",
+      "none": "Chưa có sự kiện",
+      "remove": "Xoá",
+      "detail": "Chi tiết tài sản"
+    },
+    "asset": {
+      "noQuote": "Không có giá trong snapshot hiện tại",
+      "noQuoteHint": "Snapshot của service thị trường chưa bao gồm mã này. Không ước lượng giá.",
+      "events": "Sự kiện mới nhất của mã này",
+      "noEvents": "Chưa có sự kiện cho mã này"
+    },
+    "pulse": {
+      "title": "Nhịp thị trường",
+      "movers": "Biến động",
+      "volatility": "Biến động giá",
+      "volume": "Khối lượng",
+      "funding": "Funding",
+      "oi": "Open interest",
+      "liquidation": "Thanh lý",
+      "lowcap": "Thanh khoản thấp",
+      "empty": "Chưa có dữ liệu cho tab này",
+      "emptyHint": "Chạy các service thị trường một lần để tạo snapshot.",
+      "breakout": "bứt phá",
+      "accumulation": "tích luỹ",
+      "estimate": "Ước tính",
+      "venueReported": "Sàn báo cáo",
+      "liquidationActual": "{usd} qua {count} lệnh thanh lý",
+      "top": "Thanh khoản cao"
+    },
+    "briefing": {
+      "title": "Bản tin thị trường",
+      "rules": "Theo luật, không do AI tạo",
+      "short_term": "Ngắn hạn",
+      "swing": "Swing",
+      "long_term": "Dài hạn",
+      "stale": "Đã cũ",
+      "empty": "Chưa có kết luận nào được lưu",
+      "emptyHint": "Service outlook chưa công bố cho nhóm này. Không tạo nội dung cục bộ.",
+      "evidence": "Bằng chứng ủng hộ",
+      "counter": "Bằng chứng ngược",
+      "limitations": "Hạn chế đã biết",
+      "invalidation": "Điều kiện vô hiệu",
+      "evidenceHash": "Hash bằng chứng",
+      "aiStatus": "AI provider",
+      "aiConfigured": "Đã cấu hình",
+      "aiNotConfigured": "Chưa cấu hình",
+      "aiNote": "Chỉ hiển thị danh tính — không chạy test provider khi render Dashboard."
+    },
+    "news": {
+      "title": "Tin tức & sự kiện",
+      "headlines": "Tiêu đề",
+      "events": "Sự kiện",
+      "empty": "Chưa có tin nào được lưu",
+      "emptyHint": "Service tin tức chưa thu thập dữ liệu, hoặc không kết nối được database.",
+      "noEvents": "Chưa có sự kiện thị trường nào",
+      "detail": "Chi tiết tin",
+      "sources": "nguồn",
+      "items": "bài",
+      "publisher": "Nhà xuất bản",
+      "published": "Xuất bản",
+      "ingested": "Thu thập",
+      "category": "Nhóm",
+      "tags": "Thẻ",
+      "open": "Mở bài gốc",
+      "revisions": "Lịch sử sửa đổi",
+      "notFound": "Bài này không còn khả dụng",
+      "loadFailed": "Không tải được bài này",
+      "loadFailedHint": "Nguồn có thể đã bị thu hồi hoặc bản ghi đã bị xoá. Không hiển thị từ cache."
+    },
+    "health": {
+      "title": "Sức khỏe hệ thống",
+      "ok": "Bình thường",
+      "degraded": "Suy giảm",
+      "lastUpdate": "Lần chạy thành công gần nhất",
+      "ready": "sẵn sàng",
+      "open": "Mở Control Center",
+      "unavailable": "Không lấy được trạng thái service",
+      "workers": {
+        "market": "Thị trường",
+        "scanner": "Scanner",
+        "news": "Tin tức",
+        "ai": "AI",
+        "notification": "Thông báo"
+      }
+    },
+    "control": {
+      "title": "Control Center",
+      "tabs": {
+        "services": "Services",
+        "sources": "Nguồn dữ liệu",
+        "ai": "AI provider",
+        "alerts": "Cảnh báo",
+        "storage": "Lưu trữ",
+        "settings": "Cài đặt",
+        "diagnostics": "Chẩn đoán"
+      },
+      "services": {
+        "note": "Trạng thái sẵn sàng lấy từ probe của supervisor, không phải từ tiến trình đang chạy. Lệnh được chấp nhận trước, sau đó được theo dõi đến trạng thái kết thúc.",
+        "empty": "Chưa có service nào được đăng ký",
+        "emptyHint": "Supervisor chưa công bố snapshot registry.",
+        "restarts": "Số lần khởi động lại",
+        "lastSuccess": "Thành công gần nhất",
+        "dependsOn": "phụ thuộc"
+      },
+      "sources": {
+        "venues": "Sàn dữ liệu thị trường",
+        "instruments": "công cụ",
+        "news": "Nguồn tin",
+        "lastOk": "Lần ok cuối"
+      },
+      "ai": {
+        "note": "Khoá chỉ ở server và được hiển thị dạng che. Test sức khoẻ chỉ chạy khi bạn yêu cầu.",
+        "empty": "Chưa cấu hình kết nối AI",
+        "emptyHint": "Thêm kết nối provider trong Administration → AI providers.",
+        "test": "Kiểm tra kết nối",
+        "tested": "Đã kiểm tra kết nối",
+        "testFailed": "Kiểm tra kết nối thất bại",
+        "lastTested": "kiểm tra",
+        "noKey": "không có khoá"
+      },
+      "alerts": {
+        "note": "Chỉ là luật thông tin. Lịch sử gửi nằm ở các trang cảnh báo.",
+        "empty": "Chưa có luật cảnh báo",
+        "emptyHint": "Tạo luật trong workspace cảnh báo.",
+        "matches": "khớp",
+        "notified": "đã gửi",
+        "manage": "Quản lý cảnh báo",
+        "delivery": "Gửi thông báo",
+        "rules": "Luật cảnh báo",
+        "openOutbox": "Outbox",
+        "openHistory": "Lịch sử",
+        "queued": "đang chờ",
+        "sent": "đã gửi",
+        "accepted": "đã nhận",
+        "failed": "lỗi",
+        "dead": "dead-letter"
+      },
+      "storage": {
+        "note": "Thời gian lưu do service retention thực thi. Thời gian lưu theo nguồn đọc từ news registry.",
+        "days": "ngày",
+        "open": "Mở data center",
+        "datasets": "Manifest lưu trữ dataset",
+        "files": "dataset",
+        "rows": "dòng đã lưu",
+        "noDatasets": "Chưa có dòng manifest dataset nào",
+        "news": "Thời gian lưu theo nguồn tin",
+        "sizeNote": "API dữ liệu không cung cấp dung lượng byte, nên không hiển thị.",
+        "suspect": "nghi ngờ"
+      },
+      "settings": {
+        "note": "Danh tính, vai trò và cấu hình dùng chung thuộc TM Hub. Các liên kết này mở trang admin có phân quyền.",
+        "app": "Cài đặt ứng dụng",
+        "profile": "Hồ sơ của tôi",
+        "hub": "Tích hợp TM Hub",
+        "routes": "Menu routes"
+      },
+      "diagnostics": {
+        "title": "Chẩn đoán runtime",
+        "status": "Trạng thái tổng",
+        "db": "Database",
+        "version": "Phiên bản build",
+        "uptime": "Thời gian chạy",
+        "latency": "Độ trễ API",
+        "time": "Giờ server",
+        "note": "Đã lược bỏ theo thiết kế: không trả token, mật khẩu hay connection string.",
+        "logs": "Mở logs"
+      }
+    },
+    "search": {
+      "placeholder": "Tìm mã"
+    }
   }
 }
