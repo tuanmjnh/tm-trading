@@ -2,11 +2,21 @@
 
 Guidance for AI coding agents working in this repository.
 
+## Current product authority — V5.0
+
+- Read `docs/web-app/tm-trading-central-dashboard-v5.0.md` before starting product/UI/architecture work.
+- The active product is information-first and read-only: one Dashboard, a shared Modal/Slideover system, and one Control Center.
+- Do not add order-entry, order submission/amend/cancel, broker/private trading credentials, portfolio execution views or autonomous execution to the active application.
+- Legacy `exec/`, `simulation/` and trading-oriented pages/components are under controlled audit/decommission. Do not delete them or reconnect them without a documented dependency/data/test review.
+- Preserve existing deterministic signal, market-data, research, evidence, news, alert, TM Hub and service-reliability capabilities where they fit V5.0.
+- This V5.0 authority takes precedence over older roadmap wording and old page-navigation plans. V4.2 remains a technical reference for reliability, readiness, authorization, idempotency and audit requirements.
+
+
 > **This file describes `tm-trading` only.** For tm-hub read `../tm-hub/AGENTS.md`, and for tm-tools read `../tm-tools/AGENTS.md`.
 
 ## What this project is
 
-An **automated trade desk** and quantitative signal execution platform with an integrated Nuxt 4 administration dashboard:
+A **single-dashboard Crypto Market Intelligence & Signal Research application** with a Nuxt 4 SPA. The authoritative product/UI/cleanup specification is `docs/web-app/tm-trading-central-dashboard-v5.0.md`.
 
 - **`engine/`** — Node ESM signal engine + backtester (the backbone)
 - **`exec/`** — risk gate, drift detection, paper execution
