@@ -216,7 +216,11 @@ A candidate may be deleted only when there are no import/string/dynamic referenc
 
 Starting SHA `f8a6edc`. Verified with `pnpm run typecheck` (PASS), `pnpm test`
 (18 suites / 2509 pass / 0 fail), `node tests/run-tests.mjs` (1840 tests, 1 pre-existing
-skip) and `npx nuxt build` (complete).
+skip), `pnpm run drills` (7/7 reliability drills) and `npx nuxt build` (complete).
+The built server was also booted and probed: `/` and `/login` 200, `/api/v1/health`
+200, an unauthenticated `/api/v1/signals/native` 401, cross-origin CORS blocked,
+same-origin CORS echoed, `/trading/orders` and `/operations` 301 to their targets.
+See `v5-service-runtime-map.md` §7 for the evidence table.
 
 **Changed:**
 
@@ -241,7 +245,8 @@ skip) and `npx nuxt build` (complete).
 - No deployment target was modified; worker restart isolation and lease fencing on a
   second host remain unverified (see `v5-service-runtime-map.md` §7).
 - No browser acceptance run: this pass had no session against a running app with a live
-  Hub login. The build, typecheck and 1840-test app suite are the evidence recorded.
+  Hub login. Server-side smoke, the build, typecheck, drills and the 1840-test app suite
+  are the evidence recorded.
 - `exec/` and `simulation/` are untouched; the execution UI is unreachable but present.
 - The TM Hub `system_routes` catalog still advertises the hidden groups; trimming it is
   an operator step (route map §6).

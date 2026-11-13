@@ -109,13 +109,44 @@ Thresholds live in `FRESH_MS` (`app/composables/useDashboardFeed.ts`). `missing`
   `VERCEL` is set for that reason.
 - Mongo: required for snapshots, signals, news, operations state.
 
-## 7. What still needs operator evidence
+## 7. Drill evidence (executed 2026-11-13)
+
+`pnpm run drills` runs the REAL supervisor against fixture workers and drives it
+through the same durable command inbox the Operations API uses. Result: **7/7 PASS in
+25s**.
+
+| Drill | Result | What it proves |
+|---|---|---|
+| `start-ready-stop` | PASS | A worker reached `READY` from its own IPC evidence (subscription, validated job, outbox), then drained to `STOPPED` — no PID-based verdict |
+| `duplicate-late-command` | PASS | A replayed command produced ONE operation; a command not picked up before its deadline was quarantined, not executed twice |
+| `socket-open-no-data` | PASS | Subscription acked with no market event inside the window → observed `DEGRADED`, not `FAILED` (a dead socket is a different condition from a silent one) |
+| `crash-restart` | PASS | A worker that crashed after 3 load cycles restarted and became `READY` again (generation/restart count advanced) |
+| `control-plane-restart` | PASS | The worker PID and generation survived a control-plane restart — a Nuxt restart does not restart collection |
+| `supervisor-restart-recovery` | PASS | Desired `RUNNING` was restored after a supervisor restart (generation 1 → 2, new pid) |
+| `reset-preserves-history` | PASS | Reset kept the earlier operation + audit entry (history is append-only) |
+
+Also observed on the built server (`node .output/server/index.mjs`, port 4310):
+
+| Check | Result |
+|---|---|
+| `GET /api/v1/health` | `200` |
+| `GET /` (SPA shell) | `200` |
+| `GET /login` | `200` |
+| `GET /api/v1/signals/native` without a token | `401` (auth fails closed) |
+| `OPTIONS /api/v1/intel` from `https://evil.example` | `204` with **no** `Access-Control-Allow-Origin` (browser blocks it) |
+| `GET /api/v1/health` from the server's own origin | `200` + `Access-Control-Allow-Origin: http://127.0.0.1:4310` (echoed, never `*`) |
+| `GET /trading/orders` | `301` → `/` |
+| `GET /operations` | `301` → `/?panel=control&section=services` |
+| Lazy chunking | each Dashboard panel is emitted as its own `_nuxt/*.js` chunk (`SignalCenterPanel`, `MarketPulsePanel`, `ControlCenterSlideover`, `SymbolSearch`, …) |
+
+## 8. What still needs operator evidence
 
 Not verified in this pass (no deployment target was touched):
 
-- Worker restart isolation on a real second host.
-- Lease fencing under a deliberately duplicated supervisor (the `failure-drills` suite
-  exercises the logic, not a live duplicate).
+- Worker restart isolation across two separate HOSTS (proved only for separate
+  processes on one host).
+- Lease fencing under a deliberately duplicated supervisor on two hosts.
 - Freshness behaviour with a genuinely stale provider (requires a provider outage or a
   clock shift).
 - Push/Telegram delivery (needs live credentials).
+- A browser acceptance run on `/` against a live TM Hub login.

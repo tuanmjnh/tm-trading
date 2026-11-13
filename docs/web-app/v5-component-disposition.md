@@ -16,7 +16,7 @@ via the `Lazy` prefix; only the shell is eager.
 | `SignalCenterPanel.vue` | Unified event table | Filters (category / freshness / watchlist / search), sort, cursor "load more", mobile cards, empty/loading/error states |
 | `WatchlistPanel.vue` | Observe-only symbol list | Add via modal, remove inline, opens Asset detail |
 | `AddAssetModal.vue` | Quick edit (Modal, per V5.0 §4) | Validates uppercase symbol, refuses duplicates |
-| `MarketPulsePanel.vue` | Movers / volatility / volume / funding / OI / liquidation / low-liquidity | Tabs inside the panel; venue-reported vs estimate labelled |
+| `MarketPulsePanel.vue` | Movers / top assets / volatility / volume / funding / OI / liquidation / low-liquidity | Tabs inside the panel; venue-reported vs estimate labelled |
 | `AiBriefingPanel.vue` | Evidence-linked horizons (short/swing/long) | Labelled "rules-based, not AI-generated" because no AI brief is persisted |
 | `NewsEventsPanel.vue` | Headlines + sourced market events | Opens News detail |
 | `SystemHealthStrip.vue` | Overall state + 5 worker groups | Uses supervisor readiness, never a PID |
@@ -24,6 +24,7 @@ via the `Lazy` prefix; only the shell is eager.
 | `AssetDetailSlideover.vue` | Asset quote context + latest events | No invented price: `—` when absent from the snapshot |
 | `NewsDetailSlideover.vue` | News item + revision trail | Reads `/api/v1/news/:id?detail=full` |
 | `ControlCenterSlideover.vue` | Services / Sources / AI / Alerts / Storage / Settings / Diagnostics | Real command flow (202 → poll terminal state), masked secrets |
+| `SymbolSearch.vue` | Header symbol search | Opens the Asset detail slideover; suggestions come from the same snapshot/watchlist (no second symbol list) |
 
 Supporting composables:
 
@@ -93,4 +94,5 @@ Root-level temporary artifacts that WERE deleted are listed in
 - `pnpm run typecheck` — PASS (server/app/shared/node).
 - `node tests/run-tests.mjs` — 1840 tests, 1839 pass, 1 pre-existing skip.
 - `pnpm test` — 18 suites, 2509 pass, 0 fail.
-- `npx nuxt build` — BUILD complete (`.output/`).
+- `pnpm run drills` — 7/7 service reliability drills pass.
+- `npx nuxt build` — BUILD complete (`.output/`), every panel emitted as its own chunk.
