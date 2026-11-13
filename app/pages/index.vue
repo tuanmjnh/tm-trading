@@ -97,6 +97,7 @@ const anyFailed = computed(() => Object.values(feed.failed).filter(Boolean).leng
 
     <template #right>
       <div class="flex items-center gap-2">
+        <LazyDashboardSymbolSearch />
         <UBadge
           v-if="lastRead"
           color="neutral"

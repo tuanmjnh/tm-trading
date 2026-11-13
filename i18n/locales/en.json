@@ -5965,7 +5965,8 @@
       "accumulation": "accumulation",
       "estimate": "Estimate",
       "venueReported": "Venue reported",
-      "liquidationActual": "{usd} across {count} liquidation(s)"
+      "liquidationActual": "{usd} across {count} liquidation(s)",
+      "top": "Top assets"
     },
     "briefing": {
       "title": "Market briefing",
@@ -6087,6 +6088,9 @@
         "note": "Redacted by design: no tokens, passwords or connection strings are returned here.",
         "logs": "Open logs"
       }
+    },
+    "search": {
+      "placeholder": "Search symbol"
     }
   }
 }

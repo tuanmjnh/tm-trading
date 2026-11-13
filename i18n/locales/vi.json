@@ -5965,7 +5965,8 @@
       "accumulation": "tích luỹ",
       "estimate": "Ước tính",
       "venueReported": "Sàn báo cáo",
-      "liquidationActual": "{usd} qua {count} lệnh thanh lý"
+      "liquidationActual": "{usd} qua {count} lệnh thanh lý",
+      "top": "Thanh khoản cao"
     },
     "briefing": {
       "title": "Bản tin thị trường",
@@ -6087,6 +6088,9 @@
         "note": "Đã lược bỏ theo thiết kế: không trả token, mật khẩu hay connection string.",
         "logs": "Mở logs"
       }
+    },
+    "search": {
+      "placeholder": "Tìm mã"
     }
   }
 }

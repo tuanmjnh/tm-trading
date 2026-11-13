@@ -5,7 +5,7 @@ const { t } = useI18n()
 const { intel, loading } = useDashboardFeed()
 const overlay = useAppOverlay()
 
-type PulseTab = 'movers' | 'volatility' | 'volume' | 'funding' | 'oi' | 'liquidation' | 'lowcap'
+type PulseTab = 'movers' | 'top' | 'volatility' | 'volume' | 'funding' | 'oi' | 'liquidation' | 'lowcap'
 interface PulseRow {
   symbol: string
   primary: string
@@ -18,6 +18,7 @@ const tab = ref<PulseTab>('movers')
 
 const tabs: Array<{ key: PulseTab, icon: string }> = [
   { key: 'movers', icon: 'i-lucide-trending-up' },
+  { key: 'top', icon: 'i-lucide-trophy' },
   { key: 'volatility', icon: 'i-lucide-activity' },
   { key: 'volume', icon: 'i-lucide-bar-chart-2' },
   { key: 'funding', icon: 'i-lucide-percent' },
@@ -47,6 +48,16 @@ const rows = computed<PulseRow[]>(() => {
         tone: tone(m.pct24h),
         note: m.breakout ? t('dash.pulse.breakout') : undefined
       }))
+    case 'top':
+      // Highest observed turnover in the same snapshot — a projection, not a new read.
+      return [...(d.movers ?? [])]
+        .sort((a, b) => (b.quoteVolume ?? 0) - (a.quoteVolume ?? 0))
+        .map(m => ({
+          symbol: m.symbol,
+          primary: usd(m.quoteVolume),
+          secondary: `${m.lastPrice} · 24h ${pct(m.pct24h)}`,
+          tone: tone(m.pct24h)
+        }))
     case 'volatility':
       return (d.volatility ?? []).map(v => ({
         symbol: v.symbol,
