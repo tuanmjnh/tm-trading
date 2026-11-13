@@ -2195,7 +2195,8 @@
     "filter": "Filter",
     "horizonRemaining": "{n}m remaining",
     "horizonExpired": "expired",
-    "lifecycle_intrabar": "Intrabar"
+    "lifecycle_intrabar": "Intrabar",
+    "lifecycle_closed": "Closed"
   },
   "runs": {
     "freezeEvidence": "Freeze evidence",
@@ -5844,5 +5845,248 @@
     "flow": "Money flow",
     "volatility": "Volatility",
     "fundingOi": "Funding & OI"
+  },
+  "dash": {
+    "title": "Market Intelligence",
+    "description": "One dashboard: market state, research events, watchlist, market pulse, sourced news and worker health.",
+    "controlCenter": "Control Center",
+    "asOf": "as of",
+    "partial": "{count} section(s) degraded",
+    "freshness": {
+      "fresh": "Fresh",
+      "stale": "Stale",
+      "missing": "No data"
+    },
+    "overlay": {
+      "dirtyTitle": "Discard unsaved changes?",
+      "dirtyDescription": "This panel has edits that were not saved. Closing it loses them.",
+      "discard": "Discard"
+    },
+    "market": {
+      "title": "Market overview",
+      "regime": "Regime",
+      "fng": "Fear & Greed",
+      "btc": "BTC 24h",
+      "breadth": "Breadth",
+      "noData": "No market snapshot yet",
+      "noDataHint": "The market services have not written a snapshot, or the database is unreachable. Values are not estimated here.",
+      "sourceNote": "Source: market services snapshot (intel collection). Breadth is derived from the observed movers in that snapshot.",
+      "season": {
+        "alt": "Alt season",
+        "btc": "BTC season",
+        "neutral": "Neutral"
+      }
+    },
+    "signal": {
+      "title": "Signal center",
+      "hint": "Engine signals plus service observations. Click a row for evidence and provenance.",
+      "empty": "No events match the filters",
+      "emptyHint": "Clear the filters, or wait for the engine and services to publish a cycle.",
+      "loadMore": "Load more signals",
+      "loaded": "{count} rows shown",
+      "total": "{count} events",
+      "sort": "Toggle sort direction",
+      "detail": "Event detail",
+      "notFound": "This event is no longer in the current feed",
+      "notFoundHint": "The feed refreshes continuously; reopen it from the Signal center.",
+      "detected": "Detected",
+      "source": "Source",
+      "price": "Price",
+      "quality": "Quality",
+      "expires": "Expires",
+      "recordId": "Record",
+      "provenance": "Provenance",
+      "indicators": "Indicators",
+      "evidence": "Evidence",
+      "noEvidence": "No stored evidence payload",
+      "noEvidenceHint": "This row is a snapshot observation; the producer stores no per-row evidence. Open the market pulse tab for the full snapshot.",
+      "lifecycleNote": "Lifecycle note",
+      "detailFailed": "Could not load the stored record",
+      "detailFailedHint": "The list row is still shown from the feed. Retry by closing and reopening the detail.",
+      "filter": {
+        "all": "All events",
+        "indicator": "Indicator",
+        "volatility": "Volatility",
+        "volume": "Volume",
+        "funding": "Funding",
+        "oi": "Open interest",
+        "news": "News",
+        "category": "Event category",
+        "freshness": "Freshness",
+        "fresh": "Fresh only",
+        "stale": "Stale only",
+        "search": "Search symbol or context",
+        "watchlist": "Watchlist only"
+      },
+      "colAsset": "Asset",
+      "colType": "Type",
+      "colTf": "TF",
+      "colContext": "Context",
+      "colQuality": "Quality",
+      "colDetected": "Detected",
+      "colSource": "Source",
+      "colFreshness": "Freshness",
+      "colStatus": "Status"
+    },
+    "watchlist": {
+      "title": "Watchlist",
+      "add": "Add symbol",
+      "added": "Symbol added",
+      "removed": "Symbol removed",
+      "duplicate": "This symbol is already in the list",
+      "empty": "No symbols yet",
+      "emptyHint": "Add a symbol to follow its price and latest events here.",
+      "symbol": "Symbol",
+      "price": "Price",
+      "change24h": "24h",
+      "change4h": "4h",
+      "none": "No events yet",
+      "remove": "Remove",
+      "detail": "Asset detail"
+    },
+    "asset": {
+      "noQuote": "No quote in the current snapshot",
+      "noQuoteHint": "The market services snapshot does not include this symbol yet. No price is estimated.",
+      "events": "Latest events for this asset",
+      "noEvents": "No events for this asset"
+    },
+    "pulse": {
+      "title": "Market pulse",
+      "movers": "Movers",
+      "volatility": "Volatility",
+      "volume": "Volume",
+      "funding": "Funding",
+      "oi": "Open interest",
+      "liquidation": "Liquidation",
+      "lowcap": "Low liquidity",
+      "empty": "No data for this tab",
+      "emptyHint": "Run the market services once to populate the snapshot.",
+      "breakout": "breakout",
+      "accumulation": "accumulation",
+      "estimate": "Estimate",
+      "venueReported": "Venue reported",
+      "liquidationActual": "{usd} across {count} liquidation(s)"
+    },
+    "briefing": {
+      "title": "Market briefing",
+      "rules": "Rules-based, not AI-generated",
+      "short_term": "Short term",
+      "swing": "Swing",
+      "long_term": "Long term",
+      "stale": "Stale",
+      "empty": "No outlook stored yet",
+      "emptyHint": "The outlook service has not published a horizon for this group. Nothing is generated locally.",
+      "evidence": "Supporting evidence",
+      "counter": "Counter-evidence",
+      "limitations": "Known limitations",
+      "invalidation": "Invalidation",
+      "evidenceHash": "Evidence hash",
+      "aiStatus": "AI provider",
+      "aiConfigured": "Configured",
+      "aiNotConfigured": "Not configured",
+      "aiNote": "Identity only — no provider test is run while the Dashboard renders."
+    },
+    "news": {
+      "title": "News & events",
+      "headlines": "Headlines",
+      "events": "Events",
+      "empty": "No news stored yet",
+      "emptyHint": "The news service has not ingested anything, or the database is unreachable.",
+      "noEvents": "No market events stored yet",
+      "detail": "News detail",
+      "sources": "sources",
+      "items": "items",
+      "publisher": "Publisher",
+      "published": "Published",
+      "ingested": "Ingested",
+      "category": "Category",
+      "tags": "Tags",
+      "open": "Open source article",
+      "revisions": "Revision trail",
+      "notFound": "This item is no longer available",
+      "loadFailed": "Could not load this item",
+      "loadFailedHint": "The source may have been revoked or the record removed. Nothing is shown from cache."
+    },
+    "health": {
+      "title": "System health",
+      "ok": "Healthy",
+      "degraded": "Degraded",
+      "lastUpdate": "Last successful work",
+      "ready": "ready",
+      "open": "Open Control Center",
+      "unavailable": "Service state unavailable",
+      "workers": {
+        "market": "Market",
+        "scanner": "Scanner",
+        "news": "News",
+        "ai": "AI",
+        "notification": "Notifications"
+      }
+    },
+    "control": {
+      "title": "Control Center",
+      "tabs": {
+        "services": "Services",
+        "sources": "Data sources",
+        "ai": "AI providers",
+        "alerts": "Alerts",
+        "storage": "Storage",
+        "settings": "Settings",
+        "diagnostics": "Diagnostics"
+      },
+      "services": {
+        "note": "Readiness comes from the supervisor probes, not from a running process. A command is accepted first, then polled to a terminal state.",
+        "empty": "No services registered",
+        "emptyHint": "The supervisor has not published a registry snapshot yet.",
+        "restarts": "Restarts"
+      },
+      "sources": {
+        "venues": "Market data venues",
+        "instruments": "instruments",
+        "news": "News sources",
+        "lastOk": "Last ok"
+      },
+      "ai": {
+        "note": "Keys stay server-side and are shown masked. A health test runs only when you ask for it.",
+        "empty": "No AI connection configured",
+        "emptyHint": "Add a provider connection from Administration → AI providers.",
+        "test": "Test connection",
+        "tested": "Connection tested",
+        "testFailed": "Connection test failed",
+        "lastTested": "tested",
+        "noKey": "no key"
+      },
+      "alerts": {
+        "note": "Informational rules only. Delivery history lives on the alerts pages.",
+        "empty": "No alert rules",
+        "emptyHint": "Create a rule from the alerts workspace.",
+        "matches": "matches",
+        "notified": "notified",
+        "manage": "Manage alerts"
+      },
+      "storage": {
+        "note": "Retention is enforced by the retention service. Per-source retention is read from the news registry.",
+        "days": "days",
+        "open": "Open data center"
+      },
+      "settings": {
+        "note": "Identity, roles and shared configuration are owned by TM Hub. These links open the permission-gated admin surfaces.",
+        "app": "Application settings",
+        "profile": "My profile",
+        "hub": "TM Hub integration",
+        "routes": "Menu routes"
+      },
+      "diagnostics": {
+        "title": "Runtime diagnostics",
+        "status": "Overall status",
+        "db": "Database",
+        "version": "Build version",
+        "uptime": "Uptime",
+        "latency": "API latency",
+        "time": "Server time",
+        "note": "Redacted by design: no tokens, passwords or connection strings are returned here.",
+        "logs": "Open logs"
+      }
+    }
   }
 }
