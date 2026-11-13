@@ -114,7 +114,7 @@ export default defineNuxtConfig({
       scope: '/',
       name: 'TM Trading',
       short_name: 'TM Trading',
-      description: 'Automated trading desk: signal engine + backtesting + risk gate',
+      description: 'Crypto market intelligence, signals and research events (read-only)',
       theme_color: '#0f172a',
       background_color: '#0f172a',
       display: 'standalone',
