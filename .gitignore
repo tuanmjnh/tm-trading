@@ -5,6 +5,8 @@ dist
 scratch
 .superpowers
 .env
+.tmp-*
+.gate-*
 /logs
 *.log
 .DS_Store

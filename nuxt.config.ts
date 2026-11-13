@@ -130,6 +130,8 @@ export default defineNuxtConfig({
     supabaseUrl: process.env.SUPABASE_URL || '',
     supabaseKey: process.env.SUPABASE_KEY || '',
     jwtSecret: process.env.AUTH_JWT_SECRET || 'super-secure-shared-secret-key-32-chars-min',
+    // JSON array of Hub public JWKs (RS256). Public material: safe to ship.
+    jwtPublicKeys: process.env.AUTH_JWT_PUBLIC_KEYS || '',
     configEncryptionKey: process.env.CONFIG_ENCRYPTION_KEY || '',
     public: {
       apiPrefix: '/api/v1',
