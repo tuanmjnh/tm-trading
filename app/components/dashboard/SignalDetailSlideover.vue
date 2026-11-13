@@ -43,7 +43,12 @@ async function load() {
   }
 }
 
-watch(open, (isOpen) => { if (isOpen) void load() })
+// The component is mounted only while this overlay is open, so `open` is already
+// true on mount. Watch the record id too, so switching signal A -> B while the
+// slideover stays open refetches instead of showing A's stored record.
+const signalId = computed(() => (overlay.state.value?.kind === 'signal' ? overlay.state.value.payload.id : ''))
+
+watch([open, signalId], () => { if (open.value) void load() }, { immediate: true })
 
 const metaEntries = computed(() => {
   const meta = record.value?.meta

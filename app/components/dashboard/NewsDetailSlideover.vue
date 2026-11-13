@@ -59,7 +59,9 @@ async function load() {
   }
 }
 
-watch(open, (isOpen) => { if (isOpen) void load() })
+// Mounted only while open: `immediate` covers the first open, the id watch covers
+// switching items without closing.
+watch([open, newsId], () => { if (open.value) void load() }, { immediate: true })
 
 const fmtUtc = (iso: string | null | undefined) => (iso ? `${iso.slice(0, 16).replace('T', ' ')} UTC` : '—')
 </script>
