@@ -1,15 +1,15 @@
 # TM Trading
 
-**Ứng dụng trade desk tự động**: engine tín hiệu + backtest chạy local, store MongoDB,
-dashboard Nuxt, **risk gate** và execution (paper → exchange demo).
+**Ứng dụng market intelligence và nghiên cứu tín hiệu**: một Dashboard trung tâm bằng Nuxt 4, tập trung vào dữ liệu thị trường, tín hiệu quan sát, watchlist, tin tức, AI briefing và điều khiển dịch vụ.
 
-Bộ chỉ báo TradingView (Pine Script **v6**) là **công cụ hỗ trợ** — nguồn tín hiệu và
-đối chiếu tay — **không phải sản phẩm chính**. Định hướng đầy đủ: `docs/web-app/tm-trading-roadmap-v3.9.md`.
+**Tài liệu triển khai hiện hành:** [`docs/web-app/tm-trading-central-dashboard-v5.0.md`](docs/web-app/tm-trading-central-dashboard-v5.0.md). Tài liệu V5.0 là nguồn quyết định cho product scope, Dashboard, Modal/Slideover và quy trình cleanup. Các tài liệu V4.2/V3.x chỉ còn là tham chiếu kỹ thuật/lịch sử nếu không xung đột với V5.0.
+
+TM Trading theo hướng information-first/read-only. Không phát triển hoặc đưa order-entry, execution controls, private exchange trading credentials hay autonomous execution vào trải nghiệm chính. Các thư mục legacy được giữ lại cho đến khi audit dependency, data và tests hoàn tất.
 
 ```
 tm-trading/
 ├─ docs/
-│  ├─ tm-trading-roadmap-v3.9.md kế hoạch tổng thể hiện hành (§57–§64) — bản cũ: docs/web-app/archive/
+│  ├─ web-app/tm-trading-central-dashboard-v5.0.md nguồn quyết định hiện hành cho product/UI/cleanup
 │  ├─ data-model.md        schema/index/version của mọi collection  (Phase 3)
 │  ├─ app-inheritance.md   kế thừa app/ từ tm-hub: giữ/cắt gì + bẫy môi trường
 │  ├─ architecture.md      kiến trúc, luồng dữ liệu, quy ước mở rộng
