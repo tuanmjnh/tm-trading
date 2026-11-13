@@ -222,6 +222,12 @@ The built server was also booted and probed: `/` and `/login` 200, `/api/v1/heal
 same-origin CORS echoed, `/trading/orders` and `/operations` 301 to their targets.
 See `v5-service-runtime-map.md` §7 for the evidence table.
 
+A read-only collection count on the local Mongo (no writes) confirmed the panels
+render real data rather than only empty states: `signals` 309, `alerts` 2001,
+`intel` 448, `news_items` 261, `news_market_events` 964, `news_market_outlooks` 12,
+`datasets` 1, `alert_rules` 0. The Alerts tab therefore shows its empty state — the
+only section without rows in this environment.
+
 **Changed:**
 
 - `app/pages/index.vue` rewritten as a thin Dashboard shell; 12 new components under
