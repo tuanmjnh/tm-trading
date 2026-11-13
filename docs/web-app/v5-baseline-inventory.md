@@ -205,20 +205,43 @@ A candidate may be deleted only when there are no import/string/dynamic referenc
 
 ## 11. What has and has not been changed in the V5.0 branch
 
-**Changed in the documentation branch:**
+### Documentation branch (commits before the implementation pass)
 
 - Added `docs/web-app/tm-trading-central-dashboard-v5.0.md`.
 - Updated root `README.md` product description and V5.0 documentation reference.
 - Added V5.0 authority and product boundary to root `AGENTS.md` and `.agents/AGENTS.md`.
 - Updated `docs/README.md` to identify V5.0 as product/UI authority and V4.2 as a technical reliability reference.
 
-**Not changed yet:**
+### Implementation pass (2026-11-13, on `refactor/central-intelligence-dashboard-v5`)
 
-- No Vue pages/components or route definitions.
-- No APIs, workers, supervisor or service implementations.
-- No database collections or persisted data.
-- No deployment configuration or secrets.
-- No files have been deleted.
-- No install/build/typecheck/unit/integration/browser/deployment test has been run.
+Starting SHA `f8a6edc`. Verified with `pnpm run typecheck` (PASS), `pnpm test`
+(18 suites / 2509 pass / 0 fail), `node tests/run-tests.mjs` (1840 tests, 1 pre-existing
+skip) and `npx nuxt build` (complete).
 
-The next implementation pass must follow phases in `tm-trading-central-dashboard-v5.0.md`, starting with a full route/API/reference inventory and a test baseline.
+**Changed:**
+
+- `app/pages/index.vue` rewritten as a thin Dashboard shell; 12 new components under
+  `app/components/dashboard/`; two new composables (`useAppOverlay`, `useDashboardFeed`).
+- `i18n/locales/{en,vi}.json` gained the `dash.*` namespace (197 keys each).
+- Navigation: `app/utils/navTree.ts` + `app/composables/useNavMenu.ts` hide the groups
+  whose content moved to the Dashboard (their pages stay routable).
+- Routes: `server/utils/legacy-redirect.ts` now retires `/trading*`, `/trade`,
+  `/orders`, `/positions`, `/accounts`, `/paper`, `/signals`, `/intel`, `/scanner` to
+  `/`, and sends `/operations` to the Control Center panel.
+- Security: wildcard CORS removed from `nuxt.config.ts`; per-origin allow-list in
+  `server/middleware/api-guards.ts`; production JWT secret fails closed.
+- Package manager: pnpm declared in `package.json`; docs corrected.
+- Deleted: `nuxt.config.bak.txt` and four `tools/tmp-*` artifacts (reference-scanned).
+- Added reports: `v5-route-migration-map.md`, `v5-component-disposition.md`,
+  `v5-service-runtime-map.md`, `v5-cleanup-report.md`.
+
+**Still unchanged / not verified:**
+
+- No collection, index, document or production data was touched.
+- No deployment target was modified; worker restart isolation and lease fencing on a
+  second host remain unverified (see `v5-service-runtime-map.md` §7).
+- No browser acceptance run: this pass had no session against a running app with a live
+  Hub login. The build, typecheck and 1840-test app suite are the evidence recorded.
+- `exec/` and `simulation/` are untouched; the execution UI is unreachable but present.
+- The TM Hub `system_routes` catalog still advertises the hidden groups; trimming it is
+  an operator step (route map §6).
