@@ -6040,7 +6040,9 @@
         "note": "Trạng thái sẵn sàng lấy từ probe của supervisor, không phải từ tiến trình đang chạy. Lệnh được chấp nhận trước, sau đó được theo dõi đến trạng thái kết thúc.",
         "empty": "Chưa có service nào được đăng ký",
         "emptyHint": "Supervisor chưa công bố snapshot registry.",
-        "restarts": "Số lần khởi động lại"
+        "restarts": "Số lần khởi động lại",
+        "lastSuccess": "Thành công gần nhất",
+        "dependsOn": "phụ thuộc"
       },
       "sources": {
         "venues": "Sàn dữ liệu thị trường",
@@ -6064,7 +6066,16 @@
         "emptyHint": "Tạo luật trong workspace cảnh báo.",
         "matches": "khớp",
         "notified": "đã gửi",
-        "manage": "Quản lý cảnh báo"
+        "manage": "Quản lý cảnh báo",
+        "delivery": "Gửi thông báo",
+        "rules": "Luật cảnh báo",
+        "openOutbox": "Outbox",
+        "openHistory": "Lịch sử",
+        "queued": "đang chờ",
+        "sent": "đã gửi",
+        "accepted": "đã nhận",
+        "failed": "lỗi",
+        "dead": "dead-letter"
       },
       "storage": {
         "note": "Thời gian lưu do service retention thực thi. Thời gian lưu theo nguồn đọc từ news registry.",

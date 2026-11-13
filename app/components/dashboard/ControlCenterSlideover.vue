@@ -136,6 +136,25 @@ async function testConnection(row: AiProviderConnectionRow) {
   }
 }
 
+// --- Alerts & notifications --------------------------------------------------
+// Outbox counters come from the delivery ledger (notify/outbox.mjs states), so
+// the tab can say whether delivery is actually moving instead of only listing
+// rule definitions.
+const outbox = ref<{ stats: Record<string, number>, dead: unknown[], mongo: 'up' | 'down' } | null>(null)
+
+async function loadOutbox() {
+  try {
+    const res = await $fetch<{ data: { stats: Record<string, number>, dead: unknown[] }, meta: { mongo: 'up' | 'down' } }>(
+      '/api/v1/notifications/outbox'
+    )
+    outbox.value = { stats: res.data?.stats ?? {}, dead: res.data?.dead ?? [], mongo: res.meta?.mongo ?? 'down' }
+  } catch {
+    outbox.value = null
+  }
+}
+
+const outboxKeys = ['queued', 'sent', 'accepted', 'failed', 'dead'] as const
+
 // --- Storage ----------------------------------------------------------------
 // Real evidence only: the dataset retention manifest (count, retention window,
 // suspect flag). The API exposes no byte-level size, so none is shown.
@@ -203,7 +222,7 @@ async function loadSection(key: ControlCenterSection) {
   loaded.add(key)
   if (key === 'sources') await loadSources()
   else if (key === 'ai') await loadProviders()
-  else if (key === 'alerts') await loadRules()
+  else if (key === 'alerts') await Promise.all([loadRules(), loadOutbox()])
   else if (key === 'storage') await loadStorage()
   else if (key === 'diagnostics') await loadDiagnostics()
 }
@@ -271,6 +290,14 @@ const fmtUtc = (iso: string | null | undefined) => (iso ? `${iso.slice(0, 16).re
                   · {{ t('operations.services.columns.heartbeat') }}
                   {{ row.lastHeartbeatAt ? formatTimeAgo(new Date(row.lastHeartbeatAt)) : t('operations.services.neverStarted') }}
                   <span v-if="row.restartCount"> · {{ t('dash.control.services.restarts') }} {{ row.restartCount }}</span>
+                </p>
+                <p class="mt-0.5 text-[11px] text-muted truncate">
+                  {{ t('dash.control.services.lastSuccess') }}
+                  {{ row.lastSuccessAt ? formatTimeAgo(new Date(row.lastSuccessAt)) : t('operations.services.neverStarted') }}
+                  <span v-if="row.dependencies.length" class="text-dimmed">
+                    · {{ t('dash.control.services.dependsOn') }}
+                    {{ row.dependencies.map(d => d.serviceId).join(', ') }}
+                  </span>
                 </p>
                 <p v-if="row.lastError" class="mt-0.5 text-[11px] text-error line-clamp-1">{{ row.lastError }}</p>
               </div>
@@ -361,10 +388,32 @@ const fmtUtc = (iso: string | null | undefined) => (iso ? `${iso.slice(0, 16).re
       </div>
 
       <!-- ALERTS -->
-      <div v-else-if="section === 'alerts'" class="space-y-2">
+      <div v-else-if="section === 'alerts'" class="space-y-3">
         <div class="flex items-center gap-2">
+          <h3 class="text-xs font-semibold text-highlighted">{{ t('dash.control.alerts.delivery') }}</h3>
+          <UBadge v-if="outbox?.mongo === 'down'" color="warning" variant="subtle" size="xs" icon="i-lucide-database-zap"
+            :label="t('intel.mongoDown')" />
+          <UButton class="ms-auto" icon="i-lucide-refresh-cw" color="neutral" variant="ghost" size="xs"
+            :aria-label="t('common.refresh')" @click="loadOutbox" />
+        </div>
+        <div v-if="outbox" class="flex flex-wrap items-center gap-1.5">
+          <UBadge
+            v-for="key in outboxKeys"
+            :key="key"
+            :color="key === 'dead' && (outbox.stats[key] ?? 0) > 0 ? 'error' : key === 'failed' && (outbox.stats[key] ?? 0) > 0 ? 'warning' : key === 'sent' || key === 'accepted' ? 'success' : 'neutral'"
+            variant="subtle"
+            size="xs"
+            :label="`${t(`dash.control.alerts.${key}`)} ${outbox.stats[key] ?? 0}`"
+          />
+          <UButton :label="t('dash.control.alerts.openOutbox')" color="neutral" variant="ghost" size="xs" to="/alerts/outbox" />
+          <UButton :label="t('dash.control.alerts.openHistory')" color="neutral" variant="ghost" size="xs" to="/alerts/history" />
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <h3 class="text-xs font-semibold text-highlighted">{{ t('dash.control.alerts.rules') }}</h3>
           <UBadge color="neutral" variant="subtle" size="xs" :label="String(rules.length)" />
-          <UButton class="ms-auto" icon="i-lucide-refresh-cw" color="neutral" variant="ghost" size="xs" :aria-label="t('common.refresh')" @click="loadRules" />
+          <UButton class="ms-auto" icon="i-lucide-refresh-cw" color="neutral" variant="ghost" size="xs"
+            :aria-label="t('common.refresh')" @click="loadRules" />
         </div>
         <p class="text-[11px] text-muted">{{ t('dash.control.alerts.note') }}</p>
         <div v-if="rulesLoading" class="space-y-1"><USkeleton v-for="n in 3" :key="n" class="h-8 w-full" /></div>

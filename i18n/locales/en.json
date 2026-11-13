@@ -6040,7 +6040,9 @@
         "note": "Readiness comes from the supervisor probes, not from a running process. A command is accepted first, then polled to a terminal state.",
         "empty": "No services registered",
         "emptyHint": "The supervisor has not published a registry snapshot yet.",
-        "restarts": "Restarts"
+        "restarts": "Restarts",
+        "lastSuccess": "Last success",
+        "dependsOn": "depends on"
       },
       "sources": {
         "venues": "Market data venues",
@@ -6064,7 +6066,16 @@
         "emptyHint": "Create a rule from the alerts workspace.",
         "matches": "matches",
         "notified": "notified",
-        "manage": "Manage alerts"
+        "manage": "Manage alerts",
+        "delivery": "Notification delivery",
+        "rules": "Alert rules",
+        "openOutbox": "Outbox",
+        "openHistory": "History",
+        "queued": "queued",
+        "sent": "sent",
+        "accepted": "accepted",
+        "failed": "failed",
+        "dead": "dead"
       },
       "storage": {
         "note": "Retention is enforced by the retention service. Per-source retention is read from the news registry.",
