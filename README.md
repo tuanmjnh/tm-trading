@@ -6,6 +6,24 @@
 
 TM Trading theo hướng information-first/read-only. Không phát triển hoặc đưa order-entry, execution controls, private exchange trading credentials hay autonomous execution vào trải nghiệm chính. Các thư mục legacy được giữ lại cho đến khi audit dependency, data và tests hoàn tất.
 
+## Dashboard trung tâm (`/`)
+
+Mọi thứ người dùng cần nằm trên một trang; không có trang riêng cho từng loại dữ liệu.
+
+| Panel | Nội dung |
+|---|---|
+| System health | Trạng thái tổng + 5 nhóm worker (market/scanner/news/AI/notification), lần chạy thành công gần nhất |
+| Market overview | Regime, Fear & Greed, BTC/ETH 24h, breadth, trạng thái từng nguồn dữ liệu |
+| Signal center | Bảng sự kiện hợp nhất (engine + quan sát của service + tin), lọc theo loại/độ mới/watchlist |
+| Watchlist | Chỉ theo dõi: giá quan sát, 24h, sự kiện mới nhất (không có nút đặt lệnh) |
+| Market pulse | Movers, thanh khoản cao, biến động, khối lượng, funding, OI, thanh lý (phân biệt sàn báo cáo vs ước tính) |
+| News & events | Tiêu đề có nguồn + sự kiện thị trường kèm mức xác thực chéo |
+| Market briefing | Kết luận theo luật (rules-based) cho ngắn/swing/dài hạn kèm bằng chứng, bằng chứng ngược, hạn chế |
+
+Cách tương tác: bấm một dòng → **Slideover** chi tiết; sửa nhanh → **Modal**; cấu hình và điều khiển dịch vụ → **Control Center** (một Slideover, 7 tab). Deep link: `/?panel=signal|asset|news|control` — không bao giờ chứa secret.
+
+Mọi giá trị đều có nguồn và `asOf`; dữ liệu cũ bị gắn nhãn *stale* chứ không hiển thị như realtime. Chi tiết quy ước UI: `docs/web-app/ui-design-system.md` § "V5.0 Dashboard conventions".
+
 ```
 tm-trading/
 ├─ docs/
@@ -28,7 +46,7 @@ tm-trading/
 ├─ server/
 │  └─ webhook.mjs          webhook receiver (Telegram / Discord)
 ├─ engine/                 ← BACKBONE: tín hiệu + backtest (Phase 2–5)
-├─ exec/                   ← risk gate + paper/real execution (Phase 6+)
+├─ exec/                   ← QUARANTINE: risk gate + paper/real; KHÔNG nối vào UI V5.0
 ├─ services/               ← market intelligence + heartbeat (Phase 8+)
 ├─ app/                    ← UI Nuxt dashboard (Phase 7+)
 ├─ ai/                     ← AI copilot (Phase 11+)
