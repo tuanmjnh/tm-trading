@@ -13,19 +13,32 @@
 export interface LegacyRedirect {
   from: string
   to: string
+  /**
+   * Keep the remaining sub-path (default true). Set false when the whole subtree
+   * is retired and every child must land on the same target (V5.0 execution UI).
+   */
+  keepRest?: boolean
 }
 
 export const LEGACY_REDIRECTS: ReadonlyArray<LegacyRedirect> = [
-  { from: '/intel', to: '/markets' },
-  { from: '/scanner', to: '/markets/scanner' },
+  // V5.0: the intel/scanner surfaces are Dashboard panels now.
+  { from: '/intel', to: '/', keepRest: false },
+  { from: '/scanner', to: '/', keepRest: false },
   { from: '/calendar', to: '/markets/calendar' },
 
-  { from: '/trade', to: '/trading' },
-  { from: '/signals', to: '/trading/signals' },
-  { from: '/paper', to: '/trading/paper' },
-  { from: '/orders', to: '/trading/orders' },
-  { from: '/positions', to: '/trading/positions' },
-  { from: '/accounts', to: '/trading/accounts' },
+  // V5.0 §9: the execution workspace (order entry, positions, paper accounts) is
+  // retired from the active product. The page files stay in the tree for audit
+  // and rollback, but no route reaches them. See docs/web-app/v5-route-migration-map.md.
+  { from: '/trade', to: '/', keepRest: false },
+  { from: '/trading', to: '/', keepRest: false },
+  { from: '/signals', to: '/', keepRest: false },
+  { from: '/paper', to: '/', keepRest: false },
+  { from: '/orders', to: '/', keepRest: false },
+  { from: '/positions', to: '/', keepRest: false },
+  { from: '/accounts', to: '/', keepRest: false },
+
+  // The Operations page is now the Control Center slideover.
+  { from: '/operations', to: '/?panel=control&section=services', keepRest: false },
 
   { from: '/strategies', to: '/strategy-lab' },
   { from: '/indicators', to: '/strategy-lab/indicators' },
@@ -61,9 +74,9 @@ export const LEGACY_REDIRECTS: ReadonlyArray<LegacyRedirect> = [
 
 /** Matches `path` against a legacy prefix on a path-segment boundary. */
 export function matchLegacy(path: string): { to: string, rest: string } | null {
-  for (const { from, to } of LEGACY_REDIRECTS) {
+  for (const { from, to, keepRest } of LEGACY_REDIRECTS) {
     if (path === from) return { to, rest: '' }
-    if (path.startsWith(`${from}/`)) return { to, rest: path.slice(from.length) }
+    if (path.startsWith(`${from}/`)) return { to, rest: keepRest === false ? '' : path.slice(from.length) }
   }
   return null
 }
