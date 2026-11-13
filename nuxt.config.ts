@@ -12,6 +12,19 @@ const IS_PRODUCTION = process.env.NODE_ENV === 'production'
 const HUB_ENV = resolveHubEnv(process.env, { isProduction: IS_PRODUCTION })
 hubEnvReport(HUB_ENV, { isProduction: IS_PRODUCTION })
 
+// V5.0 §8: a missing production secret must fail CLOSED (tokens rejected),
+// never fall back to a known string. Dev keeps a local-only placeholder so a
+// clone can boot without a hub.
+const DEV_JWT_PLACEHOLDER = 'dev-only-insecure-secret-do-not-use-in-production'
+const JWT_SECRET = process.env.AUTH_JWT_SECRET || (IS_PRODUCTION ? '' : DEV_JWT_PLACEHOLDER)
+const JWT_PUBLIC_KEYS = process.env.AUTH_JWT_PUBLIC_KEYS || ''
+if (IS_PRODUCTION && !JWT_SECRET && !JWT_PUBLIC_KEYS) {
+  console.error(
+    '[security] AUTH_JWT_SECRET and AUTH_JWT_PUBLIC_KEYS are both empty in production. '
+    + 'Access tokens will be rejected (fail closed). Set one of them in the deployment environment.'
+  )
+}
+
 const PNPM_VIRTUAL = join(ROOT_DIR, 'node_modules', '.pnpm', 'node_modules')
 const PROSEMIRROR_PKGS = [
   'prosemirror-state',
@@ -129,9 +142,9 @@ export default defineNuxtConfig({
   runtimeConfig: {
     supabaseUrl: process.env.SUPABASE_URL || '',
     supabaseKey: process.env.SUPABASE_KEY || '',
-    jwtSecret: process.env.AUTH_JWT_SECRET || 'super-secure-shared-secret-key-32-chars-min',
+    jwtSecret: JWT_SECRET,
     // JSON array of Hub public JWKs (RS256). Public material: safe to ship.
-    jwtPublicKeys: process.env.AUTH_JWT_PUBLIC_KEYS || '',
+    jwtPublicKeys: JWT_PUBLIC_KEYS,
     configEncryptionKey: process.env.CONFIG_ENCRYPTION_KEY || '',
     public: {
       apiPrefix: '/api/v1',
@@ -210,17 +223,8 @@ export default defineNuxtConfig({
     alias: {
       services: join(ROOT_DIR, 'services') + '/',
     },
-    routeRules: {
-      // Legacy §58.2 route re-home redirects live in server/middleware/legacy-redirect.ts
-      // (301s that must preserve dynamic segments, e.g. /runs/:id -> /test-center/runs/:id).
-      '/api/**': {
-        cors: true,
-        headers: {
-          'Access-Control-Allow-Methods': 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-App-Id, X-Requested-With'
-        }
-      }
-    }
+    // CORS is owned by server/middleware/api-guards.ts: an explicit origin
+    // allow-list, never a wildcard. A wildcard header here would override it.
+    routeRules: {}
   }
 })

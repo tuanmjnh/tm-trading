@@ -11,6 +11,8 @@ import type { H3Event } from 'h3'
  * - Preflight OPTIONS returns 204 directly from middleware.
  */
 
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
+
 interface ApiFeatureSection {
   rateLimit?: boolean | { enabled?: boolean; maxPerMinute?: number }
   cors?: boolean | { enabled?: boolean; origins?: unknown }
@@ -38,9 +40,18 @@ function applyCors(event: H3Event, flags: Record<string, unknown>): void {
       : true
   if (!enabled) return
 
-  const origins = isObj(corsCfg) && Array.isArray(corsCfg.origins)
-    ? corsCfg.origins.filter((o): o is string => typeof o === 'string')
-    : []
+  // Flag origins plus the deployment allow-list (comma-separated). The env form
+  // exists so an operator can lock CORS down without touching the flags store.
+  const envOrigins = String(process.env.API_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(o => o.trim())
+    .filter(Boolean)
+  const origins = [
+    ...(isObj(corsCfg) && Array.isArray(corsCfg.origins)
+      ? corsCfg.origins.filter((o): o is string => typeof o === 'string')
+      : []),
+    ...envOrigins
+  ]
 
   const origin = getHeader(event, 'origin')
 
@@ -50,16 +61,42 @@ function applyCors(event: H3Event, flags: Record<string, unknown>): void {
   setHeader(event, 'Access-Control-Max-Age', 86400)
   setHeader(event, 'Vary', 'Origin')
 
-  if (!origin || origins.length === 0 || origins.includes('*')) {
-    // No origin (server-to-server) or empty whitelist -> allow any.
-    setHeader(event, 'Access-Control-Allow-Origin', '*')
+  if (!origin) {
+    // Server-to-server: no browser policy to satisfy. A wildcard here would be
+    // inert for CORS but misleading in logs/config reviews.
     return
   }
-  if (origins.includes(origin)) {
+
+  const allowAny = origins.includes('*')
+  const sameOrigin = isSameOrigin(event, origin)
+
+  if (allowAny || sameOrigin || origins.includes(origin)) {
+    setHeader(event, 'Access-Control-Allow-Origin', allowAny ? '*' : origin)
+    if (!allowAny) setHeader(event, 'Access-Control-Allow-Credentials', 'true')
+    return
+  }
+
+  if (!IS_PRODUCTION && origins.length === 0) {
+    // Local dev convenience only: an unconfigured dev server keeps accepting the
+    // LAN origin used by phones/tablets on the same network.
     setHeader(event, 'Access-Control-Allow-Origin', origin)
+    setHeader(event, 'Access-Control-Allow-Credentials', 'true')
     return
   }
-  // Origin outside whitelist -> do not send Allow-Origin (blocked by browser on client).
+
+  // Origin outside the allow-list -> no Allow-Origin header, so the browser
+  // blocks the response. Production with an empty allow-list is same-origin only.
+}
+
+/** True when the Origin header points at the same host that served the request. */
+function isSameOrigin(event: H3Event, origin: string): boolean {
+  try {
+    const target = new URL(origin)
+    const host = getHeader(event, 'x-forwarded-host') || getHeader(event, 'host') || ''
+    return !!host && target.host === host
+  } catch {
+    return false
+  }
 }
 
 // P0-6 — browser-side caching for the read-heavy GET endpoints.
