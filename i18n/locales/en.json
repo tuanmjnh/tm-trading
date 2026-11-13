@@ -6068,7 +6068,14 @@
       "storage": {
         "note": "Retention is enforced by the retention service. Per-source retention is read from the news registry.",
         "days": "days",
-        "open": "Open data center"
+        "open": "Open data center",
+        "datasets": "Dataset retention manifest",
+        "files": "datasets",
+        "rows": "rows stored",
+        "noDatasets": "No dataset manifest rows yet",
+        "news": "News source retention",
+        "sizeNote": "Byte-level size is not exposed by the data API, so none is shown.",
+        "suspect": "suspect"
       },
       "settings": {
         "note": "Identity, roles and shared configuration are owned by TM Hub. These links open the permission-gated admin surfaces.",

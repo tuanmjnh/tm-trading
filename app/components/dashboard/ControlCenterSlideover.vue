@@ -10,6 +10,7 @@ import type { MarketSourceHealth } from '#shared/types/health'
 import type { NewsSourcePublic } from '#shared/types/news'
 import type { AiProviderConnectionRow, AiProvidersResponse } from '~/types/aiProviders'
 import type { AlertRule } from '#shared/types/alertRules'
+import type { Dataset } from '#shared/types/data'
 import type { ControlCenterSection } from '~/composables/useAppOverlay'
 import { SERVICE_ACTIONS_UI, isActionDisabled, type ServiceActionId } from '~/utils/serviceActions'
 import { runServiceOperation } from '~/utils/serviceOperation'
@@ -135,6 +136,42 @@ async function testConnection(row: AiProviderConnectionRow) {
   }
 }
 
+// --- Storage ----------------------------------------------------------------
+// Real evidence only: the dataset retention manifest (count, retention window,
+// suspect flag). The API exposes no byte-level size, so none is shown.
+const dataCenter = useDataCenter()
+const datasets = ref<Dataset[]>([])
+const storageLoading = ref(false)
+
+async function loadStorage() {
+  storageLoading.value = true
+  try {
+    datasets.value = await dataCenter.datasets({ limit: 200 })
+  } finally {
+    storageLoading.value = false
+  }
+}
+
+/** Per-kind rollup of the manifest — datasets, stored rows, retention window. */
+const storageSummary = computed(() => {
+  const byKind = new Map<string, { datasets: number, rows: number, minRetention: number, maxRetention: number, suspect: number }>()
+  for (const row of datasets.value) {
+    const key = row.kind || 'unknown'
+    const entry = byKind.get(key) ?? { datasets: 0, rows: 0, minRetention: row.retentionDays, maxRetention: row.retentionDays, suspect: 0 }
+    entry.datasets += 1
+    entry.rows += row.count ?? 0
+    entry.minRetention = Math.min(entry.minRetention, row.retentionDays)
+    entry.maxRetention = Math.max(entry.maxRetention, row.retentionDays)
+    if (row.suspect) entry.suspect += 1
+    byKind.set(key, entry)
+  }
+  return [...byKind.entries()]
+    .map(([kind, entry]) => ({ kind, ...entry }))
+    .sort((a, b) => b.rows - a.rows)
+})
+
+const suspectDatasets = computed(() => datasets.value.filter(row => row.suspect).length)
+
 // --- Alerts -----------------------------------------------------------------
 const rules = ref<AlertRule[]>([])
 const rulesLoading = ref(false)
@@ -167,6 +204,7 @@ async function loadSection(key: ControlCenterSection) {
   if (key === 'sources') await loadSources()
   else if (key === 'ai') await loadProviders()
   else if (key === 'alerts') await loadRules()
+  else if (key === 'storage') await loadStorage()
   else if (key === 'diagnostics') await loadDiagnostics()
 }
 
@@ -349,14 +387,40 @@ const fmtUtc = (iso: string | null | undefined) => (iso ? `${iso.slice(0, 16).re
       </div>
 
       <!-- STORAGE -->
-      <div v-else-if="section === 'storage'" class="space-y-2">
+      <div v-else-if="section === 'storage'" class="space-y-3">
         <p class="text-[11px] text-muted">{{ t('dash.control.storage.note') }}</p>
+
+        <div class="flex items-center gap-2">
+          <h3 class="text-xs font-semibold text-highlighted">{{ t('dash.control.storage.datasets') }}</h3>
+          <UBadge v-if="suspectDatasets" color="warning" variant="subtle" size="xs"
+            :label="`${suspectDatasets} ${t('dash.control.storage.suspect')}`" />
+          <UButton class="ms-auto" icon="i-lucide-refresh-cw" color="neutral" variant="ghost" size="xs"
+            :aria-label="t('common.refresh')" @click="loadStorage" />
+        </div>
+
+        <div v-if="storageLoading" class="space-y-1"><USkeleton v-for="n in 3" :key="n" class="h-6 w-full" /></div>
+        <p v-else-if="!storageSummary.length" class="text-[11px] text-dimmed">{{ t('dash.control.storage.noDatasets') }}</p>
+        <ul v-else class="divide-y divide-default/60">
+          <li v-for="row in storageSummary" :key="row.kind" class="flex flex-wrap items-center gap-2 py-1.5">
+            <span class="text-xs font-mono text-highlighted w-28 truncate">{{ row.kind }}</span>
+            <UBadge color="neutral" variant="subtle" size="xs" :label="`${row.datasets} ${t('dash.control.storage.files')}`" />
+            <span class="text-[11px] text-muted">{{ row.rows.toLocaleString() }} {{ t('dash.control.storage.rows') }}</span>
+            <span class="text-[11px] text-dimmed ms-auto">
+              {{ row.minRetention === row.maxRetention ? row.minRetention : `${row.minRetention}–${row.maxRetention}` }}
+              {{ t('dash.control.storage.days') }}
+            </span>
+          </li>
+        </ul>
+
+        <h3 class="text-xs font-semibold text-highlighted pt-1">{{ t('dash.control.storage.news') }}</h3>
         <ul class="divide-y divide-default/60">
           <li v-for="s in newsSources" :key="`ret-${s.sourceId}`" class="flex items-center gap-2 py-1.5">
             <span class="text-xs text-highlighted truncate flex-1">{{ s.name }}</span>
             <UBadge color="neutral" variant="subtle" size="xs" :label="`${s.retentionDays} ${t('dash.control.storage.days')}`" />
           </li>
         </ul>
+
+        <p class="text-[10px] text-dimmed">{{ t('dash.control.storage.sizeNote') }}</p>
         <UButton :label="t('dash.control.storage.open')" color="neutral" variant="ghost" size="xs" to="/data-research/data" />
       </div>
 

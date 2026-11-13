@@ -6068,7 +6068,14 @@
       "storage": {
         "note": "Thời gian lưu do service retention thực thi. Thời gian lưu theo nguồn đọc từ news registry.",
         "days": "ngày",
-        "open": "Mở data center"
+        "open": "Mở data center",
+        "datasets": "Manifest lưu trữ dataset",
+        "files": "dataset",
+        "rows": "dòng đã lưu",
+        "noDatasets": "Chưa có dòng manifest dataset nào",
+        "news": "Thời gian lưu theo nguồn tin",
+        "sizeNote": "API dữ liệu không cung cấp dung lượng byte, nên không hiển thị.",
+        "suspect": "nghi ngờ"
       },
       "settings": {
         "note": "Danh tính, vai trò và cấu hình dùng chung thuộc TM Hub. Các liên kết này mở trang admin có phân quyền.",
