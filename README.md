@@ -44,11 +44,11 @@ tm-trading/
 ## 1. Cài đặt & chạy
 
 Cần **Node.js ≥ 18**. Repo có dependency (Mongoose + bộ Nuxt kế thừa từ `tm-hub`) nên phải
-`npm install` trước. **Pine tooling và engine core vẫn zero-dep** — `npm run pine:build`,
+`pnpm install` (lockfile `pnpm-lock.yaml`) trước. **Pine tooling và engine core vẫn zero-dep** — `npm run pine:build`,
 `npm run pine:test`, `npm run test:engine` chạy được kể cả khi chưa cài đủ gói UI.
 
 ```bash
-npm install            # Mongoose + Nuxt UI (cache trong workspace qua .npmrc)
+pnpm install           # Mongoose + Nuxt UI (lockfile pnpm-lock.yaml)
 npm run pine:build          # ghép pine/parts* + pine/shared -> pine/dist
 npm test               # smoke (173) + engine (176) + db (49, tự SKIP nếu không có Mongo)
 npm run verify         # pine:build + docs:check + test

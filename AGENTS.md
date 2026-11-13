@@ -32,7 +32,11 @@ Mongoose are only required for the dashboard and the store layer.
 
 ## Commands
 
-**Package manager is `npm`** (not pnpm). See `.npmrc` and "Environment gotchas" below.
+**Dependencies are installed with `pnpm`** — `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the
+`node_modules/.pnpm` store are the installed state (verified 2026-11-13), and `package.json`
+declares `packageManager`. `pnpm run <script>` is canonical; the `npm run <script>` examples below
+still work because npm only executes the script. Never mix installers and never add a
+second lockfile. See `.npmrc` and "Environment gotchas" below.
 
 ```bash
 npm run pine:build          # assemble pine/parts* -> pine/dist (13 targets) + lint

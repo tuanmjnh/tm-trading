@@ -2,6 +2,7 @@
   "name": "tm-trading",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@12.15.0",
   "type": "module",
   "description": "Automated Trading, Signal Engine, Backtesting & Quantitative Risk Management",
   "engines": {

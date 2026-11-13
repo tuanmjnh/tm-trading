@@ -85,6 +85,13 @@ const EXCEPTIONS = new Set([
   'exec/mt5/server.py',
   'exec/mt5/test.mjs',
   'docs/engine/mt5-ipc.md',
+  // V5.0 cleanup: removed instead of migrated. Cited by the baseline inventory
+  // and the V5 cleanup report as deletion records, not as live paths.
+  'nuxt.config.bak.txt',
+  'tools/tmp-bot-create.mjs',
+  'tools/tmp-inspect-bot-data.mjs',
+  'tools/tmp-params.json',
+  'tools/tmp-proposal.json',
 ])
 const pathRe = /`([A-Za-z][\w./-]*\.(?:mjs|cjs|js|mts|ts|vue|py|md|json|pine))`/g
 for (const rel of docFiles) {
