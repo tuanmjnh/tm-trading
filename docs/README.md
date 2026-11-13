@@ -2,6 +2,9 @@
 
 This directory contains the technical documentation, architectural specifications, indicator methodologies, and web application designs for the TM Trading ecosystem.
 
+> **Current product/UI authority: V5.0** — read [tm-trading-central-dashboard-v5.0.md](web-app/tm-trading-central-dashboard-v5.0.md) first for the single-dashboard product scope, Modal/Slideover rules, Control Center, deployment boundaries and cleanup plan. V4.2 remains a technical reference for service reliability/readiness and its audits; V3.x documents are historical unless explicitly retained as technical references.
+
+
 ---
 
 ## Directory Organization
@@ -33,9 +36,9 @@ docs/
 - [docs/user-guide/runbooks.md](file:///d:/Applications/tm-trading/docs/user-guide/runbooks.md): Recovery runbooks for every failure mode (crash, stale feed, lease, backlog, storage, restart).
 - [docs/web-app/v4.2-drills.md](file:///d:/Applications/tm-trading/docs/web-app/v4.2-drills.md): The reliability drill harness (`npm run drills`) — what each drill proves and what still needs operator evidence.
 
-**Changing the application?** Start with the V4.2 authority and its audit set.
+**Changing the application?** Start with the V5.0 product/UI authority, then consult the V4.2 technical reliability and audit set.
 
-- [docs/web-app/tm-trading-roadmap-v4.2.md](file:///d:/Applications/tm-trading/docs/web-app/tm-trading-roadmap-v4.2.md): **Current authority** — product scope, compact IA, and §17 service operations.
+- [docs/web-app/tm-trading-roadmap-v4.2.md](file:///d:/Applications/tm-trading/docs/web-app/tm-trading-roadmap-v4.2.md): **Technical reference** — retain §17 service lifecycle, reliability, readiness, authorization and operations rules; V5.0 governs product scope and primary UI.
 - [docs/web-app/v4.2-delivery-plan.md](file:///d:/Applications/tm-trading/docs/web-app/v4.2-delivery-plan.md): The 10-stage delivery plan (S0–S9) and decisions A1–A7.
 - [docs/web-app/v4-product-scope-audit.md](file:///d:/Applications/tm-trading/docs/web-app/v4-product-scope-audit.md): S0 — page inventory and capability audit.
 - [docs/web-app/v4-route-migration-map.md](file:///d:/Applications/tm-trading/docs/web-app/v4-route-migration-map.md): S0 — all 72 seeded routes mapped to the V4 IA.
