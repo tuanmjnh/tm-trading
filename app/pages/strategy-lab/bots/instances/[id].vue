@@ -2,7 +2,7 @@
 import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 import type { BotInstance } from '#shared/types/bots'
 import { formatTimeAgo } from '@vueuse/core'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 // Bot Instance detail (roadmap §57.4 H / §58.9 Slice 2). One concrete session:
 // lifecycle state, event lag, signal/order/trade counts and the read-only

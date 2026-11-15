@@ -3,7 +3,7 @@ import { useModuleExport, buildExportChildren } from '~/composables/admin/useMod
 import type { HeaderAction } from '~/components/base/HeaderActions.vue'
 import type { GridColumn } from '~/components/gridList/Index.vue'
 import { formatTimeAgo } from '@vueuse/core'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 interface AuditLogItem {
   _id?: string

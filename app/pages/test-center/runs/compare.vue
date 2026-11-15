@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { RunSeries, RunSeriesDetail } from '#shared/types/runs'
-import { buildOverlay, metricRows, paramsDiff, paramsValue } from '~~/shared/utils/compare'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { buildOverlay, metricRows, paramsDiff, paramsValue } from '#shared/utils/compare'
+import { getErrorMessage } from '#shared/utils/errors'
 
 const { t } = useI18n()
 const notify = useNotify()

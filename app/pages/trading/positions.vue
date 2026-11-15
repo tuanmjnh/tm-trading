@@ -2,7 +2,7 @@
 import type { GridColumn } from '~/components/gridList/Index.vue'
 import type { PositionItem } from '#shared/types/positions'
 import { formatTimeAgo } from '@vueuse/core'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 
 const { t } = useI18n()

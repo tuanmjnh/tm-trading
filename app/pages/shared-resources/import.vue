@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { getErrorMessage } from '~/shared/utils/errors'
-import { readCsv, readJson } from '~/shared/utils/helper'
+import { getErrorMessage } from '#shared/utils/errors'
+import { readCsv, readJson } from '~/utils/helper'
 
 definePageMeta({
   middleware: () => {

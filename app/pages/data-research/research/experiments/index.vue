@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
 import type { Experiment, ExperimentState } from '#shared/types/research'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 // Experiments (roadmap §58.9 Slice 5, §28). The human review queue for AI
 // candidates: every row is a persisted `experiments` doc. Creating one from a

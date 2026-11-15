@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { LiveAccount } from '#shared/types/positions'
 import type { RiskAccountDay } from '#shared/types/risk'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 
 // =============================================================================

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { docsSdkDescriptionFor, docsUsageCodeFor, HUB_DOCS_CONTENT, type HubDocsContent, type DocsRoadmapStatus } from '#shared/docs/content'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 const { t, locale } = useI18n()
 const notify = useNotify()

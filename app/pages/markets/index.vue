@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { IntelData, IntelZone, IntelFlow, IntelNewsItem } from '#shared/types/intel'
 import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 // =============================================================================
 //  Market Intel — dedicated full-page view of the SAME read-only payload the

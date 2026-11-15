@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
 import type { AlertRule, AlertRuleDir } from '#shared/types/alertRules'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 // =============================================================================
 //  Alert Rules (roadmap §58.5 /alerts; §58.6 Notifications != Alert Rules).

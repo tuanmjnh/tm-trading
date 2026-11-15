@@ -3,7 +3,7 @@ import type { GridColumn } from '~/components/gridList/Index.vue'
 import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 import type { StrategyProfile, StrategyVersion } from '#shared/types/strategy'
 import { formatTimeAgo } from '@vueuse/core'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 // Strategy detail (roadmap §57.4 E / §58.9 Slice 2). Read-only profile plus the
 // immutable version history it can pin to. Reads existing /api/v1/strategies.

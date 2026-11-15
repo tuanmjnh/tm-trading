@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 // =============================================================================
 //  Phase H (§61.12) — reusable read-only contextual assistant panel.

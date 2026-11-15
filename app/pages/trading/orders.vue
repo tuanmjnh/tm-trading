@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
 import type { PaperOrderItem } from '#shared/types/orders'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 
 // =============================================================================

@@ -4,7 +4,7 @@ import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 import type { FilterChip } from '~/components/shared/FilterChips.vue'
 import type { AiAgent, AiAgentDetail, AiAgentsStatus, AiAgentValidation, AiPolicyLevel } from '#shared/types/ai'
 import { formatTimeAgo } from '@vueuse/core'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 // =============================================================================
 //  AI Agents (V3.5 §59.15 Slice D — governance).

@@ -2,7 +2,7 @@
 import { useModuleExport, buildExportChildren } from '~/composables/admin/useModuleExport'
 import type { HeaderAction } from '~/components/base/HeaderActions.vue'
 import { MODULE_DEFINITIONS } from '#shared/rbac'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 interface PermissionRow {
   id: string

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { AccountItem } from '#shared/types/accounts'
 import type { PaperAccountSummary } from '~/composables/usePaperAccounts'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 
 // =============================================================================

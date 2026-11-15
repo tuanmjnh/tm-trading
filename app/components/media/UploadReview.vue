@@ -19,7 +19,7 @@ const emit = defineEmits<{
 const { uploadToCloudinary } = useCloudinary()
 const toast = useToast()
 const { t } = useI18n()
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 const fileList = ref<File[]>([])
 const uploading = ref(false)
 const uploadProgress = ref<Record<string, number>>({})

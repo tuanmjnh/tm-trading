@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 import type { IndicatorMeta, IndicatorOutputDef } from '#shared/types/indicators'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 // Indicator detail (roadmap §57.4 D / §58.9 Slice 2). Read-only registry entry:
 // the canonical definition owned by the engine (D1). The dashboard shows meta

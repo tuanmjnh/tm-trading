@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { EvidenceSet } from '#shared/types/research'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 // Evidence Set detail (roadmap §59.15 Slice E).
 //

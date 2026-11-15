@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 definePageMeta({
   alias: ['/admin-system/hub-config', '/admin-system/hub-data']

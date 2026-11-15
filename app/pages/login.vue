@@ -2,7 +2,7 @@
 import { z } from 'zod'
 import type { LoginRequest, TotpChallenge } from '#shared/types/auth'
 import { isTotpChallenge } from '#shared/types/auth'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 definePageMeta({ layout: false })
 

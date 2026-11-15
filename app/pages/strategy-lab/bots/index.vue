@@ -5,7 +5,7 @@ import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 import type { FilterChip } from '~/components/shared/FilterChips.vue'
 import type { BotInstance, BotProfile } from '#shared/types/bots'
 import type { LiveBotSignal } from '~/composables/useBotsLive'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 import { formatTimeAgo } from '@vueuse/core'
 
 // Unified bot management: PROFILES (reusable config) + INSTANCES (runs) on one

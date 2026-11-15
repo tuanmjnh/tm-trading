@@ -1,5 +1,5 @@
 import type { HeaderActionChild } from '~/components/base/HeaderActions.vue'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 export type ExportFormat = 'csv' | 'json' | 'xlsx'
 

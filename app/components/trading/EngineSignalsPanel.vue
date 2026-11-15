@@ -3,7 +3,7 @@ import type { GridColumn } from '~/components/gridList/Index.vue'
 import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 import type { NativeSignalItem } from '#shared/types/signals'
 import { formatTimeAgo } from '@vueuse/core'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 // =============================================================================
 //  Native engine signals panel (roadmap §61.17 Phase D — D5).

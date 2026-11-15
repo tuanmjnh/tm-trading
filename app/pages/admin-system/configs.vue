@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 import type { HeaderAction } from '~/components/base/HeaderActions.vue'
 import { buildExportChildren, useModuleExport } from '~/composables/useModuleExport'
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { MarketSourceHealth, MarketSourceHealthResponse } from '#shared/types/health'
 import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 // Market Data Sources (roadmap §58 acceptance #6). Live per-venue probes of the
 // market data providers (§30.1) — DISTINCT from tm-hub connection records

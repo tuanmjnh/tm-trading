@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 import type { MethodMeta } from '#shared/types/methods'
 import type { BotExecutionConfig } from '#shared/types/bots'
 import type { SymbolRow } from '~/components/trading/SymbolSearchModal.vue'

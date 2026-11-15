@@ -1,4 +1,4 @@
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 export const useWebPush = () => {
   const { hubFetch, appId } = useHub()

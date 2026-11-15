@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { AcceptanceGate, ArmComparison, ArmMetrics, Experiment, ExperimentResearch } from '#shared/types/research'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 // Experiment detail (roadmap §58.9 Slice 5, §28). One candidate's full trail:
 // its lifecycle history, the four arms scored on the SAME metrics block, the

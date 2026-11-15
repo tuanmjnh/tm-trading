@@ -4,7 +4,7 @@ import type { Role } from '#shared/types/rbac'
 import type { RouteTreeNode } from '#shared/types/rbac'
 import type { HeaderAction } from '~/components/base/HeaderActions.vue'
 import { hasAllRoutes } from '#shared/rbac'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 const { t } = useI18n()
 const notify = useNotify()

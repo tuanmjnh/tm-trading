@@ -2,7 +2,7 @@
 import * as z from 'zod'
 import { isFullAccessRole, groupFlatPermissions } from '#shared/rbac'
 import type { Role, ModulePermission, PermissionAction, RouteTreeNode } from '#shared/types/rbac'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 const props = defineProps<{
   role: Role | null

@@ -2,7 +2,7 @@
 import type { Proposal, StrategyResearch } from '#shared/types/research'
 import type { EvidenceSet } from '#shared/types/research'
 import type { StrategyProfile } from '#shared/types/strategy'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 // AI Research workspace (roadmap §58.9 Slice 5, §27 / §57.9-N).
 //

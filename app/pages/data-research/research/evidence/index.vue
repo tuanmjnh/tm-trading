@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { GridColumn } from '~/components/gridList/Index.vue'
 import type { EvidenceKind, EvidenceSet } from '#shared/types/research'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 // Research Evidence Sets (roadmap §59.15 Slice E).
 //

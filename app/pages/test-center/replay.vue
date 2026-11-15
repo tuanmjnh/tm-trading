@@ -13,7 +13,7 @@
 //  manual actions (create/step/play/pause) return their own fresh payload.
 // =============================================================================
 import type { ReplayCandle, ReplayCreateInput, ReplayMode, ReplayPosition, ReplaySummary } from '#shared/types/replay'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 import { challengeLevels, challengeScore } from '../../../simulation/challenge.mjs'
 
 const { t } = useI18n()

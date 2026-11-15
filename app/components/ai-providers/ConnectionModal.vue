@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 import type { AiProviderConnectionRow, AiProviderDef } from '~/types/aiProviders'
 import { aiProviderErrorText } from '~/utils/aiProvidersUi'
 

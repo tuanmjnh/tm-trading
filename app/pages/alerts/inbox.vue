@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 import type { InboxDetail, InboxItem, InboxProfile } from '~/types/inbox'
 import type { HeaderAction } from '~/components/base/HeaderActions.vue'
 import { parseAddress } from '~/utils/inboxHtml'

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 import type { MethodMeta } from '#shared/types/methods'
 import type { ReplaySummary } from '#shared/types/replay'
 import type { TestRunResult } from '#shared/types/runs'

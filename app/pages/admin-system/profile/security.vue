@@ -2,7 +2,7 @@
 import * as z from 'zod'
 import type { NavigationMenuItem } from '@nuxt/ui'
 import type { PasskeyInfo } from '#shared/types/webauthn'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 definePageMeta({
   alias: ['/profile/security']
 })

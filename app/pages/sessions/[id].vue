@@ -5,7 +5,7 @@ import type { PaperOrderItem } from '#shared/types/orders'
 import type { PaperFillItem } from '#shared/types/fills'
 import type { PositionItem } from '#shared/types/positions'
 import { formatTimeAgo } from '@vueuse/core'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 // =============================================================================
 //  Session Detail (V3.4 Slice C4 / §59.15): Server-authoritative runtime state,

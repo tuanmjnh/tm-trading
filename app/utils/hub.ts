@@ -1,4 +1,4 @@
-import { DEFAULT_HUB_URL } from '~~/shared/utils/hubEnv'
+import { DEFAULT_HUB_URL } from '#shared/utils/hubEnv'
 
 // =============================================================================
 //  One Hub endpoint for the whole app.

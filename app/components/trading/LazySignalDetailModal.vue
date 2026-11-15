@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { SignalItem, NativeSignalItem } from '#shared/types/signals'
 import { formatTimeAgo } from '@vueuse/core'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 const { t } = useI18n()
 const notify = useNotify()

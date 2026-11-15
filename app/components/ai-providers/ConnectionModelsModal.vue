@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 import type { AiProviderCatalogModel } from '~/types/aiProviders'
 import { aiProviderSourceBadge, aiProviderErrorText } from '~/utils/aiProvidersUi'
 

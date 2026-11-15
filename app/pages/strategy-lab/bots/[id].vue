@@ -3,7 +3,7 @@ import type { GridColumn } from '~/components/gridList/Index.vue'
 import type { MetricItem } from '~/components/shared/MetricRibbon.vue'
 import type { BotInstance, BotProfile } from '#shared/types/bots'
 import { formatTimeAgo } from '@vueuse/core'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 // Bot Profile detail (roadmap §57.4 G / §58.9 Slice 2). The reusable execution
 // contract: which immutable strategy version it points at, its mode and risk

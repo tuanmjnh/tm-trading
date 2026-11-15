@@ -5,7 +5,7 @@ import type { BotInstance } from '#shared/types/bots'
 import type { ReplaySummary } from '#shared/types/replay'
 import type { TradingSession } from '~/composables/useSessions'
 import { formatTimeAgo } from '@vueuse/core'
-import { getErrorMessage } from '~/shared/utils/errors'
+import { getErrorMessage } from '#shared/utils/errors'
 
 // =============================================================================
 //  Sessions (V3.4 Slices B+C): durable trading sessions on top, pre-session
