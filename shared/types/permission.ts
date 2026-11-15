@@ -1,4 +1,5 @@
 export type PermissionApiAction = 'read' | 'create' | 'update' | 'delete' | 'export' | 'import' | 'manage'
+export type ServerPermissionAction = PermissionApiAction
 export type PermissionScope = 'own' | 'team' | 'app' | 'global'
 
 export interface Permission {

@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from '#server/modules/database/supabase'
-import type { PermissionScope } from '#server/types/permission'
+import type { PermissionScope } from '#shared/types/permission'
 
 /**
  * RBAC scope enforcement (E.1.4 — own/team/app/global).
