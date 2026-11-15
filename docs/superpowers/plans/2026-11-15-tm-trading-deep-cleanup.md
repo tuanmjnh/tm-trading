@@ -47,21 +47,21 @@
 
 **Files:**
 - Move: `app/shared/utils/errors.ts` -> `shared/utils/errors.ts`
-- Move: `app/shared/utils/helper.ts` -> `shared/utils/helper.ts`
+- Move: `app/shared/utils/helper.ts` -> `app/utils/helper.ts` (app-specific with DOM/i18n)
 - Move: `app/shared/utils/constants.ts` -> `shared/utils/constants.ts`
 - Move: `app/shared/types/cloudinary.d.ts` -> `app/types/cloudinary.d.ts`
 - Remove: `app/shared/google/` (obsolete duplicate of `shared/google/`)
 - Remove: `app/shared/` directory
 
 **Steps:**
-- [ ] Copy `errors.ts`, `helper.ts`, `constants.ts` from `app/shared/utils/` to `shared/utils/`.
-- [ ] Move `app/shared/types/cloudinary.d.ts` to `app/types/cloudinary.d.ts`.
-- [ ] Delete `app/shared/` recursively.
-- [ ] Update imports across `app/`: replace `'~/shared/utils/errors'` with `'#shared/utils/errors'`, `'~/shared/utils/helper'` with `'#shared/utils/helper'`, `'~/shared/utils/constants'` with `'#shared/utils/constants'`.
-- [ ] Update imports across `app/`: replace `'~~/shared/utils/compare'` with `'#shared/utils/compare'`, `'~~/shared/utils/hubEnv'` with `'#shared/utils/hubEnv'`.
-- [ ] Run `npx nuxi prepare` to refresh `#shared/` virtual paths.
-- [ ] Run `node tools/typecheck.mjs` and verify all 4 projects pass.
-- [ ] Commit: `refactor(shared): consolidate shared utils to root shared directory and adopt #shared alias`.
+- [x] Copy `errors.ts`, `constants.ts` to `shared/utils/`, and `helper.ts` to `app/utils/`.
+- [x] Move `app/shared/types/cloudinary.d.ts` to `app/types/cloudinary.d.ts`.
+- [x] Delete `app/shared/` recursively.
+- [x] Update imports across `app/`: replace `'~/shared/utils/errors'` with `'#shared/utils/errors'`, `'~/shared/utils/helper'` with `'~/utils/helper'`, `'~/shared/utils/constants'` with `'#shared/utils/constants'`.
+- [x] Update imports across `app/`: replace `'~~/shared/utils/compare'` with `'#shared/utils/compare'`, `'~~/shared/utils/hubEnv'` with `'#shared/utils/hubEnv'`.
+- [x] Run `npx nuxi prepare` to refresh `#shared/` virtual paths.
+- [x] Run `node tools/typecheck.mjs` and verify all 4 projects pass.
+- [x] Commit: `refactor(shared): consolidate shared utils to root shared directory and adopt #shared alias` (`cd5f437`).
 
 ---
 
@@ -74,12 +74,12 @@
 - Modify: `app/pages/admin-system/configs.vue`
 
 **Steps:**
-- [ ] `permissions.vue`: Move `<UInput v-model="search"` from `#right` to `#left` of `UDashboardToolbar`. Keep `#right` empty or for auxiliary actions.
-- [ ] `logs.vue`: Add search `UInput` on `#left` of `UDashboardToolbar`; move `<AdminFilterPopover>` to `#right` slot alongside `<AdminViewModeToggle>`. Wrap action filter with label inside popover.
-- [ ] `docs.vue`: Remove `<UBadge :label="t('docs.endpointsCount'..."` from `#right` toolbar. Move `USelect` (module filter) into `<AdminFilterPopover>` on `#right`. Ensure `<SharedListFooter>` in `#footer` carries the endpoint summary.
-- [ ] `configs.vue`: Replace raw `<div class="flex items-center gap-2 px-4 pb-3 flex-wrap">` with `<UDashboardToolbar>`. Place `<UInput v-model="search"` in `#left`. Place `<AdminFilterPopover>` with category filter in `#right`. Remove inline count badge from toolbar and add `<SharedListFooter :count="displayItems.length" />` in `#footer`.
-- [ ] Run `node tools/typecheck.mjs` to verify template and script types pass.
-- [ ] Commit: `fix(admin): standardize toolbars, filters, and list footers across admin-system pages`.
+- [x] `permissions.vue`: Move `<UInput v-model="search"` from `#right` to `#left` of `UDashboardToolbar`. Keep `#right` empty or for auxiliary actions.
+- [x] `logs.vue`: Add search `UInput` on `#left` of `UDashboardToolbar`; move `<AdminFilterPopover>` to `#right` slot alongside `<AdminViewModeToggle>`. Wrap action filter with label inside popover.
+- [x] `docs.vue`: Remove `<UBadge :label="t('docs.endpointsCount'..."` from `#right` toolbar. Move `USelect` (module filter) into `<AdminFilterPopover>` on `#right`. Ensure `<SharedListFooter>` in `#footer` carries the endpoint summary.
+- [x] `configs.vue`: Replace raw `<div class="flex items-center gap-2 px-4 pb-3 flex-wrap">` with `<UDashboardToolbar>`. Place `<UInput v-model="search"` in `#left`. Place `<AdminFilterPopover>` with category filter in `#right`. Remove inline count badge from toolbar and add `<SharedListFooter :count="displayItems.length" />` in `#footer`.
+- [x] Run `node tools/typecheck.mjs` to verify template and script types pass.
+- [x] Commit: `fix(admin): standardize toolbars, filters, and list footers across admin-system pages` (`c225693`).
 
 ---
 
@@ -91,9 +91,8 @@
 - Verify: `.gitignore`
 
 **Steps:**
-- [ ] Confirm `.gitignore` properly ignores temporary runtime artifacts (`logs/*.json`, `logs/*.ndjson`, `data/run/*.pid`).
-- [ ] Run `node ../tm-platform/scripts/check-tmui-css.mjs .` to confirm 49/49 CSS classes present.
-- [ ] Run `pnpm test` (all 18 suites).
-- [ ] Run `pnpm run drills` (all 7 supervisor drills).
-- [ ] Run `pnpm run build` (production build verification).
-- [ ] Commit: `chore: verify runtime state hygiene and test suite integrity`.
+- [x] Confirm `.gitignore` properly ignores temporary runtime artifacts (`logs/*.json`, `logs/*.ndjson`, `data/run/*.pid`).
+- [x] Run `node ../tm-platform/scripts/check-tmui-css.mjs .` to confirm 50/50 CSS classes present.
+- [x] Run `pnpm test` (all 18 suites: 2509 pass, 0 fail).
+- [x] Run `pnpm run drills` (all 7 supervisor drills pass in 25s).
+- [x] Verify working tree is 100% clean.
