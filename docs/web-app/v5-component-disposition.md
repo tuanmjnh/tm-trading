@@ -33,14 +33,13 @@ Supporting composables:
 | `app/composables/useAppOverlay.ts` | One typed overlay registry: single primary overlay, typed payloads, dirty guard, query deep links |
 | `app/composables/useDashboardFeed.ts` | The Dashboard read model: composes existing APIs, computes freshness, dedupes rows, bounded poll |
 
-## 2. Reused as-is
+## 2. Modularized via @tuanmjnh/tm-ui
 
 | Component | Reason |
 |---|---|
-| `app/components/base/ResponsiveModal.vue`, `ResponsiveSlideover.vue`, `ConfirmModal.vue`, `FormModal.vue` | The V5.0 overlay standard. No second overlay library was added. |
-| `app/components/gridList/Index.vue` | Table/grid primitive with mobile cards, sort emit, virtual scroll container |
-| `app/components/shared/MetricRibbon.vue` | KPI strip (compact, single row) |
-| `app/components/admin/EmptyState.vue` | Empty state used by every panel |
+| `app/components/base/ResponsiveModal.vue`, `ResponsiveSlideover.vue`, `ConfirmModal.vue`, `FormModal.vue`, `HeaderActions.vue`, `PasswordInput.vue`, `SectionNav.vue` | Powered by `@tuanmjnh/tm-ui` thin wrappers providing `useI18n()` strings, eliminating duplicated implementation code while preserving identical API. |
+| `app/components/admin/EmptyState.vue`, `FilterPopover.vue`, `RowActions.vue`, `ViewModeToggle.vue` | Powered by `@tuanmjnh/tm-ui` thin wrappers. |
+| `app/components/base/BentoCard.vue`, `BentoGrid.vue`, `AppBackdrop.vue`, `Table.vue` | Adopted from `@tuanmjnh/tm-ui`. |
 | `app/components/operations/ServiceDetailDrawer.vue`, `ServiceActionButton.vue`, `ServiceSloBadge.vue` | Still used by `/operations` (kept routable) and reusable for the Control Center |
 | `app/components/watchlist/ListsTab.vue` | Still used by `/watchlist` (hidden from menu, reachable) |
 | `app/components/ai-providers/*` | Provider editing stays on `/admin-system/ai-providers`; the Control Center only lists/tests |

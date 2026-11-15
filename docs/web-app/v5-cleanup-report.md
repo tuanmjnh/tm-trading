@@ -37,12 +37,10 @@ strict for every live path.
 
 ## 3. Dependencies
 
-No dependency was added or removed.
-
-Rationale: the Dashboard was built from packages already installed and already used
-(`@nuxt/ui`, `@vueuse/core`, `zod`, `date-fns`). Removing anything would have required
-an import/build scan across 190 API routes and 127 components with no measured benefit,
-and V5.0 §9.8 only authorises removal after such a scan proves the package is unused.
+In the shared-library integration pass:
+- Added `@tuanmjnh/tm-core` and `@tuanmjnh/tm-ui` from `tm-platform` monorepo.
+- Emitted thin base/admin wrappers (`app/components/base/*`, `app/components/admin/*`) providing `useI18n()` strings while delegating rendering and styling directly to `@tuanmjnh/tm-ui`.
+- Preserved existing dependencies and canonical package manager (`pnpm@12.15.0`).
 
 ## 4. Package manager
 
@@ -95,7 +93,7 @@ permission model, and existing server-side capability checks.
 |---|---|---|
 | `signals.lifecycle_closed` key missing in both locales, used by `app/pages/trading/signals.vue` | `node tests/run-tests.mjs` failed on `tests/i18n-keys.test.ts` before any Dashboard work touched that page | Fixed by adding the key to both locales (translation, not a test edit) |
 | `tests/legacy-redirect.test.ts` assumed every redirect target is a bare path | Would reject the supported `/?panel=control&section=services` target | Test now resolves the path before the query; assertion strength unchanged |
-| Duplicate type imports in `shared/types/permission.ts` vs `server/types/permission.ts` | `nuxt prepare` warns every run | Out of scope; recorded for a follow-up |
+| Duplicate type imports in `shared/types/permission.ts` vs `server/types/permission.ts` | `nuxt prepare` warns every run | FIXED in Phase 1: deduplicated into `shared/types/permission.ts` with backward-compatible alias `ServerPermissionAction` |
 
 ## 8. Rollback
 
