@@ -79,7 +79,13 @@ export default defineNuxtConfig({
       include: [
         '../types/**/*.ts',
         '../types/**/*.d.ts'
-      ]
+      ],
+      compilerOptions: {
+        paths: {
+          vue: ['../node_modules/vue'],
+          'vue/*': ['../node_modules/vue/*']
+        }
+      }
     }
   },
   css: ['~/assets/css/main.css'],
@@ -170,6 +176,14 @@ export default defineNuxtConfig({
     }
   },
   vite: {
+    server: {
+      fs: {
+        allow: [
+          fileURLToPath(new URL('../tm-platform/packages/tm-ui', import.meta.url)),
+          fileURLToPath(new URL('../tm-platform/packages/tm-core', import.meta.url))
+        ]
+      }
+    },
     plugins: [
       {
         name: 'vite-plugin-fix-app-manifest',
