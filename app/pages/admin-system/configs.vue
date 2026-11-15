@@ -475,13 +475,27 @@ onMounted(() => load(true))
     </template>
 
     <template #toolbar>
-      <div class="flex items-center gap-2 px-4 pb-3 flex-wrap">
-        <UInput v-model="search" icon="i-lucide-search" :placeholder="t('common.search')" size="sm"
-          class="w-full sm:w-56" />
-        <USelect v-model="categoryFilter" :items="categoryItems" value-key="value" size="sm" class="w-36"
-          :aria-label="t('configs.category')" />
-        <span class="text-xs text-muted whitespace-nowrap">{{ displayItems.length }}</span>
-      </div>
+      <UDashboardToolbar>
+        <template #left>
+          <div class="flex items-center gap-2 w-full min-w-0 sm:w-auto">
+            <UInput v-model="search" icon="i-lucide-search" :placeholder="t('common.search')" size="sm"
+              class="w-full sm:w-64" />
+          </div>
+        </template>
+        <template #right>
+          <AdminFilterPopover>
+            <div class="space-y-1">
+              <span class="text-xs font-medium text-muted">{{ t('configs.category') }}</span>
+              <USelect v-model="categoryFilter" :items="categoryItems" value-key="value" size="sm" class="w-full"
+                :aria-label="t('configs.category')" />
+            </div>
+          </AdminFilterPopover>
+        </template>
+      </UDashboardToolbar>
+    </template>
+
+    <template #footer>
+      <SharedListFooter :count="displayItems.length" :has-more="hasMore" :loading="loading" />
     </template>
 
     <template #default>

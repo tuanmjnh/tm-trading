@@ -153,12 +153,9 @@ useHead({ title })
       <UDashboardToolbar>
         <template #left>
           <div class="flex items-center gap-2 w-full min-w-0 sm:w-auto">
-            <!-- Satellite appId: {{ targetApp }} -->
+            <UInput v-model="search" icon="i-lucide-search" :placeholder="t('common.search')" size="sm"
+              class="w-full sm:w-64" />
           </div>
-        </template>
-        <template #right>
-          <UInput v-model="search" icon="i-lucide-search" :placeholder="t('common.search')" size="sm"
-            class="w-full sm:w-56" />
         </template>
       </UDashboardToolbar>
     </template>

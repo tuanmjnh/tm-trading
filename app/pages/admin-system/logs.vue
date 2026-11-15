@@ -50,6 +50,7 @@ const { exporting: exportingLogs, exportModule: exportLogs } = useModuleExport()
 const ALL = 'all'
 
 const selectedAppId = ref<string>(appId || '')
+const searchQuery = ref('')
 const actionFilter = ref<string>(ALL)
 const selectedLog = ref<AuditLogItem | null>(null)
 const isDetailOpen = ref(false)
@@ -85,8 +86,21 @@ const actionOptions = computed(() => {
 })
 
 const filteredLogs = computed(() => {
-  if (!actionFilter.value || actionFilter.value === ALL) return logs.value
-  return logs.value.filter(l => l.action === actionFilter.value)
+  let list = logs.value
+  if (actionFilter.value && actionFilter.value !== ALL) {
+    list = list.filter(l => l.action === actionFilter.value)
+  }
+  const q = searchQuery.value.trim().toLowerCase()
+  if (q) {
+    list = list.filter(l =>
+      l.action.toLowerCase().includes(q) ||
+      (l.by?.email && l.by.email.toLowerCase().includes(q)) ||
+      (l.by?.name && l.by.name.toLowerCase().includes(q)) ||
+      (l.ip && l.ip.toLowerCase().includes(q)) ||
+      (l.modelName && l.modelName.toLowerCase().includes(q))
+    )
+  }
+  return list
 })
 
 const actionColor = (action: string): 'primary' | 'success' | 'error' | 'warning' | 'neutral' => {
@@ -205,23 +219,35 @@ useHead({ title })
       <UDashboardToolbar>
         <template #left>
           <div class="flex items-center gap-2 w-full min-w-0 sm:w-auto">
-            <!-- App fixed to satellite appId -->
-            <AdminFilterPopover>
-              <USelectMenu
-                v-if="logs.length > 0"
-                v-model="actionFilter"
-                :items="actionOptions"
-                value-key="value"
-                :placeholder="t('logs.allActions')"
-                size="sm"
-                class="w-full md:w-52"
-              />
-              <p v-else class="text-xs text-muted">{{ t('logs.desc') }}</p>
-            </AdminFilterPopover>
+            <UInput
+              v-model="searchQuery"
+              icon="i-lucide-search"
+              :placeholder="t('common.search')"
+              size="sm"
+              class="w-full sm:w-64"
+            />
           </div>
         </template>
         <template #right>
-          <AdminViewModeToggle v-model="viewMode" />
+          <div class="flex items-center gap-2">
+            <AdminFilterPopover>
+              <div class="space-y-1">
+                <span class="text-xs font-medium text-muted">{{ t('common.actions') }}</span>
+                <USelectMenu
+                  v-if="logs.length > 0"
+                  v-model="actionFilter"
+                  :items="actionOptions"
+                  value-key="value"
+                  :placeholder="t('logs.allActions')"
+                  size="sm"
+                  class="w-full"
+                  :aria-label="t('logs.allActions')"
+                />
+                <p v-else class="text-xs text-muted">{{ t('logs.desc') }}</p>
+              </div>
+            </AdminFilterPopover>
+            <AdminViewModeToggle v-model="viewMode" />
+          </div>
         </template>
       </UDashboardToolbar>
     </template>

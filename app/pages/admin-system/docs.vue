@@ -121,17 +121,18 @@ mobileBar.registerInfo(computed(() => ({
         <template #left>
           <div class="flex items-center gap-2 w-full min-w-0 sm:w-auto">
             <UInput v-model="searchQuery" icon="i-lucide-search" :placeholder="t('docs.searchPlaceholder')" size="sm"
-              class="flex-1 min-w-0 sm:flex-none sm:w-64" />
-            <USelect v-model="selectedModule"
-              :items="modulesList.map(m => ({ label: m === 'ALL' ? t('docs.allModules') : m, value: m }))" size="sm"
-              class="w-36 shrink-0 sm:w-40" />
+              class="w-full sm:w-64" />
           </div>
         </template>
         <template #right>
-          <div class="hidden sm:flex">
-            <UBadge :label="t('docs.endpointsCount', { filtered: filteredApis.length, total: apis.length })"
-              variant="subtle" size="sm" />
-          </div>
+          <AdminFilterPopover>
+            <div class="space-y-1">
+              <span class="text-xs font-medium text-muted">{{ t('docs.allModules') }}</span>
+              <USelect v-model="selectedModule"
+                :items="modulesList.map(m => ({ label: m === 'ALL' ? t('docs.allModules') : m, value: m }))" size="sm"
+                class="w-full" :aria-label="t('docs.allModules')" />
+            </div>
+          </AdminFilterPopover>
         </template>
       </UDashboardToolbar>
     </template>
