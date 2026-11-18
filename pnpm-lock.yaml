@@ -223,9 +223,15 @@ importers:
       '@tiptap/vue-3':
         specifier: 3.31.4
         version: 3.31.4(@floating-ui/dom@1.8.0)(@tiptap/core@3.31.4(@tiptap/pm@3.31.4))(@tiptap/pm@3.31.4)(vue@3.5.44(typescript@6.0.3))
+      '@tuanmjnh/tm-ai-client':
+        specifier: 0.4.1
+        version: 0.4.1
       '@tuanmjnh/tm-core':
         specifier: link:../tm-platform/packages/tm-core
         version: link:../tm-platform/packages/tm-core
+      '@tuanmjnh/tm-hub-client':
+        specifier: 1.2.0
+        version: 1.2.0
       '@tuanmjnh/tm-ui':
         specifier: link:../tm-platform/packages/tm-ui
         version: link:../tm-platform/packages/tm-ui
@@ -274,9 +280,6 @@ importers:
       tailwindcss:
         specifier: 4.3.3
         version: 4.3.3
-      '@tuanmjnh/tm-hub-client':
-        specifier: 1.2.0
-        version: 1.2.0
       uuid:
         specifier: ^14.0.2
         version: 14.0.2
@@ -3457,6 +3460,12 @@ packages:
   '@trickfilm400/rollup-plugin-off-main-thread@3.0.0-pre1':
     resolution: {integrity: sha512-/67zpWDBLV+oYAEL682s1ktXL0HgqX76f6gaVGkGnVZlBbm1zd0v4Bz8MFF2GGhoX9rvfq3KSQHubFHwa6w6/Q==}
     engines: {node: '>=12'}
+
+  '@tuanmjnh/tm-ai-client@0.4.1':
+    resolution: {integrity: sha512-/Ag/rjZI540n1sNTeWIidEq0xEowYRSNN4Cjz7bC07TJa5tS5bUJckOq3rtgj6Ag3Ogu7sSVPOYrXGqXG0jC/Q==}
+
+  '@tuanmjnh/tm-hub-client@1.2.0':
+    resolution: {integrity: sha512-2a46mgIu89kdXcrVtGacgqmPkWrRLobMUUUT3Re6dxXv7L7+UQ6F8UimuCZsW3Ue770kXr8dibgKTIkr4KskhA==}
 
   '@tybys/wasm-util@0.10.4':
     resolution: {integrity: sha512-W3c4gRigFS0T/Ma4qIYF3GDAc5AQdHb1yL5znJT1Zv1YaD9Kitx656wBjvr19qbiosmZT8lWDM5BEMynUqX65A==}
@@ -6731,9 +6740,6 @@ packages:
   tinyglobby@0.2.17:
     resolution: {integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==}
     engines: {node: '>=12.0.0'}
-
-  '@tuanmjnh/tm-hub-client@1.2.0':
-    resolution: {integrity: sha512-2a46mgIu89kdXcrVtGacgqmPkWrRLobMUUUT3Re6dxXv7L7+UQ6F8UimuCZsW3Ue770kXr8dibgKTIkr4KskhA==}
 
   to-regex-range@5.0.1:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}
@@ -11100,6 +11106,10 @@ snapshots:
       magic-string: 0.30.21
       string.prototype.matchall: 4.1.0
 
+  '@tuanmjnh/tm-ai-client@0.4.1': {}
+
+  '@tuanmjnh/tm-hub-client@1.2.0': {}
+
   '@tybys/wasm-util@0.10.4':
     dependencies:
       tslib: 2.8.1
@@ -14980,8 +14990,6 @@ snapshots:
     dependencies:
       fdir: 6.5.0(picomatch@4.0.7)
       picomatch: 4.0.7
-
-  '@tuanmjnh/tm-hub-client@1.2.0': {}
 
   to-regex-range@5.0.1:
     dependencies:

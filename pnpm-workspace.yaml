@@ -51,3 +51,4 @@ minimumReleaseAgeExclude:
   - '@nuxt/image@2.2.0'
   - '@tuanmjnh/tm-core@0.1.2'
   - '@tuanmjnh/tm-ui@0.1.4'
+  - '@tuanmjnh/tm-ai-client@0.4.1'
