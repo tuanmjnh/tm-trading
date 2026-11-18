@@ -83,7 +83,7 @@ services/         binance, news, funding, scanner, regime, liquidation, confluen
 ai/               gateway, agent, daily-brief, review
 app/              Nuxt dashboard:
   ├── components/ BasePage, LazyGridList, LazyBaseConfirmModal, JsonEditor, form inputs
-  ├── composables/ useAuth, useHub (tm-hub-client wrapper), useNavMenu, useWebPush
+  ├── composables/ useAuth, useHub (@tuanmjnh/tm-hub-client wrapper), useNavMenu, useWebPush
   ├── layouts/    default.vue (dashboard layout with sidebar)
   ├── pages/
   │   ├── index.vue, runs.vue, signals.vue
@@ -134,7 +134,7 @@ overfitting. Read `docs/indicator/vsa-wyckoff/vsa-optimization.md` before propos
 `tm-hub` (Port 4000) is the central IAM, route catalog, configuration store, and notification hub:
 
 - **Satellite Connection**:
-  - Connects to TM Hub via `useHub()` (wrapping `tm-hub-client`) with `X-App-Id: tm-trading_ghfseu`.
+  - Connects to TM Hub via `useHub()` (wrapping `@tuanmjnh/tm-hub-client`) with `X-App-Id: tm-trading_ghfseu`.
   - Login/auth requests go directly to Hub (`POST /api/v1/auth/login`).
   - Configure via `.env`: `NUXT_PUBLIC_HUB_URL=http://localhost:4000`, `NUXT_PUBLIC_HUB_APP_ID=tm-trading_ghfseu`.
     - **Note**: the committed `.env` currently points `NUXT_PUBLIC_HUB_URL` at the **deployed** hub (`https://tm-hub-app.vercel.app`) because the local hub is seeded with a different appId and rejects this app's login payload (`400 error.missingLoginFields`). See `docs/web-app/ui-test-findings.md` (F4/U4).

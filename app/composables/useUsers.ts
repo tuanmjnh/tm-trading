@@ -1,5 +1,5 @@
 import type { AuthUser } from '#shared/types/auth'
-import type { HubUser, Capability } from 'tm-hub-client'
+import type { HubUser, Capability } from '@tuanmjnh/tm-hub-client'
 
 function mapAuthUserToHubUser(user: Partial<AuthUser>): Partial<HubUser> {
   return {

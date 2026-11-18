@@ -1,8 +1,8 @@
 import type { NitroFetchOptions, NitroFetchRequest } from 'nitropack'
-import { HubClient } from 'tm-hub-client'
+import { HubClient } from '@tuanmjnh/tm-hub-client'
 
 // =============================================================================
-//  SATELLITE HUB CLIENT — Wrap each tm-hub module using the `tm-hub-client` SDK.
+//  SATELLITE HUB CLIENT — Wrap each tm-hub module using the `@tuanmjnh/tm-hub-client` SDK.
 //  SDK auto-injects `X-App-Id` + `Authorization: Bearer <token>` into every request.
 //  Source: tm-tools/app/composables/useHub.ts (already working).
 // =============================================================================

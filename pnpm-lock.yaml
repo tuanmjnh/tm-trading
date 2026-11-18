@@ -274,7 +274,7 @@ importers:
       tailwindcss:
         specifier: 4.3.3
         version: 4.3.3
-      tm-hub-client:
+      '@tuanmjnh/tm-hub-client':
         specifier: 1.2.0
         version: 1.2.0
       uuid:
@@ -6732,8 +6732,8 @@ packages:
     resolution: {integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==}
     engines: {node: '>=12.0.0'}
 
-  tm-hub-client@1.2.0:
-    resolution: {integrity: sha512-pQjZ4kAPrtFJY9CjXF7LSvx4RAMiAN/LrpB53cqvt8KJKaKILA5Szt8TKG0f2C+1LFH8wsLPASC1OLHwlYL+PA==}
+  '@tuanmjnh/tm-hub-client@1.2.0':
+    resolution: {integrity: sha512-2a46mgIu89kdXcrVtGacgqmPkWrRLobMUUUT3Re6dxXv7L7+UQ6F8UimuCZsW3Ue770kXr8dibgKTIkr4KskhA==}
 
   to-regex-range@5.0.1:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}
@@ -14981,7 +14981,7 @@ snapshots:
       fdir: 6.5.0(picomatch@4.0.7)
       picomatch: 4.0.7
 
-  tm-hub-client@1.2.0: {}
+  '@tuanmjnh/tm-hub-client@1.2.0': {}
 
   to-regex-range@5.0.1:
     dependencies:

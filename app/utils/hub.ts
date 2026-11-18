@@ -3,7 +3,7 @@ import { DEFAULT_HUB_URL } from '#shared/utils/hubEnv'
 // =============================================================================
 //  One Hub endpoint for the whole app.
 //
-//  useAuth (login/refresh/me) and useHub (every tm-hub-client call) MUST resolve
+//  useAuth (login/refresh/me) and useHub (every @tuanmjnh/tm-hub-client call) MUST resolve
 //  the same base URL. They used to each carry their own
 //  `|| 'http://localhost:4000'` fallback, so an override could make login talk
 //  to one Hub and the menu to another — "logged in, but no permissions".

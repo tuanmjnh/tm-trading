@@ -539,7 +539,7 @@
       "notificationsDesc": "Quản lý thiết bị đăng ký nhận thông báo và điều phối Web Push theo tài khoản người dùng."
     },
     "sdk": {
-      "title": "Tích Hợp Client SDK (tm-hub-client)",
+      "title": "Tích Hợp Client SDK tm-hub-client (gói scoped)",
       "description": "Các ứng dụng client trong hệ sinh thái (như {app}) kết nối với TM Hub thông qua thư viện thống nhất:"
     },
     "api": {
